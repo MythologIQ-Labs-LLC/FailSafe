@@ -32,7 +32,7 @@ Release versions come from the issue-detail endpoint `FailSafe/extension/src/int
 ## Privileges and scopes
 
 Credential: a Sentry auth token in VS Code Secret Storage, sent as a Bearer header `FailSafe/extension/src/integrations/sentry/sentry-client.ts:120` (`Authorization: `).
-The setting text asks for an org-level or internal-integration token with project:read and event:read `FailSafe/extension/package.json:491-495` (`project:read`).
+The setting text asks for an org-level or internal-integration token with project:read and event:read `FailSafe/extension/package.json:501-505` (`project:read`).
 The token and API base URL come together from the credential gate, so a user token is never sent to a workspace-chosen base `FailSafe/extension/src/integrations/sentry/sentry-settings.ts:4-6` (`token is never sent to a workspace-chosen endpoint`).
 The base must be HTTPS and every request must lie under it `FailSafe/extension/src/integrations/sentry/sentry-transport.ts:96-100` (`if (u.protocol !== 'https:'`).
 Pagination links are followed only on the same origin and path `FailSafe/extension/src/integrations/sentry/sentry-client.ts:78-80` (`Untrusted Sentry pagination destination`).
@@ -42,8 +42,8 @@ Release automation, commit correlation or alert webhooks would need further scop
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| risk-ingest | verified-shipped | `importSentryRisks` `FailSafe/extension/src/integrations/sentry/sentry-import.ts:139` (`export async function importSentryRisks(`) | `FailSafe/extension/src/extension/main.ts:269` (`registerSentryImportCommand(context, core.workspaceRoot, credentials.creds, credentials.endpoints)`) | `FailSafe/extension/src/test/integrations/sentry/sentry-import.test.ts` (unit) | Command `FailSafe/extension/package.json:171` (`"command": "failsafe.sentry.import"`) |
-| release-association | verified-shipped | `importSentryRisks` `FailSafe/extension/src/integrations/sentry/sentry-import.ts:147-149` (`const lookups = await lookupReleases(issues, {`) | `FailSafe/extension/src/extension/sentry-command.ts:46` (`(_progress, token) => importSentryRisks(`) | `FailSafe/extension/src/test/integrations/sentry/sentry-releases.test.ts` (unit) | Capped per import by a setting `FailSafe/extension/package.json:523-528` (`How many issues per import get an issue-detail lookup`) |
+| risk-ingest | verified-shipped | `importSentryRisks` `FailSafe/extension/src/integrations/sentry/sentry-import.ts:139` (`export async function importSentryRisks(`) | `FailSafe/extension/src/extension/main.ts:270` (`registerSentryImportCommand(context, core.workspaceRoot, credentials.creds, credentials.endpoints)`) | `FailSafe/extension/src/test/integrations/sentry/sentry-import.test.ts` (unit) | Command `FailSafe/extension/package.json:174` (`"command": "failsafe.sentry.import"`) |
+| release-association | verified-shipped | `importSentryRisks` `FailSafe/extension/src/integrations/sentry/sentry-import.ts:147-149` (`const lookups = await lookupReleases(issues, {`) | `FailSafe/extension/src/extension/sentry-command.ts:46` (`(_progress, token) => importSentryRisks(`) | `FailSafe/extension/src/test/integrations/sentry/sentry-releases.test.ts` (unit) | Capped per import by a setting `FailSafe/extension/package.json:533-538` (`How many issues per import get an issue-detail lookup`) |
 | import-report | verified-shipped | `describeSentryImport` `FailSafe/extension/src/integrations/sentry/sentry-report.ts:46` (`export function describeSentryImport(`) | `FailSafe/extension/src/extension/sentry-command.ts:28` (`const { level, text } = describeSentryImport(outcome, scope);`) | `FailSafe/extension/src/test/integrations/sentry/sentry-import.test.ts` (unit) | - |
 | commit-correlation | proposed | none | none | none | Not implemented: no commit correlation `FailSafe/extension/src/integrations/sentry/sentry-to-risk.ts:11-12` (`never from list items; no commit correlation (#478)`) |
 | alert-webhook | proposed | none | none | none | Not implemented; the import is a pull command only (unverified beyond the absence of any webhook route in the owned files) |
@@ -88,10 +88,10 @@ Proposed (not built): error-to-commit, error-to-file and fix-to-receipt edges, s
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Import Sentry Regressions" `FailSafe/extension/package.json:171-172` (`"title": "FailSafe: Import Sentry Regressions"`).
+Command palette: "FailSafe: Import Sentry Regressions" `FailSafe/extension/package.json:175-176` (`"title": "FailSafe: Import Sentry Regressions"`).
 A cancellable progress notification runs the import `FailSafe/extension/src/extension/sentry-command.ts:45` (`title: 'Importing Sentry regressions…', cancellable: true`).
 The outcome is shown at the level the report assigns: error, warning or information `FailSafe/extension/src/extension/sentry-command.ts:29-31` (`vscode.window.showErrorMessage(text);`).
-Settings: org, project, environment, API base URL, query and release-lookup cap `FailSafe/extension/package.json:484-514` (`failsafe.integrations.sentry.org`).
+Settings: org, project, environment, API base URL, query and release-lookup cap `FailSafe/extension/package.json:494-524` (`failsafe.integrations.sentry.org`).
 Status: a Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).
 
 ## Governance policy and enforceability limits

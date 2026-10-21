@@ -36,7 +36,7 @@ Writing outside the workspace would need a new privilege and is marked requires 
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| inject-governance-block | verified-shipped | `AgentConfigInjector` `FailSafe/extension/src/qorelogic/AgentConfigInjector.ts:42-49` (`async inject(system: QorLogicSystem): Promise<void> {`) | `FailSafe/extension/src/extension/bootstrapAdvancedCommands.ts:219` (`vscode.commands.registerCommand("failsafe.onboardAgent", () =>`) | `FailSafe/extension/src/test/qorelogic/AgentConfigInjector.test.ts` (unit) | Also reached through `failsafe.syncFramework` `FailSafe/extension/src/extension/commands.ts:670` (`registerCommand("failsafe.syncFramework"`) |
+| inject-governance-block | verified-shipped | `AgentConfigInjector` `FailSafe/extension/src/qorelogic/AgentConfigInjector.ts:42-49` (`async inject(system: QorLogicSystem): Promise<void> {`) | `FailSafe/extension/src/extension/bootstrapAdvancedCommands.ts:219` (`vscode.commands.registerCommand("failsafe.onboardAgent", () =>`) | `FailSafe/extension/src/test/qorelogic/AgentConfigInjector.test.ts` (unit) | Also reached through `failsafe.syncFramework` `FailSafe/extension/src/extension/commands.ts:662` (`registerCommand("failsafe.syncFramework"`) |
 | remove-governance-block | shipped-inert | `AgentConfigInjector` `FailSafe/extension/src/qorelogic/AgentConfigInjector.ts:52-58` (`async remove(system: QorLogicSystem): Promise<void> {`) | none | none | Absent call site: its only caller `removeGovernance` is never called `FailSafe/extension/src/governance/GovernanceCeremony.ts:43` (`async removeGovernance(): Promise<void> {`); the unit test calls `remove` directly |
 | inject-all-registered-systems | shipped-inert | `AgentConfigInjector` `FailSafe/extension/src/qorelogic/AgentConfigInjector.ts:35-40` (`async injectAll(): Promise<void> {`) | none | none | Absent call site: its only caller `syncAll` has no caller `FailSafe/extension/src/qorelogic/FrameworkSync.ts:53-67` (`await injector.injectAll();`) |
 
@@ -70,9 +70,9 @@ Proposed: agent to instruction file to governance evidence, specified in `docs/a
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Set Up Agent Governance" `FailSafe/extension/package.json:317-318` (`"title": "FailSafe: Set Up Agent Governance"`).
+Command palette: "FailSafe: Set Up Agent Governance" `FailSafe/extension/package.json:327-328` (`"title": "FailSafe: Set Up Agent Governance"`).
 A multi-select picker of detected, ungoverned agents, then a count message `FailSafe/extension/src/governance/GovernanceCeremony.ts:26-40` (`Governance applied to ${selected.length} system(s).`).
-`failsafe.syncFramework` is registered but has no command-palette contribution in `package.json` (unverified beyond a search of `package.json` for that id) `FailSafe/extension/src/extension/commands.ts:670` (`registerCommand("failsafe.syncFramework"`).
+`failsafe.syncFramework` is registered but has no command-palette contribution in `package.json` (unverified beyond a search of `package.json` for that id) `FailSafe/extension/src/extension/commands.ts:662` (`registerCommand("failsafe.syncFramework"`).
 
 ## Governance policy and enforceability limits
 

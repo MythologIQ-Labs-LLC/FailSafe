@@ -29,8 +29,8 @@ The message is built as Block Kit header, section and context blocks `FailSafe/e
 
 ## Privileges and scopes
 
-Credential: one Slack incoming-webhook URL held in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:414-416` (`Plain-text settings are no longer read`).
-The webhook URL grants posting to its one channel and nothing else `FailSafe/extension/package.json:416` (`it grants posting to the target channel`).
+Credential: one Slack incoming-webhook URL held in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:424-426` (`Plain-text settings are no longer read`).
+The webhook URL grants posting to its one channel and nothing else `FailSafe/extension/package.json:426` (`it grants posting to the target channel`).
 A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:186-190` (`if (!enabled) return { enabled: false };`).
 The URL is redacted from any failure diagnostic `FailSafe/extension/src/integrations/notify-event.ts:39-41` (`return text.split(webhookUrl).join('[webhook]');`).
 Interactive approval from Slack would need a full Slack app with signed callbacks and is marked requires separate approval `FailSafe/extension/src/integrations/slack/slack-notify.ts:5-8` (`Approval decisions are NOT actioned in Slack`).
@@ -39,7 +39,7 @@ Interactive approval from Slack would need a full Slack app with signed callback
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| notify | verified-shipped | `SlackNotifier` `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:58` (`export class SlackNotifier {`) | `FailSafe/extension/src/extension/main.ts:307-312` (`new SlackNotifier(`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | Catalog capability `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:237` (`capabilities: ['notify'],`) |
+| notify | verified-shipped | `SlackNotifier` `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:58` (`export class SlackNotifier {`) | `FailSafe/extension/src/extension/main.ts:308-313` (`new SlackNotifier(`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | Catalog capability `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:237` (`capabilities: ['notify'],`) |
 | veto-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:58-61` (`case 'sentinel.verdict': {`) | `FailSafe/extension/src/sentinel/VerdictRouter.ts:35` (`this.eventBus.emit('sentinel.verdict', verdict);`) | `FailSafe/extension/src/test/integrations/slack/slack-notify.test.ts` (unit) | Only BLOCK of the emitted decisions matches; QUARANTINE does not `FailSafe/extension/src/shared/types/sentinel.ts:15-20` (`"QUARANTINE";`) |
 | l3-queued-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:69-75` (`case 'qorelogic.l3Queued':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:125` (`this.eventBus.emit('qorelogic.l3Queued', fullRequest);`) | `FailSafe/extension/src/test/integrations/slack/slack-notify.test.ts` (unit) | The queued request carries `filePath` `FailSafe/extension/src/shared/types/l3-approval.ts:21` (`filePath: string;`); on main (unreleased) it is shown as a path label (see Transformations) |
 | l3-decided-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:76-81` (`case 'qorelogic.l3Decided':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`this.eventBus.emit('qorelogic.l3Decided', { request, decision });`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | The decision reaches the title. In v6.0.8 the path detail is missing because the path is under `request` (F09) `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`{ request, decision }`); fixed on main, unreleased ([B263], see Transformations) |
@@ -84,7 +84,7 @@ Proposed (not built): a notice-to-receipt edge recorded by the event that caused
 
 Settings: `failsafe.integrations.slack.enabled` and the webhook stored with "FailSafe: Set Integration Credential" `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:233-236` (`then store the Incoming Webhook URL with`).
 Status: the Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).
-Failure: a non-delivery shows one warning per channel per session and logs every one `FailSafe/extension/src/extension/main.ts:294-301` (`if (notifyFailureWarned.has(channel)) return;`).
+Failure: a non-delivery shows one warning per channel per session and logs every one `FailSafe/extension/src/extension/main.ts:297-304` (`if (notifyFailureWarned.has(channel)) return;`).
 In Slack: a read-only card with a text link back to the Console; no buttons act `FailSafe/extension/src/integrations/slack/slack-notify.ts:5-8` (`no interactive action callbacks`).
 
 ## Governance policy and enforceability limits
@@ -117,4 +117,4 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Bl
 
 [B264] Drift notices cannot fire on main and would carry no detail (F10) `FailSafe/extension/src/governance/CheckpointReconciler.ts:112` (`governance.driftDetected`).
 [B262] The release-seal notice kind is never produced (F08) `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:14-19` (`'governance.driftDetected',`).
-The enable setting's description promises critical drift notices `FailSafe/extension/package.json:410` (`VETO, L3 queued/decided, critical drift`).
+The enable setting's description promises critical drift notices `FailSafe/extension/package.json:420` (`VETO, L3 queued/decided, critical drift`).

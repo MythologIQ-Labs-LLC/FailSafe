@@ -29,8 +29,8 @@ The payload is a message with one Adaptive Card 1.5 attachment `FailSafe/extensi
 
 ## Privileges and scopes
 
-Credential: one Teams Workflows webhook URL in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:414-416` (`Plain-text settings are no longer read`).
-The webhook URL grants posting to its target channel `FailSafe/extension/package.json:416` (`it grants posting to the target channel`).
+Credential: one Teams Workflows webhook URL in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:424-426` (`Plain-text settings are no longer read`).
+The webhook URL grants posting to its target channel `FailSafe/extension/package.json:426` (`it grants posting to the target channel`).
 A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:186-190` (`if (!enabled) return { enabled: false };`).
 The URL is redacted from failure diagnostics `FailSafe/extension/src/integrations/notify-event.ts:39-41` (`return text.split(webhookUrl).join('[webhook]');`).
 The workflow belongs to a person, not a channel, and the code does not check for a co-owner (unverified beyond reading the owned files).
@@ -40,7 +40,7 @@ Remote approval from Teams is blocked in v1 and marked requires separate approva
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| notify | verified-shipped | `TeamsNotifier` `FailSafe/extension/src/integrations/teams/TeamsNotifier.ts:59` (`export class TeamsNotifier {`) | `FailSafe/extension/src/extension/main.ts:313-318` (`new TeamsNotifier(`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | Catalog capability `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:225` (`capabilities: ['notify'],`) |
+| notify | verified-shipped | `TeamsNotifier` `FailSafe/extension/src/integrations/teams/TeamsNotifier.ts:59` (`export class TeamsNotifier {`) | `FailSafe/extension/src/extension/main.ts:314-319` (`new TeamsNotifier(`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | Catalog capability `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:225` (`capabilities: ['notify'],`) |
 | veto-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/teams/teams-notify-map.ts:52-55` (`case 'sentinel.verdict': {`) | `FailSafe/extension/src/sentinel/VerdictRouter.ts:35` (`this.eventBus.emit('sentinel.verdict', verdict);`) | `FailSafe/extension/src/test/integrations/teams/teams.test.ts` (unit) | Only BLOCK of the emitted decisions matches; QUARANTINE does not `FailSafe/extension/src/shared/types/sentinel.ts:15-20` (`"QUARANTINE";`) |
 | l3-queued-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/teams/teams-notify-map.ts:63-69` (`case 'qorelogic.l3Queued':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:125` (`this.eventBus.emit('qorelogic.l3Queued', fullRequest);`) | `FailSafe/extension/src/test/integrations/teams/teams.test.ts` (unit) | The queued request carries `filePath` `FailSafe/extension/src/shared/types/l3-approval.ts:21` (`filePath: string;`); on main (unreleased) it is shown as a path label (see Transformations) |
 | l3-decided-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/teams/teams-notify-map.ts:70-75` (`case 'qorelogic.l3Decided':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`this.eventBus.emit('qorelogic.l3Decided', { request, decision });`) | `FailSafe/extension/src/test/integrations/teams/teams.test.ts` (unit) | The decision reaches the title. In v6.0.8 the path detail is missing because the path is under `request` (F09) `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`{ request, decision }`); fixed on main, unreleased ([B263], see Transformations) |
@@ -86,7 +86,7 @@ Proposed (not built): a notice-to-receipt edge recorded by the event that caused
 
 Settings: `failsafe.integrations.teams.enabled` and the webhook stored with "FailSafe: Set Integration Credential" `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:221-224` (`then store the Incoming Webhook URL with`).
 Status: the Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).
-Failure: a non-delivery shows one warning per channel per session and logs every one `FailSafe/extension/src/extension/main.ts:294-301` (`if (notifyFailureWarned.has(channel)) return;`).
+Failure: a non-delivery shows one warning per channel per session and logs every one `FailSafe/extension/src/extension/main.ts:297-304` (`if (notifyFailureWarned.has(channel)) return;`).
 In Teams: a read-only card; Workflows webhooks render no action buttons `FailSafe/extension/src/integrations/teams/teams-notify.ts:78` (`Workflows webhooks do not render action buttons`).
 
 ## Governance policy and enforceability limits

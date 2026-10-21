@@ -41,7 +41,7 @@ A process sandbox would need new privileges and is marked requires separate appr
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
 | isolated-run | verified-shipped | `runAiderGoverned` `FailSafe/extension/src/integrations/agent-cli/aider-wrapper.ts:47` (`export async function runAiderGoverned(`) | `FailSafe/extension/src/extension/agent-cli-command.ts:167` (`registerCommand('failsafe.aider.run'`) | `FailSafe/extension/src/test/integrations/agent-cli/agent-cli.test.ts` (unit) | Auto-commit is always off `FailSafe/extension/src/test/integrations/agent-cli/agent-cli.test.ts:104` (`argv always has --no-auto-commits`) |
-| quarantine-review | verified-shipped | `handleOutcome` `FailSafe/extension/src/extension/agent-cli-command.ts:109` (`export async function handleOutcome(`) | `FailSafe/extension/src/extension/main.ts:275` (`registerAgentCliCommands(context, {`) | `FailSafe/extension/src/test/extension/agent-cli-command.test.cjs` (unit) | Shared with continue |
+| quarantine-review | verified-shipped | `handleOutcome` `FailSafe/extension/src/extension/agent-cli-command.ts:109` (`export async function handleOutcome(`) | `FailSafe/extension/src/extension/main.ts:276` (`registerAgentCliCommands(context, {`) | `FailSafe/extension/src/test/extension/agent-cli-command.test.cjs` (unit) | Shared with continue |
 | apply-reviewed-change-set | verified-shipped | `applyQuarantined` `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:74` (`export async function applyQuarantined(`) | `FailSafe/extension/src/extension/agent-cli-command.ts:94` (`await (deps.apply ?? applyQuarantined)(cs)`) | `FailSafe/extension/src/test/integrations/agent-cli/agent-run-promotion.test.ts` (unit) | Shared with continue |
 | l3-approval-for-high-risk-runs | proposed | none | none | none | The legacy review asked for it; the Apply modal shows the risk grade only `FailSafe/extension/src/extension/agent-cli-command.ts:74` (`risk ${risk ?? 'L1'}) are held in quarantine`) |
 | version-pin | proposed | none | none | none | Detection parses any version but enforces none `FailSafe/extension/src/integrations/agent-cli/agent-cli-core.ts:123-125` (`return { available: true, version: m ? m[0] : undefined };`) |
@@ -72,7 +72,7 @@ A receipt is built from argv, status, risk, exit code and diff summary, never th
 ## Persisted artifacts
 
 A QUARANTINE_START and a QUARANTINE_END entry in the FailSafe ledger, carrying the receipt, risk grade and patch hash `FailSafe/extension/src/extension/agent-cli-command.ts:84-86` (`artifactHash: cs.patchSha256`).
-The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:162` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
+The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:168` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
 A write-only audit copy under the extension's global storage `agent-runs` folder, newest 20 kept `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:95-99` (`fs.writeFileSync(path.join(dir, 'change-set.patch'), cs.patch);`).
 Health evidence of the last run in VS Code workspace state `FailSafe/extension/src/integrations/catalog/integration-health.ts:51` (`export const HEALTH_STATE_KEY = 'failsafe.integrationHealth.v1';`).
 On Apply, the working tree receives exactly the reviewed bytes; nothing is committed `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:80` (`git.tryRun(cs.root, ['apply', '-'], { input: cs.patch })`).
@@ -85,7 +85,7 @@ Proposed (not built): run-to-intent and run-to-receipt edges in the relationship
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Run Aider (governed)" `FailSafe/extension/package.json:196-197` (`"title": "FailSafe: Run Aider (governed)"`).
+Command palette: "FailSafe: Run Aider (governed)" `FailSafe/extension/package.json:200-201` (`"title": "FailSafe: Run Aider (governed)"`).
 Progress: a notification while the run is in progress `FailSafe/extension/src/extension/agent-cli-command.ts:172` (`Running Aider in an isolated worktree`).
 Decision: a modal with Discard, Review diff and Apply, stating the isolation boundary `FailSafe/extension/src/extension/agent-cli-command.ts:74-75` (`detail: BOUNDARY_NOTE`).
 Review: a read-only diff document served from memory `FailSafe/extension/src/extension/agent-cli-command.ts:66-69` (`setTextDocumentLanguage(doc, 'diff')`).
