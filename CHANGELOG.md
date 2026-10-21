@@ -9,8 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Workspace › Architecture now shows each registry row's links: related and superseded rows with their status, contract and verification files with whether they exist (with Open for those that do), and the architecture proposals that name the row with their approval outcome. The L3 decision dialogs, the L3 Approval Queue panel and the Organize or Initialize commit prompt now list the canonical and proposed architecture documents that name the files involved; this is a warning only and never blocks the decision or the commit.
+
 - Workspace › Delivery now has a Review step, and every step reads recorded, passing, failing, stale, missing or unavailable, with a legend. Recorded means the evidence is present, not that it passed, so a delivery is no longer shown as complete just because ledger evidence exists: the view says complete is not reachable until FailSafe can record a review of the implementation. An intent marked PASS is shown as approved for implementation, not as a review, and a vetoed intent makes the delivery failing (#532).
 - After a governed commit from Organize or Initialize, FailSafe offers to link that commit to the active intent. It asks in VS Code and shows the commit, its tree and branch, and how many files it contains, including any that were already staged. The offer is made only for the commit FailSafe just made, and not when a commit hook or a configured trailer changed it (#532).
+- Workspace › Taxonomy now compares each vertical's listed functions with the Console's actual sub-views and shows what is missing, extra or out of order. It reports the difference and never changes your file; edit the file to match (#548).
+- For contributors: the repository's Development Tracker manifest lists each Console tab's actual sub-views, and a test fails when the Console navigation and the manifest disagree (#548).
+- The Architecture view under Workspace in the Console now shows where design authority is contradicted or missing: two canonical documents for one area, a canonical document that is missing, a supersession that points nowhere, and area names with hidden or non-ASCII look-alike characters (look-alikes within plain ASCII, such as l, I and 1, are not detected), each with its line in the index and the file hashes. Proposing a document now asks for its area and status, refuses a second canonical document for an area (including one already waiting for an L3 decision), and offers to use the existing document, register yours as descriptive, or propose superseding it; a supersession needs your confirmation in VS Code. FailSafe still never edits the index (#531).
 
 ### Deprecated
 
@@ -26,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hub checkpoints now record this workspace's commit. They used to read the folder the extension process started in, so they usually recorded "unknown" or another repository's commit (#532).
 - Rolling back to a checkpoint from the Console shows the work tree, the branch, the current HEAD, the checkpoint commit with its subject and date, and how many commits leave the branch. It is refused when the tree has uncommitted changes, when git cannot report status, when the checkpoint commit is not an ancestor of HEAD, or when the checkpoint record does not match its recorded hashes. It now uses `git reset --keep`, which stops instead of overwriting a file changed after the check. If the branch or HEAD changed in the moment before the reset, or the check after it cannot run, the result says so, names the previous HEAD to recover from the reflog when it is known, and the rollback is recorded as failed. In a repository without a reflog only HEAD and the branch are checked, and the result says so (#532).
 - The delivery assessment no longer counts a checkpoint whose recorded HEAD equals a linked commit as governance evidence: it showed which commit was checked out at the time, not that anything evaluated it (#532).
+- Saving in Workspace › Taxonomy no longer deletes the parts of a vertical or agent mapping the editor does not show (summary, functionality, backend notes, agent evidence), and a Save that fails no longer mixes rows up when you try again (#548).
+- If `docs/roadmap/tracker-config.yaml` exists but cannot be read or parsed, Workspace › Taxonomy now shows an error and offers no Save, instead of showing an empty or substitute taxonomy that a Save would write over your file (#548).
+- Workspace › Taxonomy no longer saves over a taxonomy file that changed on disk after the view loaded it (edited, created or deleted elsewhere). The Save is refused, nothing is written, and the view asks you to reload the Console (#548).
+- The Component Help page now describes the Console's seven tabs and their sub-views (#548).
 
 ## [6.0.9] - 2026-10-18
 

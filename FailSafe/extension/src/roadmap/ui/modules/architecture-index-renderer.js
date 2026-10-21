@@ -1,13 +1,22 @@
 /**
- * ArchitectureIndexRenderer — Workspace-tab "Architecture" sub-view (#531 LD6).
+ * ArchitectureIndexRenderer — Workspace-tab "Architecture" sub-view (#531 LD6; slice 2: plan-531b LD9).
  *
  * Shows the managed architecture index from GET /api/v1/architecture/index: its state and path,
- * registry rows grouped by status, validation problems with their codes, and documents that match
- * the architecture globs but have no row, each with string-based suggestions and two actions:
- * "Use existing: open <suggestion>" (opens the document, writes nothing) and "Propose registration"
- * (a PROPOSAL ledger entry plus one L3 item; approval records the decision and edits nothing).
- * "Bootstrap index" appears only when no index exists. Design source: the Integrations Catalog
- * renderer (integration-catalog-renderer.js), same card, pill and button vocabulary.
+ * authority findings (two canonical documents for one domain, a canonical document missing, a
+ * dangling supersession, hidden or non-ASCII characters in a domain), each with its index line,
+ * document hash and provenance (index hash, HEAD), registry rows grouped by status, validation
+ * problems with their codes, and documents that match the architecture globs but have no row.
+ *
+ * Each unregistered document has a domain and status form and "Propose registration" (a PROPOSAL
+ * ledger entry plus one L3 item; approval records the decision and edits nothing). A refusal keeps
+ * its alternatives on the card: "Use existing: open <path>", "Register as descriptive" and
+ * "Propose superseding <ids>" (a supersession needs a VS Code confirmation). A conflict offers
+ * "Propose: <a> superseded by <b>" for each pair. "Bootstrap index" appears only when no index
+ * exists. Each registry row shows its links (B312, B253): related and supersedes ids with the
+ * target's status, contract and verification paths with their state ("Open" only for a present
+ * path), governance values (a bare #NNN is checked against the Qor ledger's headings only), and the
+ * architecture proposals that name the row with their L3 outcome. Design source: the Integrations Catalog renderer (integration-catalog-renderer.js), same
+ * card, pill and button vocabulary.
  *
  * Every string that comes from the repository (paths, ids, domains, problem details) is set with
  * textContent, never as HTML. The view refreshes when it is shown, on its Refresh button, and on
@@ -19,7 +28,8 @@ const STYLE = `
 .cc-arch { display:flex; flex-direction:column; gap:12px; }
 .cc-arch h3 { margin:0 0 4px; font-size:1.05rem; }
 .cc-arch-sub { color:#9aa5b4; margin:0; font-size:.9rem; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-.cc-arch-scope { color:#7f8aa0; font-size:.82rem; margin:0; border-left:2px solid #273140; padding-left:8px; }
+.cc-arch-scope, .cc-arch-authority-scope { color:#7f8aa0; font-size:.82rem; margin:0; border-left:2px solid #273140; padding-left:8px; }
+.cc-arch-provenance { padding-left:10px; }
 .cc-arch-group { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#7f8aa0; margin:6px 0 2px; }
 .cc-arch-card { background:linear-gradient(180deg,#141a22,#10161e); border:1px solid #202938; border-radius:10px; padding:14px; }
 .cc-arch-card.cc-arch-warn { border-color:#6b4f2a; }
@@ -37,17 +47,31 @@ const STYLE = `
 .cc-arch-row:first-of-type { border-top:none; }
 .cc-arch-row .cc-arch-id { color:#f1efe7; min-width:10ch; }
 .cc-arch-row .cc-arch-path { color:#9aa5b4; word-break:break-all; }
+.cc-arch-hash { font-family:var(--font-mono, monospace); font-size:.78rem; color:#7f8aa0; }
 .cc-arch-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.cc-arch-form { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0; }
+.cc-arch-form input, .cc-arch-form select { background:#10161e; color:#f1efe7; border:1px solid #273140; border-radius:8px; padding:5px 8px; font:inherit; font-size:.85rem; }
+.cc-arch-form input { min-width:18ch; }
+.cc-arch-alternatives { border-top:1px solid #1a2230; margin-top:8px; padding-top:8px; }
 .cc-arch-btn { background:#141a22; color:#f1efe7; border:1px solid #2f5e44; border-radius:8px; padding:6px 14px; cursor:pointer; font:inherit; font-size:.85rem; }
 .cc-arch-btn:hover { border-color:#68d391; }
 .cc-arch-btn[disabled] { opacity:.5; cursor:not-allowed; }
 .cc-arch-btn-link { border-color:#2b4a5c; }
 .cc-arch-result { font-size:.82rem; color:#5fb0d8; margin:6px 0 0; }
+.cc-arch-links { display:flex; flex-direction:column; gap:2px; padding:0 0 6px 12px; font-size:.8rem; color:#9aa5b4; word-break:break-all; }
+.cc-arch-link { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.cc-arch-link .cc-arch-btn { padding:1px 8px; font-size:.75rem; }
 .cc-arch-result.cc-arch-result-bad { color:#fc8181; }
 `;
 
 const SCOPE_LINE = 'FailSafe records the writes it makes here after your confirmation and never overwrites a file. ' +
   'Documents written by editors, agents or other tools are found when this view refreshes; FailSafe cannot block them.';
+
+export const AUTHORITY_SCOPE_LINE = "FailSafe compares the registry's declared domains, statuses, links and supersedes lists as written. " +
+  'It does not judge whether two documents, or two domain names, mean the same thing. ' +
+  "A canonical document's domain and every new domain must use plain ASCII letters, digits, spaces and . _ / & ( ) -; " +
+  'a non-ASCII domain already in the index can be reused only for proposed, descriptive or historical documents, typed exactly, ' +
+  'and is shown with its code points. Edits made outside FailSafe are found when this view refreshes.';
 
 const STATE_PILL = {
   present: ['Valid', 'cc-arch-pill-ok'],
@@ -70,8 +94,34 @@ const STATE_TEXT = {
   'no-workspace': 'Open a folder to use the architecture index.',
 };
 
+const FINDING_LABEL = {
+  'conflicting-canonical': ['Two canonical documents', 'cc-arch-pill-bad'],
+  'canonical-missing': ['Canonical document missing', 'cc-arch-pill-bad'],
+  'dangling-supersession': ['Dangling supersession', 'cc-arch-pill-warn'],
+  'domain-hidden-characters': ['Hidden characters in a domain', 'cc-arch-pill-warn'],
+  'domain-non-ascii': ['Non-ASCII domain', 'cc-arch-pill-warn'],
+};
+
+const DOC_STATE_TEXT = {
+  present: 'present',
+  'not-on-disk': 'not on disk',
+  'not-listed': 'exists, but git does not list it (ignored)',
+  'outside-workspace': 'resolves outside the workspace',
+  'too-large': 'larger than 2 MiB',
+  'no-safe-link': 'no safe relative link',
+};
+
+const DANGLING_TEXT = {
+  'unknown-id': 'supersedes an id that is not registered',
+  'no-successor': 'is superseded, but no row names it in supersedes',
+  cycle: 'supersedes forms a cycle',
+};
+
 const STATUS_ORDER = ['canonical', 'proposed', 'descriptive', 'superseded', 'historical'];
+const REGISTER_STATUSES = ['canonical', 'proposed', 'descriptive', 'historical'];
 const PROPOSABLE = new Set(['present', 'present-with-problems']);
+const DATALIST_ID = 'cc-arch-domains';
+const INTAKE_CHAR = /^[A-Za-z0-9 ._/&()-]$/;
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -98,6 +148,50 @@ async function postJson(url, body) {
   return { status: res.status, data };
 }
 
+/** A domain as a reviewer sees it: plain characters as is, every other code point as [U+XXXX]. */
+function reviewDomain(s) {
+  return [...String(s ?? '')].map((ch) => (INTAKE_CHAR.test(ch) ? ch
+    : `[U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}]`)).join('');
+}
+
+const short = (hex) => (typeof hex === 'string' && hex ? hex.slice(0, 12) : 'none');
+
+const HIDDEN_CHAR = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+const SPACE_SEPARATOR = /\p{Zs}/u;
+
+/** Repository text as a reviewer sees it: hidden and format code points, and spaces other than U+0020, as [U+XXXX]. */
+function reviewText(s) {
+  return [...String(s ?? '')].map((ch) => (HIDDEN_CHAR.test(ch) || (ch !== ' ' && SPACE_SEPARATOR.test(ch))
+    ? `[U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}]` : ch)).join('');
+}
+
+/** The link fields whose present paths the open route accepts. */
+const OPENABLE_FIELDS = new Set(['contract', 'verification']);
+const LINK_LABEL = { related: 'Related', supersedes: 'Supersedes', contract: 'Contract', verification: 'Verification', governanceRef: 'Governance ref' };
+const PATH_STATE_TEXT = {
+  'not-on-disk': 'not on disk', 'not-listed': 'not listed by git', 'outside-workspace': 'outside the workspace', unsafe: 'unsafe path',
+};
+const LEDGER_STATE_TEXT = {
+  'heading-found': 'heading found; chain not checked (#467)', 'heading-missing': 'heading not found',
+  'no-ledger': 'no docs/META_LEDGER.md to check', 'too-large': 'the ledger is over 8 MiB; not checked',
+};
+
+/** One line of a row's links block; `parts` are strings (set as text) or nodes. */
+function linkLine(field, state, parts) {
+  const line = el('div', 'cc-arch-link');
+  line.dataset.field = field;
+  if (state) line.dataset.state = state;
+  for (const p of parts) line.append(typeof p === 'string' ? document.createTextNode(p) : p);
+  return line;
+}
+
+/** "truncated" or "unavailable" decision links, as one line; null when they are shown per row. */
+function decisionsStateText(decisions) {
+  if (!decisions || decisions.state === 'ok') return null;
+  if (decisions.state === 'truncated') return `Decision links not shown: more than ${decisions.cap} architecture ledger entries.`;
+  return 'Decision links unavailable: the FailSafe ledger could not be read.';
+}
+
 function bootstrapMessage(status, data) {
   if (status === 200) {
     const ledger = data.ledger && typeof data.ledger === 'object'
@@ -112,12 +206,52 @@ function bootstrapMessage(status, data) {
   return [data.error || `Bootstrap failed (${status}).`, true];
 }
 
+const rowText = (r) => `${reviewDomain(r.id)} (line ${r.line}${r.domain !== undefined ? `, "${reviewDomain(r.domain)}"` : ''})`;
+
 function proposeMessage(status, data) {
   if (status === 202) {
     return [`Queued for L3 review (approval ${data.approvalId}, ledger entry #${data.ledgerEntryId}). Approving records the decision; ` +
       'edit the index yourself. An undecided proposal expires after the L3 SLA and can be proposed again.', false];
   }
   if (data.ledger === 'unavailable') return ['The FailSafe ledger is unavailable; nothing was queued.', true];
+  if (data.conflict === 'canonical-exists') {
+    const rows = (data.existing || []).map(rowText).join(', ');
+    return [`"${reviewDomain(data.domain)}" already has a canonical document: ${rows}. Use it, register this one as descriptive, ` +
+      'or propose superseding every canonical row. Nothing was recorded.', true];
+  }
+  if (data.conflict === 'pending-authority') {
+    const parts = [];
+    if ((data.pending || []).length) parts.push(`Proposal ${data.pending.join(', ')} for the same authority is waiting for an L3 decision.`);
+    for (const a of data.approvedNotInIndex || []) {
+      const still = Array.isArray(a.stillCanonical) ? a.stillCanonical : [];
+      const todo = [];
+      if (a.missingRow || !still.length) todo.push('add its row to the index by hand (any status)');
+      if (still.length) todo.push(`change ${still.map(reviewDomain).join(', ')} from canonical in the index by hand`);
+      parts.push(`Approval of ledger entry #${a.entryId} for ${a.path} is not in the index yet; ${todo.join(' and ')}.`);
+    }
+    return [`${parts.join(' ')} Nothing was recorded.`, true];
+  }
+  if (data.conflict === 'ambiguous-authority') {
+    const rows = (data.rows || []).map(rowText).join('; ');
+    if (data.reason === 'bad-row') {
+      return [`Registry rows FailSafe cannot read (the wrong number of cells, or no leading |) at ${(data.lines || []).map((l) => `line ${l}`).join(', ')}, so ` +
+        'canonical registrations and supersessions are refused until you fix those rows in the index. Nothing was recorded.', true];
+    }
+    if (data.reason === 'empty-domain') {
+      return [`Canonical rows with no domain: ${rows}. Give each a domain in the index, or change its status from canonical; until then ` +
+        'canonical registrations and supersessions are refused. Nothing was recorded.', true];
+    }
+    if (data.reason === 'hidden-character-domain') {
+      return [`Canonical rows with hidden characters in their domain: ${rows}. Rename each domain in the index without them, or change its status ` +
+        'from canonical; until then canonical registrations and supersessions are refused. Nothing was recorded.', true];
+    }
+    if (data.reason === 'non-ascii-domain') {
+      return [`Canonical rows with a non-ASCII domain: ${rows}. Rename each domain in the index to plain ASCII, or change its status ` +
+        'from canonical; until then canonical registrations and supersessions are refused. Nothing was recorded.', true];
+    }
+    if (data.reason === 'bad-status') return [`Rows with a status FailSafe does not know: ${rows}. Fix the status in the index first. Nothing was recorded.`, true];
+    return [`Rows that share an id: ${rows}. Give each row its own id in the index first. Nothing was recorded.`, true];
+  }
   return [data.error || `Proposal failed (${status}).`, true];
 }
 
@@ -126,6 +260,10 @@ export class ArchitectureIndexRenderer {
     this.container = document.getElementById(containerId);
     this.data = null;
     this.message = null;
+    /** path -> { domain, status } typed into a candidate's form; kept across repaints. */
+    this.drafts = new Map();
+    /** The last canonical-exists refusal: { path, domain, existing } (its alternatives stay on that card). */
+    this.conflict = null;
   }
 
   ensureStyle() {
@@ -188,12 +326,14 @@ export class ArchitectureIndexRenderer {
       this.message = null;
     }
     root.appendChild(this.stateCard(data));
+    if (data.authority) root.appendChild(this.authoritySection(data));
     if (Array.isArray(data.problems) && data.problems.length) root.appendChild(this.problemsCard(data.problems));
     if (Array.isArray(data.candidates) && data.candidates.length) {
+      root.appendChild(this.domainList(data));
       root.appendChild(el('div', 'cc-arch-group', `Unregistered documents (${data.candidates.length})`));
       for (const c of data.candidates) root.appendChild(this.candidateCard(c, data));
     }
-    if (Array.isArray(data.rows) && data.rows.length) this.appendRows(root, data.rows);
+    if (Array.isArray(data.rows) && data.rows.length) this.appendRows(root, data.rows, data.authority);
     target.replaceChildren(root);
   }
 
@@ -215,6 +355,70 @@ export class ArchitectureIndexRenderer {
     return card;
   }
 
+  /** #531 slice 2: authority findings with provenance (unregistered documents have their own cards below). */
+  authoritySection(data) {
+    const a = data.authority;
+    const findings = (a.findings || []).filter((f) => FINDING_LABEL[f.kind]);
+    const section = el('div', 'cc-arch-authority');
+    section.appendChild(el('div', 'cc-arch-group', `Authority (${findings.length})`));
+    section.appendChild(el('p', 'cc-arch-authority-scope', AUTHORITY_SCOPE_LINE));
+    const p = a.provenance || {};
+    const prov = el('p', 'cc-arch-line cc-arch-provenance',
+      `Index ${p.indexPath || data.indexPath} sha256 ${short(p.indexSha256)} · HEAD ${p.sourceSha ? short(p.sourceSha) : p.sourceShaReason || 'unavailable'}`);
+    prov.dataset.indexSha256 = p.indexSha256 || '';
+    prov.dataset.sourceSha = p.sourceSha || '';
+    section.appendChild(prov);
+    if (!findings.length) section.appendChild(el('p', 'cc-arch-line', 'No conflicting or missing authority was found.'));
+    for (const f of findings) section.appendChild(this.findingCard(f, data));
+    return section;
+  }
+
+  findingCard(f, data) {
+    const [label, cls] = FINDING_LABEL[f.kind];
+    const card = el('div', `cc-arch-card cc-arch-finding ${cls === 'cc-arch-pill-bad' ? 'cc-arch-bad' : 'cc-arch-warn'}`);
+    card.dataset.kind = f.kind;
+    const head = el('div', 'cc-arch-head');
+    head.appendChild(pill(label, cls));
+    if (f.domainKey !== undefined) head.appendChild(el('strong', null, reviewDomain(f.domainKey)));
+    card.appendChild(head);
+    let reason = f.detail || '';
+    if (f.kind === 'canonical-missing') reason = `The canonical document is ${DOC_STATE_TEXT[f.reason] || f.reason}.`;
+    if (f.kind === 'dangling-supersession') reason = `${(f.rows[0] || {}).id || 'A row'} ${DANGLING_TEXT[f.reason] || f.reason}${f.ref ? ` (${f.ref})` : ''}.`;
+    // Each code point once: add only those the detail does not already name.
+    const named = new Set(reason.match(/U\+[0-9A-F]{4,6}/g) || []);
+    const unnamed = Array.isArray(f.codePoints) ? f.codePoints.filter((cp) => !named.has(cp)) : [];
+    if (unnamed.length) reason = `${reason} Code points: ${unnamed.join(', ')}.`;
+    card.appendChild(el('p', null, reason));
+    for (const r of f.rows || []) {
+      const row = el('div', 'cc-arch-row cc-arch-finding-row');
+      row.dataset.line = String(r.line);
+      row.dataset.sha256 = r.docSha256 || '';
+      row.appendChild(el('span', 'cc-arch-id', reviewDomain(r.id)));
+      row.appendChild(el('span', 'cc-arch-path', r.docPath || '(no safe link)'));
+      row.appendChild(el('span', null, `line ${r.line}`));
+      row.appendChild(el('span', 'cc-arch-hash', `sha256 ${short(r.docSha256)}`));
+      card.appendChild(row);
+    }
+    const actions = el('div', 'cc-arch-actions');
+    const canPropose = data.ledger === 'available' && PROPOSABLE.has(data.state);
+    if (f.kind === 'conflicting-canonical') {
+      for (const r of f.rows) if (r.docPath) actions.appendChild(button(`Use existing: open ${r.docPath}`, 'cc-arch-btn-link cc-arch-open', () => this.open(r.docPath)));
+      if (canPropose) {
+        for (const a of f.rows) {
+          for (const b of f.rows) {
+            if (a === b || !a.docPath) continue;
+            actions.appendChild(button(`Propose: ${a.id} superseded by ${b.id}`, 'cc-arch-supersede-pair',
+              () => this.submit({ path: a.docPath, action: 'supersede', supersededBy: b.id })));
+          }
+        }
+      }
+    } else if (data.indexPath) {
+      actions.appendChild(button('Open index', 'cc-arch-btn-link cc-arch-open', () => this.open(data.indexPath)));
+    }
+    card.appendChild(actions);
+    return card;
+  }
+
   problemsCard(problems) {
     const card = el('div', 'cc-arch-card cc-arch-warn cc-arch-problems');
     card.appendChild(el('div', 'cc-arch-group', `Problems (${problems.length})`));
@@ -225,6 +429,21 @@ export class ArchitectureIndexRenderer {
       card.appendChild(line);
     }
     return card;
+  }
+
+  /** The registered domain cells, offered byte-for-byte in every candidate's domain input. */
+  domainList(data) {
+    const list = el('datalist');
+    list.id = DATALIST_ID;
+    const cells = data.authority && Array.isArray(data.authority.domains)
+      ? data.authority.domains.flatMap((d) => d.cells || [])
+      : (data.rows || []).map((r) => r.domain);
+    for (const c of [...new Set(cells)]) {
+      const o = document.createElement('option');
+      o.setAttribute('value', c);
+      list.appendChild(o);
+    }
+    return list;
   }
 
   candidateCard(candidate, data) {
@@ -242,19 +461,65 @@ export class ArchitectureIndexRenderer {
     for (const s of suggestions) {
       actions.appendChild(button(`Use existing: open ${s}`, 'cc-arch-btn-link cc-arch-open', () => this.open(s)));
     }
-    if (PROPOSABLE.has(data.state)) {
-      const propose = button('Propose registration', 'cc-arch-propose', () => this.propose(candidate.path, propose));
-      if (data.ledger !== 'available') {
-        propose.disabled = true;
-        propose.title = 'The FailSafe ledger is unavailable, so a proposal could not be recorded or decided.';
-      }
-      actions.appendChild(propose);
-    }
     card.appendChild(actions);
+    if (PROPOSABLE.has(data.state)) card.appendChild(this.registrationForm(candidate.path, data));
+    if (this.conflict && this.conflict.path === candidate.path) card.appendChild(this.alternatives(this.conflict, data));
     return card;
   }
 
-  appendRows(root, rows) {
+  registrationForm(path, data) {
+    const draft = this.drafts.get(path) || { domain: '', status: 'proposed' };
+    this.drafts.set(path, draft);
+    const form = el('div', 'cc-arch-form');
+    const input = el('input', 'cc-arch-domain');
+    input.type = 'text';
+    input.placeholder = 'Domain';
+    input.setAttribute('aria-label', `Domain for ${path}`);
+    input.setAttribute('list', DATALIST_ID);
+    input.value = draft.domain;
+    const select = el('select', 'cc-arch-status');
+    select.setAttribute('aria-label', `Status for ${path}`);
+    for (const s of REGISTER_STATUSES) {
+      const o = el('option', null, s);
+      o.value = s;
+      select.appendChild(o);
+    }
+    select.value = draft.status;
+    const propose = button('Propose registration', 'cc-arch-propose',
+      () => this.submit({ path, action: 'register', domain: draft.domain, status: draft.status }, propose));
+    const ledgerOk = data.ledger === 'available';
+    if (!ledgerOk) propose.title = 'The FailSafe ledger is unavailable, so a proposal could not be recorded or decided.';
+    const sync = () => { propose.disabled = !ledgerOk || draft.domain.length === 0; };
+    input.addEventListener('input', () => { draft.domain = input.value; sync(); });
+    select.addEventListener('change', () => { draft.status = select.value; });
+    sync();
+    form.append(input, select, propose);
+    return form;
+  }
+
+  /** After a canonical-exists refusal: use the existing document, register as descriptive, or supersede every canonical row. */
+  alternatives(conflict, data) {
+    const box = el('div', 'cc-arch-actions cc-arch-alternatives');
+    for (const r of conflict.existing) {
+      if (r.docPath) box.appendChild(button(`Use existing: open ${r.docPath}`, 'cc-arch-btn-link cc-arch-alt-open', () => this.open(r.docPath)));
+    }
+    if (data.ledger === 'available') {
+      box.appendChild(button('Register as descriptive', 'cc-arch-alt-descriptive',
+        () => this.submit({ path: conflict.path, action: 'register', domain: conflict.domain, status: 'descriptive' })));
+      const ids = conflict.existing.map((r) => r.id);
+      box.appendChild(button(`Propose superseding ${ids.join(', ')}`, 'cc-arch-alt-supersede',
+        () => this.submit({ path: conflict.path, action: 'register', domain: conflict.domain, status: 'canonical', supersedes: ids })));
+    }
+    return box;
+  }
+
+  appendRows(root, rows, authority) {
+    const links = new Map();
+    for (const l of (authority && Array.isArray(authority.links) ? authority.links : [])) if (!links.has(l.id)) links.set(l.id, l);
+    const decisions = authority ? authority.decisions : null;
+    const byRow = decisions && decisions.state === 'ok' && decisions.byRow ? decisions.byRow : {};
+    const stateText = decisionsStateText(decisions);
+    if (stateText) root.appendChild(el('p', 'cc-arch-line cc-arch-decisions-state', stateText));
     const groups = new Map();
     for (const r of rows) {
       const key = STATUS_ORDER.includes(r.status) ? r.status : 'other';
@@ -274,9 +539,58 @@ export class ArchitectureIndexRenderer {
         row.appendChild(el('span', 'cc-arch-path', r.docPath || '(no safe link)'));
         if (r.docPath) row.appendChild(button('Open', 'cc-arch-btn-link cc-arch-open', () => this.open(r.docPath)));
         card.appendChild(row);
+        const block = this.linksBlock(r.id, links.get(r.id), Object.prototype.hasOwnProperty.call(byRow, r.id) ? byRow[r.id] : []);
+        if (block) card.appendChild(block);
       }
       root.appendChild(card);
     }
+  }
+
+  /** B312 / B253: a row's links and decisions, as text; null when it has none. */
+  linksBlock(id, l, decided) {
+    const lines = [];
+    if (l) {
+      for (const field of ['related', 'supersedes']) {
+        for (const x of Array.isArray(l[field]) ? l[field] : []) {
+          const target = reviewDomain(x.id);
+          const domain = x.domain !== null && x.domain !== undefined ? `, "${reviewText(x.domain)}"` : '';
+          lines.push(linkLine(field, x.state, [x.state === 'registered'
+            ? `${LINK_LABEL[field]}: ${target} (${reviewText(x.status)}${domain})`
+            : `${LINK_LABEL[field]}: ${target} (not in the registry)`]));
+        }
+      }
+      for (const field of ['contract', 'verification', 'governanceRef']) {
+        const values = l[field];
+        if (values === 'too-long') { lines.push(linkLine(field, 'too-long', [`${LINK_LABEL[field]}: not checked (cell too long)`])); continue; }
+        for (const v of Array.isArray(values) ? values : []) lines.push(this.valueLine(field, v));
+      }
+    }
+    for (const d of Array.isArray(decided) ? decided : []) {
+      const by = d.decisionEntryId !== null && d.decisionEntryId !== undefined ? ` (#${d.decisionEntryId})` : '';
+      lines.push(linkLine('decisions', d.outcome, [`Proposal #${d.proposalEntryId} (${d.role}): ${d.outcome}${by}`]));
+    }
+    if (!lines.length) return null;
+    const block = el('div', 'cc-arch-links');
+    block.dataset.rowId = id;
+    block.append(...lines);
+    return block;
+  }
+
+  /**
+   * One contract, verification or governance value with its state. "Open" only for a present
+   * contract or verification path: the open route accepts no governance path.
+   */
+  valueLine(field, v) {
+    const label = LINK_LABEL[field];
+    if (v.kind === 'qor-ledger') return linkLine(field, v.state, [`Qor ledger #${v.entry}: ${LEDGER_STATE_TEXT[v.state] || v.state}`]);
+    if (v.kind === 'url') return linkLine(field, v.state, [`Link ${reviewText(v.label)}: ${reviewText(v.url)} (not checked)`]);
+    if (v.kind === 'pattern') return linkLine(field, v.state, [`${label}: ${reviewText(v.value)} pattern (not matched)`]);
+    if (v.state === 'present' && OPENABLE_FIELDS.has(field)) {
+      return linkLine(field, v.state, [`${label}: ${reviewText(v.path)}`, ' ',
+        button('Open', 'cc-arch-btn-link cc-arch-link-open', () => this.open(v.path))]);
+    }
+    if (v.state === 'present') return linkLine(field, v.state, [`${label}: ${reviewText(v.path)}`]);
+    return linkLine(field, v.state, [`${label}: ${reviewText(v.path)}`, ' ', pill(PATH_STATE_TEXT[v.state] || v.state, 'cc-arch-pill-warn')]);
   }
 
   async bootstrap() {
@@ -285,10 +599,15 @@ export class ArchitectureIndexRenderer {
     await this.refresh();
   }
 
-  async propose(path, btn) {
+  /** Post a proposal; a canonical-exists refusal keeps its alternatives on the candidate's card. */
+  async submit(body, btn) {
     if (btn) btn.disabled = true;
-    const { status, data } = await postJson('/api/actions/architecture-index/propose', { path, action: 'register' });
+    const { status, data } = await postJson('/api/actions/architecture-index/propose', body);
     this.message = proposeMessage(status, data);
+    this.conflict = status === 409 && data.conflict === 'canonical-exists'
+      ? { path: body.path, domain: body.domain, existing: Array.isArray(data.existing) ? data.existing : [] }
+      : null;
+    if (status === 202) this.drafts.delete(body.path);
     await this.refresh();
   }
 

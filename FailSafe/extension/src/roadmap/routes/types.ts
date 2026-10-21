@@ -87,4 +87,9 @@ export interface ApiRouteDeps {
   getRun: (runId: string) => any | undefined;
   loadRun: (runId: string) => any | null;
   getRunSteps: (runId: string) => any[];
+  /** B311: `failsafe.architecture.indexPath`, read at request time. */
+  getArchitectureIndexPath?: () => string | undefined;
+  /** B311: warn-only affected-architecture lines for the L3 dialogs (the registrar wires
+   *  describeAffectedArchitecture). Absent, throwing or rejecting: the dialogs are unchanged. */
+  describeArchitecture?: (paths: string[], options?: { maxLines?: number }) => Promise<{ state: string; lines: string[] }>;
 }

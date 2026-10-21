@@ -1,10 +1,11 @@
 /**
  * FX522 — B199 Phase 6: Governance tab Playwright structural coverage.
  *
- * The Governance top-level tab hosts 3 sub-views via TabGroup:
+ * The Governance top-level tab hosts 4 sub-views via TabGroup:
  *   - Audit (TransparencyRenderer) — audit log stream
  *   - Risks (RisksRenderer) — risk register
  *   - Compliance (GovernanceRenderer) — sentinel + policies + mode transitions
+ *   - Shadow Genome (ShadowGenomeRenderer) — #548 pins the count at 4
  *
  * FX508 (Phase 2 sibling) already covers the Compliance sub-pill rendering
  * `recentModeTransitions`. Phase 6 establishes structural coverage for the
@@ -31,7 +32,7 @@ async function gotoGovernance(page: import("@playwright/test").Page, url: string
   await expect(page.locator('#governance')).toBeVisible({ timeout: 10000 });
 }
 
-test("FX522 Governance tab — 3 sub-pills render (Audit / Risks / Compliance)", async ({ page }) => {
+test("FX522 Governance tab — 4 sub-pills render (Audit / Risks / Compliance / Shadow Genome)", async ({ page }) => {
   controller = await serveConsoleServerUI({
     initialHub: { version: 'test', bootstrapState: {} } as any,
   });
@@ -40,6 +41,8 @@ test("FX522 Governance tab — 3 sub-pills render (Audit / Risks / Compliance)",
   await expect(page.locator('#governance .cc-pill[data-key="audit"]')).toBeVisible();
   await expect(page.locator('#governance .cc-pill[data-key="risks"]')).toBeVisible();
   await expect(page.locator('#governance .cc-pill[data-key="compliance"]')).toBeVisible();
+  await expect(page.locator('#governance .cc-pill[data-key="shadow-genome"]')).toBeVisible(); // #548
+  await expect(page.locator('#governance .cc-pill')).toHaveCount(4);
 });
 
 test("FX522 Governance tab — Audit active by default + subview renders", async ({ page }) => {

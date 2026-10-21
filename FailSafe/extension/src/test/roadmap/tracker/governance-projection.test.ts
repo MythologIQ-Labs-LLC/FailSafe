@@ -246,12 +246,19 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
       tabKeys,
       'the 7 vertical tabs must match command-center.js renderers (order + keys)',
     );
-    // Sub-view labels for the TabGroup tabs must match the constant's `subviews`.
+    // #548: each tab's entry is sliced from the renderers block (not the whole file).
+    // A TabGroup entry must yield the constant's {key, label} sub-views in order; any
+    // other renderer must be a single sub-view whose key is the tab.
+    const entryStarts = [...renderersBlock.matchAll(/^\s{4}(\w+):\s/gm)].map((m) => ({ tab: m[1], at: m.index! }));
     for (const v of CONSOLE_VERTICALS) {
-      if (v.subviews.length <= 1) continue; // single-renderer tabs have no TabGroup labels
-      const tg = cc.slice(cc.indexOf(`${v.tab}:`), cc.indexOf(']', cc.indexOf(`${v.tab}:`)));
-      const labels = [...tg.matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1]);
-      assert.deepEqual(v.subviews, labels, `sub-views for '${v.tab}' must match command-center.js TabGroup labels`);
+      const i = entryStarts.findIndex((e) => e.tab === v.tab);
+      const entry = renderersBlock.slice(entryStarts[i].at, i + 1 < entryStarts.length ? entryStarts[i + 1].at : undefined);
+      if (/new TabGroup\(/.test(entry)) {
+        const pairs = [...entry.matchAll(/key:\s*'([^']+)',\s*label:\s*'([^']+)'/g)].map((m) => ({ key: m[1], label: m[2] }));
+        assert.deepEqual(v.subviews, pairs, `sub-views (key + label) for '${v.tab}' must match command-center.js TabGroup entries`);
+      } else {
+        assert.deepEqual(v.subviews.map((s) => s.key), [v.tab], `'${v.tab}' is a single renderer: one sub-view keyed by the tab`);
+      }
     }
   });
 });

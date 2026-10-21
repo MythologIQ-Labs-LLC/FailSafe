@@ -1,11 +1,14 @@
 // FX891 — operator tracker taxonomy config (Workspace › Taxonomy editor).
 //
-// The OPERATOR-authored source of truth for the tracker's programs ∥ verticals +
+// The OPERATOR-declared taxonomy for the tracker's programs ∥ verticals +
 // agent→program/vertical mappings (distinct from the generated programs.yaml
-// phases/timeline). The editor writes `docs/roadmap/tracker-config.yaml` and emits
-// a governed directive `.failsafe/governance/tracker-taxonomy.directive.md` the
-// coding agent must consult next cycle (force-discover = the CLAUDE.md directive +
-// GOVERNANCE_INDEX registration; a mechanical validator is a follow-up slice).
+// phases/timeline). Each vertical's sub-views follow the Console navigation
+// (CONSOLE_VERTICALS); #548 reports drift and never rewrites the file, which is
+// local (`docs/` is gitignored, so it is not in the repository). The editor writes
+// `docs/roadmap/tracker-config.yaml` and emits a governed directive
+// `.failsafe/governance/tracker-taxonomy.directive.md` the coding agent must consult
+// next cycle (force-discover = the CLAUDE.md directive + GOVERNANCE_INDEX
+// registration; a mechanical validator is a follow-up slice).
 //
 // PURE: yaml/markdown string transforms + reuse of the FX887 generator/validator.
 // No fs/network (the route does I/O).
@@ -27,12 +30,23 @@ const EMPTY: TrackerConfig = { programs: [], verticals: [], agents: [] };
 
 const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
-/** Tolerant parse of a tracker-config YAML → a normalized TrackerConfig. Bad input → empty. */
-export function parseTrackerConfig(yamlText: string): TrackerConfig {
-  let doc: unknown;
-  try { doc = yaml.load(yamlText); } catch { return { ...EMPTY }; }
-  if (!doc || typeof doc !== "object") return { ...EMPTY };
+/** #548 (B305): parse a tracker-config YAML, THROWING when it is not a taxonomy — a
+ *  YAML syntax error, a top level that is a scalar or a list, or a `programs`,
+ *  `verticals` or `agents` value that is neither a list nor empty. An empty file is an
+ *  empty taxonomy. The route answers a throw with an error, never an empty config,
+ *  so a Save can never write an empty taxonomy over an unparseable operator file. */
+export function parseTrackerConfigStrict(yamlText: string): TrackerConfig {
+  const doc: unknown = yaml.load(yamlText);
+  if (doc === undefined || doc === null) return { ...EMPTY };
+  if (Object.prototype.toString.call(doc) !== "[object Object]") {
+    throw new Error("the top level is not a mapping of programs, verticals and agents");
+  }
   const o = doc as Record<string, unknown>;
+  for (const k of ["programs", "verticals", "agents"]) {
+    if (o[k] !== undefined && o[k] !== null && !Array.isArray(o[k])) {
+      throw new Error(`\`${k}\` is neither a list nor empty`);
+    }
+  }
   return {
     programs: arr<TrackerProgram>(o.programs),
     verticals: arr<TrackerVertical>(o.verticals),
@@ -40,8 +54,14 @@ export function parseTrackerConfig(yamlText: string): TrackerConfig {
   };
 }
 
+/** Tolerant parse of a tracker-config YAML → a normalized TrackerConfig. Bad input → empty. */
+export function parseTrackerConfig(yamlText: string): TrackerConfig {
+  try { return parseTrackerConfigStrict(yamlText); } catch { return { ...EMPTY }; }
+}
+
 const CONFIG_BANNER =
-  "# FailSafe Tracker Taxonomy (FX891) — OPERATOR source of truth.\n" +
+  "# FailSafe Tracker Taxonomy (FX891) — OPERATOR-declared taxonomy; each vertical's\n" +
+  "# sub-views follow the Console navigation (Workspace › Taxonomy reports drift).\n" +
   "# Programs ∥ Verticals + agent→program/vertical mappings, authored via\n" +
   "# Workspace › Taxonomy. The coding agent MUST consult this each cycle that\n" +
   "# touches tracker/feature scope (see CLAUDE.md + the emitted directive at\n" +
@@ -75,7 +95,7 @@ export function lintConfig(cfg: TrackerConfig): TrackerLintFinding[] {
 }
 
 /** The governed directive markdown (PUBLISH_BLOCK SHAPE — advisory, no validator).
- *  States the declared taxonomy + the MUST-CONSULT clause for the next cycle. */
+ *  Records the intended taxonomy, names the authorities, and carries the drift-reporting MUST-CONSULT clause. */
 export function buildTaxonomyDirective(cfg: TrackerConfig, opts: { at: string }): string {
   const list = (items: Array<{ key: string; name?: string }>, kind: string): string =>
     items.length
@@ -89,18 +109,17 @@ export function buildTaxonomyDirective(cfg: TrackerConfig, opts: { at: string })
 **Active**: yes
 **Set**: ${opts.at}
 **Set by**: operator (Workspace › Taxonomy editor)
-**Source of truth**: \`docs/roadmap/tracker-config.yaml\` (tracked)
-**Enforcement**: advisory — the coding agent is bound via the CLAUDE.md directive
-(authoritative, loaded every session) + this registered record. No mechanical CI
-gate yet (the active drift-CHECK is a follow-up slice).
+**Records**: intended tracker taxonomy and mappings, in \`docs/roadmap/tracker-config.yaml\` (local file; \`docs/\` is gitignored, so it is not in the repository)
+**Authority**: the Console's implemented navigation (\`CONSOLE_VERTICALS\`) defines the actual
+tabs and sub-views; \`docs/roadmap/programs.yaml\` governs programs and phases. Workspace ›
+Taxonomy reports drift, and CI checks the tracked programs.yaml. This file is not checked in CI.
 
 ## MUST-CONSULT
 
 Any cycle that plans tracker or feature-scope work MUST consult
-\`docs/roadmap/tracker-config.yaml\` and align programs/verticals/agents to the
-operator-declared taxonomy below. A divergence between this declared taxonomy and
-the actual \`docs/roadmap/programs.yaml\` / \`docs/FEATURE_INDEX.md\` surfaces is a
-drift bug to surface, not silently reconcile.
+\`docs/roadmap/tracker-config.yaml\` and compare its intended programs, verticals and agents with the
+Console navigation and \`docs/roadmap/programs.yaml\`. Report disagreements as drift; do not silently
+reconcile them.
 
 ## Declared programs
 ${list(cfg.programs, "programs")}

@@ -31,9 +31,110 @@ const STATUSES = ['canonical', 'proposed', 'descriptive', 'superseded', 'histori
 const AUTHORITY = new Set(['canonical', 'proposed']);
 const PATH_FIELDS = ['governance_ref', 'contract', 'verification'];
 const STOP_TOKENS = new Set(['docs', 'md', 'the']);
+/** A markdown table delimiter row: | --- | :--: | ... (leading and trailing pipes required). */
+const DELIMITER = /^\|(\s*:?-{3,}:?\s*\|)+$/;
 const LINK_RE = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 /** The FailSafe-only policy checks a profile turns on or off. */
 const POLICY_CHECKS = ['governanceRegistration', 'competingIndex', 'offRamp', 'legacyPrefixes', 'dualRegistration'];
+
+// ---------------------------------------------------------------- domains (#531 slice 2)
+
+/** The key two domains are compared by: trimmed, lower-cased, as a string. Unchanged from the CLI. */
+const domainKey = (domain) => String(domain).trim().toLowerCase();
+
+/** The only characters a canonical domain, a supersession's domain or any new domain may use. */
+const INTAKE_CHARSET = /^[A-Za-z0-9 ._/&()-]+$/;
+const INTAKE_CHAR = /^[A-Za-z0-9 ._/&()-]$/;
+const HIDDEN_CHAR = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+const SPACE_SEPARATOR = /\p{Zs}/u;
+const DOMAIN_LIMIT = 120;
+
+const codePointLabel = (ch) => `U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`;
+const unique = (list) => [...new Set(list)];
+
+/** Code points outside the intake charset, as `U+XXXX` (by code point, so U+1F600 is one label). */
+function nonAsciiCodePoints(s) {
+  return unique([...String(s)].filter((ch) => !INTAKE_CHAR.test(ch)).map(codePointLabel));
+}
+
+/**
+ * Null, or why a domain holds characters a reader cannot see or tell apart: control, format,
+ * line or paragraph separators, any space separator other than U+0020, a run of spaces, a leading
+ * or trailing space, or a form that is not NFC.
+ */
+function hiddenCharacterProblem(s) {
+  const text = String(s);
+  const reasons = [];
+  const hidden = unique([...text].filter((ch) => HIDDEN_CHAR.test(ch) || (SPACE_SEPARATOR.test(ch) && ch !== ' ')).map(codePointLabel));
+  if (hidden.length) reasons.push(`invisible or format characters ${hidden.join(', ')}`);
+  if (/ {2,}/.test(text)) reasons.push('two or more spaces in a row');
+  if (/^ | $/.test(text)) reasons.push('a leading or trailing space');
+  if (text !== text.normalize('NFC')) reasons.push('a form that is not Unicode NFC');
+  return reasons.length ? reasons.join('; ') : null;
+}
+
+/**
+ * Null, or why a requested domain is refused. `authority` (a canonical registration or any
+ * supersession) needs the intake charset with no exception; otherwise a domain may also reuse a
+ * registered domain cell byte-for-byte. Hidden characters are refused in every case.
+ */
+function domainIntakeProblem(domain, registeredDomains, { authority = false } = {}) {
+  if (typeof domain !== 'string' || domain.length === 0) return 'the domain is empty';
+  if (domain.length > DOMAIN_LIMIT) return `the domain is longer than ${DOMAIN_LIMIT} characters`;
+  const hidden = hiddenCharacterProblem(domain);
+  if (hidden) return `the domain has ${hidden}`;
+  if (INTAKE_CHARSET.test(domain)) return null;
+  const found = nonAsciiCodePoints(domain).join(', ');
+  const rule = 'must use only A-Z, a-z, 0-9, space and . _ / & ( ) -';
+  if (authority) return `a canonical or superseding domain ${rule}, even when it is already in the index; found ${found}`;
+  if ((registeredDomains || []).includes(domain)) return null;
+  return `a new domain ${rule}; found ${found}`;
+}
+
+/** The domain as a reviewer sees it: intake-charset characters as is, every other code point as [U+XXXX]. */
+function renderDomainForReview(s) {
+  return [...String(s)].map((ch) => (INTAKE_CHAR.test(ch) ? ch : `[${codePointLabel(ch)}]`)).join('');
+}
+
+// ---------------------------------------------------------------- review text (B311/B312)
+
+const REVIEW_TOKEN = /^\[U\+[0-9A-F]{4,6}\]/;
+
+/**
+ * Cap text at `cap` code points, ending in `...` when cut. A `[U+XXXX]` token or a surrogate pair
+ * is never split: the cut falls before it.
+ */
+function capReview(s, cap) {
+  const cps = Array.from(String(s ?? ''));
+  if (cps.length <= cap) return cps.join('');
+  const room = Math.max(0, cap - 3);
+  let out = '';
+  let n = 0;
+  for (let i = 0; i < cps.length;) {
+    let unit = cps[i];
+    if (unit === '[') {
+      const m = REVIEW_TOKEN.exec(cps.slice(i, i + 10).join(''));
+      if (m) unit = m[0];
+    }
+    const len = unit === cps[i] ? 1 : unit.length;
+    if (n + len > room) break;
+    out += unit;
+    n += len;
+    i += len;
+  }
+  return `${out}...`;
+}
+
+/**
+ * Repository text as a reviewer sees it: control, format, line and paragraph separator code points,
+ * and every space separator other than U+0020, as [U+XXXX]; everything else unchanged (documentation
+ * text is not ASCII-restricted). With `cap`, the rendered text is capped by capReview.
+ */
+function reviewText(s, cap) {
+  const out = [...String(s ?? '')]
+    .map((ch) => (HIDDEN_CHAR.test(ch) || (ch !== ' ' && SPACE_SEPARATOR.test(ch)) ? `[${codePointLabel(ch)}]` : ch)).join('');
+  return cap === undefined ? out : capReview(out, cap);
+}
 
 // ---------------------------------------------------------------- globs
 
@@ -139,19 +240,43 @@ function parseRegistry(indexText, profile) {
   const problems = [];
   const rows = [];
   const section = sectionLines(indexText, 'Registry');
-  const table = section ? section.lines.filter((l) => l.trim().startsWith('|')) : [];
+  // Each line keeps its 1-based line number in the index text (#531 slice 2 provenance). Lines inside
+  // fenced blocks are examples, not registry rows (review531b fold 7).
+  let fenced = false;
+  const lines = section ? section.lines.map((text, k) => {
+    const fence = /^\s*```/.test(text);
+    const entry = { text, line: section.start + 2 + k, fenced: fenced || fence };
+    if (fence) fenced = !fenced;
+    return entry;
+  }).filter((x) => !x.fenced) : [];
+  const table = lines.filter((x) => x.text.trim().startsWith('|'));
   if (!section || table.length < 3) {
     problems.push({ code: 'missing-section', detail: `${profile.indexPath} has no ## Registry table with rows` });
     return { rows, problems };
   }
-  if (splitRow(table[0]).join('|') !== COLUMNS.join('|')) {
+  if (splitRow(table[0].text).join('|') !== COLUMNS.join('|')) {
     problems.push({ code: 'bad-row', detail: `registry header must be: ${COLUMNS.join(' | ')}` });
   }
-  table.slice(2).forEach((line, i) => {
+  // review531b R1: the delimiter must be the line right after the header, or the table cannot be read
+  // (a row would otherwise be skipped silently). The detail starts "registry header": the index is invalid.
+  if (!DELIMITER.test(table[1].text.trim()) || table[1].line !== table[0].line + 1) {
+    problems.push({ code: 'bad-row', detail: 'registry header must be followed directly by a | --- | delimiter row' });
+  }
+  // review531b R1: a line of the table block that holds a | but does not start with one is a row FailSafe
+  // cannot read (it could hold a canonical document); it is reported with its line.
+  const headerAt = lines.indexOf(table[0]);
+  for (let k = headerAt + 1; k < lines.length && lines[k].text.trim() !== ''; k += 1) {
+    const { text, line } = lines[k];
+    if (!text.trim().startsWith('|') && text.includes('|')) {
+      problems.push({ code: 'bad-row', detail: `registry line ${line} has a | but does not start with one`, line });
+    }
+  }
+  table.slice(1).filter((x) => !DELIMITER.test(x.text.trim())).forEach(({ text: line, line: lineNo }, i) => {
     const cells = splitRow(line);
     const label = `registry row ${i + 1}`;
     if (cells.length !== COLUMNS.length) {
-      problems.push({ code: 'bad-row', detail: `${label} has ${cells.length} cells, expected ${COLUMNS.length}` });
+      // #531 slice 2 (review B1): the dropped row's line, so authority checks can refuse while it is unreadable.
+      problems.push({ code: 'bad-row', detail: `${label} has ${cells.length} cells, expected ${COLUMNS.length}`, line: lineNo, cells: cells.length });
       return;
     }
     const row = Object.fromEntries(COLUMNS.map((c, k) => [c, cells[k]]));
@@ -167,6 +292,7 @@ function parseRegistry(indexText, profile) {
       problems.push({ code: 'bad-row', detail: `${row.id}: doc must be a relative markdown link to a repository file` });
     }
     row.docPath = doc && doc.kind === 'path' ? doc.path : null;
+    row.line = lineNo;
     rows.push(row);
   });
   return { rows, problems };
@@ -194,23 +320,28 @@ const suggestionText = (list, profile) =>
 
 function checkUnregistered(ctx) {
   const registered = new Set(ctx.rows.map((r) => r.docPath).filter(Boolean));
-  return ctx.normativeMatches.filter((p) => !registered.has(p)).map((p) => ({
-    code: 'unregistered-normative',
-    detail: `${p} (matches \`${ctx.globs.find((g) => matchesGlob(g, p))}\`) has no registry row; ` +
-      suggestionText(suggestFor(p, ctx.rows), ctx.profile),
-  }));
+  return ctx.normativeMatches.filter((p) => !registered.has(p)).map((p) => {
+    const glob = ctx.globs.find((g) => matchesGlob(g, p));
+    return {
+      code: 'unregistered-normative',
+      detail: `${p} (matches \`${glob}\`) has no registry row; ` + suggestionText(suggestFor(p, ctx.rows), ctx.profile),
+      path: p, glob,
+    };
+  });
 }
 
 function checkMissingPaths(ctx) {
   const out = [];
   for (const row of ctx.rows) {
     if (row.docPath && !ctx.tracked.has(row.docPath)) {
-      out.push({ code: 'missing-path', detail: `${row.id}: doc ${row.docPath} is not a tracked file` });
+      out.push({ code: 'missing-path', detail: `${row.id}: doc ${row.docPath} is not a tracked file`, ids: [row.id], field: 'doc', path: row.docPath });
     }
     for (const field of PATH_FIELDS) {
       for (const v of pathValues(row[field], ctx.profile)) {
-        if (v.kind === 'unsafe') out.push({ code: 'unsafe-link', detail: `${row.id}: ${field} ${v.target} ${v.reason}` });
-        else if (!ctx.tracked.has(v.path)) out.push({ code: 'missing-path', detail: `${row.id}: ${field} ${v.path} is not a tracked file` });
+        if (v.kind === 'unsafe') out.push({ code: 'unsafe-link', detail: `${row.id}: ${field} ${v.target} ${v.reason}`, ids: [row.id], field });
+        else if (!ctx.tracked.has(v.path)) {
+          out.push({ code: 'missing-path', detail: `${row.id}: ${field} ${v.path} is not a tracked file`, ids: [row.id], field, path: v.path });
+        }
       }
     }
   }
@@ -225,21 +356,24 @@ function duplicates(values) {
 }
 
 function checkDuplicateIds(ctx) {
-  return duplicates(ctx.rows.map((r) => r.id)).map((id) => ({ code: 'duplicate-id', detail: `id ${id} is registered more than once` }));
+  return duplicates(ctx.rows.map((r) => r.id)).map((id) => ({ code: 'duplicate-id', detail: `id ${id} is registered more than once`, ids: [id] }));
 }
 
 function checkDuplicatePaths(ctx) {
   return duplicates(ctx.rows.map((r) => r.docPath).filter(Boolean))
-    .map((p) => ({ code: 'duplicate-path', detail: `${p} is registered by more than one row` }));
+    .map((p) => ({ code: 'duplicate-path', detail: `${p} is registered by more than one row`, path: p }));
 }
 
 function checkConflictingCanonical(ctx) {
   const byDomain = new Map();
   const out = [];
   for (const row of ctx.rows.filter((r) => r.status === 'canonical')) {
-    const key = row.domain.trim().toLowerCase();
+    const key = domainKey(row.domain);
     if (byDomain.has(key)) {
-      out.push({ code: 'conflicting-canonical', detail: `domain "${key}" has two canonical documents: ${byDomain.get(key).docPath} and ${row.docPath}` });
+      out.push({
+        code: 'conflicting-canonical', detail: `domain "${key}" has two canonical documents: ${byDomain.get(key).docPath} and ${row.docPath}`,
+        domain: key, ids: [byDomain.get(key).id, row.id],
+      });
     } else byDomain.set(key, row);
   }
   return out;
@@ -247,7 +381,7 @@ function checkConflictingCanonical(ctx) {
 
 function checkStatuses(ctx) {
   return ctx.rows.filter((r) => !STATUSES.includes(r.status))
-    .map((r) => ({ code: 'bad-status', detail: `${r.id}: status "${r.status}" is not one of ${STATUSES.join(', ')}` }));
+    .map((r) => ({ code: 'bad-status', detail: `${r.id}: status "${r.status}" is not one of ${STATUSES.join(', ')}`, ids: [r.id] }));
 }
 
 function checkDanglingRefs(ctx) {
@@ -256,7 +390,7 @@ function checkDanglingRefs(ctx) {
   for (const row of ctx.rows) {
     for (const field of ['supersedes', 'related']) {
       for (const id of idList(row[field])) {
-        if (!ids.has(id)) out.push({ code: 'dangling-ref', detail: `${row.id}: ${field} names unregistered id ${id}` });
+        if (!ids.has(id)) out.push({ code: 'dangling-ref', detail: `${row.id}: ${field} names unregistered id ${id}`, ids: [row.id], field, ref: id });
       }
     }
   }
@@ -266,7 +400,7 @@ function checkDanglingRefs(ctx) {
 function checkSupersededSuccessor(ctx) {
   const replaced = new Set(ctx.rows.flatMap((r) => idList(r.supersedes)));
   return ctx.rows.filter((r) => r.status === 'superseded' && !replaced.has(r.id))
-    .map((r) => ({ code: 'superseded-without-successor', detail: `${r.id} is superseded but no row lists it in supersedes` }));
+    .map((r) => ({ code: 'superseded-without-successor', detail: `${r.id} is superseded but no row lists it in supersedes`, ids: [r.id] }));
 }
 
 function checkSupersedeCycles(ctx) {
@@ -276,7 +410,8 @@ function checkSupersedeCycles(ctx) {
   const visit = (id, trail) => {
     if (state.get(id) === 'done') return;
     if (state.get(id) === 'open') {
-      out.push({ code: 'supersede-cycle', detail: `supersedes forms a cycle: ${[...trail.slice(trail.indexOf(id)), id].join(' -> ')}` });
+      const cycle = trail.slice(trail.indexOf(id));
+      out.push({ code: 'supersede-cycle', detail: `supersedes forms a cycle: ${[...cycle, id].join(' -> ')}`, ids: cycle });
       return;
     }
     state.set(id, 'open');
@@ -403,4 +538,6 @@ function validate({ indexText, readmeText, governanceText, tracked }, profile) {
 module.exports = {
   COLUMNS, STATUSES, POLICY_CHECKS, globToRegExp, matchesGlob, tokens, resolveTarget, isPathShapedToken, pathValues,
   governanceRegistered, hasRegistryHeader, parseRegistry, suggestFor, suggestionText, validate,
+  domainKey, INTAKE_CHARSET, nonAsciiCodePoints, hiddenCharacterProblem, domainIntakeProblem, renderDomainForReview,
+  reviewText, capReview,
 };

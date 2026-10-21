@@ -13,11 +13,12 @@
  */
 
 import { spawnSync } from "child_process";
+import { createHash } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { trustedGitPath, TrustedGitUnavailable } from "../../shared/git/trustedGit";
 import {
-  DEFAULT_INDEX_PATH, hasRegistryHeader, matchesGlob, suggestFor, userRepoProfile, validateIndex,
+  cellValues, DEFAULT_INDEX_PATH, hasRegistryHeader, matchesGlob, suggestFor, userRepoProfile, validateIndex,
   type IndexProblem, type RegistryRow,
 } from "./architectureIndexCore";
 
@@ -44,7 +45,30 @@ export interface SnapshotRow {
   related: string;
   governanceRef: string;
   updatedBy: string;
+  /** #531 slice 2: the row's 1-based line in the index file. */
+  line: number;
+  /** #531 slice 2: the document path is in the `ls-files -co` list (exists and is not ignored). */
+  listed: boolean;
+  /** B312: the values of the contract, verification and governance_ref cells, each with its own listed flag. */
+  cellPaths: { contract: CellPaths; verification: CellPaths; governanceRef: CellPaths };
 }
+
+/**
+ * B312: one value of a path cell, in cell order. `path` values carry their listed flag; a value
+ * with `*` or `?` is a pattern and is never resolved or matched; `unsafe` is absolute, has a
+ * backslash or escapes the repository; `external` is an http(s) or mailto link (never fetched).
+ */
+export type CellPath =
+  | { at: number; kind: "path"; path: string; listed: boolean }
+  | { at: number; kind: "pattern"; value: string }
+  | { at: number; kind: "unsafe"; value: string; reason: string }
+  | { at: number; kind: "external"; label: string; url: string };
+
+/** A cell's values, or "too-long" for a cell over CELL_LIMIT_BYTES (not checked). */
+export type CellPaths = CellPath[] | "too-long";
+
+/** B312 / B311: cells over 4 KiB are not checked (the core's link pattern is quadratic on long `[` runs). */
+export const CELL_LIMIT_BYTES = 4096;
 
 export interface ArchitectureIndexSnapshot {
   state: ArchitectureIndexState;
@@ -59,6 +83,8 @@ export interface ArchitectureIndexSnapshot {
   normativeGlobs: string[];
   legacyGlobs: string[];
   checkedAt: string;
+  /** #531 slice 2: SHA-256 of the index file's bytes, or null when no index was read. */
+  indexSha256: string | null;
 }
 
 export type GitOutcome =
@@ -70,7 +96,8 @@ export type ArchitectureGit = (root: string, args: string[]) => GitOutcome;
 
 const GIT_TIMEOUT_MS = 10_000;
 const GIT_MAX_BUFFER = 64 * 1024 * 1024;
-const MAX_DOC_BYTES = 2 * 1024 * 1024;
+/** Documents up to this size are read and hashed; larger ones are never hashed (shared by discovery, assessment and proposals). */
+export const MAX_DOC_BYTES = 2 * 1024 * 1024;
 
 /** A git runner over a resolver (the trusted one by default; tests inject a failing one). */
 export function makeArchitectureGit(resolve: (cwd: string) => string = trustedGitPath): ArchitectureGit {
@@ -119,13 +146,15 @@ export function resolveInsideWorkspace(root: string, rel: string): { abs: string
   return { abs: real, inside: isInside(rootReal, real) };
 }
 
-function readInside(root: string, rel: string): string | null {
+/** The file's text and the SHA-256 of its bytes (one read, so the hash is of what was parsed). */
+function readInside(root: string, rel: string): { text: string; sha256: string } | null {
   const r = resolveInsideWorkspace(root, rel);
   if (!r || !r.inside) return null;
   try {
     const st = fs.statSync(r.abs);
     if (!st.isFile() || st.size > MAX_DOC_BYTES) return null;
-    return fs.readFileSync(r.abs, "utf8");
+    const bytes = fs.readFileSync(r.abs);
+    return { text: bytes.toString("utf8"), sha256: createHash("sha256").update(bytes).digest("hex") };
   } catch {
     return null;
   }
@@ -142,17 +171,35 @@ function listFiles(root: string, git: ArchitectureGit): { files: string[] } | { 
   return { files: files.sort() };
 }
 
-function toSnapshotRow(r: RegistryRow): SnapshotRow {
+/** B312: a cell's values in cell order, or "too-long" (see CELL_LIMIT_BYTES). */
+export function cellPathsOf(cell: string, linkBase: string, listed: ReadonlySet<string>): CellPaths {
+  if (Buffer.byteLength(cell, "utf8") > CELL_LIMIT_BYTES) return "too-long";
+  return cellValues(cell, linkBase).map((v): CellPath => {
+    if (v.kind === "external") return { at: v.at, kind: "external", label: v.label, url: v.target };
+    if (v.kind === "unsafe") return { at: v.at, kind: "unsafe", value: v.target, reason: v.reason };
+    if (/[*?]/.test(v.path)) return { at: v.at, kind: "pattern", value: v.path };
+    return { at: v.at, kind: "path", path: v.path, listed: listed.has(v.path) };
+  });
+}
+
+function toSnapshotRow(r: RegistryRow, listed: ReadonlySet<string>, linkBase: string): SnapshotRow {
   return {
     id: r.id, domain: r.domain, docPath: r.docPath, status: r.status, owner: r.owner, supersedes: r.supersedes,
-    related: r.related, governanceRef: r.governance_ref, updatedBy: r.updated_by,
+    related: r.related, governanceRef: r.governance_ref, updatedBy: r.updated_by, line: r.line,
+    listed: r.docPath !== null && listed.has(r.docPath),
+    cellPaths: {
+      contract: cellPathsOf(r.contract, linkBase, listed),
+      verification: cellPathsOf(r.verification, linkBase, listed),
+      governanceRef: cellPathsOf(r.governance_ref, linkBase, listed),
+    },
   };
 }
 
 const isNormative = (p: string, globs: string[], legacy: string[]): boolean =>
   globs.some((g) => matchesGlob(g, p)) && !legacy.some((g) => matchesGlob(g, p));
 
-const isParseFailure = (p: IndexProblem): boolean =>
+/** The problems that make an index unreadable (state "invalid"); shared with the affected-decision path. */
+export const isParseFailure = (p: IndexProblem): boolean =>
   p.code === "missing-section" || (p.code === "bad-row" && p.detail.startsWith("registry header"));
 
 const looksLikeIndex = (text: string): boolean => hasRegistryHeader(text) || /^```architecture-normative/m.test(text);
@@ -170,7 +217,7 @@ export function discoverArchitectureIndex(opts: DiscoveryOptions): ArchitectureI
   const profile = userRepoProfile(indexPath ?? DEFAULT_INDEX_PATH);
   const base: ArchitectureIndexSnapshot = {
     state: "absent", indexPath: indexPath ?? String(opts.indexPathSetting ?? ""), rows: [], problems: [], candidates: [],
-    normativeGlobs: profile.normativeGlobs, legacyGlobs: profile.legacyGlobs, checkedAt,
+    normativeGlobs: profile.normativeGlobs, legacyGlobs: profile.legacyGlobs, checkedAt, indexSha256: null,
   };
   const root = opts.workspaceRoot;
   if (!root) return { ...base, state: "no-workspace" };
@@ -182,22 +229,23 @@ export function discoverArchitectureIndex(opts: DiscoveryOptions): ArchitectureI
 
   const located = resolveInsideWorkspace(root, indexPath);
   if (located && !located.inside) return { ...base, state: "bad-index-path", detail: "the index path resolves outside the workspace" };
-  const indexText = located ? readInside(root, indexPath) : null;
+  const index = located ? readInside(root, indexPath) : null;
 
-  if (indexText === null) return discoverAbsent(root, base, files, profile.normativeGlobs, profile.legacyGlobs);
+  if (index === null) return discoverAbsent(root, base, files, profile.normativeGlobs, profile.legacyGlobs);
 
-  const result = validateIndex({ indexText, readmeText: "", governanceText: "", tracked: files }, profile);
+  const result = validateIndex({ indexText: index.text, readmeText: "", governanceText: "", tracked: files }, profile);
   const state: ArchitectureIndexState = result.problems.some(isParseFailure) ? "invalid"
     : result.problems.length ? "present-with-problems" : "present";
   const globs = result.globs.length ? result.globs : profile.normativeGlobs;
   const legacy = result.legacy.length ? result.legacy : profile.legacyGlobs;
+  const listedFiles = new Set(files);
   const registered = new Set(result.rows.map((r) => r.docPath).filter(Boolean));
   const candidates = files
     .filter((p) => p !== indexPath && !registered.has(p) && isNormative(p, globs, legacy))
     .map((p) => ({ path: p, suggestions: suggestFor(p, result.rows) }));
   return {
-    ...base, state, rows: result.rows.map(toSnapshotRow), problems: result.problems, candidates,
-    normativeGlobs: globs, legacyGlobs: legacy,
+    ...base, state, rows: result.rows.map((r) => toSnapshotRow(r, listedFiles, profile.linkBase)), problems: result.problems, candidates,
+    normativeGlobs: globs, legacyGlobs: legacy, indexSha256: index.sha256,
   };
 }
 
@@ -210,8 +258,8 @@ function discoverAbsent(
   const candidates = matches.map((p) => ({ path: p, suggestions: suggestFor(p, peers.filter((x) => x.docPath !== p)) }));
   // Present-elsewhere looks only at default-glob matches (disclosed in the ADR).
   const elsewhere = matches.find((p) => {
-    const text = readInside(root, p);
-    return text !== null && looksLikeIndex(text);
+    const read = readInside(root, p);
+    return read !== null && looksLikeIndex(read.text);
   });
   if (elsewhere) return { ...base, state: "present-elsewhere", elsewherePath: elsewhere, candidates };
   return { ...base, state: "absent", candidates };

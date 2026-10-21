@@ -29,6 +29,7 @@ export interface GovernedFlowDeps {
   /** #532 (plan-532c LD7): offered the bound commit after committed / pushed / pr; never changes the result. */
   linkCommit?: GovernedCommitLinkFn;
   base?: string;         // default "main"
+  describeArchitecture?: (paths: string[]) => Promise<string[]>; // B311: warn-only affected-architecture lines (see architectureNote)
 }
 
 /** #532 (plan-532c LD7): what the link offer is given: the bound commit and the run that made it. */
@@ -49,8 +50,9 @@ export async function runGovernedCommitFlow(
 ): Promise<GovernedFlowResult> {
   if (changedPaths.length === 0) return { step: 'noop' };
 
+  const architecture = await architectureNote(deps, changedPaths);
   const approved = await deps.confirm(
-    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?`,
+    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?${architecture}`,
   );
   if (!approved) {
     await deps.recordDeclined({ action, changes: executedLabels, at: deps.now() });
@@ -83,4 +85,18 @@ export function governedCommitPrStep(
   connection: Connection | undefined, post: GitHubPostFn,
 ): Pick<GovernedFlowDeps, 'post' | 'token' | 'apiBaseUrl'> {
   return { post, token: connection?.credential, apiBaseUrl: connection?.endpoint };
+}
+
+/**
+ * B311 (plan-b311-b312 LD8): the prompt's warn-only affected-architecture sentence, from lines the
+ * caller has already capped; '' when there are none or describe throws, so the prompt is unchanged.
+ */
+async function architectureNote(deps: GovernedFlowDeps, paths: string[]): Promise<string> {
+  if (!deps.describeArchitecture) return '';
+  try {
+    const lines = await deps.describeArchitecture(paths);
+    return Array.isArray(lines) && lines.length ? ` Architecture decisions these files touch (warn-only): ${lines.join('; ')}.` : '';
+  } catch {
+    return '';
+  }
 }

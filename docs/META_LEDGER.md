@@ -34097,3 +34097,260 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `5bfc91a7d55b7b89121f9a95cfbafd3765f8e9dec8155f8a5de63df66ac1b286`
 
 **Decision**: SESSION SEAL for plan-532c-delivery-history.md (content hash is the audited plan, sha256 d92faf66). Reality = Promise, with disclosures. Workspace Delivery now shows what FailSafe actually recorded and nothing more: decisions are not reviews, Complete is honestly unreachable, governed commits are linked only to FailSafe's own commit by explicit confirmation, and rollback cannot overwrite a tracked file edited after its last check. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); Complete stays unreachable until B320 and B321 and the receipt until #467; the intent history is an unkeyed hash chain, so a workspace writer can forge a decision; reset --keep leaves a HEAD-moved window recoverable through the reflog, may overwrite ignored files at tracked target paths, and does not cover assume-unchanged or skip-worktree files; the symlink-to-UNC refusal is proven with a simulated file layer because this host refuses such links; the linkCommit argument at the two governed-commit call sites is not reached by a test; RevertPanel stays unwired; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #834: GATE TRIBUNAL - plan-548-taxonomy (iteration 1) - VETO
+
+**Timestamp**: 2026-10-19T20:10:54Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/audit-iter1.json`
+
+**Content Hash**: `662a079dcc3ef436673414c56c3c8d57f28012eea57f41e99c9c3a33071f49da`
+**Previous Hash**: `5bfc91a7d55b7b89121f9a95cfbafd3765f8e9dec8155f8a5de63df66ac1b286`
+**Chain Hash (Merkle seal)**: `3f0a0b2d37500df761d872a92e483db20cdeb5b80aebc06aa9987eb2ba6939df`
+
+**Decision**: VETO on plan-548-taxonomy.md iteration 1 (sha256 075ed621), #548: make the code-level CONSOLE_VERTICALS the Console taxonomy authority, report drift in Workspace › Taxonomy, and close the editor's data-loss paths, with the v6.0.9 RELEASED markers and the COMPONENT_HELP tab list folded in. Fresh Option B architect-reviewer. Blocking: index-based row sources went stale after a Save, because the config was reassigned even on a failed POST and nothing repainted, so a second Save or a retry copied one row's fields onto another; drift ran inside the GET's first try, so a drift exception fell back silently to the derived taxonomy, whose Save overwrites the owner's file. Should-fix: T1 red with the real function, format falsifier, key-overlap rule, drift state, plain-object copies, T10 pid-first match, T8 cleanup, LD13 tag check, CLAUDE.md:8 authority wording surfaced to the owner. Next: revise and re-audit. The plan-gate override event of this cycle was logged with the #538 reason text; the applicable ruling is the post-v6.0.9 override.
+
+---
+
+### Entry #835: GATE TRIBUNAL - plan-548-taxonomy (iteration 2) - PASS
+
+**Timestamp**: 2026-10-19T20:18:35Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/audit-iter2.json`
+
+**Content Hash**: `8c3aaf61d592fa3b18bddba76ee1ab5908604a9b54561eb4544e38bddccc2bbb`
+**Previous Hash**: `3f0a0b2d37500df761d872a92e483db20cdeb5b80aebc06aa9987eb2ba6939df`
+**Chain Hash (Merkle seal)**: `743587a8694e8febd1bf3e256d614beea75bf20e1720a09d8f56d2dbdb907adb`
+
+**Decision**: PASS on plan-548-taxonomy.md iteration 2 (sha256 981cb76f). Fresh Option B architect-reviewer. Both data-loss blockers closed by construction: state changes only on a successful Save, and the source is chosen before lint with a read failure answering 500, never derived. Should-fix folded into implementation as mandatory: a null-row T5e that really reaches the lint guard, every failed GET treated as failed, YAML parse errors answering 500 (closing B305), statSync with only ENOENT as missing, an unterminated-label rule, and the Save re-serialization residual named. Next: implement.
+
+---
+
+### Entry #836: IMPLEMENTATION - plan-548-taxonomy
+
+**Timestamp**: 2026-10-20T19:00:47Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/implement.json`
+
+**Content Hash**: `5355f0c6ae162e44e5d219a9845808db28db62a9dc4625cf5e27b900dd8c35b3`
+**Previous Hash**: `743587a8694e8febd1bf3e256d614beea75bf20e1720a09d8f56d2dbdb907adb`
+**Chain Hash (Merkle seal)**: `139dc62300ab1a42b97c39b3fcf19b91d8535115686edc9cdd9957b9993c1f89`
+
+**Decision**: IMPLEMENTATION of plan-548-taxonomy.md iteration 2 on fix/548-taxonomy (rebased onto main ad2df9fb): 3e084708, 2860982c, e652b940, e840a19d, 3f3a2637, 5161df18. Workspace › Taxonomy reports drift between the operator's docs/roadmap/tracker-config.yaml and the code-level CONSOLE_VERTICALS, which is the Console tab authority; the drift function is total and its text escaped. The editor cannot write wrong, empty or stale content over the owner's file: the GET chooses its source before lint and drift and answers 500 on any read or parse failure, including non-list sections, links and a non-directory ancestor; every failed load hides Save; state changes only on a successful Save; a sha256 fingerprint makes the POST refuse with 409 when the file changed on disk, and the first create is exclusive; untouched rows, values and odd keys pass through unchanged and quotes are escaped. B305 closes. The v6.0.9 RELEASED markers are written after the tag check printed b83d83a3, and COMPONENT_HELP lists the seven Console tabs. New rows B330 (realpath containment of the write path) and B331 (hub repaint wipes unsaved edits). Bounded review review548: CHANGES REQUIRED for the stale overwrite, fixed by the fingerprint; re-review review548b: APPROVE, with N-a..N-e folded as C6. The owner's tracker-config.yaml is byte-unchanged.
+
+---
+
+### Entry #837: SESSION SEAL - plan-548-taxonomy
+
+**Timestamp**: 2026-10-20T19:00:47Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/substantiate.json`
+
+**Content Hash**: `981cb76f8c4d1ac8254ec60be24b5015a133f1dea6675064870b680bbc9260b9`
+**Previous Hash**: `139dc62300ab1a42b97c39b3fcf19b91d8535115686edc9cdd9957b9993c1f89`
+**Chain Hash (Merkle seal)**: `bfd62583d433820154c69e340600f7c93e8b703fbf2aa64e381bcc70548a88e1`
+
+**Decision**: SESSION SEAL for plan-548-taxonomy.md (content hash is the audited plan, sha256 981cb76f). Reality = Promise, with disclosures. The Console's taxonomy authority is the code-level CONSOLE_VERTICALS, drift against the operator's tracker-config.yaml is reported rather than silently reconciled, and the taxonomy editor can no longer overwrite the owner's file with wrong, empty or stale content. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); the iteration 1 plan-gate override event carries the #538 reason text; Save still drops YAML comments and unknown top-level keys and turns YAML dates into ISO strings (B306); a hub repaint wipes unsaved edits (B331) and the write path lacks realpath containment (B330); the ELOOP row runs only on POSIX and the full npm test was not re-run after C6; the owner's file will report 5 of 7 verticals drifted, and the CLAUDE.md:8 wording that names tracker-config.yaml as the source of truth is the owner's to change; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #838: GATE TRIBUNAL - plan-531b-architecture-authority (iteration 1) - VETO
+
+**Timestamp**: 2026-10-19T20:23:33Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2017-4c73af`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2017-4c73af/audit-iter1.json`
+
+**Content Hash**: `52b892ca41ddfbdaf6b62a7b22596a82cc9055f49a4cedcb77be12d34f3abd01`
+**Previous Hash**: `bfd62583d433820154c69e340600f7c93e8b703fbf2aa64e381bcc70548a88e1`
+**Chain Hash (Merkle seal)**: `61a7ab9b97570e3d73baa8efa97d93de8c55c0cc7962dfba5c0005ea9763ba05`
+
+**Decision**: VETO on plan-531b-architecture-authority.md iteration 1 (sha256 8c26698d), #531 Architecture Index slice 2: one authority per domain, detected and protected. Fresh Option B architect-reviewer. Blocking: domain intake accepted anything the dialog sanitizer left unchanged, so zero-width, non-breaking, soft-hyphen, repeated-space and NFD variants produced a distinct key and registered a second canonical authority with an identical-looking L3 summary, from any local caller; the conflict gate compared only the index as written, which FailSafe never edits, so pending or approved-but-unapplied proposals did not block a second canonical registration. Should-fix: stale freshness including HEAD, split mutations, bad-status and duplicate-id ambiguity, summary ordering, a hidden-character finding. Next: revise and re-audit.
+
+---
+
+### Entry #839: GATE TRIBUNAL - plan-531b-architecture-authority (iteration 2) - VETO
+
+**Timestamp**: 2026-10-19T20:35:21Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2017-4c73af`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2017-4c73af/audit-iter2.json`
+
+**Content Hash**: `6c1bc0043a8cba5c9183df6c3c37283c5691f707e1a03fb8c358fc3f3819f5df`
+**Previous Hash**: `61a7ab9b97570e3d73baa8efa97d93de8c55c0cc7962dfba5c0005ea9763ba05`
+**Chain Hash (Merkle seal)**: `4cc7204eb3bf588926ce631c1e78eaa51604578c9f6b24587c7cdcc6d0761912`
+
+**Decision**: VETO on plan-531b-architecture-authority.md iteration 2 (sha256 398291b8). Iteration 1 blockers closed for new domains and pending authority (queue in any live state, approved entries from the ledger, a per-workspace lock, four-way freshness). Fresh Option B architect-reviewer. Blocking: confusable domains entered through the byte-exact path for registered domains, and the hidden-character finding saw only format characters, so a hand-planted Cyrillic-e domain let FailSafe queue a visually identical canonical proposal. Should-fix: the 1000-entry ledger bound would refuse every registration after a few hundred proposals, approved-never-applied dead end, queue state matching, side-effect disclosure, lock release in finally, dialog path cap, one rule for proposed, expired and cancelled confirmations. Next: revise and re-audit.
+
+---
+
+### Entry #840: GATE TRIBUNAL - plan-531b-architecture-authority (iteration 3) - PASS
+
+**Timestamp**: 2026-10-19T20:43:30Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2017-4c73af`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2017-4c73af/audit-iter3.json`
+
+**Content Hash**: `a3892ea362bebc913f97bc5bfbb2bd1f2d58628a8521bd8f9136203a4f1d6dc8`
+**Previous Hash**: `4cc7204eb3bf588926ce631c1e78eaa51604578c9f6b24587c7cdcc6d0761912`
+**Chain Hash (Merkle seal)**: `979809a0f7884a893898ad51a613436b7676557452bcd188991f81ca9fb407e4`
+
+**Decision**: PASS on plan-531b-architecture-authority.md iteration 3 (sha256 2c9f7cc3). Fresh Option B architect-reviewer. Authority domains are plain ASCII with no byte-exact exception, both supersede rows are charset-checked, canonical work is refused workspace-wide while any canonical row is non-ASCII, and non-authority reuse is rendered as code points in both human gates; the ledger read is unbounded. Should-fix folded into implementation: successor-row check and mutation, a lock falsifier that reaches the lock, entry order for the unbounded read, method name, removed-row re-blocking disclosure, the wedge's two exits, code-point iteration. Next: implement.
+
+---
+
+### Entry #841: IMPLEMENTATION - plan-531b-architecture-authority
+
+**Timestamp**: 2026-10-20T19:36:12Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-19T2017-4c73af`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-19T2017-4c73af/implement.json`
+
+**Content Hash**: `998178e6e2e1effa97bd33884097847cec4487c0d4d9bd83de3ca43ed3f4f667`
+**Previous Hash**: `979809a0f7884a893898ad51a613436b7676557452bcd188991f81ca9fb407e4`
+**Chain Hash (Merkle seal)**: `9352339512e3c75df90ac7fabccc29064dc885ec31b1afb6cc500410dbaff4bb`
+
+**Decision**: IMPLEMENTATION of plan-531b-architecture-authority.md iteration 3 on feat/531-architecture-authority (rebased onto main 41d606d8): 3efc3f6c, e4029347, 4a73c592, 763ac7dd, 100dc47b, 65605aba. Workspace > Architecture gains an Authority section reporting two canonical documents for one domain, a canonical document missing on disk, a dangling supersession and non-ASCII or hidden-character domains, each with its index line, document hash, index hash and HEAD; similarity never creates a finding. FailSafe's propose route requires a domain and status, admits new domains only in a plain-ASCII charset with hidden characters refused, and answers 409 for a second canonical document in the index, pending in the L3 queue or approved but not yet applied (read from the ledger without a bound), and for canonical work while the registry is ambiguous: rows the shared parser cannot read, bad statuses, duplicate ids, or non-ASCII, hidden-character or empty canonical domains. Every supersession needs a VS Code confirmation bound to a frozen operation and re-checked under a per-workspace lock for state, index, document and HEAD before anything is recorded. The shared registry parser marks the index invalid on a broken delimiter, reports pipe-less rows and ignores fenced examples. Row ids and domains reach every human gate as rendered code points. Two bounded reviews (review531, review531b) each found an authority bypass; both are fixed with falsifying rows and mutations.
+
+---
+
+### Entry #842: SESSION SEAL - plan-531b-architecture-authority
+
+**Timestamp**: 2026-10-20T19:36:13Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-19T2017-4c73af`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-19T2017-4c73af/substantiate.json`
+
+**Content Hash**: `2c9f7cc366d21482d1aec67443ee601652c1227f104c2a2b9736251fa941abc1`
+**Previous Hash**: `9352339512e3c75df90ac7fabccc29064dc885ec31b1afb6cc500410dbaff4bb`
+**Chain Hash (Merkle seal)**: `220eb6e904e3947af7f1e9e2ed835acac7cb15f96fd1ea4c01aa89061c2c9891`
+
+**Decision**: SESSION SEAL for plan-531b-architecture-authority.md (content hash is the audited plan, sha256 2c9f7cc3). Reality = Promise, with disclosures. The Architecture Index now detects conflicting authority with provenance, and FailSafe's own propose route prevents new conflicts, including look-alike, hidden-character and pending ones, with explicit, bound confirmation for every supersession. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); only non-ASCII look-alikes are detected, not ASCII ones such as l, I and 1; while the registry holds an ambiguous canonical row, canonical registrations and supersessions are refused across the workspace until the index is edited by hand, so intentionally non-ASCII canonical domains are unsupported; an approved registration that is never applied keeps blocking its domain; the L3 decision dialog still truncates paths at 200 characters; reading the L3 queue can emit expiry notices, including Slack or Teams when configured; the proposal lock has no timeout and a shared absolute ledgerPath can block across workspaces; affected decisions at the L3 and commit seams (B311) and decision links (B312) are deferred; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #843: GATE TRIBUNAL - plan-b311-b312-architecture-residuals (iteration 1) - VETO
+
+**Timestamp**: 2026-10-20T22:27:11Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/audit-iter1.json`
+
+**Content Hash**: `d6f1e85547f6d3a752e6a39b200271ded240a06ba03d84b2e694f75171f61916`
+**Previous Hash**: `220eb6e904e3947af7f1e9e2ed835acac7cb15f96fd1ea4c01aa89061c2c9891`
+**Chain Hash (Merkle seal)**: `5fd77c72a7ad74148100e1f99315af99e07a4eca4c54a1b1cb712f927caaa935`
+
+**Decision**: VETO on plan-b311-b312-architecture-residuals.md iteration 1 (sha256 810803e7), B311/B312 architecture residuals plus the owner's CLAUDE.md taxonomy wording. Fresh Option B architect-reviewer. Blocking: the decision-link ledger read was unbounded on every index GET; warn-only had no time budget, so synchronous discovery on the L3 and commit seams could stall the loopback server long enough for the 2 s pre-commit hook to fail open; repository text reached the commit prompt and webview without hidden-character or length handling; GitHub issue link labels in governance_ref were read as ledger headings. CLAUDE.md wording confirmed verbatim. Next: revise and re-audit.
+
+---
+
+### Entry #844: GATE TRIBUNAL - plan-b311-b312-architecture-residuals (iteration 2) - VETO
+
+**Timestamp**: 2026-10-20T22:36:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/audit-iter2.json`
+
+**Content Hash**: `ba08c096ed483807fbb85b8eb1323f06f4f7bf119a0cd5347d2a561f517810f6`
+**Previous Hash**: `5fd77c72a7ad74148100e1f99315af99e07a4eca4c54a1b1cb712f927caaa935`
+**Chain Hash (Merkle seal)**: `70a2a7c55fbb250612335221b1b7b675c07aed179cc93849aaf55d3f04b09edf`
+
+**Decision**: VETO on plan-b311-b312-architecture-residuals.md iteration 2 (sha256 745c8fe4). Iteration 1 blockers 1, 3 and 4 closed with falsifiers. Fresh Option B architect-reviewer. Blocking: the async discovery still performed synchronous per-file statSync, document reads and an index readFileSync that a timer race cannot pre-empt, and the hanging-git falsifier could not detect it. Next: revise and re-audit (final iteration under the cap).
+
+---
+
+### Entry #845: GATE TRIBUNAL - plan-b311-b312-architecture-residuals (iteration 3) - PASS
+
+**Timestamp**: 2026-10-20T22:45:07Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/audit-iter3.json`
+
+**Content Hash**: `6c56a70c8eb16df434bb111d3915ce8cbb594dfd5d14994aeb67fde23fd400af`
+**Previous Hash**: `70a2a7c55fbb250612335221b1b7b675c07aed179cc93849aaf55d3f04b09edf`
+**Chain Hash (Merkle seal)**: `965d978f01b1af96e478b492c5799905a31990373742cc0c91c5336f5d7d19da`
+
+**Decision**: PASS on plan-b311-b312-architecture-residuals.md iteration 3 (sha256 53899f86), the final iteration under the native escalation cap. Fresh Option B architect-reviewer. The affected-decision path reads only the index asynchronously and parses it purely, with no git and no per-file stat; the sync-discovery mutation carries the falsifier; no safety property of discovery is lost; the CLAUDE.md wording is byte-identical. Should-fix folded into implementation: a 4 KiB cell cap against the quadratic link pattern, a complete sync spy set, a bounded read, Set matching, one describe per dialog or panel, highest-id decisions, porcelain and Hangul-filler disclosures, B316 kept open, one re-cite. Next: implement.
+
+---
+
+### Entry #846: IMPLEMENTATION - plan-b311-b312-architecture-residuals
+
+**Timestamp**: 2026-10-21T00:10:38Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/implement.json`
+
+**Content Hash**: `e91af1da7c98d0a9a74534776392a26f98dab798ac76349bf28e8704c0d7df21`
+**Previous Hash**: `965d978f01b1af96e478b492c5799905a31990373742cc0c91c5336f5d7d19da`
+**Chain Hash (Merkle seal)**: `b9bc38d3a08f7ce5efdc74ac13d4460d1910bc895bbf083d42795cc3b4b9de34`
+
+**Decision**: IMPLEMENTATION of plan-b311-b312-architecture-residuals.md iteration 3 on feat/b311-b312-architecture-residuals (from main 236b1751): 4ff03fe7 (red tests), f729b179 (implementation), a06fc9aa (docs). B311: the Console L3 decide and batch dialogs, the VS Code L3 panel and the governed-commit prompt name the canonical and proposed architecture rows whose document, contract or verification cell names a changed file; the check is warn-only, reads only the index asynchronously within a 1 s budget, does no git and no per-file I/O, skips cells over 4 KiB, renders hidden and bidi characters as code points with code-point-safe caps, and never blocks or alters a decision or commit. B312 and B253: Workspace > Architecture shows each row's related and superseded rows with status, contract and verification paths with stat-only state, bare ledger references with 'heading found; chain not checked (#467)', URLs unfetched, and proposal decisions read once with a cap and a truncated state; the open route gains the Console request guard and opens only contract and verification paths. CLAUDE.md line 8 carries the owner's taxonomy-authority wording verbatim, and the emitted taxonomy directive and its governance index rows are reworded to match; no operator taxonomy file is created or edited. B311, B312, B253 and B218 are done with evidence; B316 stays open; residuals B350-B355 filed. Bounded review review311 found three blockers, fixed.
+
+---
+
+### Entry #847: SESSION SEAL - plan-b311-b312-architecture-residuals
+
+**Timestamp**: 2026-10-21T00:10:39Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/substantiate.json`
+
+**Content Hash**: `53899f86e2a6612248a8bfeecd6254328e858659fe923d3424732e26ef8ea6bb`
+**Previous Hash**: `b9bc38d3a08f7ce5efdc74ac13d4460d1910bc895bbf083d42795cc3b4b9de34`
+**Chain Hash (Merkle seal)**: `43ea8792c941455aeca516e1ec720e8d784fac03b5959615e595e20770763ea4`
+
+**Decision**: SESSION SEAL for plan-b311-b312-architecture-residuals.md (content hash is the audited plan, sha256 53899f86). Reality = Promise, with disclosures. Agents and operators see which architecture decisions govern the files an L3 decision or governed commit touches, without any delay to or block on that decision; registry rows show their relationships as checked links with status; and the repository's agent instructions now state the owner's taxonomy-authority rule. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); plain git commits get no warning (B350) and the commit prompt matches porcelain paths as given (B353); the core link pattern stays quadratic on the validator and CLI paths (B351) and the index parse is one synchronous call (B354); review text does not render combining marks or Hangul fillers (B352); the GET route reads synchronously per request (B355); only the first workspace folder is checked and the L3 panel drops not-checked lines; an emitted directive keeps its old wording until the next save; the CONFIG_BANNER wording and the CLAUDE.md:3 enforcement overstatement are surfaced, not changed; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.

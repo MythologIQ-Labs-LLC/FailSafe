@@ -66,9 +66,31 @@ suite('FX891 tracker-config', () => {
     assert.ok(md.includes('**Active**: yes'), 'PUBLISH_BLOCK-shape metadata');
   });
 
+  test('#548 T6: the directive says the file is local, and that the Console owns vertical sub-views', () => {
+    const md = buildTaxonomyDirective(CFG, { at: '2026-10-19T00:00:00.000Z' });
+    assert.ok(!md.includes('(tracked)'), 'the file is not tracked');
+    assert.ok(md.includes('not in the repository'), 'says the file is local');
+    assert.ok(md.includes('CONSOLE_VERTICALS'), 'names the authority for vertical sub-views');
+    assert.ok(!serializeTrackerConfig(CFG).includes('OPERATOR source of truth'), 'the banner no longer claims sole authority');
+  });
+
   test('buildTaxonomyDirective on an empty config is honest-empty, still a valid directive', () => {
     const md = buildTaxonomyDirective({ programs: [], verticals: [], agents: [] }, { at: '2026-06-12T00:00:00.000Z' });
     assert.ok(md.includes('no programs declared'));
     assert.ok(md.includes('MUST consult'));
+  });
+  // B311/B312 lane (plan-b311-b312 LD10): the directive records intent; the Console navigation and
+  // programs.yaml hold the authority; disagreements are reported as drift. Line wrapping is free, so
+  // the text is compared with whitespace runs collapsed.
+  test('the directive records intended taxonomy, names the authorities, and reports drift', () => {
+    const md = buildTaxonomyDirective(CFG, { at: '2026-10-20T00:00:00.000Z' });
+    const flat = md.replace(/\s+/g, ' ');
+    assert.ok(!md.includes('Source of truth'), 'no source-of-truth claim');
+    assert.ok(!md.includes('**Enforcement**'), 'the Enforcement lines are replaced by Authority');
+    assert.ok(!flat.includes('align programs/verticals/agents to'), 'no align-to clause');
+    assert.ok(!flat.includes('drift bug to surface'), 'the old divergence sentence is gone');
+    assert.ok(flat.includes('**Records**: intended tracker taxonomy and mappings, in `docs/roadmap/tracker-config.yaml` (local file; `docs/` is gitignored, so it is not in the repository)'));
+    assert.ok(flat.includes("**Authority**: the Console's implemented navigation (`CONSOLE_VERTICALS`) defines the actual tabs and sub-views; `docs/roadmap/programs.yaml` governs programs and phases. Workspace › Taxonomy reports drift, and CI checks the tracked programs.yaml. This file is not checked in CI."));
+    assert.ok(flat.includes('Any cycle that plans tracker or feature-scope work MUST consult `docs/roadmap/tracker-config.yaml` and compare its intended programs, verticals and agents with the Console navigation and `docs/roadmap/programs.yaml`. Report disagreements as drift; do not silently reconcile them.'));
   });
 });

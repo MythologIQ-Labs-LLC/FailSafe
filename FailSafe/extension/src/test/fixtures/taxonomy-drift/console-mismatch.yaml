@@ -1,0 +1,42 @@
+# #548 falsifier fixture: the corrected Console verticals with three planted faults.
+#   governance: `**Shadow Genome**` removed            -> missing ['Shadow Genome']
+#   workspace:  an extra `**Roadmap**` line            -> extra ['Roadmap']
+#   agents:     Timeline listed before Operations      -> outOfOrder
+# Every other vertical matches the Console exactly.
+verticals:
+  - key: monitor
+    functionality:
+      - "**Overview** trust snapshot, operation stream, threat and chain status"
+  - key: learn
+    functionality:
+      - "**Learn** governance and engineering lessons, and the SHIELD glossary"
+  - key: agents
+    functionality:
+      - "**Timeline** categorized agent-execution events"
+      - "**Operations** mission strip, phase progress, integrity + rollback"
+      - "**Genome** Shadow Genome failure-pattern debugger"
+      - "**Replay** deterministic verdict replay"
+  - key: governance
+    functionality:
+      - "**Audit Log** real-time governed-event stream"
+      - "**Risks** durable risk register CRUD"
+      - "**Compliance** Sentinel status, policies, L3 queue"
+  - key: workspace
+    functionality:
+      - "**Skills** governance-aware skill discovery + intent shell"
+      - "**Mindmap** node-based ideation"
+      - "**Tracker** the development dashboard"
+      - "**Taxonomy** programs, verticals and agent mappings"
+      - "**Architecture** the managed architecture index"
+      - "**Delivery** what an intent delivered"
+      - "**Roadmap** not a Console sub-view"
+  - key: integrations
+    functionality:
+      - "**Catalog** governed installs"
+      - "**Bicameral** decision-graph MCP"
+      - "**Open Design** Open Design MCP status"
+      - "**MCP Catalog** risk-scored MCP installs"
+      - "**Agent Governance** Microsoft AGT installer"
+  - key: config
+    functionality:
+      - "**Settings** theme and local console preferences"

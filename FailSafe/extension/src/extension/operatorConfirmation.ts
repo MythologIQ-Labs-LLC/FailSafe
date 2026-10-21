@@ -85,7 +85,7 @@ function decisionVerb(decision: "APPROVED" | "REJECTED"): "Approve" | "Reject" {
   return decision === "REJECTED" ? "Reject" : "Approve";
 }
 
-export function l3DecisionRequest(item: L3ApprovalRequest, decision: "APPROVED" | "REJECTED"): OperatorActionRequest {
+export function l3DecisionRequest(item: L3ApprovalRequest, decision: "APPROVED" | "REJECTED", architecture?: string[]): OperatorActionRequest {
   const verb = decisionVerb(decision);
   return {
     title: `${verb} this L3 item?`,
@@ -98,11 +98,12 @@ export function l3DecisionRequest(item: L3ApprovalRequest, decision: "APPROVED" 
       `Agent: ${sanitizeDialogText(item.agentDid)}`,
       `Sentinel summary: ${sanitizeDialogText(item.sentinelSummary)}`,
       `Flags: ${item.flags?.length ? sanitizeDialogText(item.flags.join(", ")) : "none"}`,
+      ...architectureBlock(architecture),
     ]),
   };
 }
 
-export function l3BatchRequest(items: L3ApprovalRequest[], decision: "APPROVED" | "REJECTED"): OperatorActionRequest {
+export function l3BatchRequest(items: L3ApprovalRequest[], decision: "APPROVED" | "REJECTED", architecture?: string[]): OperatorActionRequest {
   const verb = decisionVerb(decision);
   const lines = items
     .slice(0, BATCH_LIST_LIMIT)
@@ -117,6 +118,7 @@ export function l3BatchRequest(items: L3ApprovalRequest[], decision: "APPROVED" 
       ...lines,
       "",
       "Only the items listed here are decided; items queued after you confirm stay queued.",
+      ...architectureBlock(architecture),
     ]),
   };
 }
@@ -375,4 +377,80 @@ export async function requireOperatorConfirmation(
   const failure = confirmationFailure(result);
   res.status(failure.status).json(failure.body);
   return false;
+}
+
+/** #531 slice 2: the dialog title for an architecture supersession proposal. */
+export const ARCHITECTURE_SUPERSEDE_TITLE = "Propose this architecture supersession?";
+
+/** #531 slice 2: paths up to this length are recorded and shown in full (longer ones are refused). */
+export const ARCHITECTURE_PATH_LIMIT = 1024;
+
+/** A registry row as the supersession dialog shows it (server-side facts). */
+export interface ArchitectureRowFacts {
+  id: string;
+  docPath: string | null;
+  line: number;
+  docSha256: string | null;
+}
+
+/** #531 slice 2 (plan-531b LD7): what a supersession proposal records, as the dialog shows it. */
+export interface ArchitectureSupersessionFacts {
+  action: "register" | "supersede";
+  /** The domain through renderDomainForReview; null for an unregistered superseded document. */
+  domainShown: string | null;
+  /** "request": the operator typed it (register); "index": it is the superseded row's cell. */
+  domainSource: "request" | "index";
+  status: string | null;
+  path: string;
+  docSha256: string;
+  replaced: ArchitectureRowFacts[];
+  successor: ArchitectureRowFacts | null;
+  sourceSha: string | null;
+  sourceShaReason?: string;
+  indexPath: string;
+  indexSha256: string | null;
+}
+
+function rowLine(label: string, r: ArchitectureRowFacts): string {
+  const where = sanitizeDialogText(r.docPath ?? "(no safe link)", ARCHITECTURE_PATH_LIMIT);
+  return `${label}: ${sanitizeDialogText(r.id, 120)} ${where} line ${r.line} sha256 ${r.docSha256 ?? "unreadable"}`;
+}
+
+/**
+ * #531 slice 2 (plan-531b LD7): propose a supersession. Every value is server-side except the
+ * domain and status of a registration, which are shown "as requested" and recorded exactly as
+ * shown (the route accepts only domains this dialog shows unchanged). Paths are shown in full up to
+ * ARCHITECTURE_PATH_LIMIT, the same limit the route records. Always a Console request.
+ */
+export function architectureSupersessionRequest(facts: ArchitectureSupersessionFacts, operationId: string): OperatorActionRequest {
+  const lines = [`Operation: ${operationId}`];
+  if (facts.domainShown !== null) {
+    lines.push(facts.domainSource === "request"
+      ? `Domain (as requested): ${sanitizeDialogText(facts.domainShown, 1100)}`
+      : `Domain (from the index): ${sanitizeDialogText(facts.domainShown, 1100)}`);
+  }
+  if (facts.status) lines.push(`Status (as requested): ${sanitizeDialogText(facts.status)}`);
+  for (const r of facts.replaced) lines.push(rowLine("Replaces", r));
+  if (facts.successor) lines.push(rowLine("Successor", facts.successor));
+  lines.push(
+    `${facts.action === "register" ? "Proposed document" : "Superseded document"}: ` +
+      `${sanitizeDialogText(facts.path, ARCHITECTURE_PATH_LIMIT)} sha256 ${facts.docSha256}`,
+    `Source HEAD: ${facts.sourceSha ?? facts.sourceShaReason ?? "unavailable"}`,
+    `Index: ${sanitizeDialogText(facts.indexPath, ARCHITECTURE_PATH_LIMIT)} sha256 ${facts.indexSha256 ?? "unavailable"}`,
+    "",
+    "FailSafe records this proposal in its ledger and queues it for an L3 decision. Approving the L3 item records the decision; FailSafe never edits the index.",
+  );
+  return { title: ARCHITECTURE_SUPERSEDE_TITLE, approveLabel: "Propose", detail: withFooter(lines) };
+}
+
+/** B311: the heading of the warn-only affected-architecture lines in the L3 dialogs. */
+export const L3_ARCHITECTURE_HEADING = "Architecture decisions for these files (warn-only):";
+
+/**
+ * B311: the affected-architecture block of l3DecisionRequest and l3BatchRequest (`architecture`:
+ * lines from describeAffectedArchitecture, already review text and capped; the batch caller caps
+ * them at 10 in total). Without lines the dialogs are unchanged.
+ */
+function architectureBlock(architecture: string[] | undefined): string[] {
+  return architecture && architecture.length ? ["", L3_ARCHITECTURE_HEADING, ...architecture] : [];
 }

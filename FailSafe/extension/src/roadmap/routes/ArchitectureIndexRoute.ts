@@ -1,28 +1,43 @@
 /**
- * Managed architecture index routes (#531 LD4). Design: docs/architecture/MANAGED_ARCHITECTURE_INDEX.md.
+ * Managed architecture index routes (#531 LD4; slice 2: plan-531b LD5-LD8). Design:
+ * docs/architecture/MANAGED_ARCHITECTURE_INDEX.md.
  *
- *   GET  /api/v1/architecture/index                 snapshot + ledger state (read-only)
+ *   GET  /api/v1/architecture/index                 snapshot + ledger state + authority findings, registry links and
+ *                                                   decision links (read-only)
  *   POST /api/actions/architecture-index/bootstrap  {mode:'create'}: create the index once, never overwriting
- *   POST /api/actions/architecture-index/propose    {path, action, supersededBy?}: PROPOSAL entry + one L3 item
- *   POST /api/actions/architecture-index/open       {path}: open a snapshot document in the editor ("Use existing")
+ *   POST /api/actions/architecture-index/propose    {path, action:'register', domain, status, supersedes?} or
+ *                                                   {path, action:'supersede', supersededBy}: PROPOSAL entry + one L3 item
+ *   POST /api/actions/architecture-index/open       {path}: open a snapshot document, or a listed contract or
+ *                                                   verification path, in the editor
  *
- * Every route is loopback-only and rate limited. Only bootstrap writes a file, after a modal
- * confirmation. Propose records a decision request and writes nothing; with no usable ledger it
- * answers 503 and queues nothing, because processL3Decision records the decision in the ledger.
+ * Every route is loopback-only and rate limited; propose and open also run the Console request guard.
+ * Only bootstrap writes a file, after a modal confirmation. Propose records a decision request and
+ * writes nothing: it refuses competing canonical authority (in the index, or pending in the L3 queue
+ * or approved and not yet in the index), needs a modal confirmation for every supersession, and
+ * re-checks the index, the documents and HEAD under a per-workspace lock before it records. With no
+ * usable ledger it answers 503 and queues nothing, because processL3Decision records the decision.
  */
 
 import type { Application, Request, Response } from "express";
-import * as fs from "fs";
 import { rateLimit } from "express-rate-limit";
-import { confirmationFailure, type ConfirmOperatorAction } from "../../extension/operatorConfirmation";
-import type { L3ApprovalRequest } from "../../shared/types/l3-approval";
 import {
-  discoverArchitectureIndex, resolveInsideWorkspace, type ArchitectureGit, type ArchitectureIndexSnapshot,
+  architectureSupersessionRequest, confirmBoundOperation, confirmationFailure, type ConfirmOperatorAction,
+} from "../../extension/operatorConfirmation";
+import type { L3ApprovalRequest } from "../../shared/types/l3-approval";
+import { describeOperatorAuthentication } from "../../shared/types/operatorAuthentication";
+import {
+  discoverArchitectureIndex, INDEX_PRESENT_STATES, resolveInsideWorkspace, type ArchitectureGit, type ArchitectureIndexSnapshot,
 } from "../../governance/architecture/ArchitectureIndexDiscovery";
 import {
-  appendArchitectureProposal, ARCHITECTURE_AGENT_DID, runArchitectureIndexBootstrap, sha256, sourceShaOf, usableLedger,
-  type BootstrapResult,
+  runArchitectureIndexBootstrap, usableLedger, type ArchitectureLedger, type BootstrapResult,
 } from "../../governance/architecture/ArchitectureIndexBootstrap";
+import { assessArchitectureAuthority, registryLinks } from "../../governance/architecture/architectureAuthority";
+import {
+  decisionLinks, freshnessProblem, ledgerReader, loadApprovedProposals, pendingAuthority, pendingRefusal, planArchitectureProposal,
+  recordArchitectureProposal, supersessionFacts, withProposalLock, type ArchitectureLedgerReader, type ConfirmationRecord,
+  type ProposalOperation, type Refusal,
+} from "../../governance/architecture/ArchitectureIndexProposal";
+import { consoleRequestGuard } from "./consoleRequestGuard";
 
 export interface ArchitectureIndexRouteDeps {
   rejectIfRemote(req: Request, res: Response): boolean;
@@ -32,16 +47,19 @@ export interface ArchitectureIndexRouteDeps {
   /** Read at request time; null, disabled and stub ledgers all count as unavailable. */
   getLedgerManager: () => unknown;
   queueL3Approval: (request: Omit<L3ApprovalRequest, "id" | "state" | "queuedAt" | "slaDeadline">) => Promise<string>;
+  /** #531 slice 2: read-only L3 queue (pending authority). Absent or throwing: propose answers 503 pending unknown. */
+  getL3Queue?: () => L3ApprovalRequest[];
   /** Modal confirmer; a lazy getter on the registrar's deps (routes register before bootstrap wires it). */
   confirmOperatorAction?: ConfirmOperatorAction;
+  /** #531 slice 2: the bound supersession confirmation's deadline (tests shorten it). */
+  confirmationDeadlineMs?: number;
   /** Opens an absolute path that has passed the snapshot and containment checks. */
   openFileInEditor: (absPath: string) => Promise<void>;
   broadcast?: (data: Record<string, unknown>) => void;
   git?: ArchitectureGit;
 }
 
-const ACTIONS = new Set(["register", "supersede"]);
-const PROPOSABLE = new Set(["present", "present-with-problems"]);
+const PROPOSE_CHANNEL = "console:/api/actions/architecture-index/propose";
 
 function snapshotOf(deps: ArchitectureIndexRouteDeps): ArchitectureIndexSnapshot {
   return discoverArchitectureIndex({
@@ -67,57 +85,93 @@ export function bootstrapResponse(result: BootstrapResult): { status: number; bo
 
 const badRequest = (res: Response, error: string): void => { res.status(400).json({ ok: false, error }); };
 
-/** The workspace-relative paths a request may name: candidates, registered docs and their suggestions. */
+/**
+ * The workspace-relative paths a request may name: candidates, registered docs, their suggestions,
+ * the index, and (B312) listed, non-pattern contract and verification paths.
+ */
 function knownPaths(snap: ArchitectureIndexSnapshot): Set<string> {
   const out = new Set<string>();
   for (const c of snap.candidates) { out.add(c.path); for (const s of c.suggestions) out.add(s); }
   for (const r of snap.rows) if (r.docPath) out.add(r.docPath);
+  for (const r of snap.rows) {
+    for (const cell of [r.cellPaths.contract, r.cellPaths.verification]) {
+      if (cell === "too-long") continue;
+      for (const v of cell) if (v.kind === "path" && v.listed) out.add(v.path);
+    }
+  }
+  if (INDEX_PRESENT_STATES.has(snap.state) && snap.state !== "present-elsewhere") out.add(snap.indexPath);
   return out;
 }
 
-async function propose(req: Request, res: Response, deps: ArchitectureIndexRouteDeps): Promise<void> {
-  const body = (req.body ?? {}) as { path?: unknown; action?: unknown; supersededBy?: unknown };
-  const action = typeof body.action === "string" && ACTIONS.has(body.action) ? body.action : null;
-  if (!action) { badRequest(res, "action must be register or supersede"); return; }
-  const docPath = typeof body.path === "string" ? body.path : "";
-  const snap = snapshotOf(deps);
-  if (!PROPOSABLE.has(snap.state)) { res.status(409).json({ ok: false, state: snap.state }); return; }
-  const candidate = snap.candidates.find((c) => c.path === docPath);
-  const row = snap.rows.find((r) => r.docPath === docPath);
-  let successor: string | null = null;
-  if (action === "register") {
-    if (!candidate) { badRequest(res, "path is not an unregistered architecture document in this workspace"); return; }
-  } else {
-    if (!candidate && !row) { badRequest(res, "path is not an architecture document in this workspace"); return; }
-    const next = snap.rows.find((r) => r.id === body.supersededBy && r.docPath);
-    if (!next || next.docPath === docPath) { badRequest(res, "supersededBy must name another registered row id"); return; }
-    successor = next.id;
-  }
-  const located = resolveInsideWorkspace(deps.workspaceRoot, docPath);
-  if (!located || !located.inside) { badRequest(res, "path does not resolve inside the workspace"); return; }
+const PENDING_UNKNOWN: Refusal = {
+  status: 503,
+  body: {
+    ok: false, pending: "unknown",
+    error: "FailSafe could not read the L3 queue or the ledger, so it cannot tell whether this authority is already pending; nothing was recorded.",
+  },
+};
 
-  const ledger = usableLedger(deps.getLedgerManager());
-  if (!ledger) { res.status(503).json({ ok: false, ledger: "unavailable", error: "The FailSafe ledger is unavailable; nothing was queued." }); return; }
-  const kind = action === "register" ? "architecture-doc-proposal" : "architecture-doc-supersede";
-  const { sourceSha, sourceShaReason } = sourceShaOf(deps.workspaceRoot, deps.git);
-  const docSha256 = sha256(fs.readFileSync(located.abs));
-  const suggestions = candidate?.suggestions ?? [];
-  const payload: Record<string, unknown> = {
-    kind, path: docPath, action, supersededBy: successor, sourceSha, ...(sourceShaReason ? { sourceShaReason } : {}),
-    docSha256, suggestions,
-  };
-  const record = await appendArchitectureProposal(ledger, docPath, docSha256, payload);
-  if (record === "unavailable") { res.status(503).json({ ok: false, ledger: "unavailable", error: "The FailSafe ledger is unavailable; nothing was queued." }); return; }
-  if (record === "failed") { res.status(500).json({ ok: false, ledger: "failed", error: "The proposal could not be recorded; nothing was queued." }); return; }
-  const verb = action === "register" ? "Register" : `Supersede with ${successor}:`;
-  const approvalId = await deps.queueL3Approval({
-    filePath: docPath, riskGrade: "L3", agentDid: ARCHITECTURE_AGENT_DID, agentTrust: 0,
-    sentinelSummary: `Architecture index proposal. ${verb} ${docPath}. Approving records the decision; it does not edit the index.`,
-    flags: ["architecture-index"], kind, meta: { ...payload, proposalEntryId: record.entryId },
-    sourceLedgerEntryId: record.entryId,
+/** Pending authority from the queue and the ledger; a reader that is missing or throws is 503 unknown. */
+async function pendingCheck(
+  deps: ArchitectureIndexRouteDeps, op: ProposalOperation, snap: ArchitectureIndexSnapshot, reader: ArchitectureLedgerReader,
+): Promise<Refusal | null> {
+  try {
+    if (!deps.getL3Queue) return PENDING_UNKNOWN;
+    const queue = deps.getL3Queue();
+    const approved = await loadApprovedProposals(reader);
+    return pendingRefusal(op, pendingAuthority(op, { queue, approved, snapshot: snap }));
+  } catch {
+    return PENDING_UNKNOWN;
+  }
+}
+
+const STALE_TEXT: Record<string, string> = {
+  state: "The index can no longer take proposals",
+  index: "The index changed",
+  document: "A document in this proposal changed",
+  head: "HEAD moved",
+};
+
+async function propose(req: Request, res: Response, deps: ArchitectureIndexRouteDeps): Promise<void> {
+  const root = deps.workspaceRoot;
+  const plan = planArchitectureProposal(snapshotOf(deps), req.body, { workspaceRoot: root, git: deps.git });
+  if (plan.refuse) { res.status(plan.refuse.status).json(plan.refuse.body); return; }
+  let op = plan.op;
+  const manager = deps.getLedgerManager();
+  const ledger: ArchitectureLedger | null = usableLedger(manager);
+  const reader = ledgerReader(manager);
+  if (!ledger || !reader) { res.status(503).json({ ok: false, ledger: "unavailable", error: "The FailSafe ledger is unavailable; nothing was queued." }); return; }
+  const early = await pendingCheck(deps, op, snapshotOf(deps), reader);
+  if (early) { res.status(early.status).json(early.body); return; }
+
+  let confirmation: ConfirmationRecord = {};
+  if (op.supersession) {
+    const bound = await confirmBoundOperation(
+      deps.confirmOperatorAction, op, (o, id) => architectureSupersessionRequest(supersessionFacts(o), id), res,
+      { deadlineMs: deps.confirmationDeadlineMs },
+    );
+    if (!bound) return;
+    op = bound.operation;
+    confirmation = {
+      operationId: bound.operationId,
+      authentication: { ...describeOperatorAuthentication({ method: "vscode-modal-confirmation", channel: PROPOSE_CHANNEL }) },
+    };
+  }
+
+  const frozen = op;
+  const result = await withProposalLock(root, async (): Promise<Refusal> => {
+    const now = snapshotOf(deps);
+    const stale = freshnessProblem(frozen, now, { workspaceRoot: root, git: deps.git });
+    if (stale) {
+      return { status: 409, body: { ok: false, stale, error: `${STALE_TEXT[stale]} while you were confirming; nothing was recorded. Propose again.` } };
+    }
+    const pending = await pendingCheck(deps, frozen, now, reader);
+    if (pending) return pending;
+    return recordArchitectureProposal(frozen, ledger, deps.queueL3Approval, confirmation);
   });
-  deps.broadcast?.({ type: "hub.refresh", reason: "architecture-proposal" });
-  res.status(202).json({ ok: true, approvalId, ledgerEntryId: record.entryId, kind, path: docPath });
+  if (res.writableEnded) return;
+  res.status(result.status).json(result.body);
+  if (result.status === 202) deps.broadcast?.({ type: "hub.refresh", reason: "architecture-proposal" });
 }
 
 async function open(req: Request, res: Response, deps: ArchitectureIndexRouteDeps): Promise<void> {
@@ -141,10 +195,23 @@ export function setupArchitectureIndexRoutes(app: Application, deps: Architectur
   const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: false, legacyHeaders: false });
   const readLimiter = limiter(60);
 
-  app.get("/api/v1/architecture/index", readLimiter, (req, res) => {
+  app.get("/api/v1/architecture/index", readLimiter, async (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
-    const snap = snapshotOf(deps);
-    res.json({ ...snap, ledger: usableLedger(deps.getLedgerManager()) ? "available" : "unavailable" });
+    try {
+      const snap = snapshotOf(deps);
+      const manager = deps.getLedgerManager();
+      const ctx = { workspaceRoot: deps.workspaceRoot, git: deps.git };
+      // B312 / B253: the per-cell values stay server-side; the view gets their checked links.
+      const rows = snap.rows.map(({ cellPaths: _cellPaths, ...row }) => row);
+      res.json({
+        ...snap, rows, ledger: usableLedger(manager) ? "available" : "unavailable",
+        authority: {
+          ...assessArchitectureAuthority(snap, ctx), links: registryLinks(snap, ctx), decisions: await decisionLinks(snap.rows, manager),
+        },
+      });
+    } catch {
+      if (!res.headersSent) res.status(500).json({ ok: false, error: "The architecture index could not be read." });
+    }
   });
 
   app.post("/api/actions/architecture-index/bootstrap", limiter(5), async (req, res) => {
@@ -159,14 +226,17 @@ export function setupArchitectureIndexRoutes(app: Application, deps: Architectur
     res.status(status).json(body);
   });
 
-  app.post("/api/actions/architecture-index/propose", limiter(10), async (req, res) => {
-    if (deps.rejectIfRemote(req, res)) return;
+  // #531 slice 2: propose can raise a modal, so the Console request guard (loopback socket, Host,
+  // Origin, JSON) runs before its limiter.
+  app.post("/api/actions/architecture-index/propose", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), limiter(10), async (req, res) => {
     try { await propose(req, res, deps); } catch {
       if (!res.headersSent) res.status(500).json({ ok: false, error: "The proposal could not be queued." });
     }
   });
 
-  app.post("/api/actions/architecture-index/open", limiter(30), async (req, res) => {
+  // B312 (closes the open-route part of B316): open raises an editor, so the Console request guard
+  // runs before its limiter, as for propose.
+  app.post("/api/actions/architecture-index/open", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), limiter(30), async (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
     await open(req, res, deps);
   });
