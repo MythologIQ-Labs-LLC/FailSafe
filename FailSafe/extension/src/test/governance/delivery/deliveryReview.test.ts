@@ -22,7 +22,7 @@ import {
 } from '../../../governance/delivery/deliveryService';
 import {
   buildReviewPlan, DELIVERY_REVIEW_DID, LOCAL_OVERSEER_DID, parseReviewRequest, recordDeliveryReview, recordProblem, REVIEW_MAX_AGE_MS,
-  walkContinuity, type RecordHooks, type ReviewPlan, type ReviewRequest,
+  sortedJson, walkContinuity, type RecordHooks, type ReviewPlan, type ReviewRequest,
 } from '../../../governance/delivery/deliveryReview';
 import { makeArchitectureGit, type ArchitectureGit } from '../../../governance/architecture/ArchitectureIndexDiscovery';
 import { LedgerManager } from '../../../qorelogic/ledger/LedgerManager';
@@ -1239,6 +1239,15 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
       : kind === 'commitParents' ? args[0] === 'log' && args.includes('--format=%P') : args.includes('--name-status'));
     return (root, args) => (hit(args) && (!only || args[args.length - 1] === only) ? { kind: 'unavailable', detail: `test: ${kind} unavailable` } : real(root, args));
   };
+
+  test('B344 review fold (written with the implementation, not red-first): the read-time evidence comparison ignores key order and keeps array order', () => {
+    const a = { vetoParent: 'p', shared: [{ path: 'a.ts', vetoStatus: 'M', reworkStatus: 'M' }], vetoDiffId: null };
+    const b = { vetoDiffId: null, shared: [{ reworkStatus: 'M', vetoStatus: 'M', path: 'a.ts' }], vetoParent: 'p' };
+    assert.equal(sortedJson(a), sortedJson(b));
+    assert.notEqual(JSON.stringify(a), JSON.stringify(b), 'the plain form would differ');
+    assert.notEqual(sortedJson({ x: [1, 2] }), sortedJson({ x: [2, 1] }), 'array order counts');
+    assert.notEqual(sortedJson({ x: 1 }), sortedJson({ x: 2 }));
+  });
 
   test('B344 R4 fail-closed record (red-first): an unavailable diffIdentity, commitParents or changedPaths answers 503 and writes nothing', async () => {
     const s = await amendedSetup();
