@@ -212,9 +212,27 @@ export class ConsoleRouteRegistrar {
   private registerCoreRoutes(): void {
     const app = this.host.app;
     app.get("/", (req, res) => this.serveUiEntry(req, res));
-    app.get("/health", (_req, res) => {
-      const ready = fs.existsSync(path.join(this.host.uiDir, "index.html"));
-      res.status(ready ? 200 : 503).json({ ready, uiDir: this.host.uiDir });
+    app.get("/health", (req, res) => {
+      // #471: the HTTP handler being reached is evidence of serving this request,
+      // not a verified governance PASS. Test the UI entry actually selected by
+      // serveUiEntry, including its command-center fallback, not unrelated index.html.
+      const isUsableEntry = (name: string): boolean => {
+        try {
+          const file = path.join(this.host.uiDir, name);
+          const stat = fs.statSync(file);
+          fs.accessSync(file, fs.constants.R_OK);
+          return stat.isFile();
+        } catch { return false; }
+      };
+      const requested = this.host.getUiEntryFile(req);
+      const uiAssetsPresent = isUsableEntry(requested) || isUsableEntry("command-center.html");
+      res.status(uiAssetsPresent ? 200 : 503).json({
+        ready: uiAssetsPresent,
+        httpServing: true,
+        uiAssetsPresent,
+        governanceStatus: "unverified",
+        uiDir: this.host.uiDir,
+      });
     });
     app.get("/api/roadmap", (_req, res) => this.serveRoadmap(_req, res));
     app.get("/api/hub", async (_req, res) => { res.json(await this.host.hub.buildHubSnapshot()); });
