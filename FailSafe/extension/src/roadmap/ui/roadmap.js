@@ -302,13 +302,13 @@ export class WebPanelClient {
 
     this.elements.governanceAlerts.classList.remove('hidden');
     this.elements.governanceAlerts.innerHTML = alerts.map((alert) => {
-      const typeClass = alert.type?.toLowerCase() || 'warning';
+      const typeClass = alertTypeClass(alert.type);
       const icon = alert.type === 'VETO' ? '⛔' : alert.type === 'BLOCK' ? '🚫' : '⚠️';
       return `
         <div class="governance-alert ${typeClass}" data-alert-id="${this.escapeHtml(alert.id)}">
           <span class="alert-icon">${icon}</span>
           <span class="alert-message">${this.escapeHtml(alert.message)}</span>
-          ${alert.entry ? `<span class="alert-entry">#${alert.entry}</span>` : ''}
+          ${alert.entry ? `<span class="alert-entry">#${this.escapeHtml(alert.entry)}</span>` : ''}
         </div>
       `;
     }).join('');
@@ -334,7 +334,7 @@ export class WebPanelClient {
     // (role=dialog, focus trap, Escape-close, focus save/restore).
     const bodyHtml = `
       <div class="alert-modal-header">
-        <span class="alert-modal-type ${this.escapeHtml(alert.type).toLowerCase()}">${this.escapeHtml(alert.type)}</span>
+        <span class="alert-modal-type ${alertTypeClass(alert.type)}">${this.escapeHtml(alert.type)}</span>
         <button class="alert-modal-close">&times;</button>
       </div>
       <div class="alert-modal-body">
@@ -498,4 +498,10 @@ if (typeof document !== 'undefined') {
 // .stack content imperatively).
 if (typeof window !== 'undefined') {
   /** @type {any} */ (window).__failsafeRefitMonitor = fitMonitorToViewport;
+}
+
+// Only known governance severity classes may enter HTML attributes (#563).
+function alertTypeClass(value) {
+  const token = String(value ?? '').toLowerCase();
+  return token === 'veto' || token === 'block' ? token : 'warning';
 }
