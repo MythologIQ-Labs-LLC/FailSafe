@@ -39,7 +39,7 @@ Reading user-level agent settings outside the workspace would widen file access 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
 | policy-audit | verified-shipped | `auditMcpConfig` `FailSafe/extension/src/integrations/agent-observe/mcp-policy-audit.ts:105` (`export function auditMcpConfig(agent: string, text: string)`) | `FailSafe/extension/src/extension/agent-observe-command.ts:63` (`auditMcpConfig(cand.agent, text)`) | `FailSafe/extension/src/test/integrations/agent-observe/agent-observe.test.ts` (unit) | Command `FailSafe/extension/src/extension/agent-observe-command.ts:80` (`registerCommand('failsafe.agentAudit.run'`) |
-| risk-ingest | verified-shipped | `runMcpPolicyScan` `FailSafe/extension/src/extension/agent-observe-command.ts:49` (`export function runMcpPolicyScan(`) | `FailSafe/extension/src/extension/main.ts:286` (`registerAgentObserveCommands(context, core.workspaceRoot)`) | `FailSafe/extension/src/test/integrations/agent-observe/agent-observe.test.ts` (unit) | A throwing sink is counted, not loop-aborting `FailSafe/extension/src/test/integrations/agent-observe/agent-observe.test.ts:159` (`a sink that throws on the SECOND risk keeps scanning`) |
+| risk-ingest | verified-shipped | `runMcpPolicyScan` `FailSafe/extension/src/extension/agent-observe-command.ts:49` (`export function runMcpPolicyScan(`) | `FailSafe/extension/src/extension/main.ts:287` (`registerAgentObserveCommands(context, core.workspaceRoot)`) | `FailSafe/extension/src/test/integrations/agent-observe/agent-observe.test.ts` (unit) | A throwing sink is counted, not loop-aborting `FailSafe/extension/src/test/integrations/agent-observe/agent-observe.test.ts:159` (`a sink that throws on the SECOND risk keeps scanning`) |
 | user-level-config-audit | proposed | none | none | none | Only workspace-relative candidates are read `FailSafe/extension/src/extension/agent-observe-command.ts:23-24` (`Best-effort known MCP/tool config locations (workspace-relative)`) |
 | kilo-namespaced-permissions | proposed | none | none | none | The legacy review's Kilo allow/ask/deny parse is not implemented (unverified beyond `parseMcpPolicyConfig`, which reads `mcpServers` and auto-approve lists only) |
 | runtime-interception | proposed | none | none | none | Deferred by the legacy review; the audit is read-only `FailSafe/extension/src/extension/agent-observe-command.ts:6` (`Both are READ-ONLY.`) |
@@ -81,7 +81,7 @@ Proposed (not built): risk-to-config-file and risk-to-MCP-install edges in the r
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)" `FailSafe/extension/package.json:201-202` (`"title": "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)"`).
+Command palette: "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)" `FailSafe/extension/package.json:205-206` (`"title": "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)"`).
 Result: an information message with configs scanned, risks upserted and the high-severity count `FailSafe/extension/src/extension/agent-observe-command.ts:96` (`risk(s) upserted (`).
 Findings: the Console risk view reads the register `FailSafe/extension/src/roadmap/ui/modules/rest-api.js:19` (`/api/risks`).
 Status: the Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).

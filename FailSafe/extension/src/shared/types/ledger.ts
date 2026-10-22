@@ -42,7 +42,9 @@ export type LedgerEventType =
   | "MARKETPLACE_INSTALL"   // Agent installed from marketplace
   | "MARKETPLACE_UNINSTALL" // Agent uninstalled from marketplace
   // Workspace Delivery (#532 B320/B321)
-  | "DELIVERY_REVIEWED"; // Operator-confirmed review verdict on one linked commit of the active intent
+  | "DELIVERY_REVIEWED" // Operator-confirmed review verdict on one linked commit of the active intent
+  // Intent decisions (B340)
+  | "INTENT_DECIDED"; // Operator-confirmed PASS, VETO or SEALED on the active intent (enforce-mode approval)
 
 export interface LedgerEntry {
   id: number;

@@ -37,7 +37,7 @@ Running a module's command uses the operator's own package-manager credentials i
 |---|---|---|---|---|---|
 | environment-detection | verified-shipped | `detectEnvironment` `FailSafe/extension/src/integrations/agt/agt-catalog.ts:111` (`export function detectEnvironment(rootEntries: string[]): string[] {`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:503` (`app.get("/api/v1/agt/modules"`) | `FailSafe/extension/src/test/integrations/agt/agt-catalog.test.ts` (unit) | Language modules only `FailSafe/extension/src/integrations/agt/agt-catalog.ts:115` (`if (m.kind !== 'language'`) |
 | verified-module-catalog | verified-shipped | `AGT_MODULES` `FailSafe/extension/src/integrations/agt/agt-catalog.ts:45` (`export const AGT_MODULES: AgtModule[] = [`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:503` (`app.get("/api/v1/agt/modules"`) | `FailSafe/extension/src/test/integrations/agt/agt-catalog.test.ts` (unit) | Nine modules, verified on a stated date `FailSafe/extension/src/integrations/agt/agt-catalog.ts:9-10` (`microsoft/agent-governance-toolkit, 2026-06-03`) |
-| terminal-prefill-install | verified-shipped | `AgtRoute` `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:60` (`install(req: Request, res: Response, deps: AgtRouteDeps)`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:489` (`const installLimiter = rateLimit({ windowMs: 60_000, limit: 5`) | `FailSafe/extension/src/test/roadmap/routes/AgtRoute.test.ts` (route) | Pre-filled, not executed `FailSafe/extension/src/extension/bootstrapServers.ts:184-186` (`terminal.sendText(command, false);`); as released in v6.0.8 there was no server-side confirmation (F16); on main it confirms first (terminal-prefill-confirmation) |
+| terminal-prefill-install | verified-shipped | `AgtRoute` `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:60` (`install(req: Request, res: Response, deps: AgtRouteDeps)`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:489` (`const installLimiter = rateLimit({ windowMs: 60_000, limit: 5`) | `FailSafe/extension/src/test/roadmap/routes/AgtRoute.test.ts` (route) | Pre-filled, not executed `FailSafe/extension/src/extension/bootstrapServers.ts:191-193` (`terminal.sendText(command, false);`); as released in v6.0.8 there was no server-side confirmation (F16); on main it confirms first (terminal-prefill-confirmation) |
 | terminal-prefill-confirmation | main-unreleased | `setupAgtInstallRoute` `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:92` (`export function setupAgtInstallRoute(`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:511` (`setupAgtInstallRoute(app, agtDeps, installLimiter);`) | `FailSafe/extension/src/test/roadmap/installAuthorization.routes.test.ts` (route) | #538: the catalog command is shown in a modal VS Code dialog before the terminal opens; Host, Origin and JSON are checked before the rate limit; an approval after 2 minutes or after the browser has gone opens nothing; the approval is recorded in the ledger when it is available |
 
 ## Inbound fields
@@ -60,7 +60,7 @@ Detected modules are flagged `recommended` in the list `FailSafe/extension/src/r
 
 ## Persisted artifacts
 
-None written by FailSafe; the terminal holds the pre-filled command `FailSafe/extension/src/extension/bootstrapServers.ts:186-188` (`const terminal = vscode.window.createTerminal(name);`).
+None written by FailSafe; the terminal holds the pre-filled command `FailSafe/extension/src/extension/bootstrapServers.ts:190-192` (`const terminal = vscode.window.createTerminal(name);`).
 
 ## Graph links
 
@@ -75,7 +75,7 @@ A Public Preview notice is shown `FailSafe/extension/src/integrations/agt/agt-ca
 
 ## Governance policy and enforceability limits
 
-Enforced: the command is never executed by FailSafe; the operator presses enter `FailSafe/extension/src/extension/bootstrapServers.ts:180-182` (`pre-fills the command but does NOT execute it`).
+Enforced: the command is never executed by FailSafe; the operator presses enter `FailSafe/extension/src/extension/bootstrapServers.ts:187-189` (`pre-fills the command but does NOT execute it`).
 Enforced: only catalog ids are accepted, so a request cannot inject a command `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:59-63` (`unknown AGT module id`).
 Enforced: non-loopback callers, a non-loopback `Host`, a foreign `Origin` and non-JSON bodies are refused before the shared rate limit `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:97` (`app.post(AGT_INSTALL_PATH, consoleRequestGuard(`). A Console reached through a browser-based remote (Codespaces, vscode.dev, code-server behind https) or the cross-port workspace switcher is refused too; copy the command from the card there.
 Enforced on main (#538): the terminal opens only after the operator approves the catalog command in a modal VS Code dialog, and exactly that command is typed `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:81` (`deps.runInTerminal(`). The modal proves a person clicked in VS Code, not which local process asked.

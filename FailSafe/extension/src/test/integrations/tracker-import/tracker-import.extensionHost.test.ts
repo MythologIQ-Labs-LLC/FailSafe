@@ -379,8 +379,12 @@ suite('tracker governed intent drafts in the extension host (#480)', function ()
   test('D6e an active SEALED intent, even this issue\'s, does not block a new draft', async () => {
     const svc = service(root);
     await svc.createIntent({ type: 'feature', purpose: 'Old draft', scope: { files: [], modules: [], riskGrade: 'L1' }, planId: 'p', metadata: { author: 'user', tags: [], externalRef: 'jira:PROJ-123' } });
-    await svc.updateStatus('PASS', 'user', true);
+    // B340: in enforce mode a decision is recorded only through a confirmed modal; this setup only needs
+    // an active SEALED intent, so the two status writes run in observe mode.
+    svc.setGovernanceModeGetter(() => 'observe');
+    await svc.updateStatus('PASS', 'user');
     await svc.updateStatus('SEALED', 'user');
+    svc.setGovernanceModeGetter(() => 'enforce');
     assert.equal((await svc.getActiveIntent())?.status, 'SEALED');
     const { result } = await jira(['jira-PROJ-123'], new ScriptedReviewUi({ approve: true, plan: 'plan-1' }), { svc });
     assert.equal(result?.outcome, 'draft_created');

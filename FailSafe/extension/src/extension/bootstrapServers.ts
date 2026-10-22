@@ -34,6 +34,8 @@ import { readArchitectureIndexPath, registerArchitectureIndexCommand } from "./a
 import { describeAffectedArchitecture } from "../governance/architecture/affectedArchitecture";
 import { registerDeliveryAssessmentCommand } from "./deliveryAssessmentCommand";
 import { registerDeliveryReviewCommand } from "./deliveryReviewCommand";
+import { registerIntentDecisionCommands } from "./intentDecisionCommand";
+import { assessIntentDelivery } from "../governance/delivery/deliveryService";
 import { governedCommitLinker } from "./governedCommitLink";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
 import type { CredentialsBootstrap } from "./credentials-command";
@@ -118,6 +120,8 @@ export interface ServerDeps {
   /** #532 part B: the governance IntentService behind the delivery routes, the commit-check
    *  route's active-intent read and the delivery assessment command. */
   intentService?: import("../governance/IntentService").IntentService;
+  /** B340: called after an intent decision or seal is recorded (refreshes the status bar). */
+  onIntentDecided?: () => void;
 }
 
 export interface ServerResult {
@@ -284,6 +288,23 @@ export async function bootstrapServers(
       confirm: confirmOperatorAction,
       getIndexPathSetting: readArchitectureIndexPath,
       broadcast: (data) => consoleServer.broadcastEvent(data),
+    });
+    // B340 (plan-b340 LD1/LD6): approve, veto and seal the active intent through the shared confirmer.
+    const decisionIntents = deps.intentService;
+    registerIntentDecisionCommands(context, {
+      workspaceRoot: deps.workspaceRoot,
+      intents: decisionIntents,
+      getLedger: () => deps.qorelogicManager.getLedgerManager(),
+      confirm: confirmOperatorAction,
+      reviewState: async (intentId) => {
+        const view = await assessIntentDelivery({
+          workspaceRoot: deps.workspaceRoot, intents: decisionIntents, ledger: deps.qorelogicManager.getLedgerManager(),
+          indexPathSetting: readArchitectureIndexPath(),
+        }, intentId);
+        const step = view.integrity === "valid" && view.found ? view.assessment.steps.find((s) => s.key === "review") : undefined;
+        return step ? `${step.status}: ${step.reason}` : "unavailable";
+      },
+      onRecorded: deps.onIntentDecided,
     });
   }
 

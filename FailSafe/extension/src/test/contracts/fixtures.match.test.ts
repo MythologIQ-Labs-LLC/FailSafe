@@ -46,7 +46,7 @@ suite('Governance contract schemas — fixture validation (FX546)', () => {
     assert.equal(validate(fixture), true, JSON.stringify((validate as unknown as { errors?: unknown }).errors));
   });
 
-  test('#532 B320: a DELIVERY_REVIEWED entry validates; the schema declares $schema-version 1.1 and the README lists the migration', () => {
+  test('#532 B320: a DELIVERY_REVIEWED entry validates and the README lists the 1.0 -> 1.1 migration', () => {
     const validate = compileSchema('ledger_entry');
     const fixture: LedgerEntryContract = {
       id: 7,
@@ -62,10 +62,32 @@ suite('Governance contract schemas — fixture validation (FX546)', () => {
     };
     assert.equal(validate(fixture), true, JSON.stringify((validate as unknown as { errors?: unknown }).errors));
     const schema = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'ledger_entry.json'), 'utf8'));
-    assert.equal(schema['$schema-version'], '1.1');
+    assert.ok(['1.1', '1.2'].includes(schema['$schema-version']));
     const readme = fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'src', 'contracts', 'README.md'), 'utf8');
     assert.match(readme, /\| `ledger_entry\.json` \| 1\.0 \| 1\.1 \| `eventType` adds `DELIVERY_REVIEWED`/);
     assert.equal(validate({ ...fixture, eventType: 'DELIVERY_REVIEWED_TYPO' }), false, 'the enum is still closed');
+  });
+
+  test('B340: an INTENT_DECIDED entry validates; the schema declares $schema-version 1.2 and the README lists the migration', () => {
+    const validate = compileSchema('ledger_entry');
+    const fixture = {
+      id: 9,
+      timestamp: '2026-10-21T12:00:00.000Z',
+      eventType: 'INTENT_DECIDED',
+      agentDid: 'did:myth:failsafe:intent-decision',
+      agentTrustAtAction: 0,
+      gdprTrigger: false,
+      payload: { decisionId: '33333333-3333-4333-8333-333333333333', verdict: 'PASS' },
+      entryHash: 'a'.repeat(64),
+      prevHash: 'b'.repeat(64),
+      signature: `v3:${'c'.repeat(64)}`,
+    } as unknown as LedgerEntryContract;
+    assert.equal(validate(fixture), true, JSON.stringify((validate as unknown as { errors?: unknown }).errors));
+    const schema = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'ledger_entry.json'), 'utf8'));
+    assert.equal(schema['$schema-version'], '1.2');
+    const readme = fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'src', 'contracts', 'README.md'), 'utf8');
+    assert.match(readme, /\| `ledger_entry\.json` \| 1\.1 \| 1\.2 \| `eventType` adds `INTENT_DECIDED`/);
+    assert.equal(validate({ ...fixture, eventType: 'INTENT_DECIDED_TYPO' }), false, 'the enum is still closed');
   });
 
   test('LedgerEntry missing required field is rejected', () => {

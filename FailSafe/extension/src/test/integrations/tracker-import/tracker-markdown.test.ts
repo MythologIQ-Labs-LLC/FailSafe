@@ -47,7 +47,8 @@ suite('tracker preview and chat Markdown safety (#480 T11)', () => {
     };
     const active = { id: 'i', purpose: HOSTILE_TITLE, type: 'feature', status: 'PASS', scope: { files: [], riskGrade: 'L1' } };
     const participant = Object.create(FailSafeChatParticipant.prototype) as Record<string, unknown>;
-    participant.intentService = { getActiveIntent: async () => active, sealIntent: async () => undefined };
+    // B340: the participant reads the effective status (here the same object).
+    participant.intentService = { getActiveIntent: async () => active, getEnforcedActiveIntent: async () => active, sealIntent: async () => undefined };
     participant.sentinel = { getStatus: () => ({ running: true, mode: 'LOCAL', filesWatched: 0, queueDepth: 0 }) };
     const handle = (participant.handleRequest as (...a: unknown[]) => Promise<unknown>).bind(participant);
     const token = new vscode.CancellationTokenSource().token;

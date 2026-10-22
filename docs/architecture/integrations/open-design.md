@@ -41,9 +41,9 @@ Write tools (`create_artifact`, `write_file`, `delete_file`, `delete_project`) w
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| file-path-provenance | verified-shipped | `OpenDesignProvenanceDetector` `FailSafe/extension/src/integrations/open-design/OpenDesignProvenanceDetector.ts:13` (`export class OpenDesignProvenanceDetector`) | `FailSafe/extension/src/extension/bootstrapSentinel.ts:88-90` (`[new OpenDesignProvenanceDetector()]`) | `FailSafe/extension/src/test/extension/bootstrapSentinel-open-design.test.cjs` (unit) | Opt-in setting `FailSafe/extension/package.json:402` (`"failsafe.integrations.openDesign.enabled"`) |
+| file-path-provenance | verified-shipped | `OpenDesignProvenanceDetector` `FailSafe/extension/src/integrations/open-design/OpenDesignProvenanceDetector.ts:13` (`export class OpenDesignProvenanceDetector`) | `FailSafe/extension/src/extension/bootstrapSentinel.ts:88-90` (`[new OpenDesignProvenanceDetector()]`) | `FailSafe/extension/src/test/extension/bootstrapSentinel-open-design.test.cjs` (unit) | Opt-in setting `FailSafe/extension/package.json:412` (`"failsafe.integrations.openDesign.enabled"`) |
 | daemon-probe | verified-shipped | `OpenDesignDaemonProbe` `FailSafe/extension/src/integrations/open-design/OpenDesignDaemonProbe.ts:41` (`export class OpenDesignDaemonProbe`) | `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts:140-141` (`const probeResult = await probe.probe();`) | `FailSafe/extension/src/test/integrations/open-design/OpenDesignDaemonProbe.test.ts` (unit) | Runs only inside the register command `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts:14-15` (`The daemon is NOT auto-probed on activation`) |
-| consented-mcp-launch | verified-shipped | `bootstrapOpenDesignMcp` `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts:65` (`export function bootstrapOpenDesignMcp(`) | `FailSafe/extension/src/extension/main.ts:388` (`bootstrapOpenDesignMcp(context, core.workspaceRoot, {`) | `FailSafe/extension/src/test/extension/bootstrapOpenDesignMcp.test.cjs` (unit) | Command `FailSafe/extension/package.json:121` (`"command": "failsafe.openDesign.registerMcp"`) |
+| consented-mcp-launch | verified-shipped | `bootstrapOpenDesignMcp` `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts:65` (`export function bootstrapOpenDesignMcp(`) | `FailSafe/extension/src/extension/main.ts:395` (`bootstrapOpenDesignMcp(context, core.workspaceRoot, {`) | `FailSafe/extension/src/test/extension/bootstrapOpenDesignMcp.test.cjs` (unit) | Command `FailSafe/extension/package.json:124` (`"command": "failsafe.openDesign.registerMcp"`) |
 | read-only-mcp-client | verified-shipped | `OpenDesignMcpClient` `FailSafe/extension/src/integrations/open-design/OpenDesignMcpClient.ts:56` (`export class OpenDesignMcpClient extends McpClientHost`) | `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts:82` (`return new OpenDesignMcpClient({ command: spec.command`) | `FailSafe/extension/src/test/integrations/open-design/OpenDesignMcpClient.test.ts` (unit) | No FailSafe code calls a read-only tool; the connect step only counts them `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts:155` (`OpenDesignMcpAllowlist.isReadOnly(t)).length`) |
 | destructive-tool-refusal | verified-shipped | `isDestructive` `FailSafe/extension/src/integrations/open-design/OpenDesignMcpAllowlist.ts:67` (`static isDestructive(toolName: string): boolean {`) | `FailSafe/extension/src/integrations/open-design/OpenDesignMcpClient.ts:80-82` (`if (OpenDesignMcpAllowlist.isDestructive(name)) {`) | `FailSafe/extension/src/test/integrations/open-design/OpenDesignMcpAllowlist.test.ts` (unit) | Unlisted tools are refused too `FailSafe/extension/src/integrations/open-design/OpenDesignMcpClient.ts:77-78` (`TOOL_NOT_ALLOWLISTED`) |
 | connection-status-route | shipped-unverified | `setupOpenDesignRoutes` `FailSafe/extension/src/roadmap/routes/OpenDesignRoute.ts:36-37` (`'/api/integrations/open-design/status'`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:343` (`setupOpenDesignRoutes(app, {`) | none | The route test covers only the create_artifact POST `FailSafe/extension/src/test/roadmap/routes/OpenDesignRoute.test.ts:40` (`valid create_artifact request enqueues L3`); the renderer test stubs the status fetch (unverified beyond its header) |
@@ -87,10 +87,10 @@ Proposed (not built): design artifact to intent, plan or receipt edges (unverifi
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Register Open Design MCP Connection" `FailSafe/extension/package.json:121-122` (`"title": "FailSafe: Register Open Design MCP Connection"`).
+Command palette: "FailSafe: Register Open Design MCP Connection" `FailSafe/extension/package.json:125-126` (`"title": "FailSafe: Register Open Design MCP Connection"`).
 Console Integrations, Open Design card: status from `/api/integrations/open-design/status` `FailSafe/extension/src/roadmap/ui/modules/open-design-renderer.js:38` (`fetch('/api/integrations/open-design/status')`).
 The card still offers a create_artifact "Request" button `FailSafe/extension/src/roadmap/ui/modules/open-design-renderer.js:64` (`cc-od-create-artifact`), which queues an L3 item that cannot execute (see Open defects).
-Monitor Agents: an "Open Design" provenance pill on tagged runs `FailSafe/extension/package.json:405` (`Surfaces an 'Open Design' pill in the Monitor Agents tab`).
+Monitor Agents: an "Open Design" provenance pill on tagged runs `FailSafe/extension/package.json:415` (`Surfaces an 'Open Design' pill in the Monitor Agents tab`).
 
 ## Governance policy and enforceability limits
 
@@ -123,6 +123,6 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Pr
 
 ## Open defects
 
-The SSE observer is constructed but never subscribed and its setting is read nowhere [B266] `FailSafe/extension/package.json:585-588` (`"failsafe.integrations.openDesign.sseEnabled"`).
+The SSE observer is constructed but never subscribed and its setting is read nowhere [B266] `FailSafe/extension/package.json:595-598` (`"failsafe.integrations.openDesign.sseEnabled"`).
 The Console card queues a create_artifact L3 approval that always fails on approval (observed, not filed in this cycle; see Other findings in the portfolio) `FailSafe/extension/src/roadmap/routes/OpenDesignRoute.ts:75` (`const approvalId = await deps.queueL3Approval({`).
 B228 asks for capability conformance coverage of Open Design `docs/BACKLOG.md:584` (`Extend the #474 capability conformance suite`).

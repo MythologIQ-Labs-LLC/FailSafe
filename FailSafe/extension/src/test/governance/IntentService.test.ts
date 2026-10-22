@@ -99,7 +99,10 @@ describe('IntentService (Phase 1 - B66/B67)', () => {
     assert.equal(intent.planId, 'plan-v4.2.0');
   });
 
-  it('rejects PASS status without auditVerified in enforce mode (B67)', async () => {
+  // B340 (plan-b340 LD5): a caller-supplied boolean is not proof. In enforce mode a PASS, VETO or
+  // SEALED is recorded only through FailSafe: Approve or Veto the Active Intent (a confirmed modal),
+  // so updateStatus refuses all three, with or without the old auditVerified argument.
+  it('refuses PASS through updateStatus in enforce mode, even with a caller-supplied boolean (B67 -> B340)', async () => {
     const workspace = makeTempWorkspace();
     const service = new IntentService(workspace, createMockSessionManager());
     service.setGovernanceModeGetter(() => 'enforce');
@@ -112,26 +115,30 @@ describe('IntentService (Phase 1 - B66/B67)', () => {
       metadata: { author: 'test', tags: [] },
     });
 
+    await assert.rejects(() => service.updateStatus('PASS', 'test'), /Approve or Veto the Active Intent/);
     await assert.rejects(
-      () => service.updateStatus('PASS', 'test'),
-      { message: 'Intent cannot reach PASS without audit sign-off in enforce mode.' },
+      () => (service.updateStatus as unknown as (s: string, a: string, v: boolean) => Promise<void>)('PASS', 'judge', true),
+      /Approve or Veto the Active Intent/,
     );
+    await assert.rejects(() => service.updateStatus('VETO', 'judge'), /Approve or Veto the Active Intent/);
+    await assert.rejects(() => service.updateStatus('SEALED', 'judge'), /Approve or Veto the Active Intent/);
+    const active = await service.getActiveIntent();
+    assert.equal(active?.status, 'PULSE');
   });
 
-  it('allows PASS status with auditVerified in enforce mode (B67)', async () => {
+  it('still writes PASS through updateStatus in observe mode (enforcement never honours it)', async () => {
     const workspace = makeTempWorkspace();
     const service = new IntentService(workspace, createMockSessionManager());
-    service.setGovernanceModeGetter(() => 'enforce');
+    service.setGovernanceModeGetter(() => 'observe');
 
     await service.createIntent({
       type: 'feature',
       purpose: 'Test intent',
       scope: { files: [], modules: [], riskGrade: 'L1' },
-      planId: 'plan-v4.2.0',
       metadata: { author: 'test', tags: [] },
     });
 
-    await service.updateStatus('PASS', 'judge', true);
+    await service.updateStatus('PASS', 'judge');
     const active = await service.getActiveIntent();
     assert.equal(active?.status, 'PASS');
   });

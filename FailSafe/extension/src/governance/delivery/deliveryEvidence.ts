@@ -22,6 +22,7 @@
 
 import { createHash } from 'crypto';
 import type { SealedLedgerRow } from '../../qorelogic/ledger/LedgerManager';
+import { isIntentDecisionRecord } from '../intentDecision';
 
 /** Records listed in the view; the digest and the count always cover the complete set. */
 export const EVIDENCE_PAGE = 200;
@@ -86,7 +87,7 @@ export function evidenceDigest(pairs: Array<[number, string]>): string {
   return createHash('sha256').update(JSON.stringify(sorted)).digest('hex');
 }
 
-/** Every row whose payload names the intent id exactly (reviews excluded), newest first. */
+/** Every row whose payload names the intent id exactly (reviews and valid intent decisions excluded), newest first. */
 export async function findGovernanceEvidence(ledger: unknown, intentId: string): Promise<GovernanceEvidence> {
   const usable = usableEvidenceLedger(ledger);
   if (!usable) return { state: 'unavailable', reason: 'The FailSafe ledger is unavailable, so governance evidence cannot be read.' };
@@ -98,8 +99,11 @@ export async function findGovernanceEvidence(ledger: unknown, intentId: string):
   }
   const byId = new Map<number, EvidenceRecord>();
   const unverifiable: UnverifiableEvidence[] = [];
-  for (const { row, payload, seal } of rows) {
-    if (row.event_type === REVIEW_EVENT_TYPE || byId.has(row.id)) continue;
+  for (const sealed of rows) {
+    const { row, payload, seal } = sealed;
+    // B340 (plan-b340 LD7): a valid intent decision (sealed, written by the decision DID) is not evidence;
+    // any other row with that event type stays evidence, and a broken seal stays listed as unverifiable.
+    if (row.event_type === REVIEW_EVENT_TYPE || isIntentDecisionRecord(sealed) || byId.has(row.id)) continue;
     const exact = !!payload && payload.intentId === intentId;
     if (!exact && payload) continue; // the id appears in some other field: not evidence
     if (!seal.ok) {

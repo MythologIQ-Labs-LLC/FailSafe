@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { IntentService } from "../governance/IntentService";
-import { EnforcementEngine } from "../governance/EnforcementEngine";
+import type { EnforcementEngine } from "../governance/EnforcementEngine";
+import { createEnforcementEngine } from "../governance/enforcedIntentProvider";
 import { GovernanceRouter } from "../governance/GovernanceRouter";
 import { isGovernedSave } from "../governance/governedDocument";
 import { GovernanceStatusBar } from "../governance/GovernanceStatusBar";
@@ -82,15 +83,15 @@ export async function bootstrapGovernance(
   }
 
   const intentService = new IntentService(core.workspaceRoot, sessionManager);
-  const enforcement = new EnforcementEngine(
+  // B340 (plan-b340 LD4): the one factory; the engine reads the effective status in enforce mode,
+  // and the factory wires the governance mode getter (B66 planId enforcement).
+  const enforcement = createEnforcementEngine(
     intentService,
     core.workspaceRoot,
     configProvider,
     notifications,
     executeCommand,
   );
-  // B66: Wire governance mode getter for planId enforcement
-  intentService.setGovernanceModeGetter(() => enforcement.getGovernanceMode());
   const governanceStatusBar = new GovernanceStatusBar();
 
   const evaluationRouter = EvaluationRouter.fromConfigManager(
@@ -109,7 +110,8 @@ export async function bootstrapGovernance(
   governanceRouter.setPlanManager(core.planManager);
 
   // Initial UI State
-  governanceStatusBar.update(await intentService.getActiveIntent());
+  // B340: the effective status (PULSE until main.ts wires the ledger, then refreshed there).
+  governanceStatusBar.update(await intentService.getEnforcedActiveIntent());
 
   // Wire File Hooks - extract fsPath from vscode.Uri at the boundary
   context.subscriptions.push(
