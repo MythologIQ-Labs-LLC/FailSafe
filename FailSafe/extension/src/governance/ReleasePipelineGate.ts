@@ -45,7 +45,7 @@ export class ReleasePipelineGate {
     // exception for a skipped preflight check (#473).
     let active: Awaited<ReturnType<IntentService['getActiveIntent']>>;
     try {
-      active = await this.intentService.getActiveIntent();
+      active = await this.intentService.getActiveIntentForRelease();
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
