@@ -35,13 +35,20 @@ async function otherOrigin(): Promise<string> {
   return `http://127.0.0.1:${(other.address() as AddressInfo).port}/`;
 }
 
-interface Effects { starts: number; resumed: number; verifies: number; requestLog: Array<{ method: string; path: string }> }
+interface Effects {
+  starts: number;
+  resumed: number;
+  verifies: number;
+  requestLog: Array<{ method: string; path: string }>;
+  responseLog: Array<{ method: string; path: string; status: number }>;
+}
 
 async function serve(): Promise<Effects> {
-  const effects: Effects = { starts: 0, resumed: 0, verifies: 0, requestLog: [] };
+  const effects: Effects = { starts: 0, resumed: 0, verifies: 0, requestLog: [], responseLog: [] };
   controller = await serveConsoleServerUI({
     initialHub: { version: "test", bootstrapState: {}, agentHealth: null } as never,
     requestLog: effects.requestLog,
+    responseLog: effects.responseLog,
     onSentinelStart: () => { effects.starts += 1; },
     onCheckpoint: (type) => { if (type === "monitoring.resumed") effects.resumed += 1; },
     onVerifyChain: () => { effects.verifies += 1; },
@@ -82,10 +89,15 @@ for (const route of ["/api/actions/resume-monitoring", "/api/actions/verify-inte
       const effects = await serve();
       await page.goto(await otherOrigin());
       await send(page, `${controller!.url}${route}`);
-      await expect.poll(() => effects.requestLog.filter((r) => r.method === "POST" && r.path === route).length).toBe(arrivals);
+      const posts = <T extends { method: string; path: string }>(log: T[]) => log.filter((r) => r.method === "POST" && r.path === route);
+      await expect.poll(() => posts(effects.requestLog).length).toBe(arrivals);
+      // Lane D2 review: the request log is written before the route runs, so wait until every
+      // response has been sent (the route has finished, async work included) before asserting.
+      await expect.poll(() => posts(effects.responseLog).length).toBe(arrivals);
       expect(effects.starts).toBe(0);
       expect(effects.resumed).toBe(0);
       expect(effects.verifies).toBe(0);
+      expect(posts(effects.responseLog).map((r) => r.status)).toEqual(Array(arrivals).fill(403));
     });
   }
 }

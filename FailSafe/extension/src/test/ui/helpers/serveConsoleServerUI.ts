@@ -111,6 +111,8 @@ export interface ConsoleServerFixtures {
   onL3Decision?: (id: string, decision: string) => void;
   /** Lane D: every request that reaches the server is appended here (method and path). */
   requestLog?: Array<{ method: string; path: string }>;
+  /** Lane D2: every response the server finished sending is appended here (method, path, status). */
+  responseLog?: Array<{ method: string; path: string; status: number }>;
   /** Lane D2: when given, the fake Sentinel is stopped (as after a Panic Stop) and its `start` calls this. */
   onSentinelStart?: () => void;
   /** Lane D2: when given, called for every hub chain verify and checkpoint record, before the real call. */
@@ -394,6 +396,11 @@ export async function serveConsoleServerUI(
   // hubRef.current means controller.setHub() updates surface on next fetch.
   app.use((req, res, next) => {
     fixtures.requestLog?.push({ method: req.method, path: req.path });
+    const responseLog = fixtures.responseLog;
+    if (responseLog) {
+      const { method, path: reqPath } = req;
+      res.on("finish", () => { responseLog.push({ method, path: reqPath, status: res.statusCode }); });
+    }
     if (req.method === 'GET' && (req.originalUrl === '/api/hub' || req.path === '/api/hub') && fakes.hubRef.current) {
       res.json(fakes.hubRef.current);
       return;
