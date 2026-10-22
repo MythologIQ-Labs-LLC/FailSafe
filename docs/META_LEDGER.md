@@ -35398,3 +35398,61 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `5ea6e973cc6e136fa3ad92a6a66b9f3e6dc741b529947a8d5587d78fa5775af6`
 
 **Decision**: SESSION SEAL for plan-b340-enforce-approval.md (content hash = the audited iteration-4 plan, sha256 0780da6a). Reality = Promise, with disclosures. In enforce mode, an intent can be approved again, through an operator-confirmed decision recorded as a sealed ledger row. A forged intent file, forged history or forged verdict is not honoured. A deleted, edited, reordered or index-hidden VETO cannot be bypassed: the status is computed only from the ledger rows the verifier checked in that same pass. Disclosures: bounded override; the cap exception; B371 (a workspace writer can change the mode); B373 and B374; editor saves are reported, not prevented; the B372 residuals; documented equivalent mutants. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #903: GATE TRIBUNAL - plan-d2-resume-guard (iteration 1) - PASS
+
+**Timestamp**: 2026-10-22T13:30:51Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-22T1324-cfd47b`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; Lane D2 release-blocking per owner ruling 2026-10-22; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-22T1324-cfd47b/audit-iter1.json`
+
+**Content Hash**: `d25a8e470d5eb82b003d2b302f2077a7a664cca37fce0208dce6a37d0e70aafa`
+**Previous Hash**: `5ea6e973cc6e136fa3ad92a6a66b9f3e6dc741b529947a8d5587d78fa5775af6`
+**Chain Hash (Merkle seal)**: `a14290afdc0243e28dddb17d801c78510cd5053767caccc8e53308dfedbb5fce`
+
+**Decision**: PASS on plan-d2-resume-guard.md iteration 1 (sha256 4f0383d8), auditD2, Option B. consoleRequestGuard (rejectIfRemote, Host, Origin absent-or-equal, JSON) closes every no-preflight shape on resume-monitoring and verify-integrity; sentinelDaemon.start is reachable over HTTP only at ActionsRoute.ts:40; no other route-level checkpoint writer is reachable cross-site; every caller goes through postAction with JSON. Lead ruling OQ1: the resume confirmation is deferred to B395. Should-fix folds: R1b/R2c/R2d rows; sendBeacon and form B1; B2 drives the real Resume; spies count before calling through; M7 serves edited source; M8; OQ1 wording. Citations 95/0.
+
+---
+
+### Entry #904: IMPLEMENTATION - plan-d2-resume-guard
+
+**Timestamp**: 2026-10-22T17:45:45Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-22T1324-cfd47b`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-22T1324-cfd47b/implement.json`
+
+**Content Hash**: `3d2cdfd8f28bbf9d9d102d6d62efd6475dc8ed638f0524eb4b013e3f9fde3719`
+**Previous Hash**: `a14290afdc0243e28dddb17d801c78510cd5053767caccc8e53308dfedbb5fce`
+**Chain Hash (Merkle seal)**: `96cc274f4b7b6a0fb111a91f4a2d75ecd39423b7db5b5abf8586aa2b35a761e5`
+
+**Decision**: IMPLEMENTATION of plan-d2-resume-guard.md on fix/console-resume-guard (rebased on main c478ddb7). Commits:
+- 4ec9bb03: red tests.
+- a47aeb47: consoleRequestGuard is the first handler on POST /api/actions/resume-monitoring and POST /api/actions/verify-integrity. verify-integrity gets limiter(10) after the guard; resume has no limiter, matching panic-stop. The redundant in-handler rejectIfRemote is removed. Line-neutral.
+- 800ed627: docs. B383 partly done; B395 (resume confirmation, deferred) and B396 (GET /api/checkpoints) filed; CHANGELOG; FX183.
+- 3903dd5f: review folds. The legacy remote rows use a loopback Host so they exercise rejectIfRemote; B1 waits for each response.
+
+---
+
+### Entry #905: SESSION SEAL - plan-d2-resume-guard
+
+**Timestamp**: 2026-10-22T17:45:45Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-22T1324-cfd47b`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-22T1324-cfd47b/substantiate.json`
+
+**Content Hash**: `4f0383d8eaf79bcaa73e1d57c673060b6117fe91450db24024e2465a1725fe4a`
+**Previous Hash**: `96cc274f4b7b6a0fb111a91f4a2d75ecd39423b7db5b5abf8586aa2b35a761e5`
+**Chain Hash (Merkle seal)**: `a902e5916688147f1928e4aa4d0dc5c1841d61fb15531bfe5350c05d32538ea4`
+
+**Decision**: SESSION SEAL for plan-d2-resume-guard.md (content hash = the audited plan, sha256 4f0383d8). Reality = Promise, with disclosures. A web page in a local browser can no longer restart a stopped Sentinel (silently overriding an operator's Panic Stop and recording a forged PASS monitoring.resumed checkpoint) or run a chain verification: both routes run the Console request guard first, and verify-integrity is rate-limited after the guard. Disclosures: bounded override (#467 unresolved); reproduction scope; residuals B395, B396, B383 show-output and B384; CodeQL #23 closure to be observed post-merge; a void environmental test:ui run. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.

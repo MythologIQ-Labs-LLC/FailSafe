@@ -147,7 +147,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(log.sentinelStarted, 1);
@@ -171,7 +171,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring', body: {} });
     assert.equal(res.status, 200);
     assert.equal(log.sentinelStarted, 0, 'start() should NOT be called when already running');
   });
@@ -182,8 +182,13 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
       rejectIfRemote: (_req, res) => { res.status(403).json({ error: 'remote' }); return true; },
     });
     setupActionsRoutes(app, deps);
-    const captured = await invokeRemote(app, 'POST', '/api/actions/resume-monitoring');
+    // Lane D2 review: a loopback Host and JSON pass the guard's Host and content-type checks, so
+    // only rejectIfRemote can refuse this request.
+    const captured = await invokeRemote(app, 'POST', '/api/actions/resume-monitoring', {
+      headers: { host: '127.0.0.1:9376', 'content-type': 'application/json' }, body: {},
+    });
     assert.equal(captured.statusCode, 403);
+    assert.deepEqual(captured.body, { error: 'remote' });
   });
 
   test('POST /api/actions/verify-integrity — returns chain valid status + verifiedAt timestamp + broadcasts', async () => {
@@ -192,7 +197,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(res.body.chainValid, true);
@@ -208,7 +213,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.chainValid, false);
   });
@@ -219,8 +224,13 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
       rejectIfRemote: (_req, res) => { res.status(403).json({ error: 'remote' }); return true; },
     });
     setupActionsRoutes(app, deps);
-    const captured = await invokeRemote(app, 'POST', '/api/actions/verify-integrity');
+    // Lane D2 review: a loopback Host and JSON pass the guard's Host and content-type checks, so
+    // only rejectIfRemote can refuse this request.
+    const captured = await invokeRemote(app, 'POST', '/api/actions/verify-integrity', {
+      headers: { host: '127.0.0.1:9376', 'content-type': 'application/json' }, body: {},
+    });
     assert.equal(captured.statusCode, 403);
+    assert.deepEqual(captured.body, { error: 'remote' });
   });
 
   test('POST /api/actions/scaffold-skills — invokes scaffoldSkills and forwards report', async () => {
