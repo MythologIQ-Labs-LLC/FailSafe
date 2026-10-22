@@ -82,7 +82,7 @@ const vscodeUi: ReviewCommandUi = {
   pickRework: async (veto, commits) => {
     const pick = await vscode.window.showQuickPick(commits.map((c) => ({ label: c.label, sha: c.sha })), {
       title: `Record a Delivery Review: which linked commit reworks the VETO in ledger entry #${veto.entryId} (on ${veto.commitSha.slice(0, 12)})?`,
-      placeHolder: "It must have that commit's diff (rebased), or its parent and more than half of its non-bookkeeping files (amended); dismiss to record nothing.",
+      placeHolder: "It must have that commit's diff (rebased), or its parent, more than half of its non-bookkeeping files, and at least half of its own non-bookkeeping files among them (amended); dismiss to record nothing.",
       ignoreFocusOut: true,
     });
     return pick?.sha;

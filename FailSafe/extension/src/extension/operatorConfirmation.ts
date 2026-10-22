@@ -463,17 +463,22 @@ export interface DeliveryReviewFacts {
 const REPLACEMENT_CHAR = String.fromCodePoint(0xfffd);
 /**
  * Every control, format, unassigned or private-use code point (\p{C}), every space separator
- * (\p{Zs}; U+0020 is kept inside a path), line and paragraph separator, U+FFFD and backslash.
+ * (\p{Zs}; U+0020 is kept inside a path), line and paragraph separator, every default-ignorable code
+ * point (variation selectors, joiners, fillers), the fillers U+3164, U+FFA0 and U+2800 that render
+ * blank, U+FFFD and backslash.
  */
-const PATH_ESCAPES = new RegExp(`[\\p{C}\\p{Zs}\\p{Zl}\\p{Zp}\\\\${REPLACEMENT_CHAR}]`, "gu");
+const PATH_ESCAPES = new RegExp(`[\\p{C}\\p{Zs}\\p{Zl}\\p{Zp}\\p{Default_Ignorable_Code_Point}\\u{3164}\\u{FFA0}\\u{2800}\\\\${REPLACEMENT_CHAR}]`, "gu");
 
 /**
- * #532 B344 (plan-b344 LD5, review fold): a path exactly as git names it, with nothing cut or
- * collapsed. Each code point that could reshape, hide or pass for another part of the dialog is
- * written as \u{XXXX}: controls, format characters, separators, U+FFFD, every space other than
- * U+0020 (U+00A0 looks like U+0020) and a U+0020 at either end of the path (it would not be seen).
- * A backslash is written as \\, so every backslash shown is half of "\\" or starts "\u{", and two
- * different paths never show the same text. sanitizeDialogText is never used for paths.
+ * #532 B344 (plan-b344 LD5, review folds): a path exactly as git names it, with nothing cut or
+ * collapsed. Each code point that could reshape, hide or pass for blank space in the dialog is
+ * written as \u{XXXX}: controls, format characters, separators, default-ignorable code points,
+ * blank fillers, U+FFFD, every space other than U+0020 (U+00A0 looks like U+0020) and a U+0020 at
+ * either end of the path (it would not be seen). A backslash is written as \\, so every backslash
+ * shown is half of "\\" or starts "\u{". The escaping is injective: two different code point
+ * sequences never show the same text. It does not normalize or judge look-alikes: a name in NFC and
+ * the same name in NFD, or a Cyrillic letter beside the Latin one it resembles, show different text
+ * that can look alike (out of scope, B385). sanitizeDialogText is never used for paths.
  */
 export function escapeDialogPath(path: string): string {
   return path.replace(PATH_ESCAPES, (ch: string, at: number) =>
@@ -494,13 +499,17 @@ export const REWORK_PATH_CHUNK = 40;
 export const REWORK_CONTINUATION = "\\>";
 /** One escaped unit: "\\", a "\u{...}" escape or a single code point, never split across chunks. */
 const ESCAPED_UNIT = /\\\\|\\u\{[0-9A-F]+\}|[\s\S]/gu;
+/** A U+0020 as the escape escapeDialogPath writes for one at a path's edge. */
+const SPACE_ESCAPE = "\\u{0020}";
 
 /**
  * #532 B344 D4 fold (owner ruling 2026-10-21): the native dialog wraps only at spaces and cuts a
  * longer unbroken run with an ellipsis, so an escaped path is split into chunks of at most
  * REWORK_PATH_CHUNK characters, after the last '/' that fits when the rest does not, otherwise at the
- * limit, and never inside an escape. A break is moved back so no chunk starts or ends with a U+0020,
- * which the dialog would not show at a line's edge (unless the chunk is all spaces).
+ * limit, and never inside an escape. A U+0020 at a line's edge would not be seen, so a break is
+ * moved back off a U+0020 when it can be; when it cannot (a run of spaces leaves no clean break),
+ * the chunk shows each U+0020 at its start or end as \u{0020}, counted in its length. A shown chunk
+ * therefore never starts or ends with a U+0020, and every chunk decodes to its part of the path.
  */
 export function chunkDialogPath(escaped: string): string[] {
   const units = escaped.match(ESCAPED_UNIT) ?? [];
@@ -518,12 +527,22 @@ export function chunkDialogPath(escaped: string): string[] {
     if (j < units.length && lastSlash >= i) j = lastSlash + 1;
     let k = j;
     while (k < units.length && k > i + 1 && (units[k - 1] === " " || units[k] === " ")) k--;
-    if (k < units.length && (units[k - 1] === " " || units[k] === " ")) k = j;
-    j = k;
-    chunks.push(units.slice(i, j).join(""));
+    if (!(k < units.length && (units[k - 1] === " " || units[k] === " "))) j = k;
+    // Edge spaces shown as \u{0020} are longer; shorten the chunk until it fits again.
+    while (j > i + 1 && shownChunk(units.slice(i, j)).length > REWORK_PATH_CHUNK) j--;
+    chunks.push(shownChunk(units.slice(i, j)));
     i = j;
   }
   return chunks.length ? chunks : [""];
+}
+
+/** The units of one chunk, with each U+0020 at its start or end written as \u{0020}. */
+function shownChunk(units: string[]): string {
+  let a = 0;
+  let b = units.length;
+  while (a < b && units[a] === " ") a++;
+  while (b > a && units[b - 1] === " ") b--;
+  return SPACE_ESCAPE.repeat(a) + units.slice(a, b).join("") + SPACE_ESCAPE.repeat(units.length - b);
 }
 
 /** A path line ("    <status> <chunk>") and one continuation line per further chunk. */
@@ -621,7 +640,7 @@ export function deliveryReviewRequest(
     "This proves a person approved a VS Code dialog; it does not identify who.",
     facts.verdict === "PASS"
       ? "A PASS is current only while the linked commits, their trees and the governance evidence stay as shown; new evidence will need a fresh review. The receipt stays unavailable (#467)."
-      : "A VETO blocks this delivery until a later PASS names it: a PASS on this commit or a descendant of it, or a PASS on a declared rework with this commit's diff (rebased), or with its parent and more than half of its non-bookkeeping paths (amended).",
+      : "A VETO blocks this delivery until a later PASS names it: a PASS on this commit or a descendant of it, or a PASS on a declared rework with this commit's diff (rebased), or with its parent, more than half of its non-bookkeeping paths, and at least half of its own non-bookkeeping paths among them (amended).",
     "FailSafe records this review in its ledger and the intent history. Nothing leaves this machine.",
   );
   const footer = source === "console" ? LOOPBACK_FOOTER : source === "command-arguments" ? COMMAND_CALL_FOOTER : null;
