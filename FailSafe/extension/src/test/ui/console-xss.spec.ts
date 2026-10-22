@@ -52,7 +52,7 @@ test('U1 Compliance policies card: a hub alert carrying markup does not execute 
   });
   await openCompliance(page, controller.url);
   await expect(page.locator('#governance .cc-card').filter({ hasText: 'Active Policies' })).toContainText('Blocked: BLOCK');
-  expect(await fired(page), 'the payload never executed').toBeUndefined();
+  expect(await fired(page), 'the payload executed').toBeUndefined();
   expect(await page.locator('#governance img').count()).toBe(0);
   await expect(page.locator('#governance').getByText(message)).toBeVisible();
 });
@@ -72,7 +72,7 @@ test('U1b Compliance policies card: a META_LEDGER verdict carrying markup does n
   controller = await serveConsoleServerUI({ workspaceRoot: ws });
   await openCompliance(page, controller.url);
   await expect(page.locator('#governance .cc-card').filter({ hasText: 'Active Policies' })).toContainText('Blocked: BLOCK', { timeout: 10000 });
-  expect(await fired(page), 'the payload never executed').toBeUndefined();
+  expect(await fired(page), 'the payload executed').toBeUndefined();
   expect(await page.locator('#governance img').count()).toBe(0);
   await expect(page.locator('#governance').getByText(`Blocked: BLOCK ${TAG}`)).toBeVisible();
 });
@@ -90,7 +90,7 @@ test('U2 Risks Edit modal: a risk title breaking out of value= does not execute 
   const input = page.locator('.cc-modal-overlay input[name=title]');
   await expect(input).toBeVisible();
   await input.focus();
-  expect(await fired(page), 'the payload never executed').toBeUndefined();
+  expect(await fired(page), 'the payload executed').toBeUndefined();
   expect(await page.locator('.cc-modal-overlay [autofocus], .cc-modal-overlay [data-x]').count()).toBe(0);
   expect(await input.inputValue()).toBe(DQ);
 });

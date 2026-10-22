@@ -91,6 +91,13 @@ suite('Lane E XSS: governance.js (X1-X6, X28)', () => {
     assert.ok(root.querySelector('.cc-mode-transition')!.textContent!.includes("operator's call"));
   });
 
+  test('X33 Sentinel card: a non-numeric eventsProcessed renders as a number (review fold 7)', () => {
+    const r = new GovernanceRenderer('gov');
+    r.render(hub({ sentinelStatus: { running: true, eventsProcessed: TAG } }));
+    assertInert(root);
+    assert.ok(root.textContent!.includes('Events: 0'));
+  });
+
   test('X28 protocol audit log: a hostile event time stays text (fold 5, governance.js:256)', () => {
     const r = new GovernanceRenderer('gov');
     r.onEvent({ type: 'verdict', time: TAG, payload: { message: 'ok' } });
