@@ -40,7 +40,20 @@ export class ReleasePipelineGate {
   }
 
   private async checkUnsealedIntents(): Promise<ReleaseGateCheck> {
-    const active = await this.intentService.getActiveIntent();
+    // A failed intent read is NOT evidence that no unsealed intents exist.
+    // Return a normal BLOCK result so release callers never mistake an
+    // exception for a skipped preflight check (#473).
+    let active: Awaited<ReturnType<IntentService['getActiveIntent']>>;
+    try {
+      active = await this.intentService.getActiveIntent();
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        name: 'unsealed-intents',
+        passed: false,
+        reason: `Unable to verify active intent: ${detail}.`,
+      };
+    }
     if (active && active.status !== 'SEALED') {
       return {
         name: 'unsealed-intents',
