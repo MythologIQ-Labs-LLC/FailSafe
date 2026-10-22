@@ -35210,3 +35210,80 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `fff194bd58ec21b0821f65165358c5519ecd535d4dddf49ac7f6218433b035c2`
 
 **Decision**: SESSION SEAL for plan-b344-veto-rework.md (content hash = the audited iteration-4 plan, sha256 167b5728). Reality = Promise, with disclosures. A delivery-review VETO can now be superseded by declared rework that git verifies as an amended or rebased version of the vetoed commit, with the operator confirming each in a dialog that shows every relevant path escaped and unclipped. Unrelated work, including work that merely touches the same bookkeeping files, cannot clear a VETO or inherit a PASS. Disclosures: bounded override (#467 unresolved); cap exception plus folds; the D4 method and residual clipping (B385); escaping scope; the fixed bookkeeping list; the equivalent mutant. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #893: GATE TRIBUNAL - plan-e-console-ui-xss (iteration 1) - PASS
+
+**Timestamp**: 2026-10-22T05:56:10Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-22T0545-4ec52e`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; Lane E release-blocking per owner ruling 2026-10-22; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-22T0545-4ec52e/audit-iter1.json`
+
+**Content Hash**: `da738496f14bfc7c1a3617f2d55f482af585df4771da9409b0ad6412ae2d9c81`
+**Previous Hash**: `fff194bd58ec21b0821f65165358c5519ecd535d4dddf49ac7f6218433b035c2`
+**Chain Hash (Merkle seal)**: `b067d5203f00dfcf66925aa7e9b7c3f2a53d5de7b2aa93c4878bae27a23d0926`
+
+**Decision**: PASS on plan-e-console-ui-xss.md iteration 1 (sha256 6655108f, confirmed by the judge), auditLE, Option B. The plan fixes the defect of record (governance.js:166: ledger Verdict -> alert name -> innerHTML) and, by the judge's independent grep, every workspace-, ledger-, skill-, host-registry-, MCP- and risk-fed sink in the browser Console and the /console/* builders. Both escapers escape & < > " '; all interpolated attributes are double-quoted. 12 mandated folds: FX1012; the S21 DoS claimed only if it reproduces; X14 is a control; case-insensitive assertInert; the missed marketplace/governance sinks; S23 wording; G1 pinned; a URL variant table; the compatibility note; an end-to-end ledger U1b; S33 wording; the genome.js fix. Citations checked 74, failed 0.
+
+---
+
+### Entry #894: IMPLEMENTATION - plan-e-console-ui-xss
+
+**Timestamp**: 2026-10-22T07:36:19Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-22T0545-4ec52e`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-22T0545-4ec52e/implement.json`
+
+**Content Hash**: `5d2326b706f412ad14acf3312c6e1046f0b5ff714e849241df0b0f6cebd4188e`
+**Previous Hash**: `b067d5203f00dfcf66925aa7e9b7c3f2a53d5de7b2aa93c4878bae27a23d0926`
+**Chain Hash (Merkle seal)**: `3dfe2deb7628f5d3de1fbd4f21aea38fd9c7da81e58b8dc5453ae894a8d74c42`
+
+**Decision**: IMPLEMENTATION of plan-e-console-ui-xss.md on fix/console-ui-xss-sweep (rebased on main f1d5ee5d). Commits:
+- d8c85729: red tests.
+- 745c4c77: client fixes in 30 files. Every module-local esc/escHtml delegates to the five-character escapeHtml; raw interpolations are escaped; badge classes are allowlisted (SEVERITIES; riskGrade token regex); tracker and marketplace links are http(s) only via new URL().protocol; tabButtonSelector goes through escapeSelectorValue; genome.js handles a numeric id.
+- 6391ca8d: the /console/* server routes and SreTemplate escape every value.
+- 4d3a3ac1: R10, written after the fix.
+- 94084cf3: docs B390-B394, CHANGELOG, FX1012.
+- b0bbffe6, 070c48a1, 6369b65d: review folds (G1 widened; tracker esc made quote-safe; Number() on counters; wording).
+
+---
+
+### Entry #895: SESSION SEAL - plan-e-console-ui-xss
+
+**Timestamp**: 2026-10-22T07:36:20Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-22T0545-4ec52e`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-22T0545-4ec52e/substantiate.json`
+
+**Content Hash**: `6655108ff5bc47e025bb84c2ad9206f48794b87b99b19fcb11ffb75deda517b5`
+**Previous Hash**: `3dfe2deb7628f5d3de1fbd4f21aea38fd9c7da81e58b8dc5453ae894a8d74c42`
+**Chain Hash (Merkle seal)**: `da80602a1cd5aa1e11e037f798860b35ba39a9b6c7e6b3baf9bf8724da268ad6`
+
+**Decision**: SESSION SEAL for plan-e-console-ui-xss.md (content hash = the audited plan, sha256 6655108f). Reality = Promise, with disclosures. The browser-served Console and its /console/* pages no longer let workspace-, ledger-, skill-, host-registry-, MCP- or risk-derived text inject markup, attributes, classes or javascript: links: every escape helper is quote-safe, class tokens are allowlisted, and links are http(s) only. The stored XSS through a META_LEDGER Verdict line, reproduced in headless Chromium against the test Console before the fix, no longer executes. Disclosures: bounded override (#467 unresolved); the reproduction scope (test Console, not an installed extension); S21 is hardening; the mid-audit plan edit; scope additions forced by the guard; the compatibility note; residuals B393/B394. Next: push, open a PR, run the full required CI including Linux test:all and CodeQL, and merge pinned to the head. No release.
+
+---
+
+### Entry #896: IMPLEMENTATION ADDENDUM - plan-e-console-ui-xss (CI fixture race fix after the seal)
+
+**Timestamp**: 2026-10-22T13:21:44Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-22T0545-4ec52e`
+**Risk Grade**: L2
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; Lane E release-blocking per owner ruling 2026-10-22; disclosed per cycle (#467)
+
+**Content Hash**: `5bbd6fbde7a47d7e9be47c4b3da110be96e22ea077acd5333ae04fa200ffc74d`
+**Previous Hash**: `da80602a1cd5aa1e11e037f798860b35ba39a9b6c7e6b3baf9bf8724da268ad6`
+**Chain Hash (Merkle seal)**: `f06c28731246aba402f27ed74cb1388f0dfd400f17d5d102594b925e6e4615b8`
+
+**Decision**: After seal #895, PR #580's Linux CI failed Playwright U1b. Root cause: a test-fixture race; the fixture's WebSocket init carried {} and could overwrite the real hub after the HTTP fetch. It was reproduced on Windows by delaying the init. The product is unchanged. Test-only fix ea1432f7 (labelled as written after the fix): an opt-in liveHubInit sends the real hub on init, as production does, and U1b forces the CI ordering on every platform. U1b is not weakened: it still asserts the visible BLOCK alert from a workspace META_LEDGER through the real producer and the payload staying inert, and M1 still makes it red. Evidence: U1b 5/5 repeated; console-xss 9/9; fixture-dependent specs 32 passed.

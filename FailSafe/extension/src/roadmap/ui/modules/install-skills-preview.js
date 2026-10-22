@@ -3,12 +3,10 @@
 // and renders per-host wouldWrite collapsibles inside the modal body.
 
 import { collectSkillFilter } from './install-skills-picker.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function esc(value) {
-  if (value === null || value === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(value);
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 export function renderPreviewButton(running) {

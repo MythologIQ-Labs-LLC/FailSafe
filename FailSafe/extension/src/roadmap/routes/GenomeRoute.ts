@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { RouteDeps } from './index';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 import { renderEmptyState } from '../../genesis/EmptyStates';
 
 export const GenomeRoute = {
@@ -19,11 +20,11 @@ export const GenomeRoute = {
     }
 
     const patternRows = patterns.map(p =>
-      `<tr><td>${p.failureMode}</td><td>${p.count}</td></tr>`
+      `<tr><td>${escapeHtml(p.failureMode)}</td><td>${p.count}</td></tr>`
     ).join('');
 
     const unresolvedRows = unresolved.map(u =>
-      `<tr><td>${u.id}</td><td>${u.failureMode}</td><td>${u.remediationStatus}</td></tr>`
+      `<tr><td>${u.id}</td><td>${escapeHtml(u.failureMode)}</td><td>${escapeHtml(u.remediationStatus)}</td></tr>`
     ).join('');
 
     res.send(`<!DOCTYPE html><html><head><title>Shadow Genome</title></head><body>

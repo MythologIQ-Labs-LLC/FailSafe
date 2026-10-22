@@ -128,7 +128,7 @@ function buildSliHtml(sli: AgtSreSnapshot["sli"]): string {
       </div>
       <div class="sre-meter"><div class="sre-meter-fill" style="width:${sliPct ?? 0}%;background:${sliColor}"></div></div>
       <div class="sre-row" style="margin-top:4px">
-        <span class="sre-label">Target ${targetPct}% &middot; ${sli.totalDecisions} decisions</span>
+        <span class="sre-label">Target ${targetPct}% &middot; ${Number(sli.totalDecisions)} decisions</span>
         <span class="sre-value" style="color:${sliColor};font-size:10px">${sliLabel}</span>
       </div>
     </div>
@@ -199,11 +199,11 @@ function buildFleetHtml(fleet: AgtSreSnapshot["fleet"]): string {
     return `<div style="flex:1;min-width:140px;padding:6px;border:1px solid rgba(95,150,255,0.15);border-radius:4px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:11px;font-weight:600">${escapeHtml(a.agentId)}</span>
-        <span style="width:6px;height:6px;border-radius:50%;background:${sc};display:inline-block" title="${a.status}"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:${sc};display:inline-block" title="${escapeHtml(a.status)}"></span>
       </div>
       <div style="font-size:10px;color:#a0b8e8;margin-top:3px">
         <span class="sre-badge" style="background:${cc}20;color:${cc}">${escapeHtml(a.circuitState)}</span>
-        ${a.taskCount} tasks &middot; ${Math.round(a.successRate * 100)}%
+        ${Number(a.taskCount)} tasks &middot; ${Math.round(a.successRate * 100)}%
       </div>
     </div>`;
   }).join("");

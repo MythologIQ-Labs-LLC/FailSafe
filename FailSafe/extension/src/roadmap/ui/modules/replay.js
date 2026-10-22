@@ -1,10 +1,10 @@
 // FailSafe Command Center — Agent Run Replay Renderer (B146/B150)
 // Run list, step timeline, governance decision cards.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 const KIND_COLORS = {

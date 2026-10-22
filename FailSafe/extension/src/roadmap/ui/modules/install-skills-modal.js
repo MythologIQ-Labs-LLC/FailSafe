@@ -7,6 +7,7 @@ import { applyProgressUpdate, applyCompletion, applyError } from './install-skil
 import { renderPickerSection, collectSkillFilter } from './install-skills-picker.js';
 import { renderPreviewButton, bindPreviewEvents } from './install-skills-preview.js';
 import { CONFIRM_PENDING_TEXT, gatedFailureMessage, jsonPost, settleGated } from './operator-confirmation-copy.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 const HOST_LABELS = { claude: 'Claude', codex: 'Codex', 'kilo-code': 'Kilo', gemini: 'Gemini' };
 const PHASE_LABELS = {
@@ -18,10 +19,7 @@ const PHASE_LABELS = {
 };
 
 function esc(value) {
-  if (value === null || value === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(value);
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 function lineIcon(status) {

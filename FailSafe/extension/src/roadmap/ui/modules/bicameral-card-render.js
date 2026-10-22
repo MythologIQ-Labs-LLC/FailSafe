@@ -8,6 +8,7 @@
 // existing CSS/test hooks keep matching.
 import { renderInstallProgress as renderSharedInstallProgress } from './install-progress.js';
 import { CONFIRM_PENDING_TEXT } from './operator-confirmation-copy.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function renderInstallProgress(progress) {
   // #538: until VS Code confirms, say so instead of an empty step list.
@@ -18,10 +19,7 @@ function renderInstallProgress(progress) {
 }
 
 function esc(value) {
-  if (value === null || value === undefined) return '';
-  const d = (typeof document !== 'undefined') ? document.createElement('div') : null;
-  if (d) { d.textContent = String(value); return d.innerHTML; }
-  return String(value).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
+  return escapeHtml(value ?? '');
 }
 
 // Status color tokens — sourced from command-center.css theme variables.

@@ -1,11 +1,10 @@
 // FailSafe Command Center — Metric Integrity & Unattributed Activity Cards
 
 import { sentinelModeValue } from './sentinel-mode.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function esc(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
+  return escapeHtml(str ?? '');
 }
 
 export function renderIntegrityCard(integrity) {

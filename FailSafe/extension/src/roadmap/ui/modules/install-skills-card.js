@@ -3,12 +3,10 @@
 // Modal lifecycle moved to install-skills-modal.js per Phase 1 V2 Path A split.
 
 import { renderInstallModal, bindModalEvents, showInstallModal } from './install-skills-modal.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function esc(value) {
-  if (value === null || value === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(value);
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 /**
@@ -91,7 +89,7 @@ function renderHostGrid(hosts, running) {
   const rows = hosts.map(h => {
     const meta = HOST_META[h.host] || { label: h.host, icon: '?' };
     const dotColor = h.installed ? 'var(--accent-green)' : 'var(--text-muted)';
-    const statusText = h.installed ? `${h.fileCount} file${h.fileCount === 1 ? '' : 's'}` : 'Not installed';
+    const statusText = h.installed ? `${Number(h.fileCount) || 0} file${Number(h.fileCount) === 1 ? '' : 's'}` : 'Not installed';
     const mtime = h.recordMtime ? new Date(h.recordMtime).toLocaleDateString() : '';
     return `
       <div style="display:flex;align-items:center;justify-content:space-between;

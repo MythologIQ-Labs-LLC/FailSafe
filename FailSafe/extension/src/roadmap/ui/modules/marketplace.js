@@ -1,7 +1,7 @@
 // FailSafe Command Center — Agent Marketplace Renderer
 // Catalog browser, HITL install gates, security scanning status, trust tiers.
 // Includes Adapter panel for Microsoft Agent Governance Toolkit integration.
-import { escHtml } from './skill-utils.js';
+import { escHtml, safeHttpUrl } from './skill-utils.js';
 import { AdapterPanel } from './adapter-panel.js';
 
 const MARKETPLACE_TABS = ['Featured', 'All', 'Installed', 'Quarantined', 'Adapter'];
@@ -176,7 +176,7 @@ export class MarketplaceRenderer {
           ` : `
             <button class="cc-btn cc-btn--small cc-btn--primary cc-marketplace-install" data-id="${escHtml(item.id)}">Install</button>
           `}
-          <a href="${escHtml(item.repoUrl)}" target="_blank" rel="noopener"
+          <a${this.repoHref(item)} target="_blank" rel="noopener"
             style="font-size:0.75rem;color:var(--text-muted);text-decoration:none;margin-left:auto;display:flex;align-items:center;gap:4px">
             GitHub ↗
           </a>
@@ -217,9 +217,9 @@ export class MarketplaceRenderer {
     return `
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-rim);font-size:0.7rem">
         <span style="${passedStyle}">${scan.passed ? 'PASS' : 'FAIL'}</span>
-        <span style="color:var(--text-muted);margin-left:8px">Risk: ${scan.riskGrade || 'N/A'}</span>
+        <span style="color:var(--text-muted);margin-left:8px">Risk: ${escHtml(scan.riskGrade || 'N/A')}</span>
         <span style="color:var(--text-muted);margin-left:8px">${findingsCount} finding${findingsCount !== 1 ? 's' : ''}</span>
-        <span style="color:var(--text-muted);margin-left:8px">Scanner: ${scan.scanner}</span>
+        <span style="color:var(--text-muted);margin-left:8px">Scanner: ${escHtml(scan.scanner)}</span>
       </div>`;
   }
 
@@ -361,7 +361,7 @@ export class MarketplaceRenderer {
         <strong>${escHtml(item.name)}</strong> by ${escHtml(item.author)}
       </div>
       <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px">
-        Repository: <a href="${escHtml(item.repoUrl)}" target="_blank" rel="noopener" style="color:var(--primary)">${escHtml(item.repoUrl)}</a>
+        Repository: <a${this.repoHref(item)} target="_blank" rel="noopener" style="color:var(--primary)">${escHtml(item.repoUrl)}</a>
       </div>
       <div style="font-size:0.8rem;margin-bottom:12px">
         <strong>Required Permissions:</strong>
@@ -383,6 +383,12 @@ export class MarketplaceRenderer {
         </label>
       </div>`;
     modal.style.display = 'flex';
+  }
+
+  /** Lane E: an href attribute only for an http(s) repository URL. */
+  repoHref(item) {
+    const url = safeHttpUrl(item.repoUrl);
+    return url ? ` href="${escHtml(url)}"` : '';
   }
 
   closeModal() {

@@ -6,10 +6,10 @@
 // no non-deterministic motion). A "View as table" mode keeps the graph from
 // being the only access path (spec §15). Edges styled by canonical type.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 // FX890: truncate the VISIBLE node label so dense graphs don't collapse into

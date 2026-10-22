@@ -959,7 +959,18 @@ const el = (tag, cls, txt) => {
   return n;
 };
 const esc = (s) => String(s == null ? "" : s)
-  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+// Lane E: a link target only when the URL resolves to http(s) (relative URLs
+// resolve against this page); javascript:, data:, vbscript: and their
+// obfuscations (case, leading control characters, embedded tab/newline) give "".
+const safeHref = (u) => {
+  if (typeof u !== "string" || !u.trim()) return "";
+  try {
+    const p = new URL(u, location.href).protocol;
+    return p === "http:" || p === "https:" ? u : "";
+  } catch (_e) { return ""; }
+};
 // Allow a SAFE subset of inline markup (<code>, <b>, <em>, <strong>) from trusted JSON.
 // We escape everything, then re-permit the whitelisted tags.
 const richText = (s) => {
@@ -1782,9 +1793,10 @@ function selectRelease(rcIndex, animate) {
     readout.appendChild(line);
 
     // Release traceability — governance doesn't expire; older records stay linkable.
-    if (rc.ref) {
+    const roRef = safeHref(rc.ref);
+    if (roRef) {
       const a = el("a", "ro-ref");
-      a.href = rc.ref;
+      a.href = roRef;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
       a.appendChild(document.createTextNode("↗ record"));
@@ -1806,9 +1818,10 @@ function renderReleaseRecord(rc) {
   box.appendChild(el("span", "rr-date", rc.note || "—"));
 
   // Audit link (↗ record) — _blank, rel=noopener — when present.
-  if (rc.ref) {
+  const rrRef = safeHref(rc.ref);
+  if (rrRef) {
     const a = el("a", "rr-ref");
-    a.href = rc.ref;
+    a.href = rrRef;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.appendChild(document.createTextNode("↗ record"));
@@ -2322,8 +2335,9 @@ function openModal(prog, ph, triggerChip) {
 
       if (lk.t === "url") {
         // Arbitrary record (Linear, a doc, a spec) — use href directly.
-        if (!lk.href) return; // skip malformed url entries gracefully
-        a.href = lk.href;
+        const href = safeHref(lk.href);
+        if (!href) return; // skip malformed and non-http(s) url entries
+        a.href = href;
         a.appendChild(el("span", "lg", "↗"));
         a.appendChild(document.createTextNode(lk.label || lk.href));
       } else {

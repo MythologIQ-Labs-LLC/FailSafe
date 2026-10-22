@@ -10,12 +10,10 @@
 // Pure HTML + JSDOM-friendly leaf. All styling lives in command-center.css
 // (.cc-bicameral-advanced and friends) — this module emits class names only.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(value) {
-  if (value === null || value === undefined) return '';
-  const d = (typeof document !== 'undefined') ? document.createElement('div') : null;
-  if (d) { d.textContent = String(value); return d.innerHTML; }
-  return String(value).replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  return escapeHtml(value ?? '');
 }
 
 // The 11 tools. `fields` enumerate the named text inputs each invoke row needs;

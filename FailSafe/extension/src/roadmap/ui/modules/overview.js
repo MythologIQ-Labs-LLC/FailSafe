@@ -3,11 +3,10 @@
 import { renderLatestAudit } from './latest-audit.js';
 import { renderRecentReleases } from './recent-releases.js';
 import { navigationHash } from './command-center-deeplink.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 export class OverviewRenderer {
@@ -44,7 +43,7 @@ export class OverviewRenderer {
         <div class="card" style="background: var(--bg-panel); border: 1px solid var(--border-rim); border-radius: 12px; padding: 16px;">
           <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Sentinel Events</div>
           <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); font-family: var(--font-display); margin-top: 8px;">
-            ${sentinelStatus?.eventsProcessed || 0}
+            ${Number(sentinelStatus?.eventsProcessed) || 0}
           </div>
         </div>
 
@@ -168,8 +167,8 @@ export class OverviewRenderer {
   }
 
   renderActivityLive(hubData) {
-    const evts = hubData?.sentinelStatus?.eventsProcessed || 0;
-    const qd = hubData?.sentinelStatus?.queueDepth || 0;
+    const evts = Number(hubData?.sentinelStatus?.eventsProcessed) || 0;
+    const qd = Number(hubData?.sentinelStatus?.queueDepth) || 0;
     const l3 = hubData?.l3Queue?.length || 0;
     const evtPct = Math.min(evts, 100);
     const qdPct = Math.min(qd * 10, 100);
@@ -225,7 +224,7 @@ export class OverviewRenderer {
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <div style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; border-left: 2px solid var(--accent-cyan);">
             <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Session Throughput</div>
-            <div style="font-size: 14px; font-weight: bold; color: var(--text-main); font-family: var(--font-mono);">${sentinelStatus?.eventsProcessed || 0} events</div>
+            <div style="font-size: 14px; font-weight: bold; color: var(--text-main); font-family: var(--font-mono);">${Number(sentinelStatus?.eventsProcessed) || 0} events</div>
           </div>
           <div style="margin-top: 12px; font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); opacity: 0.5;">
             SYSTEM_UPTIME: 142ms <br>

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { RouteDeps } from './index';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 import { renderEmptyState } from '../../genesis/EmptyStates';
 
 export const HomeRoute = {
@@ -14,13 +15,13 @@ export const HomeRoute = {
     }
 
     const entryRows = entries.map(e =>
-      `<tr><td>${e.timestamp}</td><td>${e.eventType}</td><td>${e.agentDid}</td></tr>`
+      `<tr><td>${escapeHtml(e.timestamp)}</td><td>${escapeHtml(e.eventType)}</td><td>${escapeHtml(e.agentDid)}</td></tr>`
     ).join('');
 
     res.send(`<!DOCTYPE html><html><head><title>FailSafe Console</title></head><body>
       <h1>Dashboard</h1>
-      <p>Governance Mode: <strong>${mode}</strong></p>
-      <h2>Current Sprint: ${sprint.name ?? sprint.id}</h2>
+      <p>Governance Mode: <strong>${escapeHtml(mode)}</strong></p>
+      <h2>Current Sprint: ${escapeHtml(sprint.name ?? sprint.id)}</h2>
       <h3>Recent Ledger Entries</h3>
       <table><thead><tr><th>Time</th><th>Event</th><th>Agent</th></tr></thead>
       <tbody>${entryRows}</tbody></table>

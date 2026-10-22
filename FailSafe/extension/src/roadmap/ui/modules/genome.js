@@ -1,10 +1,10 @@
 // FailSafe Command Center — Shadow Genome Renderer (B144 + B183)
 // Failure pattern cards + unresolved entries table with show-all toggle.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 export class GenomeRenderer {
@@ -95,7 +95,7 @@ export class GenomeRenderer {
         border-bottom:1px solid var(--border-rim);font-size:0.82rem">
         <div style="display:flex;align-items:center;gap:8px">
           <span class="cc-badge" style="font-size:0.65rem">${esc(e.failureMode || '?')}</span>
-          <span>${esc(e.id?.slice(0, 8) || 'entry')}</span>
+          <span>${esc(String(e.id ?? '').slice(0, 8) || 'entry')}</span>
         </div>
         <span style="color:${sc};font-size:0.75rem">${esc(e.remediationStatus || 'unknown')}</span>
       </div>`;

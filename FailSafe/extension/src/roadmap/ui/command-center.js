@@ -26,7 +26,7 @@ import { ArchitectureIndexRenderer } from './modules/architecture-index-renderer
 import { DeliveryAssessmentRenderer } from './modules/delivery-assessment-renderer.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
-import { governanceSubviewForRoute, parseCommandCenterHash } from './modules/command-center-deeplink.js';
+import { governanceSubviewForRoute, parseCommandCenterHash, tabButtonSelector } from './modules/command-center-deeplink.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const client = new ConnectionClient();
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const applyHashRoute = () => {
     const route = parseCommandCenterHash(window.location.hash);
-    const active = document.querySelector(`.tab-btn[data-target="${route.tab}"]`);
+    const active = document.querySelector(tabButtonSelector(route.tab));
     if (route.tab && active && !active.classList.contains('active')) active.click();
     if (route.tab === 'governance') {
       const subview = governanceSubviewForRoute(route);

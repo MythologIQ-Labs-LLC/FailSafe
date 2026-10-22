@@ -2,16 +2,15 @@
 // Renders the verdict + target + risk grade from the latest /qor-audit run.
 // Pure render function: no event handlers, no async work.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 const VERDICT_COLORS = {
   PASS: 'var(--accent-teal, #2dd4bf)',
   VETO: 'var(--accent-red, #ef4444)',
 };
 
 function esc(str) {
-  if (str === null || str === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(str);
-  return d.innerHTML;
+  return escapeHtml(str ?? '');
 }
 
 export function renderLatestAudit(audit) {

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 
 interface KPIDeps {
   ledgerManager: LedgerManager;
@@ -24,7 +25,7 @@ export const GovernanceKPIRoute = {
     }
 
     const riskRows = Object.entries(riskDistribution)
-      .map(([grade, count]) => `<tr><td>${grade}</td><td>${count}</td></tr>`)
+      .map(([grade, count]) => `<tr><td>${escapeHtml(grade)}</td><td>${count}</td></tr>`)
       .join('');
 
     res.send(`<!DOCTYPE html><html><head><title>Governance KPIs</title></head><body>
