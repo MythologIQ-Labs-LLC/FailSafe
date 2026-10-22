@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { RouteDeps } from './index';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 
 export const RunDetailRoute = {
   render(req: Request, res: Response, deps: RouteDeps): void {
@@ -12,8 +13,8 @@ export const RunDetailRoute = {
     const progress = deps.planManager.getPlanProgress(runId);
 
     res.send(`<!DOCTYPE html><html><head><title>Run Detail</title></head><body>
-      <h1>Plan: ${plan.id}</h1>
-      <p>Title: ${plan.title}</p>
+      <h1>Plan: ${escapeHtml(plan.id)}</h1>
+      <p>Title: ${escapeHtml(plan.title)}</p>
       <h2>Progress</h2>
       <p>Completed: ${progress.completed} / ${progress.total} | Blocked: ${progress.blocked}</p>
       <a href="/console/home">Back to Dashboard</a>

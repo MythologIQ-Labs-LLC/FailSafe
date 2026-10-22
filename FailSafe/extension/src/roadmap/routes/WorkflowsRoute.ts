@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { RouteDeps } from './index';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 import { renderEmptyState } from '../../genesis/EmptyStates';
 
 export const WorkflowsRoute = {
@@ -11,7 +12,7 @@ export const WorkflowsRoute = {
     }
 
     const rows = plans.map(p =>
-      `<tr><td><a href="/console/run/${p.id}">${p.id}</a></td><td>${p.title}</td></tr>`
+      `<tr><td><a href="/console/run/${escapeHtml(encodeURIComponent(p.id))}">${escapeHtml(p.id)}</a></td><td>${escapeHtml(p.title)}</td></tr>`
     ).join('');
 
     res.send(`<!DOCTYPE html><html><head><title>Workflows</title></head><body>

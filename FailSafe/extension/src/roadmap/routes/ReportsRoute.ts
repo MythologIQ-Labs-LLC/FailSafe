@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { RouteDeps } from './index';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 
 export const ReportsRoute = {
   async render(req: Request, res: Response, deps: RouteDeps): Promise<void> {
@@ -8,7 +9,7 @@ export const ReportsRoute = {
     const failCount = entries.filter(e => e.eventType === 'AUDIT_FAIL').length;
 
     const rows = entries.map(e =>
-      `<tr><td>${e.timestamp}</td><td>${e.eventType}</td><td>${e.agentDid}</td></tr>`
+      `<tr><td>${escapeHtml(e.timestamp)}</td><td>${escapeHtml(e.eventType)}</td><td>${escapeHtml(e.agentDid)}</td></tr>`
     ).join('');
 
     res.send(`<!DOCTYPE html><html><head><title>Reports</title></head><body>
