@@ -115,6 +115,11 @@ export interface ConsoleServerFixtures {
   intentService?: unknown;
   /** B312: the editor-open dependency (default: none, so architecture open answers 503). */
   openFileInEditor?: (filePath: string, startLine?: number) => Promise<void>;
+  /** Lane E: with no initialHub, send the server's real hub snapshot as the WebSocket
+   *  `init` payload, as production does (ConsoleLifecycleService.setupWebSocket), instead
+   *  of `{}`. Without it an `{}` init that lands after the page's `/api/hub` fetch replaces
+   *  the real hub in the page (the ordering seen on ubuntu-latest for PR #580). */
+  liveHubInit?: boolean;
 }
 
 export interface ConsoleServerController {
@@ -215,15 +220,23 @@ function attachWebSocket(
   harness: http.Server,
   sockets: Set<WebSocket>,
   hubRef?: { current: HubFixture | null },
+  liveHubInit = false,
 ): void {
   const wsm = (server as unknown as { wsManager: WebSocketManager }).wsManager;
+  const liveHub = (server as unknown as { hub: { buildHubSnapshot(): Promise<Record<string, unknown>> } }).hub;
   wsm.setup(harness, (ws) => {
     sockets.add(ws);
-    const initPayload = { type: "init", payload: hubRef?.current ?? {} };
-    try {
-      ws.send(JSON.stringify(initPayload));
-    } catch {
-      /* socket may already be closing — safe to ignore in fixture */
+    const send = (payload: unknown) => {
+      try {
+        ws.send(JSON.stringify({ type: "init", payload }));
+      } catch {
+        /* socket may already be closing — safe to ignore in fixture */
+      }
+    };
+    if (liveHubInit && !hubRef?.current) {
+      liveHub.buildHubSnapshot().then(send, () => send({}));
+    } else {
+      send(hubRef?.current ?? {});
     }
     ws.on("close", () => sockets.delete(ws));
   });
@@ -367,7 +380,7 @@ export async function serveConsoleServerUI(
   }
   const harness = http.createServer(app);
   const sockets = new Set<WebSocket>();
-  attachWebSocket(server, harness, sockets, fakes.hubRef);
+  attachWebSocket(server, harness, sockets, fakes.hubRef, fixtures.liveHubInit === true);
 
   const url = await listenAndResolveUrl(harness);
   return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });

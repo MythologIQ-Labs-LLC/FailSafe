@@ -5,7 +5,10 @@
 // U1  Governance > Compliance policies card, hub alert carrying markup (S1).
 // U1b The same through the real producer: a workspace META_LEDGER whose
 //     **Verdict**: line carries the payload -> GovernancePhaseTracker -> hub
-//     -> governance.js policies card (audit fold 10).
+//     -> governance.js policies card (audit fold 10). The WebSocket init is
+//     held back until after the page's /api/hub fetch, the ordering that
+//     ubuntu-latest produced on PR #580, so the row is deterministic everywhere;
+//     the fixture sends the real hub on init (liveHubInit), as production does.
 // U2  Governance > Risks Edit modal, risk title breaking out of value= (S11).
 // U3  command-center.html with a hash that is not a valid selector value (S21).
 // U4  Development Tracker links from programs.yaml: javascript: and its
@@ -69,8 +72,17 @@ test('U1b Compliance policies card: a META_LEDGER verdict carrying markup does n
     `**Verdict**: BLOCK ${TAG}`,
     '', '---', '',
   ].join('\n'), 'utf8');
-  controller = await serveConsoleServerUI({ workspaceRoot: ws });
+  controller = await serveConsoleServerUI({ workspaceRoot: ws, liveHubInit: true });
+  let initDelivered: () => void = () => undefined;
+  const delivered = new Promise<void>((resolve) => { initDelivered = resolve; });
+  await page.routeWebSocket(/.*/, (sock) => {
+    const srv = sock.connectToServer();
+    srv.onMessage((m) => { setTimeout(() => { sock.send(m); initDelivered(); }, 1000); });
+    sock.onMessage((m) => srv.send(m));
+  });
   await openCompliance(page, controller.url);
+  await delivered; // the init (the server's hub) reached the page after the HTTP fetch
+  await page.waitForTimeout(300);
   await expect(page.locator('#governance .cc-card').filter({ hasText: 'Active Policies' })).toContainText('Blocked: BLOCK', { timeout: 10000 });
   expect(await fired(page), 'the payload executed').toBeUndefined();
   expect(await page.locator('#governance img').count()).toBe(0);
