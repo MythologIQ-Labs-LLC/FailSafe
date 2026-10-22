@@ -53,9 +53,9 @@ FailSafe's core monitoring and governance run locally. External integrations are
 
 ## Current release and what's coming
 
-**Current Release**: v6.0.9, the latest published release ([release notes](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.9)). See the [release history](CHANGELOG.md) for fixes, security corrections, and packaged platform support.
+**Current Release**: v6.0.10, the latest published release ([release notes](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.10)). See the [release history](CHANGELOG.md) for fixes, security corrections, and packaged platform support.
 
-Newer work on `main`, including Workspace Architecture and Delivery views, may not yet be available in the marketplace release. Check [GitHub Releases](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases) before assuming a repository feature is installed.
+Newer work on `main` may not yet be available in the marketplace release. Check [GitHub Releases](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases) before assuming a repository feature is installed.
 
 ## For developers and agentic contributors
 
