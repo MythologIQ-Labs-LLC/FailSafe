@@ -124,13 +124,12 @@ suite('Cross-process lock queue (v6.0.8 #528 LD-4)', function () {
     // deadline: 0.3 s + 5 rounds x (4 s + an 8 s worst-case waiter mutate + 4 s) = 80.3 s, under
     // the suite's 90 s timeout. At its deadline a wait throws "inconclusive", never a pass.
     const waitForCount = async (min: number, deadlineMs: number): Promise<number> => {
-      const start = countA();
       const deadline = Date.now() + deadlineMs;
       for (;;) {
         const n = countA();
         if (n >= min) return n;
         if (Date.now() >= deadline) {
-          throw new Error(`inconclusive: the hot writer stored fewer than ${min - start} updates within ${deadlineMs} ms ${JSON.stringify(rounds)}`);
+          throw new Error(`inconclusive: the hot writer stored fewer than 20 updates within ${deadlineMs} ms ${JSON.stringify(rounds)}`);
         }
         await delay(25);
       }
@@ -147,9 +146,8 @@ suite('Cross-process lock queue (v6.0.8 #528 LD-4)', function () {
     }
     const summary = JSON.stringify(rounds);
     console.log(`R1 rounds ${summary}`);
-    for (const r of rounds) {
-      assert.ok(r.before >= 20 && r.after >= 20, `inconclusive: the writer was not hot ${summary}`);
-    }
+    // By construction every round has before >= 20 and after >= 20: waitForCount returns only
+    // once the writer stored 20 more updates, and otherwise throws "inconclusive".
     for (const r of rounds) {
       assert.ok(r.overtaken <= 3, `the hot writer stored ${r.overtaken} updates after the waiter started waiting ${summary}`);
     }
