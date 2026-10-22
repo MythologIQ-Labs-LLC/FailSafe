@@ -1,11 +1,18 @@
 import { describe, it } from 'mocha';
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { IntentService } from '../../governance/IntentService';
 import { ReleasePipelineGate } from '../../governance/ReleasePipelineGate';
 import type { LedgerVerification } from '../../qorelogic/ledger/LedgerVerifier';
 import { GOLDEN, appendN, isAnchorKey, makeEnv, openLedger, writeGoldenLedger } from '../qorelogic/ledgerTestKit';
 
 function createMockIntentService(activeIntent: { id: string; status: string } | null) {
-  return { getActiveIntent: async () => activeIntent } as Parameters<typeof ReleasePipelineGate['prototype']['evaluate']> extends never ? never : any;
+  return {
+    getActiveIntent: async () => activeIntent,
+    getActiveIntentForRelease: async () => activeIntent,
+  } as any;
 }
 
 function report(overrides: Partial<LedgerVerification> = {}): LedgerVerification {
@@ -65,7 +72,7 @@ describe('ReleasePipelineGate', () => {
   });
 
   it('returns an explicit release BLOCK when active-intent storage cannot be read (#473)', async () => {
-    const broken = { getActiveIntent: async () => { throw new Error('intent store I/O unavailable'); } };
+    const broken = { getActiveIntentForRelease: async () => { throw new Error('intent store I/O unavailable'); } };
     const gate = new ReleasePipelineGate(broken as any, createMockLedger(true));
     const result = await gate.evaluate('v6.0.10');
     assert.equal(result.allowed, false);
@@ -74,6 +81,27 @@ describe('ReleasePipelineGate', () => {
     assert.match(result.failures[0].reason, /Unable to verify active intent/);
     assert.match(result.failures[0].reason, /intent store I\/O unavailable/);
     assert.deepEqual(result.warnings, []);
+  });
+
+  it('blocks on corrupt active_intent.json instead of treating it as no active intent (#473)', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-release-corrupt-'));
+    try {
+      const file = path.join(root, '.failsafe', 'manifest', 'active_intent.json');
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      // Invalid JSON and invalid schema are both suppressed by the ordinary UI reader.
+      // Release acceptance must use the strict reader, not that permissive fallback.
+      const service = new IntentService(root, {} as any);
+      for (const raw of ['{ torn json', JSON.stringify({ schemaVersion: 2, id: 'bad-intent' })]) {
+        fs.writeFileSync(file, raw);
+        assert.equal(await service.getActiveIntent(), null, 'ordinary read is forgiving for UI');
+        const result = await new ReleasePipelineGate(service, createMockLedger(true)).evaluate('v6.0.10');
+        assert.equal(result.allowed, false, raw);
+        assert.equal(result.failures[0].name, 'unsealed-intents');
+        assert.match(result.failures[0].reason, /Unable to verify active intent/, raw);
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('blocks release with invalid version format', async () => {
