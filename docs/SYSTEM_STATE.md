@@ -36,7 +36,7 @@
 - Lane E (#580, #893-#896; #896 is the post-seal CI fixture addendum): Console UI stored-XSS sweep (B390-B392).
 - B340 (#581, #897-#902): the enforce-mode intent approval path; owner cap exception, iteration 4 PASS.
 - D2 (#582, #903-#905): the Console request guard on resume-monitoring and verify-integrity (B383 in part); B395 and B396 filed.
-- Governance: each cycle ran under its own bounded damaged-ledger override, disclosed in its seal: the 2026-10-19 post-v6.0.9 override (#821-#842), the 2026-10-20 hardening-lanes override (#843-#856) and the 2026-10-21 v6.0.10 override (#857-#905, and this release prep). The META_LEDGER stays DAMAGED (#467, unrepaired): the declared-anchor check reads post-anchor DIRTY with exactly #341 and #382 (re-run on d77f0d3d).
+- Governance: each cycle ran under its own bounded damaged-ledger override, disclosed in its seal: the 2026-10-19 post-v6.0.9 override (#821-#842), the 2026-10-20 hardening-lanes override (#843-#856) and the 2026-10-21 v6.0.10 override (#857-#905, the release prep #906-#910, and Dependabot #584 #911-#913). The META_LEDGER stays DAMAGED (#467, unrepaired): the declared-anchor check reads post-anchor DIRTY with exactly #341 and #382 (re-run on d77f0d3d).
 
 ## 2026-10-19 — v6.0.9 published
 
