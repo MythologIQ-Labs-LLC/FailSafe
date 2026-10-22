@@ -154,7 +154,7 @@ export class GovernanceRenderer {
           <span class="cc-badge" style="background:var(--primary);color:#fff">Sentinel: ${this.esc(sentinelModeValue(sentinel.mode))}</span>
         </div>
         <div style="font-size:0.8rem;color:var(--text-muted)">
-          Events: ${sentinel.eventsProcessed || 0} ·
+          Events: ${Number(sentinel.eventsProcessed) || 0} ·
           Chain: <span style="color:${chainColor}">${chainText}</span>
         </div>
         <button class="cc-btn cc-btn--primary cc-gov-verify" style="margin-top:10px">Verify Integrity</button>

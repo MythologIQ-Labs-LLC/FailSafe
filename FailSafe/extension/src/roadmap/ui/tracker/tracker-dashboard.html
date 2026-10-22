@@ -959,7 +959,8 @@ const el = (tag, cls, txt) => {
   return n;
 };
 const esc = (s) => String(s == null ? "" : s)
-  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 // Lane E: a link target only when the URL resolves to http(s) (relative URLs
 // resolve against this page); javascript:, data:, vbscript: and their
 // obfuscations (case, leading control characters, embedded tab/newline) give "".

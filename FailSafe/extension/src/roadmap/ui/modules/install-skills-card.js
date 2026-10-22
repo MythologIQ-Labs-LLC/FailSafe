@@ -89,7 +89,7 @@ function renderHostGrid(hosts, running) {
   const rows = hosts.map(h => {
     const meta = HOST_META[h.host] || { label: h.host, icon: '?' };
     const dotColor = h.installed ? 'var(--accent-green)' : 'var(--text-muted)';
-    const statusText = h.installed ? `${h.fileCount} file${h.fileCount === 1 ? '' : 's'}` : 'Not installed';
+    const statusText = h.installed ? `${Number(h.fileCount) || 0} file${Number(h.fileCount) === 1 ? '' : 's'}` : 'Not installed';
     const mtime = h.recordMtime ? new Date(h.recordMtime).toLocaleDateString() : '';
     return `
       <div style="display:flex;align-items:center;justify-content:space-between;
