@@ -120,21 +120,35 @@ suite('Cross-process lock queue (v6.0.8 #528 LD-4)', function () {
     const countA = (): number => storedIds(store).filter((id) => id.startsWith('A-')).length;
     await delay(300);
     const rounds: Array<{ before: number; after: number; overtaken: number }> = [];
+    // B400: hotness is a count, not a fixed 500 ms wall-clock window. Each wait has a 4000 ms
+    // deadline: 0.3 s + 5 rounds x (4 s + an 8 s worst-case waiter mutate + 4 s) = 80.3 s, under
+    // the suite's 90 s timeout. At its deadline a wait throws "inconclusive", never a pass.
+    const waitForCount = async (min: number, deadlineMs: number): Promise<number> => {
+      const start = countA();
+      const deadline = Date.now() + deadlineMs;
+      for (;;) {
+        const n = countA();
+        if (n >= min) return n;
+        if (Date.now() >= deadline) {
+          throw new Error(`inconclusive: the hot writer stored fewer than ${min - start} updates within ${deadlineMs} ms ${JSON.stringify(rounds)}`);
+        }
+        await delay(25);
+      }
+    };
     for (let k = 0; k < 5; k++) {
       const w0 = countA();
-      await delay(500);
-      const a0 = countA();
+      const a0 = await waitForCount(w0 + 20, 4000);
       store.mutate((doc) => { doc.risks.push({ id: `B-${k}` }); });
       const landed = countA();
       const ids = storedIds(store);
       const aBeforeB = ids.slice(0, ids.indexOf(`B-${k}`)).filter((id) => id.startsWith('A-')).length;
-      await delay(500);
-      rounds.push({ before: a0 - w0, after: countA() - landed, overtaken: aBeforeB - a0 });
+      const after = (await waitForCount(landed + 20, 4000)) - landed;
+      rounds.push({ before: a0 - w0, after, overtaken: aBeforeB - a0 });
     }
     const summary = JSON.stringify(rounds);
     console.log(`R1 rounds ${summary}`);
     for (const r of rounds) {
-      assert.ok(r.before >= 20 && r.after >= 20, `inconclusive: the writer was not hot in a fixed 500 ms window ${summary}`);
+      assert.ok(r.before >= 20 && r.after >= 20, `inconclusive: the writer was not hot ${summary}`);
     }
     for (const r of rounds) {
       assert.ok(r.overtaken <= 3, `the hot writer stored ${r.overtaken} updates after the waiter started waiting ${summary}`);
