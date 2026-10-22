@@ -1,10 +1,10 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-19 (v6.0.9 published: tag `v6.0.9` on `b83d83a3`, release run 39306563766, public artifacts verified 108/108); 2026-10-18 (#538 post-v6.0.8 security patch: lanes A-F merged to main de71858e; v6.0.9 release candidate sealed on release/v6.0.9-rc (seal #818), rehearsal qualification passed; ledger #786-#818; not tagged, not published)
+**Last Updated:** 2026-10-22 (v6.0.10 release candidate prepared on `release/v6.0.10-rc` from main d77f0d3d: every v6.0.10 security and hardening lane merged, ledger #821-#905; not tagged, not published); 2026-10-19 (v6.0.9 published: tag `v6.0.9` on `b83d83a3`, release run 39306563766, public artifacts verified 108/108); 2026-10-18 (#538 post-v6.0.8 security patch: lanes A-F merged to main de71858e; v6.0.9 release candidate sealed on release/v6.0.9-rc (seal #818), rehearsal qualification passed; ledger #786-#818; not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
-**Current Release:** v6.0.9 (2026-10-19) — published to the VS Code Marketplace, Open VSX and GitHub Release (tag `v6.0.9` on `b83d83a3`). Latest published release: v6.0.9 (2026-10-19). Marketplace install/update/scan stay disabled until the B222 gate lift conditions hold.
+**Current Release:** v6.0.10 (2026-10-22): release candidate (source on `release/v6.0.10-rc`); not published. Latest published release: v6.0.9 (2026-10-19; VS Code Marketplace, Open VSX and GitHub Release, tag `v6.0.9` on `b83d83a3`). Marketplace install/update/scan stay disabled until the B222 gate lift conditions hold.
 **Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
@@ -13,6 +13,30 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-10-22 — v6.0.10: post-v6.0.9 security and hardening patch (release candidate, not published)
+
+- v6.0.10 release prep (`plan-v6010-release-prep.md`, audit PASS iteration 3): version 6.0.10, release notes with every open row filed since v6.0.9 reconciled (47 rows), What's New, release markers, the CHANGELOG Verify Integrity line corrected against B396, backlog rows B397-B402, and the B397 and B400 test fixes. Source on `release/v6.0.10-rc` from main d77f0d3d; not tagged, not published.
+- B288 (#550, ledger #821-#825): the inert governance-webhook sender is retired.
+- B289 (#551, #826-#828): the Qor runtime client, its three Console routes and the API ticker are retired; the `externalRuntime` settings are deprecated.
+- #532 (#553, #829-#833): delivery history, governed-commit links bound to FailSafe's own commit, guarded `git reset --keep` rollback.
+- #548 (#554, #834-#837): Console taxonomy authority, drift report and editor data-loss fixes.
+- #531 (#556, #838-#842): conflicting canonical architecture authority is detected and new conflicts are refused.
+- B311/B312 (#557, #843-#847): warn-only affected architecture decisions and registry links.
+- B330/B331 (#559, #848-#852): taxonomy write containment; unsaved edits survive repaints.
+- B320-B322 (#560, #853-#856): operator-confirmed delivery review sealed in the FailSafe ledger; the Sovereign Checkpoint Protocol is retired.
+- B347 (#565, #857-#859): the G4 provenance-race test fix.
+- Dependabot #561 (#860-#862, MCP SDK 1.32.0), #562 (#863-#865, markdown-it 14.3.3, development only) and #552 (#873-#875, hono 4.13.13).
+- #564 (#573, #866-#869): the Console WebSocket accepts only its own page, and every route refuses a non-loopback Host.
+- L3 route guard (#576, #870-#872): the Console request guard and limiters on the L3 decision routes, and the guard on Panic Stop.
+- C1 (#577, #876-#879): the MCP tool-input cap; sharp 0.35.5.
+- C2 (#578, #880-#883): chokidar 4.0.3 and the Sentinel ignore matcher; braces leaves the production tree.
+- #563 (#884-#886): governance-alert type and entry escaped in the roadmap view.
+- B344 (#579, #887-#892): VETO rework supersession; four VETOs, then implemented from iteration 4 under the owner's fold authorization, disclosed in its seal.
+- Lane E (#580, #893-#896; #896 is the post-seal CI fixture addendum): Console UI stored-XSS sweep (B390-B392).
+- B340 (#581, #897-#902): the enforce-mode intent approval path; owner cap exception, iteration 4 PASS.
+- D2 (#582, #903-#905): the Console request guard on resume-monitoring and verify-integrity (B383 in part); B395 and B396 filed.
+- Governance: each cycle ran under its own bounded damaged-ledger override, disclosed in its seal: the 2026-10-19 post-v6.0.9 override (#821-#842), the 2026-10-20 hardening-lanes override (#843-#856) and the 2026-10-21 v6.0.10 override (#857-#905, and this release prep). The META_LEDGER stays DAMAGED (#467, unrepaired): the declared-anchor check reads post-anchor DIRTY with exactly #341 and #382 (re-run on d77f0d3d).
 
 ## 2026-10-19 — v6.0.9 published
 

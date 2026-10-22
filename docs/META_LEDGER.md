@@ -35456,3 +35456,95 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `a902e5916688147f1928e4aa4d0dc5c1841d61fb15531bfe5350c05d32538ea4`
 
 **Decision**: SESSION SEAL for plan-d2-resume-guard.md (content hash = the audited plan, sha256 4f0383d8). Reality = Promise, with disclosures. A web page in a local browser can no longer restart a stopped Sentinel (silently overriding an operator's Panic Stop and recording a forged PASS monitoring.resumed checkpoint) or run a chain verification: both routes run the Console request guard first, and verify-integrity is rate-limited after the guard. Disclosures: bounded override (#467 unresolved); reproduction scope; residuals B395, B396, B383 show-output and B384; CodeQL #23 closure to be observed post-merge; a void environmental test:ui run. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #906: GATE TRIBUNAL - plan-v6010-release-prep (iteration 1) - VETO
+
+**Timestamp**: 2026-10-22T18:13:33Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-22T1803-5bfd2a`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; release preparation authorized, tagging and publication NOT authorized; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-22T1803-5bfd2a/audit-iter1.json`
+
+**Content Hash**: `894147cc0a8629eebcc4539b56a312ab7182c39e8ea5dcbb04d648452bcdb9ed`
+**Previous Hash**: `a902e5916688147f1928e4aa4d0dc5c1841d61fb15531bfe5350c05d32538ea4`
+**Chain Hash (Merkle seal)**: `a6b6283250effc88c06a20b1052e13defa2a12cccdec7885ab9198c36c9793a4`
+
+**Decision**: VETO on plan-v6010-release-prep.md iteration 1 (sha256 2a51d104), auditRP, Option B. Blocking: (1) the disclosure set was incomplete: D2/L3 loopback-origin reproduction scope, B370, and no reconciliation of the open rows the lanes filed (B361, B362, B375, B379, B389 and others); (2) What's New overclaimed ('answers only its own pages' against B384, show-output and B396; the forged-intent bullet omitted B370 and B374). 15 should-fix items. Safety boundary held. Citations 138 checked, 0 ghosts. Report: .failsafe/governance/audits-611/AUDIT_rp-iter1.md.
+
+---
+
+### Entry #907: GATE TRIBUNAL - plan-v6010-release-prep (iteration 2) - VETO
+
+**Timestamp**: 2026-10-22T18:32:55Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-22T1803-5bfd2a`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; release preparation authorized, tagging and publication NOT authorized; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-22T1803-5bfd2a/audit-iter2.json`
+
+**Content Hash**: `1d7acad129456372295077a5221db32a9a8600630622cf58044345a8dbb0d1e1`
+**Previous Hash**: `a6b6283250effc88c06a20b1052e13defa2a12cccdec7885ab9198c36c9793a4`
+**Chain Hash (Merkle seal)**: `eb5003a62c0fbc70000e5f9e6a6e93ce81049f593d2916986dd96105d69485cc`
+
+**Decision**: VETO on plan-v6010-release-prep.md iteration 2 (sha256 48ab7ae2), auditRP2 (fresh), Option B. All iteration-1 items resolved; the 47-row reconciliation was re-derived independently and is complete. Blocking: root CHANGELOG :51 (from the D2 seal) said another page cannot start a checkpoint chain verification, but GET /api/checkpoints runs verifyCheckpointChain() unguarded (CheckpointRoute.ts:32, B396). The plan kept the line, and What's New bullet 2 repeated it. 14 should-fix items. Citations 204 checked, 0 failed. Report: AUDIT_rp-iter2.md.
+
+---
+
+### Entry #908: GATE TRIBUNAL - plan-v6010-release-prep (iteration 3) - PASS
+
+**Timestamp**: 2026-10-22T18:48:07Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-22T1803-5bfd2a`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; release preparation authorized, tagging and publication NOT authorized; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-22T1803-5bfd2a/audit-iter3.json`
+
+**Content Hash**: `368507991e7762dbc33931b14aa15ed29ce3807b2725752a96ba10cd51060ccb`
+**Previous Hash**: `eb5003a62c0fbc70000e5f9e6a6e93ce81049f593d2916986dd96105d69485cc`
+**Chain Hash (Merkle seal)**: `44a1f253be8ca78487cd50c8819dd412869fa0ef535ac190913a8fdb17714972`
+
+**Decision**: PASS on plan-v6010-release-prep.md iteration 3 (sha256 6a9ac8ba), auditRP3 (fresh), Option B; final iteration under the cap. The :51 rewrite is true against ActionsRoute.ts:86-93 and CheckpointRoute.ts:25-33. Every iteration-2 item was resolved and verified against the source. Safety boundary: no tag outside a scratch clone, no push of a tag, no publication, no API-enacted approval. 10 should-fix items were folded into implementation and recorded in IMPLEMENT_rp-deviations.md. Citations 184 checked, 0 failed. Report: AUDIT_rp-iter3.md.
+
+---
+
+### Entry #909: IMPLEMENTATION - plan-v6010-release-prep
+
+**Timestamp**: 2026-10-22T20:15:27Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-22T1803-5bfd2a`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-22T1803-5bfd2a/implement.json`
+
+**Content Hash**: `44390cd1f31e02754ddf3509a22b6614cda54ee212808b0fd2aab4b101bf8f3c`
+**Previous Hash**: `44a1f253be8ca78487cd50c8819dd412869fa0ef535ac190913a8fdb17714972`
+**Chain Hash (Merkle seal)**: `b41c068b556a4732927d5c8c6fad1075c8ef8630db2f7cd1250497a8fbbbadf2`
+
+**Decision**: IMPLEMENTATION of plan-v6010-release-prep.md on release/v6.0.10-rc (from main d77f0d3d), 17 commits, 15 files, +200/-41. Version 6.0.10 in package.json (1/1) and package-lock.json (2/2). Root CHANGELOG [6.0.10] section, with the D2 line corrected against B396, the 2c and 2c-R disclosures and known limitations (B341, B361, B362, B364/B384, B368, B370-B375, B379, B383, B389, B396, B401, B402 and #467), synced byte-identically to the extension CHANGELOG. README What's New, release markers (COMPONENT_HELP, PROCESS_GUIDE, both READMEs) and the stale v6.0.8 sentence fixed; README contract citations re-cited exactly. BACKLOG: v6.0.10 candidate row; B397-B402; B260/B271/B361 corrections; gap notes; B402 corrected to name the two synchronous git calls and set to high priority per the owner ruling of 2026-10-22 (disclose, fix next cycle). SYSTEM_STATE v6.0.10 section (#821-#905), naming each cycle's own override. B397: .vscode-test.mjs removes its own two mkdtemp profile folders on exit (junction-safe, best-effort). B400: lockQueue R1 waits on a count with a 4000 ms inconclusive deadline; RiskStore T7/T21 budgets FAST_PATH_MS 1000 (still 5-6x below the 5000/6000 ms slow paths). Independent code review reviewRP: REQUEST CHANGES (B1: SYSTEM_STATE misattributed the override; S1-S5; N1-N5), all folded in. Bounded re-review at 294f8026: APPROVE (1 should-fix: What's New 'Still open' names B402; 2 nits: the B330 line points to the B332 race windows, the B400 evidence wording), folded in at 20e4d12f and a89550dd. The deviations and both review rounds are recorded in IMPLEMENT_rp-deviations.md.
+
+---
+
+### Entry #910: SESSION SEAL - plan-v6010-release-prep
+
+**Timestamp**: 2026-10-22T20:15:28Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-22T1803-5bfd2a`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-22T1803-5bfd2a/substantiate.json`
+
+**Content Hash**: `6a9ac8baa97ff7535d6a08f9f2797dca4c615cd7b6fc0c23244b47109d053e78`
+**Previous Hash**: `b41c068b556a4732927d5c8c6fad1075c8ef8630db2f7cd1250497a8fbbbadf2`
+**Chain Hash (Merkle seal)**: `32351f1980283ff5a9ff3cceee6172e95136f5402f2cf09eafcaaecad3817b15`
+
+**Decision**: SESSION SEAL for plan-v6010-release-prep.md (content hash = the audited plan, sha256 6a9ac8ba; iteration 3 PASS after two VETOs). Reality = Promise, with disclosures. The release-prep branch carries version 6.0.10, truthful release notes (each line checked against the open BACKLOG rows and the code by the auditor and an independent reviewer), byte-identical CHANGELOGs, the B397 profile-folder leak fix and the B400 timing-flake fixes with their falsifiers intact. Correction to the Lane D2 seal (#905): its 'or run a chain verification' wording overclaimed, because GET /api/checkpoints still re-checks the chain unguarded (B396); the v6.0.10 notes state this. Disclosures: bounded override (#467 unresolved); B400 has no local red-first; N1/N2 postdate the full local runs; B369 lag seen once; an environmental vscode-test launch crash, rerun green; the B402 owner ruling. Next: push release/v6.0.10-rc, open the release-prep PR, two Linux CI runs, merge pinned to the head, then Phase 4 qualification on the merged candidate and the GO/NO-GO report. No tag, no publication.

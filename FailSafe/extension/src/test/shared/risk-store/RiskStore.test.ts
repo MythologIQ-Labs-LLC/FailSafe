@@ -27,6 +27,11 @@ function patch(name: string, impl: unknown): () => void {
 
 function sleepSync(ms: number): void { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
 
+// B400: the "at once" budget. The slow paths these rows separate from take at least 5000 ms
+// (stale takeover, DEFAULT_STALE_MS) or 6000 ms (lock timeout, DEFAULT_LOCK_TIMEOUT_MS), so 1000 ms
+// keeps a 5x margin while tolerating a loaded runner; 100 ms failed on CI about every other run.
+const FAST_PATH_MS = 1000;
+
 function codeOf(fn: () => unknown): string {
   try { fn(); } catch (e) { return e instanceof RiskStoreError ? e.code : `other:${String(e)}`; }
   return 'none';
@@ -129,7 +134,7 @@ suite('RiskStore (#517 FX972)', () => {
     const nestedRoot = process.platform === 'win32' ? ws.toUpperCase() : ws;
     const inner = codeOf(() => store().mutate(() => codeOf(() => new RiskStore(nestedRoot).mutate(add('x')))));
     assert.equal(inner, 'none', 'the outer mutate completes');
-    assert.ok(Date.now() - t0 < 100);
+    assert.ok(Date.now() - t0 < FAST_PATH_MS, `took ${Date.now() - t0} ms`);
     let nested = '';
     store().mutate(() => { nested = codeOf(() => new RiskStore(nestedRoot).mutate(add('x'))); });
     assert.equal(nested, 'REENTRANT');
@@ -423,7 +428,7 @@ suite('RiskStore (#517 FX972)', () => {
         make();
         const t0 = Date.now();
         assert.equal(codeOf(() => store().mutate(add('n'))), 'LOCK_BLOCKED');
-        assert.ok(Date.now() - t0 < 100, `took ${Date.now() - t0} ms`);
+        assert.ok(Date.now() - t0 < FAST_PATH_MS, `took ${Date.now() - t0} ms`);
         assert.equal(fs.readFileSync(risksFile(), 'utf8'), before);
         assert.ok(fs.lstatSync(lockDir()), 'the planted entry is left in place');
         fs.rmSync(lockDir(), { force: true, recursive: false });
@@ -445,7 +450,7 @@ suite('RiskStore (#517 FX972)', () => {
         assert.equal(fs.existsSync(lockDir()), false);
         const t0 = Date.now();
         store().mutate(add('b'));
-        assert.ok(Date.now() - t0 < 100);
+        assert.ok(Date.now() - t0 < FAST_PATH_MS, `took ${Date.now() - t0} ms`);
       });
 
       test('(ii) the retry never removes a lock directory that is not this holder\'s', () => {
