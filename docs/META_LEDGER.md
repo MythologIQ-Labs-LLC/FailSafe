@@ -35270,3 +35270,20 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `da80602a1cd5aa1e11e037f798860b35ba39a9b6c7e6b3baf9bf8724da268ad6`
 
 **Decision**: SESSION SEAL for plan-e-console-ui-xss.md (content hash = the audited plan, sha256 6655108f). Reality = Promise, with disclosures. The browser-served Console and its /console/* pages no longer let workspace-, ledger-, skill-, host-registry-, MCP- or risk-derived text inject markup, attributes, classes or javascript: links: every escape helper is quote-safe, class tokens are allowlisted, and links are http(s) only. The stored XSS through a META_LEDGER Verdict line, reproduced in headless Chromium against the test Console before the fix, no longer executes. Disclosures: bounded override (#467 unresolved); the reproduction scope (test Console, not an installed extension); S21 is hardening; the mid-audit plan edit; scope additions forced by the guard; the compatibility note; residuals B393/B394. Next: push, open a PR, run the full required CI including Linux test:all and CodeQL, and merge pinned to the head. No release.
+
+---
+
+### Entry #896: IMPLEMENTATION ADDENDUM - plan-e-console-ui-xss (CI fixture race fix after the seal)
+
+**Timestamp**: 2026-10-22T13:21:44Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-22T0545-4ec52e`
+**Risk Grade**: L2
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; Lane E release-blocking per owner ruling 2026-10-22; disclosed per cycle (#467)
+
+**Content Hash**: `5bbd6fbde7a47d7e9be47c4b3da110be96e22ea077acd5333ae04fa200ffc74d`
+**Previous Hash**: `da80602a1cd5aa1e11e037f798860b35ba39a9b6c7e6b3baf9bf8724da268ad6`
+**Chain Hash (Merkle seal)**: `f06c28731246aba402f27ed74cb1388f0dfd400f17d5d102594b925e6e4615b8`
+
+**Decision**: After seal #895, PR #580's Linux CI failed Playwright U1b. Root cause: a test-fixture race; the fixture's WebSocket init carried {} and could overwrite the real hub after the HTTP fetch. It was reproduced on Windows by delaying the init. The product is unchanged. Test-only fix ea1432f7 (labelled as written after the fix): an opt-in liveHubInit sends the real hub on init, as production does, and U1b forces the CI ordering on every platform. U1b is not weakened: it still asserts the visible BLOCK alert from a workspace META_LEDGER through the real producer and the payload staying inert, and M1 still makes it red. Evidence: U1b 5/5 repeated; console-xss 9/9; fixture-dependent specs 32 passed.
