@@ -36,6 +36,23 @@ export class IntentStore {
     } catch { return null; }
   }
 
+  /**
+   * Release-only read: missing file is a legitimate "no active intent", but
+   * unreadable, malformed, or partially written content must never be treated
+   * as absent when deciding whether a release may proceed (#473).
+   * The existing UI-oriented readActiveIntent retains its forgiving semantics.
+   */
+  async readActiveIntentStrict(): Promise<Intent | null> {
+    let data: string;
+    try {
+      data = await fs.promises.readFile(this.activeIntentPath, 'utf-8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
+    return this.migrateIntent(JSON.parse(data) as Intent);
+  }
+
   private migrateIntent(intent: Intent): Intent {
     if (!intent.schemaVersion || intent.schemaVersion < 2) {
       intent.schemaVersion = 2;
