@@ -320,9 +320,9 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     }
   });
 
-  test('the VETO wording names declared rework (review fold, red-first for the wording: it never says git "shows" an amendment)', () => {
+  test('the VETO wording names declared rework (review folds, red-first for the wording: it never says git "shows" an amendment, and it states both halves)', () => {
     const d = deliveryReviewRequest({ ...facts([], []), verdict: 'VETO' }, 'op_4', 'console').detail;
-    assert.match(d, /a PASS on a declared rework with this commit's diff \(rebased\), or with its parent and more than half of its non-bookkeeping paths \(amended\)/);
+    assert.match(d, /a PASS on a declared rework with this commit's diff \(rebased\), or with its parent, more than half of its non-bookkeeping paths, and at least half of its own non-bookkeeping paths among them \(amended\)/);
     assert.doesNotMatch(d, /git shows/);
   });
 
@@ -352,8 +352,8 @@ suite('#532 B344 delivery review dialog: rework section', () => {
   });
 
   test('D6 (red-first): a space other than U+0020, and a U+0020 at either end of a path or of a chunk, is shown escaped', () => {
-    assert.equal(escapeDialogPath('a b.ts'), 'a\\u{00A0}b.ts');
-    assert.equal(escapeDialogPath('a　b c'), 'a\\u{3000}b\\u{2007}c');
+    assert.equal(escapeDialogPath('a\u00A0b.ts'), 'a\\u{00A0}b.ts');
+    assert.equal(escapeDialogPath('a\u3000b\u2007c'), 'a\\u{3000}b\\u{2007}c');
     assert.equal(escapeDialogPath('x.ts '), 'x.ts\\u{0020}');
     assert.equal(escapeDialogPath(' x.ts'), '\\u{0020}x.ts');
     assert.equal(escapeDialogPath('my dir/a b.ts'), 'my dir/a b.ts', 'an inner U+0020 stays a space');
@@ -363,5 +363,29 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     const chunks = section.split('\n').map((l) => /^ {4}M\/M (.*)$/.exec(l)?.[1] ?? /^ {6}\\> (.*)$/.exec(l)?.[1]).filter((c): c is string => c !== undefined);
     assert.ok(chunks.length >= 2);
     for (const c of chunks) assert.ok(!c.startsWith(' ') && !c.endsWith(' '), `a chunk with an edge space: ${JSON.stringify(c)}`);
+  });
+
+  // #532 B344 second review fold (reviewB344b, red-first).
+  const ch = (cp: number) => String.fromCodePoint(cp);
+  /** The path a shown text stands for: "\\" is a backslash, "\u{X}" is code point X. */
+  const decode = (shown: string) => shown.replace(/\\\\|\\u\{([0-9A-F]+)\}/g, (m, hex: string | undefined) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : '\\'));
+  const chunksOf = (section: string) => section.split('\n').map((l) => /^ {4}M\/M (.*)$/.exec(l)?.[1] ?? /^ {6}\\> (.*)$/.exec(l)?.[1]).filter((c): c is string => c !== undefined);
+
+  test('D6b (red-first): default-ignorable code points and invisible fillers are shown escaped', () => {
+    for (const cp of [0xFE0F, 0x034F, 0x3164, 0xFFA0, 0x2800, 0x115F, 0x180B]) {
+      assert.equal(escapeDialogPath(`a${ch(cp)}b`), `a\\u{${cp.toString(16).toUpperCase().padStart(4, '0')}}b`, `U+${cp.toString(16).toUpperCase()}`);
+    }
+    assert.equal(escapeDialogPath(`caf${ch(0x00E9)}.ts`), `caf${ch(0x00E9)}.ts`, 'a visible letter is not escaped');
+  });
+
+  test('D7 (red-first): when a run of spaces leaves no clean break, no chunk starts or ends with an unescaped space, and the path decodes exactly', () => {
+    const paths = [`a${' '.repeat(45)}b.ts`, `x/${' '.repeat(90)}y`, `q${' '.repeat(39)}`.concat('r')];
+    const section = sectionOf(deliveryReviewRequest(facts([item(13)], [rework(13, paths.map((path) => ({ path, vetoStatus: 'M' as const, reworkStatus: 'M' as const })))]), 'op_d7', 'console').detail);
+    const shown = rebuilt(section);
+    assert.deepEqual(shown.map(decode), paths, 'each path decodes to itself');
+    for (const c of chunksOf(section)) {
+      assert.ok(!c.startsWith(' ') && !c.endsWith(' '), `a chunk with an unescaped edge space: ${JSON.stringify(c)}`);
+      assert.ok(c.length <= REWORK_PATH_CHUNK, `a chunk of ${c.length}`);
+    }
   });
 });
