@@ -35548,3 +35548,57 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `32351f1980283ff5a9ff3cceee6172e95136f5402f2cf09eafcaaecad3817b15`
 
 **Decision**: SESSION SEAL for plan-v6010-release-prep.md (content hash = the audited plan, sha256 6a9ac8ba; iteration 3 PASS after two VETOs). Reality = Promise, with disclosures. The release-prep branch carries version 6.0.10, truthful release notes (each line checked against the open BACKLOG rows and the code by the auditor and an independent reviewer), byte-identical CHANGELOGs, the B397 profile-folder leak fix and the B400 timing-flake fixes with their falsifiers intact. Correction to the Lane D2 seal (#905): its 'or run a chain verification' wording overclaimed, because GET /api/checkpoints still re-checks the chain unguarded (B396); the v6.0.10 notes state this. Disclosures: bounded override (#467 unresolved); B400 has no local red-first; N1/N2 postdate the full local runs; B369 lag seen once; an environmental vscode-test launch crash, rerun green; the B402 owner ruling. Next: push release/v6.0.10-rc, open the release-prep PR, two Linux CI runs, merge pinned to the head, then Phase 4 qualification on the merged candidate and the GO/NO-GO report. No tag, no publication.
+
+---
+
+### Entry #911: GATE TRIBUNAL - plan-dep-584 (iteration 1) - PASS
+
+**Timestamp**: 2026-10-22T21:17:42Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-22T2058-1b9147`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, applied by the owner on 2026-10-22 to Dependabot #584 after GHSA-rxp7-6hxx-x8q5 blocked GO; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-22T2058-1b9147/audit-iter1.json`
+
+**Content Hash**: `1d0b2ab942f844abcc1acc0a56472ed93baba9c85ca3928b299e8350ab642a12`
+**Previous Hash**: `32351f1980283ff5a9ff3cceee6172e95136f5402f2cf09eafcaaecad3817b15`
+**Chain Hash (Merkle seal)**: `51eabe7bf45cda77a6d7dbe41e77acee5fb806cadc8f2974164cf4c01ffecea6`
+
+**Decision**: PASS on plan-dep-584.md iteration 1 (sha256 71315751): Dependabot #584, ip-address 10.7.2 -> 10.7.4, lockfile only. Verifier dep584 and fresh reviewer revdep584 (Option B). Findings: one lockfile hunk (version, resolved, integrity) against base bfe7c33b; 10.7.4 is inside express-rate-limit's ^10.2.0; the integrity equals the registry value; signatures 698 verified before and after. Production audit 1 -> 0; full 14 -> 13, only GHSA-rxp7-6hxx-x8q5 removed. The bundle carries the 10.7.4 zone and arpa guards, and the 10.7.2 RE_ZONE_STRING.exec is absent (discriminators proven by bundling both versions). Reach is express-rate-limit's ipKeyGenerator -> new Address6 (main.js:105404/:105407). Focused rate-limiter suites: 16 files 389/0, architecture 3/0, plus the tracker-config saveLimiter files 44/0/1 (review should-fix 1). Exposure is low and no reproduction is claimed: the Console binds 127.0.0.1 (ConsoleServer.ts:45) and sets no trust proxy. Should-fix items 1-4 and the nits were folded in before the seal. Report: .failsafe/governance/audits-611/AUDIT_dep584-iter1.md.
+
+---
+
+### Entry #912: IMPLEMENTATION - plan-dep-584
+
+**Timestamp**: 2026-10-22T21:18:14Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-22T2058-1b9147`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-22T2058-1b9147/implement.json`
+
+**Content Hash**: `aba7f53aa729608aab5e433e6e44de26bb41312397ea0e4795fb61f5235cd4b9`
+**Previous Hash**: `51eabe7bf45cda77a6d7dbe41e77acee5fb806cadc8f2974164cf4c01ffecea6`
+**Chain Hash (Merkle seal)**: `b1b2b6514ac079ce0870ace45fe93fc0cd44d24c4fcf2c9fcbf50d82bd29955d`
+
+**Decision**: IMPLEMENTATION of plan-dep-584.md on the #584 Dependabot branch (base bfe7c33b, the v6.0.10 release-prep merge). Commits: 46fc946b is Dependabot's lockfile bump, taken verbatim (LD1). 2842450c is LD5: the CHANGELOG [6.0.10] dependency line names ip-address 10.7.4 through the Console's rate limiter (GHSA-rxp7-6hxx-x8q5, Dependabot #584), so the line's `npm audit --omit=dev` reports 0 findings is true again; it is synced byte-identically to the extension CHANGELOG. Lead deviations from the plan's 'no other doc edit' and 'only LD5 and the seal' (disclosed; the fresh reviewer judged D1): e6de1c62 (D1) adds #584 (#911-#913) to SYSTEM_STATE's v6.0.10 Dependabot line; 348bae89 (review SF2b) extends SYSTEM_STATE's governance line so the 2026-10-21 override covers the release prep #906-#910 and #584 #911-#913. After the merge, the merge commit becomes the v6.0.10 release candidate (LD6), and Phase 4 of plan-v6010-release-prep.md runs on it unchanged.
+
+---
+
+### Entry #913: SESSION SEAL - plan-dep-584
+
+**Timestamp**: 2026-10-22T21:18:15Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-22T2058-1b9147`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-22T2058-1b9147/substantiate.json`
+
+**Content Hash**: `71315751b8591bc921ba83f3da8b366ffd2460dfe70644a85683f55c4a43efb6`
+**Previous Hash**: `b1b2b6514ac079ce0870ace45fe93fc0cd44d24c4fcf2c9fcbf50d82bd29955d`
+**Chain Hash (Merkle seal)**: `89b89eea7c8acc3c61ecd8dfe30c7efab120145abf9518c7cd2b95c697b7f8e5`
+
+**Decision**: SESSION SEAL for plan-dep-584.md (content hash = the audited plan, sha256 71315751). Reality = Promise, with disclosures. Dependabot #584 moves the Console rate limiter's ip-address to 10.7.4, clearing GHSA-rxp7-6hxx-x8q5 (published 2026-10-22 16:19Z, after the v6.0.10 release-prep merge). The production npm audit goes from 1 to 0 and the full audit from 14 to 13. The fixed code is the code bundled. The v6.0.10 release notes name the bump, so their production-audit claim holds. Disclosures: bounded override (#467 unresolved); low exposure, with no reproduction claimed; two lead SYSTEM_STATE deviation commits; one void DNS-failed test attempt. Next: push the seal to the #584 branch, run the full required CI, and merge pinned to the head. The merge commit becomes the v6.0.10 release candidate for Phase 4 qualification. No tag, no publication.
