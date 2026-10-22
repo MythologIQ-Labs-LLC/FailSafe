@@ -195,7 +195,10 @@ function reviewStep(review: ReviewAssessment, decision: IntentDecisionInput | nu
       timestamp: r.timestamp, mirrorEntryHash: r.mirrorEntryHash,
       ...(latest && latest.review.reviewId === r.reviewId ? { current: latest.current, staleReasons: latest.staleReasons } : {}),
     })),
-    ...review.cleared.map((c) => ({ record: 'cleared', kind: c.kind, id: c.id, hash: c.hash, label: c.label, clearedBy: c.clearedBy })),
+    ...review.cleared.map((c) => ({
+      record: 'cleared', kind: c.kind, id: c.id, hash: c.hash, label: c.label, clearedBy: c.clearedBy,
+      ...(c.clearedNote ? { note: c.clearedNote } : {}),
+    })),
     ...decisionRecords,
   ];
   if (review.blocking.length) {

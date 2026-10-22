@@ -351,4 +351,30 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
       assert.equal(after.includes('/api/v1/delivery/candidates'), false);
     } finally { ctx.cleanup(); }
   });
+
+  test('B344 (red-first): "Reworked by" appears only on trusted VETO records, and Record PASS posts the chosen reworks once', async () => {
+    overall = 'failing';
+    reviewOverride = {
+      status: 'failing', reason: 'Rejected by review: VETO on 9',
+      records: [
+        { record: 'blocking', kind: 'veto', id: 8, hash: 'h'.repeat(64), label: 'Rejected by review: VETO.', verdict: 'VETO', commitSha: SHA2, commitState: 'sealed' },
+        { record: 'blocking', kind: 'bad-seal', id: 9, hash: 'k'.repeat(64), label: 'Review record unverifiable.', commitSha: null, commitState: null },
+      ],
+    };
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      const d = ctx.doc;
+      const selects = [...d.querySelectorAll('.cc-dlv-rework-pick')] as HTMLSelectElement[];
+      assert.equal(selects.length, 1, 'only the trusted VETO record offers a rework');
+      assert.equal(selects[0].getAttribute('data-veto'), '8');
+      assert.deepEqual([...selects[0].options].map((o) => o.value), ['', SHA], 'none, or a linked commit other than the vetoed one');
+      selects[0].value = SHA;
+      (d.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+      await new Promise((res) => setTimeout(res, 20));
+      assert.deepEqual(ctx.posted, [
+        { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: '', reworks: [{ vetoEntryId: 8, reworkCommit: SHA }] } },
+      ]);
+    } finally { ctx.cleanup(); }
+  });
 });

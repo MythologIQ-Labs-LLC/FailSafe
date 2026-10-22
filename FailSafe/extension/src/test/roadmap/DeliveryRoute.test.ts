@@ -30,7 +30,7 @@ import type { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
 import { RouteHarness, makeApp, invokeRemote } from '../extension/helpers/routeTestHarness';
 import { makeEnv, openLedger, type Env } from '../qorelogic/ledgerTestKit';
 import {
-  commitAll, deliveryWorkspace, importedIntent, intentService, RUNTIME_DOC, RUNTIME_ROW, type DeliveryWorkspace,
+  commitAll, deliveryWorkspace, git, importedIntent, intentService, RUNTIME_DOC, RUNTIME_ROW, type DeliveryWorkspace,
 } from '../governance/delivery/deliveryFixtures';
 import { DELIVERY_REVIEW_TITLES, LOOPBACK_FOOTER } from '../../extension/operatorConfirmation';
 import { rawRows } from '../qorelogic/ledgerTestKit';
@@ -441,5 +441,33 @@ suite('#532 DeliveryRoute', () => {
     assert.match(s.shown[s.shown.length - 1].detail, new RegExp(`on ${ws.head} \\(an ancestor of the reviewed commit\\)`));
     a = (await assess(s, intent.id)).assessment;
     assert.equal(a.overall, 'evidence-complete-except-receipt', JSON.stringify(stepOf(a, 'review')));
+  });
+
+  // ---------------------------------------------------------------- plan-b344: rework over HTTP (red-first)
+
+  test('B344 R7: an amended rework declared over HTTP supersedes the VETO; an undeclared PASS gets veto-not-ancestor with the VETO named', async () => {
+    const s = await start();
+    const intent = await readyIntent(s);
+    fs.writeFileSync(path.join(ws.root, 'w.ts'), 'one\n');
+    const b = commitAll(ws.root, 'b');
+    assert.equal((await link(s, intent.id, 'committed-under', b)).status, 200);
+    const vetoed = await review(s, intent.id, 'VETO', b);
+    assert.equal(vetoed.status, 200, JSON.stringify(vetoed.body));
+    fs.writeFileSync(path.join(ws.root, 'w.ts'), 'two\n');
+    git(ws.root, '-c', 'user.name=FailSafe-Test', '-c', 'user.email=test@failsafe.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=',
+      'commit', '-q', '-a', '--amend', '-m', 'b amended');
+    const b2 = git(ws.root, 'rev-parse', 'HEAD');
+    assert.equal((await s.harness.request({ method: 'POST', path: '/api/actions/delivery/unlink', body: { intentId: intent.id, edge: 'committed-under', target: b } })).status, 200);
+    assert.equal((await link(s, intent.id, 'committed-under', b2)).status, 200);
+    const undeclared = await review(s, intent.id, 'PASS', b2);
+    assert.equal(undeclared.status, 409);
+    assert.equal(undeclared.body.code, 'veto-not-ancestor');
+    assert.deepEqual(undeclared.body.veto, { entryId: vetoed.body.ledgerEntryId, commitSha: b });
+    const declared = await review(s, intent.id, 'PASS', b2, { reworks: [{ vetoEntryId: vetoed.body.ledgerEntryId, reworkCommit: b2 }] });
+    assert.equal(declared.status, 200, JSON.stringify(declared.body));
+    const dialog = s.shown[s.shown.length - 1].detail;
+    assert.ok(dialog.indexOf('Superseded by rework') >= 0 && dialog.indexOf('Superseded by rework') < dialog.indexOf('Supersedes ('), dialog);
+    const a = (await assess(s, intent.id)).assessment;
+    assert.equal(stepOf(a, 'review').status, 'passing', stepOf(a, 'review').reason);
   });
 });

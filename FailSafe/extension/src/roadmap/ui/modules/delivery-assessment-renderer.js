@@ -371,7 +371,13 @@ export class DeliveryAssessmentRenderer {
     note.setAttribute('aria-label', 'Review note');
     actions.appendChild(select);
     actions.appendChild(note);
-    const record = (verdict, btn) => { btn.disabled = true; void this.review(view.intent.id, verdict, select.value, note.value); };
+    const reworkPicks = this.reworkPicks(view, linked);
+    for (const pick of reworkPicks) actions.appendChild(pick.parentNode);
+    const reworksOf = () => reworkPicks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
+    const record = (verdict, btn) => {
+      btn.disabled = true;
+      void this.review(view.intent.id, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
+    };
     const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS', pass));
     const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO', veto));
     actions.appendChild(pass);
@@ -379,8 +385,34 @@ export class DeliveryAssessmentRenderer {
     return actions;
   }
 
-  async review(intentId, verdict, commitSha, note) {
-    const { status, data } = await postJson('/api/actions/delivery/review', { intentId, verdict, commitSha, note });
+  /**
+   * #532 B344 (plan-b344 LD5): a "Reworked by" select on each blocking trusted VETO (a sealed row's
+   * commit): none, or a linked commit other than the vetoed one. The server verifies the relation.
+   */
+  reworkPicks(view, linked) {
+    const step = ((view.assessment && view.assessment.steps) || []).find((s) => s.key === 'review');
+    const vetoes = ((step && step.records) || []).filter((r) => r.record === 'blocking' && r.kind === 'veto' && r.commitState === 'sealed' && r.commitSha);
+    return vetoes.map((r) => {
+      const wrap = el('label', 'cc-dlv-line cc-dlv-rework', `Reworked by (VETO #${r.id} on ${String(r.commitSha).slice(0, 12)}): `);
+      const pick = el('select', 'cc-dlv-select cc-dlv-rework-pick');
+      pick.setAttribute('data-veto', String(r.id));
+      pick.setAttribute('aria-label', `Linked commit that reworks the VETO in ledger entry #${r.id}`);
+      const none = el('option', null, 'none');
+      none.value = '';
+      pick.appendChild(none);
+      for (const e of linked.filter((x) => x.target !== r.commitSha)) {
+        const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
+        opt.value = e.target;
+        pick.appendChild(opt);
+      }
+      wrap.appendChild(pick);
+      return pick;
+    });
+  }
+
+  async review(intentId, verdict, commitSha, note, reworks = []) {
+    const body = reworks.length ? { intentId, verdict, commitSha, note, reworks } : { intentId, verdict, commitSha, note };
+    const { status, data } = await postJson('/api/actions/delivery/review', body);
     this.message = status === 200
       ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
       : [data.error || `Recording the review failed (${status}).`, true];

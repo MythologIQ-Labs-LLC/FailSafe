@@ -22,7 +22,7 @@ import {
 } from '../../../governance/delivery/deliveryService';
 import {
   buildReviewPlan, DELIVERY_REVIEW_DID, LOCAL_OVERSEER_DID, parseReviewRequest, recordDeliveryReview, recordProblem, REVIEW_MAX_AGE_MS,
-  walkContinuity, type RecordHooks, type ReviewPlan, type ReviewRequest,
+  sortedJson, walkContinuity, type RecordHooks, type ReviewPlan, type ReviewRequest,
 } from '../../../governance/delivery/deliveryReview';
 import { makeArchitectureGit, type ArchitectureGit } from '../../../governance/architecture/ArchitectureIndexDiscovery';
 import { LedgerManager } from '../../../qorelogic/ledger/LedgerManager';
@@ -848,6 +848,501 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
       assert.ok(reviewOf(v).records.some((x) => x.record === 'blocking' && x.kind === 'unverifiable-row' && label.test(String(x.label))), JSON.stringify(set));
       resealRow(row.id, { overseer_decision: row.overseer_decision, verification_result: row.verification_result, verification_method: row.verification_method, artifact_hash: row.artifact_hash, prev_hash: row.prev_hash });
     }
+  });
+
+  // ------------------------------------------------------------------ B344: rework (plan-b344 LD7)
+  //
+  // Labels (plan-b344 LD7 method): "red-first" rows fail by assertion on the red commit (compile-only
+  // stubs); "regression guard" rows pass on main too (main refuses every non-ancestor supersession)
+  // and are not red evidence. Ancestry runs before rework (ancestorOrEqual, deliveryReview.ts): a
+  // vetoed commit that resolves to "unavailable" throws there, before any rework read.
+
+  const GC = ['-c', 'user.name=FailSafe-Test', '-c', 'user.email=test@failsafe.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath='];
+  /** A commit on `parent` with the given file contents (null deletes); HEAD is left detached at it. */
+  function commitOn(parent: string, files: Record<string, string | Buffer | null>, message = 'work'): string {
+    git(ws.root, 'checkout', '-q', '--detach', parent);
+    for (const [f, c] of Object.entries(files)) {
+      const p = path.join(ws.root, ...f.split('/'));
+      if (c === null) fs.rmSync(p, { force: true });
+      else { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, c); }
+    }
+    git(ws.root, 'add', '-A');
+    git(ws.root, ...GC, 'commit', '-q', '--allow-empty', '-m', message);
+    return git(ws.root, 'rev-parse', 'HEAD');
+  }
+  /** fast-import one commit on `parent` whose files are given as raw byte paths (no checkout, so any path works). */
+  function importCommit(parent: string, files: Array<[Buffer, string]>): string {
+    const ref = `refs/heads/imported-${crypto.randomUUID()}`;
+    const NL = '\n';
+    const parts: Buffer[] = [Buffer.from([`commit ${ref}`, 'committer T <t@failsafe.invalid> 1700000000 +0000', 'data 3', 'imp', `from ${parent}`, ''].join(NL))];
+    // An unquoted fast-import path is taken byte for byte up to the newline, so any non-UTF-8 byte reaches the tree as-is.
+    for (const [p, content] of files) {
+      parts.push(Buffer.from('M 100644 inline '), p, Buffer.from([``, `data ${Buffer.byteLength(content)}`, content, ''].join(NL)));
+    }
+    parts.push(Buffer.from(NL));
+    const r = spawnSync('git', ['fast-import', '--quiet'], { cwd: ws.root, input: Buffer.concat(parts), windowsHide: true });
+    assert.equal(r.status, 0, String(r.stderr));
+    return git(ws.root, 'rev-parse', ref);
+  }
+  async function linkDirect(sha: string): Promise<void> {
+    const tree = git(ws.root, 'rev-parse', `${sha}^{tree}`);
+    assert.deepEqual(await service.linkEdge({ intentId, edge: 'committed-under', target: sha, actor: 'user', provenance: { sha, tree, branch: null } }), { ok: true });
+  }
+  const reworkReq = (sha: string, reworks: Array<{ vetoEntryId: number; reworkCommit: string }> | undefined): ReviewRequest => ({ ...request('PASS', sha), reworks });
+  async function planOrRefusal(req: ReviewRequest, c: DeliveryContext = ctx) {
+    return buildReviewPlan(c, req) as Promise<{ ok: true; plan: ReviewPlan } | { ok: false; status: number; error: string; code?: string; veto?: { entryId: number; commitSha: string } }>;
+  }
+  async function refusedWith(req: ReviewRequest, status: number, code: string, message?: RegExp) {
+    const rows = reviewRows().length;
+    const out = await planOrRefusal(req);
+    assert.equal(out.ok, false, JSON.stringify(out));
+    const r = out as { status: number; error: string; code?: string };
+    assert.equal(r.status, status, r.error);
+    assert.equal(r.code, code, r.error);
+    if (message) assert.match(r.error, message);
+    assert.equal(reviewRows().length, rows, 'nothing written');
+    return out as { status: number; error: string; code?: string; veto?: { entryId: number; commitSha: string } };
+  }
+  async function recordRework(req: ReviewRequest, c: DeliveryContext = ctx) {
+    const built = await planOrRefusal(req, c);
+    assert.equal(built.ok, true, JSON.stringify(built));
+    const plan = (built as { plan: ReviewPlan }).plan;
+    const out = await recordDeliveryReview(c, req, plan, { operationId: `op_rw-${++ops}`, channel: 'console' });
+    assert.equal(out.status, 200, JSON.stringify(out.body));
+    return { plan, body: out.body as { ledgerEntryId: number } };
+  }
+  const clearedRecords = (v: Found) => reviewOf(v).records.filter((x) => x.record === 'cleared');
+
+  /** R1 setup: VETO on B = {a.ts, b.ts}; `commit --amend` gives B' (same parent); B unlinked, B' linked. */
+  async function amendedSetup() {
+    await readyDelivery();
+    const b = commitOn(ws.head, { 'a.ts': 'one\n', 'b.ts': 'one\n' }, 'b');
+    await linkEdge('committed-under', b);
+    const veto = await recorded('VETO', b);
+    fs.writeFileSync(path.join(ws.root, 'a.ts'), 'two\n');
+    fs.writeFileSync(path.join(ws.root, 'b.ts'), 'two\n');
+    git(ws.root, ...GC, 'commit', '-q', '-a', '--amend', '-m', 'b amended');
+    const b2 = git(ws.root, 'rev-parse', 'HEAD');
+    await linkEdge('committed-under', b, 'unlink');
+    await linkEdge('committed-under', b2);
+    return { b, b2, veto, req: reworkReq(b2, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: b2 }]) };
+  }
+  async function amendedClearance() {
+    const s = await amendedSetup();
+    assert.equal(reviewOf(await view()).status, 'failing', 'the VETO blocks before the PASS');
+    const r = await recordRework(s.req);
+    const v = await view();
+    assert.equal(reviewOf(v).status, 'passing', reviewOf(v).reason);
+    return { ...s, ...r };
+  }
+  /** R3 setup: VETO on B3 = {a.ts, b.ts, k.ts} from A, then B3 unlinked (coverage needs it gone). k.ts was CHANGELOG.md until CHANGELOG.md became a bookkeeping file (B344 review fold); every R3 row keeps its counts. */
+  async function b3Setup() {
+    await readyDelivery();
+    const b3 = commitOn(ws.head, { 'a.ts': '1\n', 'b.ts': '1\n', 'k.ts': '1\n' }, 'b3: the vetoed change');
+    await linkEdge('committed-under', b3);
+    const veto = await recorded('VETO', b3);
+    await linkEdge('committed-under', b3, 'unlink');
+    return { b3, veto };
+  }
+
+  test('B344 R1 (red-first): an amended rework, declared and verified, supersedes the VETO', async () => {
+    const s = await amendedClearance();
+    assert.equal(s.plan.reworks.length, 1);
+    assert.equal(s.plan.reworks[0].relation, 'amended');
+    assert.deepEqual(s.plan.reworks[0].evidence.shared.map((x) => [x.path, x.vetoStatus, x.reworkStatus]), [['a.ts', 'A', 'A'], ['b.ts', 'A', 'A']]);
+    assert.equal(s.plan.reworks[0].vetoCommit, s.b);
+    assert.ok(s.plan.supersedes.some((x) => x.kind === 'veto' && x.id === s.veto.ledgerEntryId), 'the PASS still names the VETO');
+    assert.ok(clearedRecords(await view()).some((x) => x.id === s.veto.ledgerEntryId));
+  });
+
+  test('B344 R2 (red-first): a rebased rework (cherry-pick onto a sibling) supersedes the VETO', async () => {
+    await readyDelivery();
+    const b = commitOn(ws.head, { 'a.ts': 'one\n' }, 'b');
+    await linkEdge('committed-under', b);
+    const veto = await recorded('VETO', b);
+    const c = commitOn(ws.head, { 'c.ts': 'c\n' }, 'c');
+    await linkEdge('committed-under', c);
+    git(ws.root, ...GC, 'cherry-pick', b);
+    const b3 = git(ws.root, 'rev-parse', 'HEAD');
+    await linkEdge('committed-under', b3);
+    await linkEdge('committed-under', b, 'unlink');
+    assert.equal(reviewOf(await view()).status, 'failing');
+    const r = await recordRework(reworkReq(b3, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: b3 }]));
+    assert.equal(r.plan.reworks[0].relation, 'rebased');
+    assert.equal(r.plan.reworks[0].evidence.vetoDiffId, r.plan.reworks[0].evidence.reworkDiffId);
+    assert.equal(reviewOf(await view()).status, 'passing');
+  });
+
+  test('B344 R3a (regression guard for the refusal, red-first for the code and message): same parent, V half fails only (D = {k.ts, x.ts}): rework-unrelated "V half"', async () => {
+    const { veto } = await b3Setup();
+    const d = commitOn(ws.head, { 'k.ts': '2\n', 'x.ts': 'x\n' });
+    await linkEdge('committed-under', d);
+    await refusedWith(reworkReq(d, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: d }]), 409, 'rework-unrelated', /V half/);
+    assert.equal(reviewOf(await view()).status, 'failing', 'the VETO stands');
+  });
+
+  test('B344 R3b (regression guard for the refusal, red-first for the code and message): same parent, R half fails only (F = {a.ts, b.ts, x.ts, y.ts, z.ts}): rework-unrelated "R half"', async () => {
+    const { veto } = await b3Setup();
+    const f = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'x.ts': 'x\n', 'y.ts': 'y\n', 'z.ts': 'z\n' });
+    await linkEdge('committed-under', f);
+    await refusedWith(reworkReq(f, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: f }]), 409, 'rework-unrelated', /R half/);
+  });
+
+  test('B344 R3c (red-first): the R-half boundary (G = B3 plus x, y, z; 6 >= 6) is accepted as amended', async () => {
+    const { veto } = await b3Setup();
+    const g = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'k.ts': '2\n', 'x.ts': 'x\n', 'y.ts': 'y\n', 'z.ts': 'z\n' });
+    await linkEdge('committed-under', g);
+    const r = await recordRework(reworkReq(g, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: g }]));
+    assert.equal(r.plan.reworks[0].relation, 'amended');
+    assert.equal(reviewOf(await view()).status, 'passing');
+  });
+
+  test('B344 R3d (regression guard for the refusal, red-first for the code and message): E shares every path with B3 but sits on another parent C: rework-unrelated naming the parent', async () => {
+    const { veto } = await b3Setup();
+    const c = commitOn(ws.head, { 'c.ts': 'c\n' });
+    const e = commitOn(c, { 'a.ts': '9\n', 'b.ts': '9\n', 'k.ts': '9\n' });
+    await linkEdge('committed-under', e);
+    await refusedWith(reworkReq(e, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: e }]), 409, 'rework-unrelated', /parent/);
+  });
+
+  test('B344 R3e (regression guard for the refusal, red-first for the code and message): a copied commit message does not relate unrelated work', async () => {
+    const { veto } = await b3Setup();
+    const d = commitOn(ws.head, { 'k.ts': '2\n', 'x.ts': 'x\n' }, 'b3: the vetoed change');
+    await linkEdge('committed-under', d);
+    await refusedWith(reworkReq(d, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: d }]), 409, 'rework-unrelated');
+  });
+
+  test('B344 R3f (red-first for the veto field): a related rework that is linked but not declared is refused, and the refusal names the VETO', async () => {
+    const { b3, veto } = await b3Setup();
+    const related = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'k.ts': '2\n' });
+    await linkEdge('committed-under', related);
+    const r = await refusedWith(reworkReq(related, undefined), 409, 'veto-not-ancestor');
+    assert.deepEqual(r.veto, { entryId: veto.ledgerEntryId, commitSha: b3 });
+    assert.equal(reviewOf(await view()).status, 'failing');
+  });
+
+  test('B344 R3g (red-first): the strict V-half boundary (V = {a.ts, k.ts}, R = {k.ts, x.ts}; 2 > 2 fails) is refused, naming the VETO', async () => {
+    await readyDelivery();
+    const v = commitOn(ws.head, { 'a.ts': '1\n', 'k.ts': '1\n' });
+    await linkEdge('committed-under', v);
+    const veto = await recorded('VETO', v);
+    await linkEdge('committed-under', v, 'unlink');
+    const r = commitOn(ws.head, { 'k.ts': '2\n', 'x.ts': 'x\n' });
+    await linkEdge('committed-under', r);
+    const out = await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated', /V half/);
+    assert.match(out.error, new RegExp(`#${veto.ledgerEntryId}\\b`));
+  });
+
+  // #532 B344 review fold (owner ruling 2026-10-21, red-first): files this repository edits in nearly
+  // every change are not counted toward the amended majority.
+  const BOOKKEEPING = { 'CHANGELOG.md': '1\n', 'docs/BACKLOG.md': '1\n', 'docs/FEATURE_INDEX.md': '1\n' };
+  test('B344 R3h (red-first): bookkeeping files do not count: V = {CHANGELOG.md, docs/BACKLOG.md, docs/FEATURE_INDEX.md, a.ts} and an unrelated R = {the same three, b.ts} on the same parent are refused', async () => {
+    await readyDelivery();
+    const v = commitOn(ws.head, { ...BOOKKEEPING, 'a.ts': '1\n' });
+    await linkEdge('committed-under', v);
+    const veto = await recorded('VETO', v);
+    await linkEdge('committed-under', v, 'unlink');
+    const r = commitOn(ws.head, { 'CHANGELOG.md': '2\n', 'docs/BACKLOG.md': '2\n', 'docs/FEATURE_INDEX.md': '2\n', 'b.ts': '1\n' });
+    await linkEdge('committed-under', r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated', /0 of the 1 non-bookkeeping path/);
+    assert.equal(reviewOf(await view()).status, 'failing', 'the VETO stands');
+  });
+
+  test('B344 R3i (red-first): a VETO on a commit that changed only bookkeeping files is not reworked by an amend that keeps them', async () => {
+    await readyDelivery();
+    const v = commitOn(ws.head, { 'CHANGELOG.md': '1\n', 'docs/BACKLOG.md': '1\n', 'FailSafe/extension/package-lock.json': '1\n' });
+    await linkEdge('committed-under', v);
+    const veto = await recorded('VETO', v);
+    await linkEdge('committed-under', v, 'unlink');
+    const r = commitOn(ws.head, { 'CHANGELOG.md': '2\n', 'docs/BACKLOG.md': '2\n', 'FailSafe/extension/package-lock.json': '2\n', 'x.ts': 'x\n' });
+    await linkEdge('committed-under', r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated', /changed only bookkeeping files/);
+  });
+
+  test('B344 R3j (written after the implementation, for the R-half exclusion; reviewB344b): bookkeeping files in R are not counted: V = {a.ts, b.ts}, R = {a.ts, b.ts, CHANGELOG.md, docs/BACKLOG.md, docs/FEATURE_INDEX.md} is amended', async () => {
+    await readyDelivery();
+    const v = commitOn(ws.head, { 'a.ts': '1\n', 'b.ts': '1\n' });
+    await linkEdge('committed-under', v);
+    const veto = await recorded('VETO', v);
+    await linkEdge('committed-under', v, 'unlink');
+    const r = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', ...BOOKKEEPING });
+    await linkEdge('committed-under', r);
+    // Counting the bookkeeping files, R's half would be 2 shared of 5 (4 >= 5 fails).
+    const out = await recordRework(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]));
+    assert.equal(out.plan.reworks[0].relation, 'amended');
+    assert.equal(out.plan.reworks[0].evidence.reworkPathCount, 5, 'the evidence still lists every path');
+    assert.equal(reviewOf(await view()).status, 'passing');
+  });
+
+  test('B344 R4 (red-first): declarations are checked: unknown, cleared and non-veto items, an ancestor VETO, a duplicate', async () => {
+    const s = await amendedClearance();
+    await refusedWith(reworkReq(s.b2, [{ vetoEntryId: 99999, reworkCommit: s.b2 }]), 400, 'rework-unknown-veto');
+    await refusedWith(reworkReq(s.b2, [{ vetoEntryId: s.veto.ledgerEntryId, reworkCommit: s.b2 }]), 400, 'rework-unknown-veto', /cleared|not .*blocking/);
+    // A non-veto blocking item: a VETO whose row names an unknown overseer (re-sealed) is unverifiable-row, not a trusted veto.
+    const x = commitOn(s.b2, { 'q.ts': 'q\n' });
+    await linkEdge('committed-under', x);
+    const second = await recorded('VETO', x);
+    resealRow(second.ledgerEntryId, { overseer_did: 'did:someone:else' });
+    await refusedWith(reworkReq(x, [{ vetoEntryId: second.ledgerEntryId, reworkCommit: x }]), 400, 'rework-unknown-veto');
+  });
+
+  test('B344 R4 (red-first): an ancestor VETO needs no rework (rework-unnecessary), and a VETO is declared once (rework-duplicate)', async () => {
+    await readyDelivery();
+    const veto = await recorded('VETO', ws.head);
+    const x = commitOn(ws.head, { 'x.ts': 'x\n' });
+    await linkEdge('committed-under', x);
+    await refusedWith(reworkReq(x, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: x }]), 400, 'rework-unnecessary');
+    await refusedWith(reworkReq(x, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: x }, { vetoEntryId: veto.ledgerEntryId, reworkCommit: x }]), 400, 'rework-duplicate');
+  });
+
+  test('B344 R4: the rework must be linked and in the reviewed commit\'s history', async () => {
+    const { veto } = await b3Setup();
+    const related = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'k.ts': '2\n' });
+    const other = commitOn(ws.head, { 'h.ts': 'h\n' });
+    await linkEdge('committed-under', other);
+    await refusedWith(reworkReq(other, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: related }]), 409, 'rework-not-linked');
+    git(ws.root, 'checkout', '-q', '--detach', related);
+    await linkEdge('committed-under', related);
+    git(ws.root, 'checkout', '-q', '--detach', other);
+    await refusedWith(reworkReq(other, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: related }]), 409, 'rework-not-in-history');
+  });
+
+  test('B344 R4: a vetoed commit pruned before the PASS is refused (rework-veto-missing, B379)', async () => {
+    const s = await amendedSetup();
+    git(ws.root, 'reflog', 'expire', '--expire=now', '--all');
+    git(ws.root, 'gc', '-q', '--prune=now');
+    assert.notEqual(spawnSync('git', ['cat-file', '-e', `${s.b}^{commit}`], { cwd: ws.root, windowsHide: true }).status, 0, 'V is pruned');
+    await refusedWith(s.req, 409, 'rework-veto-missing');
+  });
+
+  test('B344 R4: a merge or root commit is refused (rework-merge), naming its parent count', async () => {
+    const { veto } = await b3Setup();
+    const c = commitOn(ws.head, { 'c.ts': 'c\n' });
+    const d = commitOn(ws.head, { 'd.ts': 'd\n' });
+    git(ws.root, 'checkout', '-q', '--detach', c);
+    git(ws.root, ...GC, 'merge', '-q', '--no-ff', '-m', 'merge', d);
+    const m = git(ws.root, 'rev-parse', 'HEAD');
+    await linkEdge('committed-under', m);
+    await refusedWith(reworkReq(m, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: m }]), 409, 'rework-merge', /2 parents/);
+    await linkEdge('committed-under', m, 'unlink');
+    await linkEdge('committed-under', ws.head, 'unlink');
+    git(ws.root, 'checkout', '-q', '--orphan', 'orphan');
+    git(ws.root, ...GC, 'commit', '-q', '--allow-empty', '-m', 'root');
+    const root = git(ws.root, 'rev-parse', 'HEAD');
+    await linkEdge('committed-under', root);
+    await refusedWith(reworkReq(root, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: root }]), 409, 'rework-merge', /0 parents[\s\S]*root commit/);
+  });
+
+  test('B344 R4: an amended rework over 50 paths is refused, naming both counts, the limit and a new intent', async () => {
+    await readyDelivery();
+    const many = (v: string) => Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`m/f${i}.ts`, v]));
+    const b = commitOn(ws.head, many('1\n'));
+    await linkEdge('committed-under', b);
+    const veto = await recorded('VETO', b);
+    await linkEdge('committed-under', b, 'unlink');
+    const r = commitOn(ws.head, many('2\n'));
+    await linkEdge('committed-under', r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-too-many-paths', /51 paths[\s\S]*51[\s\S]*50[\s\S]*new intent/);
+  });
+
+  test('B344 R4: a path that is not UTF-8 is refused (rework-path-unshowable)', async () => {
+    const { veto } = await b3Setup();
+    const r = importCommit(ws.head, [[Buffer.from('a.ts'), '2'], [Buffer.from('b.ts'), '2'], [Buffer.from('k.ts'), '2'], [Buffer.from([0x66, 0xff, 0x2e, 0x74, 0x73]), 'x']]);
+    await linkDirect(r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-path-unshowable');
+  });
+
+  test('B344 R4 D3: a path over 4096 characters and a rework section over the dialog limit are refused', async () => {
+    const long = Buffer.from(Array.from({ length: 25 }, (_, i) => `d${String(i).padStart(3, '0')}${'x'.repeat(160)}`).join('/') + '.ts');
+    assert.ok(long.length > 4096);
+    const { veto } = await b3Setup();
+    const r = importCommit(ws.head, [[Buffer.from('a.ts'), '2'], [Buffer.from('b.ts'), '2'], [Buffer.from('k.ts'), '2'], [long, 'x']]);
+    await linkDirect(r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-path-unshowable');
+  });
+
+  test('B344 D3: a rework section over REWORK_DIALOG_LIMIT is refused with rework-dialog-too-large, naming the size, the limit and a new intent', async () => {
+    await readyDelivery();
+    const names = Array.from({ length: 45 }, (_, i) => Buffer.from(`p${String(i).padStart(2, '0')}/${'n'.repeat(190)}.ts`));
+    const v = importCommit(ws.head, names.map((n) => [n, '1'] as [Buffer, string]));
+    await linkDirect(v);
+    const veto = await recorded('VETO', v);
+    const r = importCommit(ws.head, names.map((n) => [n, '2'] as [Buffer, string]));
+    await linkEdge('committed-under', v, 'unlink');
+    await linkDirect(r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-dialog-too-large', /\d+ characters[\s\S]*8000[\s\S]*new intent/);
+  });
+
+  test('B344 R4: a forged PASS whose rework claims "rebased" for unrelated work leaves the VETO standing', async () => {
+    const { b3, veto } = await b3Setup();
+    const u = commitOn(ws.head, { 'u.ts': 'u\n' });
+    await linkEdge('committed-under', u);
+    const p = await plan('VETO', u);
+    const vrow = rawRows(ledger).find((x) => x.id === veto.ledgerEntryId)!;
+    const reworks = [{
+      vetoEntryId: veto.ledgerEntryId, vetoEntryHash: vrow.entry_hash, vetoCommit: b3, reworkCommit: u, relation: 'rebased',
+      evidence: { vetoParent: ws.head, reworkParent: ws.head, vetoDiffId: 'a'.repeat(64), reworkDiffId: 'a'.repeat(64), vetoPathCount: 3, reworkPathCount: 1, shared: [], onlyInVeto: [], onlyInRework: [] },
+    }];
+    const supersedes = [{ kind: 'veto', id: veto.ledgerEntryId, hash: vrow.entry_hash }];
+    const forged = await ledger.appendEntry({
+      eventType: 'DELIVERY_REVIEWED', agentDid: DELIVERY_REVIEW_DID, overseerDid: LOCAL_OVERSEER_DID, overseerDecision: 'PASS',
+      verificationMethod: 'operator-delivery-review', verificationResult: 'PASS', artifactHash: p.binding.evaluates.tree,
+      payload: { reviewId: crypto.randomUUID(), intentId, verdict: 'PASS', binding: p.binding, supersedes, note: '', operationId: 'op_forged',
+        authentication: { method: 'vscode-modal-confirmation', channel: 'console:/api/actions/delivery/review', proves: 'x' }, reworks },
+    });
+    const pl = JSON.parse(String(rawRows(ledger).find((x) => x.id === forged.id)!.payload));
+    rewriteHistory((es) => [...es, {
+      intentId, timestamp: new Date().toISOString(), event: 'REVIEWED', actor: 'user',
+      details: { reviewId: pl.reviewId, verdict: 'PASS', evaluates: pl.binding.evaluates, covers: pl.binding.covers, evidenceDigest: pl.binding.evidenceDigest,
+        supersedes, ledgerEntryId: forged.id, ledgerEntryHash: forged.entryHash, operationId: 'op_forged', reworks },
+    } as IntentHistoryEntry]);
+    const v = await view();
+    assert.ok(reviewOf(v).records.some((x) => x.record === 'review' && x.entryId === forged.id), 'the forged pair is a valid pair');
+    assert.equal(reviewOf(v).status, 'failing', 'the claimed relation does not re-verify, so the VETO stands');
+    assert.deepEqual(blockingKinds(v), ['veto']);
+  });
+
+  test('B344 R4 (red-first): a git double changing a diff identity after a rebased clearance makes the VETO stand again', async () => {
+    await readyDelivery();
+    const b = commitOn(ws.head, { 'a.ts': 'one\n' });
+    await linkEdge('committed-under', b);
+    const veto = await recorded('VETO', b);
+    const c = commitOn(ws.head, { 'c.ts': 'c\n' });
+    await linkEdge('committed-under', c);
+    git(ws.root, ...GC, 'cherry-pick', b);
+    const r = git(ws.root, 'rev-parse', 'HEAD');
+    await linkEdge('committed-under', r);
+    await linkEdge('committed-under', b, 'unlink');
+    await recordRework(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]));
+    assert.equal(reviewOf(await view()).status, 'passing');
+    const real = makeArchitectureGit();
+    const tampered: ArchitectureGit = (root, args) => {
+      const out = real(root, args);
+      return args.includes('--diff-algorithm=myers') && args[args.length - 1] === r && out.kind === 'ok' ? { kind: 'ok', stdout: out.stdout + '+tampered\n' } : out;
+    };
+    const v = await view({ ...ctx, git: tampered });
+    assert.equal(reviewOf(v).status, 'failing');
+    assert.deepEqual(blockingKinds(v), ['veto']);
+  });
+
+  test('B344 R4: a mirror whose reworks differ from its row breaks the pair', async () => {
+    await amendedClearance();
+    rewriteHistory((es) => es.map((e) => {
+      const d = e.details as { reworks?: Array<Record<string, unknown>> } | undefined;
+      return e.event === 'REVIEWED' && d?.reworks ? { ...e, details: { ...d, reworks: [{ ...d.reworks[0], relation: 'rebased' }] } } : e;
+    }));
+    assert.equal(reviewOf(await view()).status, 'failing');
+  });
+
+  test('B344 R4: a non-UTF-8 file has no diff identity, so a cherry-pick of it is not "rebased"', async () => {
+    await readyDelivery();
+    const b = commitOn(ws.head, { 'bin.txt': Buffer.from([0x61, 0xff, 0xfe, 0x0a]) });
+    await linkEdge('committed-under', b);
+    const veto = await recorded('VETO', b);
+    const c = commitOn(ws.head, { 'c.ts': 'c\n' });
+    await linkEdge('committed-under', c);
+    git(ws.root, ...GC, 'cherry-pick', b);
+    const r = git(ws.root, 'rev-parse', 'HEAD');
+    await linkEdge('committed-under', r);
+    await linkEdge('committed-under', b, 'unlink');
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated');
+  });
+
+  const unavailableFor = (kind: 'diffIdentity' | 'commitParents' | 'changedPaths', only?: string): ArchitectureGit => {
+    const real = makeArchitectureGit();
+    const hit = (args: string[]) => (kind === 'diffIdentity' ? args.includes('--diff-algorithm=myers')
+      : kind === 'commitParents' ? args[0] === 'log' && args.includes('--format=%P') : args.includes('--name-status'));
+    return (root, args) => (hit(args) && (!only || args[args.length - 1] === only) ? { kind: 'unavailable', detail: `test: ${kind} unavailable` } : real(root, args));
+  };
+
+  test('B344 review fold (written with the implementation, not red-first): the read-time evidence comparison ignores key order and keeps array order', () => {
+    const a = { vetoParent: 'p', shared: [{ path: 'a.ts', vetoStatus: 'M', reworkStatus: 'M' }], vetoDiffId: null };
+    const b = { vetoDiffId: null, shared: [{ reworkStatus: 'M', vetoStatus: 'M', path: 'a.ts' }], vetoParent: 'p' };
+    assert.equal(sortedJson(a), sortedJson(b));
+    assert.notEqual(JSON.stringify(a), JSON.stringify(b), 'the plain form would differ');
+    assert.notEqual(sortedJson({ x: [1, 2] }), sortedJson({ x: [2, 1] }), 'array order counts');
+    assert.notEqual(sortedJson({ x: 1 }), sortedJson({ x: 2 }));
+  });
+
+  test('B344 R4 fail-closed record (red-first): an unavailable diffIdentity, commitParents or changedPaths answers 503 and writes nothing', async () => {
+    const s = await amendedSetup();
+    const lines = () => historyLines().filter((e) => e.event === 'REVIEWED').length;
+    for (const kind of ['diffIdentity', 'commitParents', 'changedPaths'] as const) {
+      const rows = reviewRows().length;
+      const before = lines();
+      const out = await planOrRefusal(s.req, { ...ctx, git: unavailableFor(kind) });
+      assert.equal(out.ok, false, kind);
+      assert.equal((out as { status: number }).status, 503, kind);
+      assert.equal(reviewRows().length, rows, `${kind}: 0 ledger rows`);
+      assert.equal(lines(), before, `${kind}: 0 history lines`);
+    }
+  });
+
+  test('B344 R4 fail-closed read (blocker fold, red-first): after an amended clearance, an unavailable read of V alone makes the step unavailable with 0 cleared items', async () => {
+    const s = await amendedClearance();
+    for (const kind of ['diffIdentity', 'commitParents', 'changedPaths'] as const) {
+      const v = await view({ ...ctx, git: unavailableFor(kind, s.b) });
+      assert.equal(reviewOf(v).status, 'unavailable', `${kind} of V unavailable: ${reviewOf(v).reason}`);
+      assert.equal(clearedRecords(v).length, 0, kind);
+    }
+    assert.equal(reviewOf(await view()).status, 'passing', 'reads of R and X answer; without the double it is cleared');
+  });
+
+  test('B344 R5: the VETO keeps blocking until the PASS lands; a change only in the rework evidence during the dialog gives 409 stale', async () => {
+    const s = await amendedSetup();
+    assert.equal(reviewOf(await view()).status, 'failing', 'regression guard: failing after the amend and relink');
+    const built = await planOrRefusal(s.req);
+    assert.equal(built.ok, true, JSON.stringify(built));
+    const shown = (built as { plan: ReviewPlan }).plan;
+    const real = makeArchitectureGit();
+    const extraPath: ArchitectureGit = (root, args) => {
+      const out = real(root, args);
+      return args.includes('--name-status') && args[args.length - 1] === s.b2 && out.kind === 'ok' ? { kind: 'ok', stdout: out.stdout + 'A\0n.ts\0' } : out;
+    };
+    const changed = { ...ctx, git: extraPath };
+    const again = await planOrRefusal(s.req, changed);
+    assert.equal(again.ok, true, JSON.stringify(again));
+    const ap = (again as { plan: ReviewPlan }).plan;
+    assert.equal(JSON.stringify(ap.binding), JSON.stringify(shown.binding), 'binding unchanged');
+    assert.equal(JSON.stringify(ap.supersedes), JSON.stringify(shown.supersedes), 'supersedes unchanged');
+    assert.notEqual(JSON.stringify(ap.reworks), JSON.stringify(shown.reworks), 'only reworks changed');
+    const rows = reviewRows().length;
+    const out = await recordDeliveryReview(changed, s.req, shown, { operationId: 'op_r5', channel: 'console' });
+    assert.equal(out.status, 409);
+    assert.equal(out.body.stale, true);
+    assert.equal(reviewRows().length, rows);
+    // The rebuild's own refusal keeps its code and veto.
+    const refused = await recordDeliveryReview(ctx, { ...s.req, reworks: undefined }, shown, { operationId: 'op_r5b', channel: 'console' });
+    assert.equal(refused.status, 409);
+    assert.equal(refused.body.code, 'veto-not-ancestor');
+    assert.deepEqual(refused.body.veto, { entryId: s.veto.ledgerEntryId, commitSha: s.b });
+  });
+
+  test('B344 R6 (red-first): restart keeps the clearance; after V is pruned the R half is re-verified and a forged reworkParent re-blocks', async () => {
+    const s = await amendedClearance();
+    await reopen();
+    service = intentService(ws.root);
+    ctx = { ...ctx, intents: service };
+    assert.equal(reviewOf(await view()).status, 'passing', 'restart');
+    git(ws.root, 'reflog', 'expire', '--expire=now', '--all');
+    git(ws.root, 'gc', '-q', '--prune=now');
+    assert.notEqual(spawnSync('git', ['cat-file', '-e', `${s.b}^{commit}`], { cwd: ws.root, windowsHide: true }).status, 0, 'V is pruned');
+    let v = await view();
+    assert.equal(reviewOf(v).status, 'passing', reviewOf(v).reason);
+    assert.ok(clearedRecords(v).some((x) => /verified when recorded/.test(String(x.note))), JSON.stringify(clearedRecords(v)));
+    // Forge the recorded reworkParent (row re-sealed, mirror rewritten to match): the R half no longer verifies.
+    const row = rawRows(ledger).find((x) => x.id === s.body.ledgerEntryId)!;
+    const payload = JSON.parse(String(row.payload));
+    payload.reworks[0].evidence.reworkParent = 'f'.repeat(40);
+    resealRow(row.id, { payload: JSON.stringify(payload) });
+    const resealed = rawRows(ledger).find((x) => x.id === row.id)!;
+    rewriteHistory((es) => es.map((e) => {
+      const d = e.details as { ledgerEntryId?: number } | undefined;
+      return e.event === 'REVIEWED' && d?.ledgerEntryId === row.id ? { ...e, details: { ...d, reworks: payload.reworks, ledgerEntryHash: resealed.entry_hash } } : e;
+    }));
+    v = await view();
+    assert.ok(reviewOf(v).records.some((x) => x.record === 'review' && x.entryId === row.id), 'still a valid pair');
+    assert.equal(reviewOf(v).status, 'failing', 'the forged R half does not verify, so the VETO stands');
   });
 
   test('walkContinuity: contiguous v3 rows pass; a gap, a broken link and a bad seal are each reported', async () => {
