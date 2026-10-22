@@ -35039,3 +35039,63 @@ The plan's single migration commit is split into matcher plus bump, for the clea
 **Chain Hash (Merkle seal)**: `b4045f264e6eea7fb0673d110a630c1f7f807d1e6d0ceac645139ef44226e131`
 
 **Decision**: SESSION SEAL for plan-c2-chokidar.md (content hash = the audited plan, sha256 b1b2c56d). Reality = Promise, with disclosures. chokidar moves from 3.6.0 to 4.0.3 and Sentinel's ignore rules become a compiled function matcher, proven equivalent to the old globs by a 315-row live cross-check against chokidar 3. braces (GHSA-vfj7-8cjw-p6xm, no patched version) and the rest of the glob stack leave the production graph and the bundle, taking production npm audit findings from 2 to 0. Disclosures: bounded damaged-ledger override (#467 unresolved); the macOS watcher delta is unobserved; the literal-root change; the B367 known limitation; post-implementation T4; the T6 base gating; the extension CHANGELOG sync deferred. Next: push, open a PR, run the full required CI including Linux test:all and macOS compile, and merge pinned to the head. No release.
+
+---
+
+### Entry #884: GATE TRIBUNAL - plan-563-roadmap-xss (iteration 1) - PASS
+
+**Timestamp**: 2026-10-22T05:12:52Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-22T0510-846891`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; #563 taken over by the lead per owner ruling 2026-10-22; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-22T0510-846891/audit-iter1.json`
+
+**Content Hash**: `afc458cf8662c74ce8f08325deef96f42b68fcfabf63238c4bd9e6836a00dcd3`
+**Previous Hash**: `b4045f264e6eea7fb0673d110a630c1f7f807d1e6d0ceac645139ef44226e131`
+**Chain Hash (Merkle seal)**: `a5490d12f2ef950ef7a8cadfcaec0fa47b40349c5f12d76c2f09e590412d36fe`
+
+**Decision**: PASS on plan-563-roadmap-xss.md iteration 1 (sha256 89df46a0), review563b (fresh code-reviewer, Option B). alertTypeClass (roadmap.js:504-507) can only return veto, block or warning: an exact ASCII equality guard, and case folding cannot escape it. Every sink in the alert row and modal is escaped or constant. The CodeQL flow at :304-314 is removed; main's post-merge analysis must confirm alert #19 (LD5). A hostile type affects only its own row, so a VETO cannot be hidden. Should-fix, recorded: only 2 rows are red on main (the VETO/BLOCK row is a pin); 'warning\tfoo' is a literal backslash-t; follow-ups B389 (icon uses the raw type; a non-callable toString stops the render).
+
+---
+
+### Entry #885: IMPLEMENTATION - plan-563-roadmap-xss
+
+**Timestamp**: 2026-10-22T05:28:44Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-22T0510-846891`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-22T0510-846891/implement.json`
+
+**Content Hash**: `a7251efaf27b57b09b6d890668d4255e47018a83e3dcddf981d096d0f699cc50`
+**Previous Hash**: `a5490d12f2ef950ef7a8cadfcaec0fa47b40349c5f12d76c2f09e590412d36fe`
+**Chain Hash (Merkle seal)**: `c221bb9f2024aab65126d59f22f8fbd767a15e8e974fd23a1c023322a3432bca`
+
+**Decision**: IMPLEMENTATION of plan-563-roadmap-xss.md. PR #563 (authored by another session; owner ruling 2026-10-22: the lead takes it over). Commits:
+- 24132a44: escape and type-token constraint.
+- 3c3c841a: test-first rows pinning the VETO/BLOCK classes and refusing hidden or injected tokens.
+- 9ca4108e: alertTypeClass exact allowlist (veto, block, otherwise warning) on the alert row and the modal badge; alert.entry escaped.
+- 2bc46f9c: lead merge of main 4a8be5d3.
+- 7f035072: lead docs, a root CHANGELOG security line and B389 follow-ups.
+No duplicate PR.
+
+---
+
+### Entry #886: SESSION SEAL - plan-563-roadmap-xss
+
+**Timestamp**: 2026-10-22T05:28:45Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-22T0510-846891`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-22T0510-846891/substantiate.json`
+
+**Content Hash**: `89df46a012bf4698dfda950c3db304a2d4c53bb7b80404ac6b166ebc0004d44d`
+**Previous Hash**: `c221bb9f2024aab65126d59f22f8fbd767a15e8e974fd23a1c023322a3432bca`
+**Chain Hash (Merkle seal)**: `e7988b2910994efb481e1a43f36a71c21c462e5f9ba743bde1a7a3cc6f967a9f`
+
+**Decision**: SESSION SEAL for plan-563-roadmap-xss.md. Reality = Promise, with disclosures. The Console's governance alert list and alert-details modal can no longer be made to inject HTML or CSS classes through an alert's type or ledger entry. The type maps only to the veto, block or warning class, so a crafted type can no longer hide a VETO, and the entry is escaped. This removes the flow behind CodeQL js/xss alert #19 at roadmap.js:304. Disclosures: bounded override (#467 unresolved); lead takeover of another session's PR; 2 red rows plus 1 pin; #19 closure to be observed post-merge; sibling sink handed to Lane E; B389 follow-ups. Next: push to the PR branch, run the full required CI including CodeQL, merge pinned to the head, then confirm #19 on main. No release.
