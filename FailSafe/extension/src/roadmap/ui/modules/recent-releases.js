@@ -2,11 +2,10 @@
 // Renders the last N CHANGELOG entries (default 5).
 // Pure render function: no event handlers, no async work.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(str) {
-  if (str === null || str === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(str);
-  return d.innerHTML;
+  return escapeHtml(str ?? '');
 }
 
 export function renderRecentReleases(releases) {

@@ -1,10 +1,10 @@
 // FailSafe Command Center — Agent Timeline Renderer (B142 + B184)
 // Displays sentinel timeline entries with category/severity filters and expandable details.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 // #477: 'Imported' shows evidence imported from exported agent runs.

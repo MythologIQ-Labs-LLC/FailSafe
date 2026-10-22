@@ -2,6 +2,7 @@
 // Summary cards, risk list, CRUD modal, real-time updates.
 
 import { openModal } from './modal-helper.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 
@@ -33,7 +34,7 @@ export class RisksRenderer {
     const df = r.derivedFrom || {};
     let context = '';
     if (source === 'mcp') context = r.sourceAgent ? ` · ${this.esc(r.sourceAgent)}` : '';
-    else if (source === 'audit-veto' && df.ledgerEntry !== undefined) context = ` · Entry #${df.ledgerEntry}`;
+    else if (source === 'audit-veto' && df.ledgerEntry !== undefined) context = ` · Entry #${this.esc(String(df.ledgerEntry))}`;
     else if (source === 'audit-veto' && df.planSlug) context = ` · ${this.esc(df.planSlug)}`;
     else if (source === 'shadow-genome' && df.shadowGenomeEventId) {
       const short = String(df.shadowGenomeEventId).slice(0, 8);
@@ -78,7 +79,7 @@ export class RisksRenderer {
       <div class="cc-card${linkedRisk === r.id || linkedSeverity === r.severity ? ' cc-risk--highlighted' : ''}" style="margin-bottom:6px;padding:12px 16px" data-rid="${this.esc(r.id)}" data-risk-severity="${this.esc(r.severity)}">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span class="cc-badge cc-badge--${this.esc(r.severity)}">${this.esc(r.severity)}</span>
+            <span class="cc-badge${SEVERITIES.includes(r.severity) ? ` cc-badge--${r.severity}` : ''}">${this.esc(r.severity)}</span>
             <strong>${this.esc(r.title)}</strong>
             ${this.renderSourcePill(r)}
           </div>
@@ -176,7 +177,7 @@ export class RisksRenderer {
     this.render({ risks: this.risks });
   }
 
-  esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+  esc(str) { return escapeHtml(str ?? ''); }
 
   /**
    * B198 Phase 3: re-render-safe teardown (RD-4). Closes any open risk modal

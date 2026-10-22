@@ -5,10 +5,10 @@
 // federation have no producer in the canonical graph yet; learning-maturity's
 // "Observed" is the only sourced stage today). Token-only, no faked data.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 export function renderTrustPanel(d) {

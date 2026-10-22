@@ -12,6 +12,7 @@
  */
 
 import { CONFIRM_PENDING_TEXT, gatedFailureMessage, jsonPost, settleGated } from './operator-confirmation-copy.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 const STYLE_ID = 'cc-agt-style';
 const STYLE = `
@@ -40,7 +41,7 @@ const STYLE = `
 `;
 
 function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  return escapeHtml(s ?? '');
 }
 
 function card(m) {

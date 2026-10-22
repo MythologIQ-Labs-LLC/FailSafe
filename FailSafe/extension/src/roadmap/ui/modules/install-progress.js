@@ -7,11 +7,10 @@
 // A "step" is `{ phase: string, status: 'running'|'success'|'error', error?: string }`.
 // A "progress" is `{ mode?: string, steps?: Step[], done?: boolean, ok?: boolean }`.
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 function esc(value) {
-  if (value === null || value === undefined) return '';
-  const d = (typeof document !== 'undefined') ? document.createElement('div') : null;
-  if (d) { d.textContent = String(value); return d.innerHTML; }
-  return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return escapeHtml(value ?? '');
 }
 
 /** One install step as an `<li>` with a status icon (+ inline error). */

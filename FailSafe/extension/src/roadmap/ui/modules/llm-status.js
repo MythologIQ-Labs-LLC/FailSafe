@@ -1,5 +1,6 @@
 // FailSafe Command Center — LLM Status Renderer
 // Renders the AI extraction tier list, help block, and handles reorder/copy actions.
+import { escapeHtml } from './brainstorm-templates.js';
 
 const TOOLTIPS = {
   native: 'Runs inside your browser \u2014 zero latency, zero cost, fully private. Ideal for rephrasing, classifying, and expanding brainstorm ideas. Not a knowledge engine.',
@@ -55,7 +56,7 @@ export class LlmStatusRenderer {
           <button onclick="window.dispatchEvent(new CustomEvent('fs-reorder-llm', {detail:{index:${index},dir:1}}))" style="background:none; border:none; color:white; padding:0; cursor:pointer; font-size:8px; opacity:0.3; hover:opacity:1">\u25BC</button>
         </div>
         ${dot(info.active)}
-        <span style="font-size:11px; color:${info.color}; flex:1;">${info.label}</span>
+        <span style="font-size:11px; color:${info.color}; flex:1;">${escapeHtml(info.label)}</span>
         <span style="font-size:10px; font-family:var(--font-mono);">${info.status}</span>
       </div>`;
   }

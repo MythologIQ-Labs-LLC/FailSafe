@@ -4,6 +4,7 @@
 import { renderIntegrityCard, renderUnattributedCard, derivePolicies } from './integrity.js';
 import { sentinelModeValue } from './sentinel-mode.js';
 import { escapeSelectorValue } from './escape-selector.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 export class GovernanceRenderer {
   constructor(containerId, deps = {}) {
@@ -163,7 +164,7 @@ export class GovernanceRenderer {
   renderPoliciesCard(policies) {
     const items = policies.length
       ? policies.map(p => `<div style="padding:4px 0;border-bottom:1px solid var(--border-rim);
-          font-size:0.82rem">${p.name || p.id || 'Policy'}</div>`).join('')
+          font-size:0.82rem">${this.esc(p.name || p.id || 'Policy')}</div>`).join('')
       : '<div style="color:var(--text-muted);font-size:0.82rem">No active policies</div>';
     return `
       <div class="cc-card">
@@ -185,10 +186,10 @@ export class GovernanceRenderer {
       <div style="padding:6px 0;border-bottom:1px solid var(--border-rim);font-size:0.82rem">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
-            <span class="cc-badge cc-badge--${(item.riskGrade || 'medium').toLowerCase()}">${item.riskGrade || '?'}</span>
+            <span class="cc-badge cc-badge--${this.gradeClass(item.riskGrade)}">${this.esc(item.riskGrade || '?')}</span>
             <span style="margin-left:6px">${this.esc(item.filePath || item.id)}</span>
           </div>
-          <span style="color:var(--text-muted);font-size:0.7rem">${item.queuedAt || ''}</span>
+          <span style="color:var(--text-muted);font-size:0.7rem">${this.esc(item.queuedAt || '')}</span>
         </div>
         ${this.renderL3PreflightConflicts(item)}
         ${this.renderL3OpenDesignItem(item)}
@@ -253,8 +254,8 @@ export class GovernanceRenderer {
       // (#governance?verdict=<iso>) can locate and highlight this row.
       const ts = this.esc(v.payload?.timestamp || v.timestamp || '');
       return `<div class="cc-verdict cc-verdict--${level}" data-verdict-ts="${ts}" style="margin-bottom:6px;font-size:0.8rem">
-        <span style="color:var(--text-muted);font-size:0.7rem">${v.time || ''}</span>
-        <span style="margin-left:8px">${message}</span>
+        <span style="color:var(--text-muted);font-size:0.7rem">${this.esc(v.time || '')}</span>
+        <span style="margin-left:8px">${this.esc(message)}</span>
       </div>`;
     }).join('');
     return `
@@ -416,6 +417,11 @@ export class GovernanceRenderer {
     }
   }
 
-  esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+  esc(str) { return escapeHtml(str ?? ''); }
+  // Lane E: the badge modifier is a plain lowercase token or the default.
+  gradeClass(grade) {
+    const token = String(grade || 'medium').toLowerCase();
+    return /^[a-z0-9-]{1,16}$/.test(token) ? token : 'medium';
+  }
   destroy() { if (this.container) this.container.innerHTML = ''; }
 }

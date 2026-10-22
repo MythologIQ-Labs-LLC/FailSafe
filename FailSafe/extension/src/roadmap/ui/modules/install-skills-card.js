@@ -3,12 +3,10 @@
 // Modal lifecycle moved to install-skills-modal.js per Phase 1 V2 Path A split.
 
 import { renderInstallModal, bindModalEvents, showInstallModal } from './install-skills-modal.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function esc(value) {
-  if (value === null || value === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(value);
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 /**

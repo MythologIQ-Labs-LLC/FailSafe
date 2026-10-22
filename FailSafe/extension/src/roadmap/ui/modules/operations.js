@@ -3,6 +3,7 @@
 
 import { normalizePhaseProgress } from './phase-progress.js';
 import { sentinelModeValue } from './sentinel-mode.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 export class OperationsRenderer {
   constructor(containerId, deps = {}) {
@@ -65,8 +66,8 @@ export class OperationsRenderer {
           box-shadow:0 0 8px ${color};animation:pulse 2s infinite"></span>
         <div>
           <div style="font-family:var(--font-display);font-size:1.1rem;text-transform:uppercase;
-            letter-spacing:0.08em">${phase}</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">${mode} · ${running}</div>
+            letter-spacing:0.08em">${escapeHtml(phase)}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">${escapeHtml(mode)} · ${running}</div>
         </div>
       </div>`;
   }
@@ -134,8 +135,8 @@ export class OperationsRenderer {
       const badge = p.status === 'complete' ? 'var(--accent-green)' : 'var(--text-muted)';
       return `<div class="cc-card" style="display:flex;justify-content:space-between;align-items:center;
         padding:10px 16px;margin-bottom:4px">
-        <span>${p.name || p.id || 'Phase'}</span>
-        <span class="cc-badge" style="background:${badge};color:#fff">${p.status || 'pending'}</span>
+        <span>${escapeHtml(p.name || p.id || 'Phase')}</span>
+        <span class="cc-badge" style="background:${badge};color:#fff">${escapeHtml(p.status || 'pending')}</span>
       </div>`;
     }).join('');
     return `<div style="margin-bottom:16px"><h3 style="margin:0 0 8px;font-size:0.85rem;
@@ -208,7 +209,7 @@ export class OperationsRenderer {
             <div style="font-size: 14px; font-weight: bold; color: var(--text-main); font-family: var(--font-mono);">${queueLen} items</div>
           </div>
           <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
-            Sentinel is operating in <strong>${sentinelModeValue(sentinelStatus?.mode)}</strong> mode. System integrity is checked against the last verified block.
+            Sentinel is operating in <strong>${escapeHtml(sentinelModeValue(sentinelStatus?.mode))}</strong> mode. System integrity is checked against the last verified block.
           </div>
           <button class="cc-btn cc-btn--primary cc-ops-l3-batch" style="font-size: 11px; padding: 6px;">
             Approve All

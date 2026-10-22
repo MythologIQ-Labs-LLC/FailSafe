@@ -15,6 +15,7 @@
  * feedback_design_reference_required.
  */
 
+import { escapeHtml } from './brainstorm-templates.js';
 const STYLE_ID = 'cc-intcat-style';
 const STYLE = `
 .cc-intcat { display:flex; flex-direction:column; gap:12px; }
@@ -125,7 +126,7 @@ const DOCS_PATH = {
 };
 
 function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  return escapeHtml(s ?? '');
 }
 
 function pill(state) {

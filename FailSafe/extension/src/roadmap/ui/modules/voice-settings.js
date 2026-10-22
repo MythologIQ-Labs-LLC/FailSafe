@@ -119,7 +119,7 @@ function renderControls(store) {
     <div style="${ROW}">
       <span style="min-width:120px">Push-to-Talk Key:</span>
       <code class="cc-settings-ptt-display" style="padding:2px 10px;border-radius:4px;
-        background:var(--bg-deep);border:1px solid var(--border-rim);font-size:0.85rem">${pttKey}</code>
+        background:var(--bg-deep);border:1px solid var(--border-rim);font-size:0.85rem">${escapeHtml(pttKey)}</code>
       <button class="cc-btn cc-settings-ptt-record" style="font-size:0.75rem">Record New Key</button>
     </div>`;
 }

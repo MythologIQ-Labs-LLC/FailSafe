@@ -3,11 +3,10 @@
 import { renderLatestAudit } from './latest-audit.js';
 import { renderRecentReleases } from './recent-releases.js';
 import { navigationHash } from './command-center-deeplink.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 export class OverviewRenderer {
