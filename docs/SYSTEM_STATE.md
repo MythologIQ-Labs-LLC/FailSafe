@@ -26,7 +26,7 @@
 - B330/B331 (#559, #848-#852): taxonomy write containment; unsaved edits survive repaints.
 - B320-B322 (#560, #853-#856): operator-confirmed delivery review sealed in the FailSafe ledger; the Sovereign Checkpoint Protocol is retired.
 - B347 (#565, #857-#859): the G4 provenance-race test fix.
-- Dependabot #561 (#860-#862, MCP SDK 1.32.0), #562 (#863-#865, markdown-it 14.3.3, development only) and #552 (#873-#875, hono 4.13.13).
+- Dependabot #561 (#860-#862, MCP SDK 1.32.0), #562 (#863-#865, markdown-it 14.3.3, development only), #552 (#873-#875, hono 4.13.13) and #584 (#911-#913, ip-address 10.7.4 through the Console's rate limiter, GHSA-rxp7-6hxx-x8q5).
 - #564 (#573, #866-#869): the Console WebSocket accepts only its own page, and every route refuses a non-loopback Host.
 - L3 route guard (#576, #870-#872): the Console request guard and limiters on the L3 decision routes, and the guard on Panic Stop.
 - C1 (#577, #876-#879): the MCP tool-input cap; sharp 0.35.5.
@@ -36,7 +36,7 @@
 - Lane E (#580, #893-#896; #896 is the post-seal CI fixture addendum): Console UI stored-XSS sweep (B390-B392).
 - B340 (#581, #897-#902): the enforce-mode intent approval path; owner cap exception, iteration 4 PASS.
 - D2 (#582, #903-#905): the Console request guard on resume-monitoring and verify-integrity (B383 in part); B395 and B396 filed.
-- Governance: each cycle ran under its own bounded damaged-ledger override, disclosed in its seal: the 2026-10-19 post-v6.0.9 override (#821-#842), the 2026-10-20 hardening-lanes override (#843-#856) and the 2026-10-21 v6.0.10 override (#857-#905, and this release prep). The META_LEDGER stays DAMAGED (#467, unrepaired): the declared-anchor check reads post-anchor DIRTY with exactly #341 and #382 (re-run on d77f0d3d).
+- Governance: each cycle ran under its own bounded damaged-ledger override, disclosed in its seal: the 2026-10-19 post-v6.0.9 override (#821-#842), the 2026-10-20 hardening-lanes override (#843-#856) and the 2026-10-21 v6.0.10 override (#857-#905, the release prep #906-#910, and Dependabot #584 #911-#913). The META_LEDGER stays DAMAGED (#467, unrepaired): the declared-anchor check reads post-anchor DIRTY with exactly #341 and #382 (re-run on d77f0d3d).
 
 ## 2026-10-19 — v6.0.9 published
 
