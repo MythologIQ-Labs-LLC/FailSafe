@@ -81,6 +81,7 @@ No command, setting or Console view configures or shows the server (unverified: 
 
 Enforced (if reachable): audit and decision tools refuse an intent id that is not the active intent `FailSafe/extension/src/mcp/FailSafeServer.ts:152-156` (`active.id !== intentId`).
 Enforced (if reachable): audit refuses a path outside the open workspace folders `FailSafe/extension/src/mcp/FailSafeServer.ts:65-69` (`is outside valid workspace scope.`).
+Enforced (if reachable), defence in depth for GHSA-46jr: a tools/call whose arguments hold more than 10,000 elements is refused before the tool runs; the SDK (1.32.0 since Dependabot #561) defaults to no limit, so the cap applies because FailSafe opts in `FailSafe/extension/src/mcp/FailSafeServer.ts:38` (`maxToolInputElements: 10_000`), tested over an in-memory transport `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:205` (`tools/call input element cap`).
 Limit: none of this applies on main, because no caller exists `docs/BACKLOG.md:554` (`FailSafeServer is in-process-only today`).
 
 ## Failure, offline, stale and permission semantics
@@ -93,7 +94,7 @@ The server is stopped on deactivation `FailSafe/extension/src/extension/teardown
 
 Scenario (after B209): an agent session connects to a FailSafe MCP bridge, calls `qorelogic_status`, then `ledger_log_decision` with the active intent id, and the ledger holds the entry (unverified: not possible on main).
 Metric: an external MCP client completes one tool call against a running extension (threshold: one success); on main the count is zero `docs/BACKLOG.md:554` (`FailSafeServer is in-process-only today`).
-Existing test: `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:6-8` (`exercise the`) (unit) exercises the intent and path gates and the tool registrations with mock services, not a transport.
+Existing test: `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:6-8` (`exercise the`) (unit) exercises the intent and path gates and the tool registrations with mock services; one row drives the real server over the SDK's in-memory transport `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:205` (`tools/call input element cap`).
 Installed-extension test: none (unverified).
 
 ## Recommended disposition

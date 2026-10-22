@@ -15,6 +15,7 @@ import { AgtRoute, setupAgtInstallRoute, type AgtRouteDeps } from "../routes/Agt
 import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
 import { setupArchitectureIndexRoutes } from "../routes/ArchitectureIndexRoute";
 import { setupDeliveryRoutes, type DeliveryRouteDeps } from "../routes/DeliveryRoute";
+import { consoleHostGuard } from "../routes/consoleRequestGuard";
 import { describeAffectedArchitecture } from "../../governance/architecture/affectedArchitecture";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
@@ -157,6 +158,7 @@ export class ConsoleRouteRegistrar {
 
   setupAllRoutes(): void {
     const app = this.host.app;
+    app.use(consoleHostGuard()); // #564: before every route, static mount and late route
     app.use(express.json({ limit: "12mb" }));
     // Voice-pack /vendor mount (Phase 2 of voice-substrate-extraction).
     // When the operator has installed the voice pack to globalStoragePath/voice-pack/,

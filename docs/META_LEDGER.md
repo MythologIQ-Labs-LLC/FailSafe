@@ -34519,3 +34519,523 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `f8d99756261fda4656dea324ce6f5232bab1307a81627e702c96501f1b5a9159`
 
 **Decision**: SESSION SEAL for plan-b320-delivery-review.md (content hash is the audited plan, sha256 c49d6313). Reality = Promise, with disclosures. Workspace Delivery can now be completed legitimately: an operator-confirmed review bound to the exact commit, tree and evidence is sealed in the FailSafe ledger, a rejection or any unverifiable review record blocks until a later valid PASS names it, and an approved intent alone never counts as a review. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); the tests were written after the implementation and red evidence comes from a stubbed module and 52 killed mutations; the receipt stays unavailable while #467 holds and Complete is transient because a later save stales the PASS; the record is tamper evidence, not authentication, since any same-user process can read the ledger secret; deleting the newest rows with their mirrors is undetectable; one bad-seal review row blocks every intent until a PASS names it; the intent-decision VETO is still cleared by a status change; the enforce-mode block and unreachable Seal Intent remain an owner policy decision (B340), as does rework that does not descend from a vetoed commit (B344); FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #857: GATE TRIBUNAL - plan-b347-g4-provenance-race (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T14:33:05Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-f4aac6`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1428-f4aac6/audit-iter1.json`
+
+**Content Hash**: `66eb20c19083b8db462f14e3accc6ed4ecaa2afa996155c9ca61a7a88b457591`
+**Previous Hash**: `f8d99756261fda4656dea324ce6f5232bab1307a81627e702c96501f1b5a9159`
+**Chain Hash (Merkle seal)**: `0c4124062eb2b9f6fa7fe48cfc267970182e50f9c2ec341a0d469d29dc5985ad`
+
+**Decision**: PASS on plan-b347-g4-provenance-race.md iteration 1 (sha256 dd62d8e6), B347: the B320 G4 extension-host test raced a debounced provenance row on Linux CI (run 39563947170, failing dependabot #561). Combined audit and bounded review (code-reviewer, Option B fresh context); the fix was written before this audit as an urgent CI unblocker and the verdict certifies the diff as written. The wait is condition-based (the save's own PROVENANCE_RECORDED row, then a 1 s quiet window); no assertion is loosened; the read-only ledger reader is WAL-safe; the injected-delay proof reproduces the CI message on the old test and passes on the fixed one. Non-blocking folded: count by payload intentId, assert the stale reason, soften the retained-evidence claim. Next: implement and seal.
+
+---
+
+### Entry #858: IMPLEMENTATION - plan-b347-g4-provenance-race
+
+**Timestamp**: 2026-10-21T14:36:27Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1428-f4aac6`
+**Risk Grade**: L1
+**Gate**: `.qor/gates/2026-10-21T1428-f4aac6/implement.json`
+
+**Content Hash**: `0ce625dbefcad837cede41ee3ff12b1bf7a402047efae9b215f930136cdb7c2a`
+**Previous Hash**: `0c4124062eb2b9f6fa7fe48cfc267970182e50f9c2ec341a0d469d29dc5985ad`
+**Chain Hash (Merkle seal)**: `a45139f7b4ffdd2b62d4216c493d4185e402c3af15eec4a2e9d771e163655b44`
+
+**Decision**: IMPLEMENTATION of plan-b347-g4-provenance-race.md on fix/b320-g4-provenance-race (from main 72717c7b): c5f74241 (test), 46ea2d89 (B347 row). Test only. G4 now waits until the save's own PROVENANCE_RECORDED row is in the ledger and the intent's evidence count, matched by payload intentId as the product matches it, has been stable for 1 s before recording the review, and asserts that the second save makes the PASS stale for new governance evidence. No product change and no assertion loosened. Disclosed: the implementation preceded its audit as an urgent CI unblocker.
+
+---
+
+### Entry #859: SESSION SEAL - plan-b347-g4-provenance-race
+
+**Timestamp**: 2026-10-21T14:36:27Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-f4aac6`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1428-f4aac6/substantiate.json`
+
+**Content Hash**: `dd62d8e6ba8d7bb80925938b60b71bdabed67b0b77dba7e56496bedd4d79f808`
+**Previous Hash**: `a45139f7b4ffdd2b62d4216c493d4185e402c3af15eec4a2e9d771e163655b44`
+**Chain Hash (Merkle seal)**: `55bdc4a0be18ac4282543fed0b1792a8f58fcd51f635884ea38f2739e1f3263a`
+
+**Decision**: SESSION SEAL for plan-b347-g4-provenance-race.md (content hash is the audited plan, sha256 dd62d8e6). Reality = Promise, with disclosures. The B320 G4 positive-path test no longer races the debounced provenance row, so the Linux full suite stops failing unrelated PRs; the product behaviour that a later save stales a PASS is unchanged and still asserted. Disclosures: bounded damaged-ledger override for the v6.0.10 lanes (owner ruling 2026-10-21; #467 unresolved, native governance acceptance unavailable); the fix preceded its audit as an urgent CI unblocker and the audit and review were combined; the 1 s quiet window is supported by the writer inventory rather than a falsifying run; the old run's row dump was not retained. Next: push, PR checks including Linux test:all, a merge pinned to the head. No release.
+
+---
+
+### Entry #860: GATE TRIBUNAL - plan-dep-561 (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T15:46:32Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-37fbf3`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, widened the same day to Dependabot #561/#562/#552; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1459-37fbf3/audit-iter1.json`
+
+**Content Hash**: `b3ac55765d16c811b1b71ece7e6234ba248794689bddf8a3ac0356f9b7dd7762`
+**Previous Hash**: `55bdc4a0be18ac4282543fed0b1792a8f58fcd51f635884ea38f2739e1f3263a`
+**Chain Hash (Merkle seal)**: `2e89a5e1a61a09563c39eda673a8b053fb453f4fabf670d0d8ff5a6b3169d6ef`
+
+**Decision**: PASS on plan-dep-561.md iteration 1. Dependabot #561 (@modelcontextprotocol/sdk 1.31.0 -> 1.32.0), merged onto main 624c486e. Independent verifier (dep561) and fresh reviewer (revdep561, Option B).
+
+Verified:
+- Diff: two files, three hunks; the integrity equals the registry's; 698 signatures verified; dependencies byte-equal, so hono does not move.
+- Audit: production 4 -> 3 and full 20 -> 19; all four GHSA ranges exited at 1.32.0.
+- Behaviour: the only change is that qorelogic_status (schema {}, read-only) accepts a call with no arguments. The session-scoped task lookup is inert (no taskStore), and no HTTP transport is bundled.
+- Owner checks: (a) redirect restrictions pass (no SDK HTTP transport; egress suites including G4b green); (b) MCP client identity is unchanged by a stdio probe, but no repo test asserts it; (c) governance interceptor continuity passes.
+
+Should-fix, recorded as seal wording: GHSA-46jr mitigation waits on C1 (maxToolInputElements is opt-in); the bundle is not compared with main's module set; the probe uses the cjs build while the bundle uses esm, which carries the same hunks.
+
+---
+
+### Entry #861: IMPLEMENTATION - plan-dep-561
+
+**Timestamp**: 2026-10-21T15:47:07Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1459-37fbf3`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-21T1459-37fbf3/implement.json`
+
+**Content Hash**: `26ae08c296dc5300535bff920f444d440e1496a0d36c99c2fcc94faad9d7b13b`
+**Previous Hash**: `2e89a5e1a61a09563c39eda673a8b053fb453f4fabf670d0d8ff5a6b3169d6ef`
+**Chain Hash (Merkle seal)**: `9eaca058b04ebc763e68b0fde51c58df85b3f093b0c7c9953f26430744540c24`
+
+**Decision**: IMPLEMENTATION of plan-dep-561.md. The Dependabot change is taken verbatim: c5790cfd (package.json range ^1.32.0, plus the lockfile root range and the sdk version/resolved/integrity), merged with main 624c486e as b46a5eda. Nothing else is edited. One Dependabot PR per cycle, never combined (owner ruling 2026-10-21).
+
+---
+
+### Entry #862: SESSION SEAL - plan-dep-561
+
+**Timestamp**: 2026-10-21T15:47:08Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-37fbf3`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1459-37fbf3/substantiate.json`
+
+**Content Hash**: `feab91aa7aedecb48c3eb4b43e767344ab5c7a037b64ef05c8f5e82d023b49a9`
+**Previous Hash**: `9eaca058b04ebc763e68b0fde51c58df85b3f093b0c7c9953f26430744540c24`
+**Chain Hash (Merkle seal)**: `9b6e48e31706fe0cf8cab1754a433753cb15e7ca00a6e49575b39bac26b183cc`
+
+**Decision**: SESSION SEAL for plan-dep-561.md. Reality = Promise, with disclosures. Dependabot #561 moves the bundled MCP SDK to 1.32.0, so the SDK advisories GHSA-22jm-h49p-29qw, GHSA-6prh-2h8m-c8cw, GHSA-rvq5-wwqv-78pq and GHSA-46jr-4wx8-v453 leave the advisory range. Production npm audit findings drop from 4 to 3 (braces/chokidar via C2, hono via #552). Stdio client identity, redirect restrictions and governance-interceptor routing are unchanged. GHSA-46jr's hardening (maxToolInputElements) is C1, which lands next. Disclosures: bounded damaged-ledger override (#467 unresolved, native acceptance unavailable); identity is verified by probe, not by a repo test; the read-only qorelogic_status now accepts empty arguments; the local ledgerAnchor failures come from the host. Next: push the seal to the Dependabot branch, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #863: GATE TRIBUNAL - plan-dep-562 (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T15:09:19Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-e2f501`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, widened the same day to Dependabot #561/#562/#552; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1459-e2f501/audit-iter1.json`
+
+**Content Hash**: `26ef77aed0e040055a507abf92bdb0be8c53716689eba0de8a237e874dc1429d`
+**Previous Hash**: `9b6e48e31706fe0cf8cab1754a433753cb15e7ca00a6e49575b39bac26b183cc`
+**Chain Hash (Merkle seal)**: `4c0df0877362d89a0f30addede5e7bf905b083f0977b91e07d289de4ec13fe54`
+
+**Decision**: PASS on plan-dep-562.md iteration 1: Dependabot #562 (markdown-it 14.3.2 -> 14.3.3, dev only via @vscode/vsce). Independent verifier (dep562) and fresh reviewer (revdep562, Option B).
+
+Verified:
+- A single lockfile hunk: version, resolved and integrity. The dependencies are unchanged and the package stays dev.
+- Within vsce's ^14.1.0 range.
+- 698 signatures verified.
+- Fixes GHSA-gfr2-rv44-r23c (HIGH) and GHSA-vfgh-jcmw-g37q (LOW).
+- Not reachable at runtime: there is no src import, nothing in dist, and the only consumer is vsce's README render at pack time.
+
+Should-fix (closed by the lead):
+- Whole-tree diff stat: one file, three lines.
+- Positively counted VSIX comparison: 186 vs 186 files, 0 hash mismatches.
+- After #561 merged, main (b44f7675) was re-merged and the audits re-run: production 3 -> 3 unchanged; full 19 -> 18, markdown-it the only package removed.
+
+---
+
+### Entry #864: IMPLEMENTATION - plan-dep-562
+
+**Timestamp**: 2026-10-21T16:03:22Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1459-e2f501`
+**Risk Grade**: L1
+**Gate**: `.qor/gates/2026-10-21T1459-e2f501/implement.json`
+
+**Content Hash**: `b47d987d37ca227aa2439bf950127c170938414bd2900bddcd384412c87b546e`
+**Previous Hash**: `4c0df0877362d89a0f30addede5e7bf905b083f0977b91e07d289de4ec13fe54`
+**Chain Hash (Merkle seal)**: `d2bf2ed3db6574434c989053f33a22eed3d4373f1ef19eb264aefde4c3e115b2`
+
+**Decision**: IMPLEMENTATION of plan-dep-562.md: the Dependabot change is taken verbatim. bae243b7 changes node_modules/markdown-it version, resolved and integrity, and is merged with main b44f7675 (after #561) as 6d24b8fe. Nothing else is edited. One Dependabot PR per cycle (owner ruling 2026-10-21).
+
+---
+
+### Entry #865: SESSION SEAL - plan-dep-562
+
+**Timestamp**: 2026-10-21T16:03:23Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-e2f501`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1459-e2f501/substantiate.json`
+
+**Content Hash**: `6212c02b7529406f7ec59021295e643a41507f039db392b543e9601187eb2f0a`
+**Previous Hash**: `d2bf2ed3db6574434c989053f33a22eed3d4373f1ef19eb264aefde4c3e115b2`
+**Chain Hash (Merkle seal)**: `6e67be7e4e98a1f717a24a8bfedd6e1a0bbbc755d8908e37f83eec0c9ba4df0f`
+
+**Decision**: SESSION SEAL for plan-dep-562.md. Reality = Promise, with disclosures. Dependabot #562 moves vsce's markdown-it to 14.3.3, clearing GHSA-gfr2-rv44-r23c (HIGH) and GHSA-vfgh-jcmw-g37q (LOW). The full npm audit drops from 19 to 18; production is unchanged at 3 (braces/chokidar via C2, hono via #552). The packaged VSIX is unchanged: 186 files, 0 hash mismatches. Disclosure: bounded damaged-ledger override (#467 unresolved, native acceptance unavailable). Next: push the seal to the Dependabot branch, run the full required CI, then merge pinned to the head. No release.
+
+---
+
+### Entry #866: GATE TRIBUNAL - plan-564-websocket-origin (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:32:28Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/audit-iter1.json`
+
+**Content Hash**: `d96cb9959f21561eccd79156a5e014ad2c32d88b9afc9fe1b8b6c40577a3700d`
+**Previous Hash**: `6e67be7e4e98a1f717a24a8bfedd6e1a0bbbc755d8908e37f83eec0c9ba4df0f`
+**Chain Hash (Merkle seal)**: `abd1edf66bd4c96b0dfb68e6f67bab6307e17c409ebe0eed83537aaf67523ea0`
+
+**Decision**: VETO on plan-564-websocket-origin.md iteration 1 (sha256 445a7140), audit564, Option B. Blocking: the DNS-rebinding residual was undisclosed. GET routes have no Host check, and GET /api/hub (ConsoleRouteRegistrar.ts:218) returns the same snapshot. Owner ruling R1 2026-10-21: add an app-wide loopback-Host middleware. Owner ruling R2: Origin must equal http:// + Host, Host must be the loopback name for the bound family, and the port is unpinned. Should-fix: non-string Host/remoteAddress, try/catch to 403, raw-socket no-Host, exact Host spellings, v8 and duplicate-Origin rows, upgrade listener count, wording, and the backlog range.
+
+---
+
+### Entry #867: GATE TRIBUNAL - plan-564-websocket-origin (iteration 2) - PASS
+
+**Timestamp**: 2026-10-21T14:47:04Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/audit-iter2.json`
+
+**Content Hash**: `4889a8e1298f233c8878f36487e543334627cff95932a9976faf66178f974ce2`
+**Previous Hash**: `abd1edf66bd4c96b0dfb68e6f67bab6307e17c409ebe0eed83537aaf67523ea0`
+**Chain Hash (Merkle seal)**: `6f71bb5fe63564ebff1448e0be7283266253f4d88c72c4e51e830d189b1cf1ba`
+
+**Decision**: PASS on plan-564-websocket-origin.md iteration 2 (sha256 ccc56128), audit564b, Option B. The iteration-1 blocker is closed: the app-wide Host middleware is first in setupAllRoutes, ahead of express.json, static, late routes and the SPA fallback. No other HTTP listener exists. HOST is the constant 127.0.0.1. verifyClient runs before completeUpgrade. Six mandated folds: per-connection localAddress wording; named hostnameOf/v8/try-catch killers; a Playwright run without initialHub plus a late route; the registrar suite; disclosure that browser-based remotes now get 403 on GET/WS; and exact re-cites.
+
+---
+
+### Entry #868: IMPLEMENTATION - plan-564-websocket-origin
+
+**Timestamp**: 2026-10-21T17:05:52Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/implement.json`
+
+**Content Hash**: `44758b3d27015728e269009529344bdeb95c85ad0d58e2e610793b1ede42725e`
+**Previous Hash**: `6f71bb5fe63564ebff1448e0be7283266253f4d88c72c4e51e830d189b1cf1ba`
+**Chain Hash (Merkle seal)**: `4440b3dfcc0e5b78d31563c776bead5cc12752ea4c453563384400f67f7d82f3`
+
+**Decision**: IMPLEMENTATION of plan-564-websocket-origin.md on fix/564-websocket-origin (rebased on main d89f2ea6):
+- 34a6d001: red tests
+- 1ddc49a1: consoleHostRefusal and consoleHostGuard, first in setupAllRoutes. The WebSocket verifyClient policy checks version 13, then a loopback peer, then the Host rule, then that Origin equals http:// + Host. A refusal or a throw answers 403.
+- ada77205 and 9c5fc25e: B360-B364, the CHANGELOG security line, FX458/FX524, and exact integration-contract re-cites.
+The review folds are disclosed.
+
+---
+
+### Entry #869: SESSION SEAL - plan-564-websocket-origin
+
+**Timestamp**: 2026-10-21T17:05:53Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/substantiate.json`
+
+**Content Hash**: `ccc5612867fcec223e5d20d2168a06bbc81f5124198f1ca39895f373bb91c9b6`
+**Previous Hash**: `4440b3dfcc0e5b78d31563c776bead5cc12752ea4c453563384400f67f7d82f3`
+**Chain Hash (Merkle seal)**: `fffb68c699352b0af51ce2563eb772c20892a0cc7ef89cb1df7c7f8886cba9ac`
+
+**Decision**: SESSION SEAL for plan-564-websocket-origin.md (content hash = the audited plan, iteration 2). Reality = Promise, with disclosures. #564 is fixed: the Console WebSocket accepts only a protocol-13 handshake from a loopback peer whose Host is the loopback name and whose Origin equals http:// + Host, refusing everything else with 403 before the connection callback. Every Console HTTP request whose Host is not a loopback name is refused with 403 before any route, which closes DNS rebinding of /api/hub. Disclosures: bounded damaged-ledger override (#467 unresolved); browser-remote Consoles are now refused on GET/WS; no authentication (B364); harness-only reproduction, no installed exploit claimed; the architecture-index 8/1 failure is local to this host. Next: push, open the PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #870: GATE TRIBUNAL - plan-l3-routes-guard (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T14:41:48Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1435-82a4cb`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21 (Lane D added the same day), disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1435-82a4cb/audit-iter1.json`
+
+**Content Hash**: `67e68443f0143e63ceabad80500d500854fe42ff136d1d6b6c06084798205e97`
+**Previous Hash**: `fffb68c699352b0af51ce2563eb772c20892a0cc7ef89cb1df7c7f8886cba9ac`
+**Chain Hash (Merkle seal)**: `26c6313a701fd9f9d2aff870baffeecbbe49c98650cf24bf70eb44f2f83688fd`
+
+**Decision**: PASS on plan-l3-routes-guard.md iteration 1 (sha256 de73f617), auditl3, Option B. Citations: 82 checked, 0 failed. The guard is sound: Origin is checked at consoleRequestGuard.ts:53, a non-JSON body gets 415 at :54, and a JSON request needs a preflight that is never granted. The limiter is mounted after the guard, and panic-stop is deliberately left without a limiter. Empty body = APPROVED is kept (OQ3 later). No app-wide guard now. Residuals B383/B384 are not release-blocking. Mandated folds: (1) honest red-first labels, with R6 a regression guard, C1 split with only 503 red, and L2 refusals asserted per request with N > budget; (2) a B1 server arrival counter; (3) a WeakMap accessor; (4) B384 names ArchitectureIndexRoute.ts:217 and DeliveryRoute.ts:147.
+
+---
+
+### Entry #871: IMPLEMENTATION - plan-l3-routes-guard
+
+**Timestamp**: 2026-10-21T18:12:14Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1435-82a4cb`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-21T1435-82a4cb/implement.json`
+
+**Content Hash**: `b3349f6728b137588519df6cda27fb8bfeea5f57e7d5de78fda0b80eb9adf4ea`
+**Previous Hash**: `26c6313a701fd9f9d2aff870baffeecbbe49c98650cf24bf70eb44f2f83688fd`
+**Chain Hash (Merkle seal)**: `72c791fc31cc8aa324e6f89f4d995986b436da492b8b088fe70228e756e147d0`
+
+**Decision**: IMPLEMENTATION of plan-l3-routes-guard.md on fix/l3-routes-guard (rebased on main 85c9d357). Commits: a5d9f54b red tests; 53a2a28d consoleRequestGuard plus the limiter on approve-l3-batch and decide-l3 and the guard on panic-stop, in the order guard -> limiter -> cheap refusals -> lookup -> modal, with isConfirmationOpen read through a live accessor; 4ddf0222, fd6bdef4 and 851c4223 for B380-B384, the CHANGELOG security line, FX960 and exact contract re-cites. Disclosed: the red operatorConfirmation row's runtime export lookup became a static import in 53a2a28d, so the 'is exported' assertion is now compile-time and the behaviour assertions are unchanged; M6/M6b kill the row. The lead folded review should-fix 2 and 3 (B384 line references; durable backlog ids in comments) as 851c4223.
+
+---
+
+### Entry #872: SESSION SEAL - plan-l3-routes-guard
+
+**Timestamp**: 2026-10-21T18:12:14Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1435-82a4cb`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1435-82a4cb/substantiate.json`
+
+**Content Hash**: `de73f6170189b0c48405006cbab3c3387abde82389dab7f0a37972696f3ab76c`
+**Previous Hash**: `72c791fc31cc8aa324e6f89f4d995986b436da492b8b088fe70228e756e147d0`
+**Chain Hash (Merkle seal)**: `d29eb1e3bd245a7a234f1cb9c806c722dc0efb8dd66f94bb2d13328d9f0fd6ed`
+
+**Decision**: SESSION SEAL for plan-l3-routes-guard.md (content hash = the audited plan, sha256 de73f617). Reality = Promise, with disclosures. A cross-site page can no longer open the operator's L3 'Approve all' or decide dialog, or the Stop Sentinel dialog. approve-l3-batch, decide-l3 and panic-stop run the Console request guard first (Origin, JSON content type, loopback), so every no-preflight browser request shape is refused before any dialog or index read. The L3 routes carry a limiter that refused requests cannot spend. Disclosures: bounded damaged-ledger override (#467 unresolved); harness-only reproduction; a red-row access edit; mutation evidence from before the rebase on identical source; residuals B383/B384/OQ3. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #873: GATE TRIBUNAL - plan-dep-552 (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T18:16:13Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-8cf0eb`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, widened the same day to Dependabot #561/#562/#552; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1459-8cf0eb/audit-iter1.json`
+
+**Content Hash**: `e897ce3326aa3a35248e635cb6ead3ca5acb755d589c1eb5036968e02300ae59`
+**Previous Hash**: `d29eb1e3bd245a7a234f1cb9c806c722dc0efb8dd66f94bb2d13328d9f0fd6ed`
+**Chain Hash (Merkle seal)**: `6aba84b016747e53852453afc6ba302b269904608f0a5160e91023ea2db3720f`
+
+**Decision**: PASS on plan-dep-552.md iteration 1. Dependabot #552 (hono 4.13.7 -> 4.13.13, transitive via the MCP SDK), rebased by Dependabot to head 2e98829b. Independent verifier dep552b and fresh reviewer revdep552 (Option B). Findings: one lockfile hunk (version, resolved, integrity) against main 85c9d357; signatures 698/698 verified; GHSA-5r4p-p66f-jhc7 (>=4.12.4 <4.13.11) exited; production audit 3 -> 2, full 18 -> 17, with only hono removed. hono is not reachable at runtime: src imports only the SDK stdio/mcp/client/types modules, streamableHttp.js is not bundled, dist has 0 hono markers, and the VSIX ships only better-sqlite3. vscode-test 150/0 over 21 MCP, interceptor and bicameral files. Should-fix, recorded as seal wording: the diff base is 85c9d357; FX946 reproduced on main earlier this round; the #555 overlap match is a word in a comment.
+
+---
+
+### Entry #874: IMPLEMENTATION - plan-dep-552
+
+**Timestamp**: 2026-10-21T18:25:44Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1459-8cf0eb`
+**Risk Grade**: L1
+**Gate**: `.qor/gates/2026-10-21T1459-8cf0eb/implement.json`
+
+**Content Hash**: `110deaa53f641c7cba32d4e59b0488da0047fd393c51c592539aa1a4d427d860`
+**Previous Hash**: `6aba84b016747e53852453afc6ba302b269904608f0a5160e91023ea2db3720f`
+**Chain Hash (Merkle seal)**: `1023888a5ab6fe0ef2de67cc8b470096e21e2cd7f4ef9896d4990c5f20b1813c`
+
+**Decision**: IMPLEMENTATION of plan-dep-552.md: Dependabot change taken verbatim. 2e98829b changes the node_modules/hono version, resolved and integrity, and was merged locally with main for the seal. Nothing else edited. One Dependabot PR per cycle (owner ruling 2026-10-21).
+
+---
+
+### Entry #875: SESSION SEAL - plan-dep-552
+
+**Timestamp**: 2026-10-21T18:25:45Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-8cf0eb`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1459-8cf0eb/substantiate.json`
+
+**Content Hash**: `f928faaa0073146b5c0d0347b678bec3dc0591e16091b0b9d3a8ba675a1056c4`
+**Previous Hash**: `1023888a5ab6fe0ef2de67cc8b470096e21e2cd7f4ef9896d4990c5f20b1813c`
+**Chain Hash (Merkle seal)**: `706cfab28475355d3d05f5eca9d1bcc033236e8837f32d3ac2e2ffc03cb22501`
+
+**Decision**: SESSION SEAL for plan-dep-552.md. Reality = Promise, with disclosures. Dependabot #552 moves the SDK's transitive hono to 4.13.13, clearing GHSA-5r4p-p66f-jhc7. Production npm audit drops from 3 to 2 (braces and chokidar remain, lane C2); full audit 18 -> 17. hono is neither bundled nor shipped. Disclosure: bounded damaged-ledger override (#467 unresolved, no native acceptance available). Next: push the seal to the Dependabot branch, run the full required CI, and merge pinned to the head. No release.
+
+---
+
+### Entry #876: GATE TRIBUNAL - plan-c1-dependency-refresh (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:33:06Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/audit-iter1.json`
+
+**Content Hash**: `ecade5ceccfba64c71a6aee7c1244d7503d297ab6276b82e63242f77a12b52c8`
+**Previous Hash**: `706cfab28475355d3d05f5eca9d1bcc033236e8837f32d3ac2e2ffc03cb22501`
+**Chain Hash (Merkle seal)**: `c29e5f4abfda7a798525abccfc136d18298c08033d5b34d9aae185b69bc37f6f`
+
+**Decision**: VETO on plan-c1-dependency-refresh.md iteration 1 (sha256 c0862dab), auditc1, Option B. Blocking: (1) T2 expected a rejection, but SDK 1.32.0 returns isError and the tool was unspecified; fix: qorelogic_status with an oversized pad gives isError, the size text and handler counter 0, red on 1.31.0. (2) The sharp hand-edit fallback left exact @img pins inconsistent; fix: no hand edit, and T1 asserts libvips >= 1.3.4 and pin consistency. Should-fix: citations, the default no-limit note, the FX144 count, B365 measured, audit signatures, naming. Citations checked 26, failed 0.
+
+---
+
+### Entry #877: GATE TRIBUNAL - plan-c1-dependency-refresh (iteration 2) - PASS
+
+**Timestamp**: 2026-10-21T14:43:01Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/audit-iter2.json`
+
+**Content Hash**: `da2ae512c3ff699e44dd81864c8def7b2b14b490aa2ef659b6d1d599560d8cc5`
+**Previous Hash**: `c29e5f4abfda7a798525abccfc136d18298c08033d5b34d9aae185b69bc37f6f`
+**Chain Hash (Merkle seal)**: `4f2725d116e8f67ec2c41cefb10a3aa9edcc5f120ee82c85222987b38435441b`
+
+**Decision**: PASS on plan-c1-dependency-refresh.md iteration 2 (sha256 0eae7d86), auditc1b, Option B. Both blockers closed with working falsifiers: T2 drives the real server over InMemoryTransport and is red on 1.31.0 with no source change; sharp fails closed and the libvips floor matches the published 0.35.5 pins. Mandatory S1: exact pins compared by equality, range pins by satisfies, with dependencies in scope. S2: @emnapi/runtime unchanged. S3: T2 call order and close. Citations checked 35, failed 0.
+
+---
+
+### Entry #878: IMPLEMENTATION - plan-c1-dependency-refresh
+
+**Timestamp**: 2026-10-21T18:47:24Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/implement.json`
+
+**Content Hash**: `6685da0c202127c26f47d95f495c9af230825b714dc8beb6181eae1a9ab93d42`
+**Previous Hash**: `4f2725d116e8f67ec2c41cefb10a3aa9edcc5f120ee82c85222987b38435441b`
+**Chain Hash (Merkle seal)**: `a84a6550ce7b6aed92950ed191de177eac92d6f5217edabefa399d162546d73c`
+
+**Decision**: IMPLEMENTATION of plan-c1-dependency-refresh.md on fix/v6010-deps (rebased on main 99e7de6b). Owner-narrowed scope (2026-10-21): the SDK 1.32.0 and markdown-it 14.3.3 bumps went through Dependabot #561 and #562; C1 delivers the maxToolInputElements 10,000 cap (FailSafeServer.ts:38), the sharp 0.35.5 lockfile refresh and dependency-floor tests. Commits: 04b90bd3 red; ab5025a0 fix; f7cefb6b docs (CHANGELOG security line, B365 audit, B369 load flake, FX144, contract line); 75c6ac51 review fold (caret floor instead of an exact pin; failsafe-mcp-server.md:97 wording).
+
+---
+
+### Entry #879: SESSION SEAL - plan-c1-dependency-refresh
+
+**Timestamp**: 2026-10-21T18:47:24Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/substantiate.json`
+
+**Content Hash**: `0eae7d86723558cefa6c0a9c4e550ee0a92ec6d35062cd3ee8ca05282d9ff95f`
+**Previous Hash**: `a84a6550ce7b6aed92950ed191de177eac92d6f5217edabefa399d162546d73c`
+**Chain Hash (Merkle seal)**: `54f9c35efbe98dcd793f89753cfc96769b1efe860252e80bd1c4ca02820e6ecc`
+
+**Decision**: SESSION SEAL for plan-c1-dependency-refresh.md (content hash = the audited plan, sha256 0eae7d86). Reality = Promise, with disclosures. The FailSafe MCP server refuses a tool call with more than 10,000 argument elements before the tool runs, as defence in depth for GHSA-46jr-4wx8-v453 on the SDK 1.32.0 from Dependabot #561. sharp moves to 0.35.5 with libvips 1.3.4, and dependency-floor tests catch a later revert of any of these. npm audit: all 17 -> 13; production is unchanged at 2 (braces and chokidar, lane C2). Disclosures: bounded damaged-ledger override; owner-narrowed scope; red-commit message history; the extension CHANGELOG sync deferred to release prep; the B369 load flake. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #880: GATE TRIBUNAL - plan-c2-chokidar (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:39:27Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/audit-iter1.json`
+
+**Content Hash**: `af56d4840279e532dfc6920ffe9b1e405e4e32c45b0a6cf75b8d91f881bb5670`
+**Previous Hash**: `54f9c35efbe98dcd793f89753cfc96769b1efe860252e80bd1c4ca02820e6ecc`
+**Chain Hash (Merkle seal)**: `4e66bf5a37f5d4070c9d878f347f7f301bd1e975a343b1511ccdba3b5b9d114b`
+
+**Decision**: VETO on plan-c2-chokidar.md iteration 1 (sha256 f462cd1c), auditc2, Option B. Blocking: (1) LD2 was wrong on shipped macOS, where chokidar 3 polls with atomic off and chokidar 4 defaults to fs.watch with atomic on; also v3 globs a root containing bracket or brace groups while v5 is literal. (2) LD1 missed the .nvmrc 20.18.1 pin, below chokidar 5's floor. Should-fix: T1 atomic:true, T2 pattern iteration, the T3 settle, T6 lastVerdict, the LD3 expected diff, the LD7 invocation, the docs snippet. B367 ruling: not release-blocking. Citations 27/0.
+
+---
+
+### Entry #881: GATE TRIBUNAL - plan-c2-chokidar (iteration 2) - PASS
+
+**Timestamp**: 2026-10-21T14:52:20Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/audit-iter2.json`
+
+**Content Hash**: `33181a4e3f78d128435051e6284700542bf92413449df1ce28ee7f25cceeb6d2`
+**Previous Hash**: `4e66bf5a37f5d4070c9d878f347f7f301bd1e975a343b1511ccdba3b5b9d114b`
+**Chain Hash (Merkle seal)**: `0e45873b647cab2e0f02c3335be42531d5b1ef1e72a54b206ff07806df09086b`
+
+**Decision**: PASS on plan-c2-chokidar.md iteration 2 (sha256 b1b2c56d), auditc2b, Option B. chokidar 4.0.3 (dual CJS/ESM, node >=14.16, no toolchain change). Both deltas named and accepted, with the macOS residual stated. Mandated folds: T5 ESM markers; the LD3 expected diff with a two-way stop rule; T3 per-path raw events; T6 polled lastVerdict; T1/T2 red via runtime access. Disclosure folds: the macOS per-file kqueue EMFILE risk (B368); the [x]-root wording rule; the explicit chokidar 3 cross-check path; a UNC root; commands.ts:670. Citations 30/0.
+
+---
+
+### Entry #882: IMPLEMENTATION - plan-c2-chokidar
+
+**Timestamp**: 2026-10-21T20:41:38Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/implement.json`
+
+**Content Hash**: `6a66c02fbb7356b53e874aeb77317a44d211f1323999691b176268e7334f4cfb`
+**Previous Hash**: `0e45873b647cab2e0f02c3335be42531d5b1ef1e72a54b206ff07806df09086b`
+**Chain Hash (Merkle seal)**: `5fe429f1f71a755c67ee746a4a5644de0581c6b9fa3269ca934cffcc4c1f009a`
+
+**Decision**: IMPLEMENTATION of plan-c2-chokidar.md on fix/v6010-chokidar (on main 0368a8b6). Commits:
+- 1d74ce5b: red tests.
+- 97daad0c: Sentinel ignore matcher (compiled at load, fails closed) in place of the chokidar glob strings, and sentinelStatus returns the status.
+- fb3c61ca: chokidar 4.0.3, so braces, picomatch, anymatch and micromatch leave the production graph.
+- 49c43831: T4 floors.
+- 53a481fa: docs B366-B368, the CHANGELOG security line and known limitation, FX340/FX510, the governance-cache snippet.
+- 2cac7010: review folds.
+The plan's single migration commit is split into matcher plus bump, for the clean-tree rebase.
+
+---
+
+### Entry #883: SESSION SEAL - plan-c2-chokidar
+
+**Timestamp**: 2026-10-21T20:41:39Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/substantiate.json`
+
+**Content Hash**: `b1b2c56dcebd3488e0de566f92986ceb938cfd288ca4012d4515e18dd584d877`
+**Previous Hash**: `5fe429f1f71a755c67ee746a4a5644de0581c6b9fa3269ca934cffcc4c1f009a`
+**Chain Hash (Merkle seal)**: `b4045f264e6eea7fb0673d110a630c1f7f807d1e6d0ceac645139ef44226e131`
+
+**Decision**: SESSION SEAL for plan-c2-chokidar.md (content hash = the audited plan, sha256 b1b2c56d). Reality = Promise, with disclosures. chokidar moves from 3.6.0 to 4.0.3 and Sentinel's ignore rules become a compiled function matcher, proven equivalent to the old globs by a 315-row live cross-check against chokidar 3. braces (GHSA-vfj7-8cjw-p6xm, no patched version) and the rest of the glob stack leave the production graph and the bundle, taking production npm audit findings from 2 to 0. Disclosures: bounded damaged-ledger override (#467 unresolved); the macOS watcher delta is unobserved; the literal-root change; the B367 known limitation; post-implementation T4; the T6 base gating; the extension CHANGELOG sync deferred. Next: push, open a PR, run the full required CI including Linux test:all and macOS compile, and merge pinned to the head. No release.
