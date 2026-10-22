@@ -64,6 +64,18 @@ describe('ReleasePipelineGate', () => {
     assert.equal(result.failures.length, 0);
   });
 
+  it('returns an explicit release BLOCK when active-intent storage cannot be read (#473)', async () => {
+    const broken = { getActiveIntent: async () => { throw new Error('intent store I/O unavailable'); } };
+    const gate = new ReleasePipelineGate(broken as any, createMockLedger(true));
+    const result = await gate.evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.equal(result.failures.length, 1);
+    assert.equal(result.failures[0].name, 'unsealed-intents');
+    assert.match(result.failures[0].reason, /Unable to verify active intent/);
+    assert.match(result.failures[0].reason, /intent store I\/O unavailable/);
+    assert.deepEqual(result.warnings, []);
+  });
+
   it('blocks release with invalid version format', async () => {
     const gate = new ReleasePipelineGate(
       createMockIntentService(null),
