@@ -1059,6 +1059,21 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
     await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated', /changed only bookkeeping files/);
   });
 
+  test('B344 R3j (written after the implementation, for the R-half exclusion; reviewB344b): bookkeeping files in R are not counted: V = {a.ts, b.ts}, R = {a.ts, b.ts, CHANGELOG.md, docs/BACKLOG.md, docs/FEATURE_INDEX.md} is amended', async () => {
+    await readyDelivery();
+    const v = commitOn(ws.head, { 'a.ts': '1\n', 'b.ts': '1\n' });
+    await linkEdge('committed-under', v);
+    const veto = await recorded('VETO', v);
+    await linkEdge('committed-under', v, 'unlink');
+    const r = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', ...BOOKKEEPING });
+    await linkEdge('committed-under', r);
+    // Counting the bookkeeping files, R's half would be 2 shared of 5 (4 >= 5 fails).
+    const out = await recordRework(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]));
+    assert.equal(out.plan.reworks[0].relation, 'amended');
+    assert.equal(out.plan.reworks[0].evidence.reworkPathCount, 5, 'the evidence still lists every path');
+    assert.equal(reviewOf(await view()).status, 'passing');
+  });
+
   test('B344 R4 (red-first): declarations are checked: unknown, cleared and non-veto items, an ancestor VETO, a duplicate', async () => {
     const s = await amendedClearance();
     await refusedWith(reworkReq(s.b2, [{ vetoEntryId: 99999, reworkCommit: s.b2 }]), 400, 'rework-unknown-veto');
