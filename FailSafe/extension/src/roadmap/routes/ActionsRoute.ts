@@ -29,12 +29,12 @@ export function setupActionsRoutes(
   const guard = consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res));
   // B380: L3 decision budgets per minute, after the guard so refused cross-site requests spend none.
   const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: false, legacyHeaders: false });
+  // B383: behind the Console request guard, so another web page cannot undo a Panic Stop. No
+  // limiter, as for panic-stop: a local process must not be able to starve a resume.
   app.post(
     "/api/actions/resume-monitoring",
-    async (req: Request, res: Response) => {
-      if (deps.rejectIfRemote(req, res)) {
-        return;
-      }
+    guard,
+    async (_req: Request, res: Response) => {
       try {
         if (!deps.sentinelDaemon.isRunning()) {
           await deps.sentinelDaemon.start();
@@ -80,13 +80,13 @@ export function setupActionsRoutes(
     }
   });
 
-  // Manual checkpoint chain integrity verification
+  // Manual checkpoint chain integrity verification. B383: behind the Console request guard,
+  // then a limiter (each request walks the whole chain); refused requests spend no budget.
   app.post(
     "/api/actions/verify-integrity",
-    (req: Request, res: Response) => {
-      if (deps.rejectIfRemote(req, res)) {
-        return;
-      }
+    guard,
+    limiter(10),
+    (_req: Request, res: Response) => {
       try {
         const chainValid = deps.verifyCheckpointChain();
         const verifiedAt = new Date().toISOString();
