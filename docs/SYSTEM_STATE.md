@@ -26,7 +26,7 @@
 - B330/B331 (#559, #848-#852): taxonomy write containment; unsaved edits survive repaints.
 - B320-B322 (#560, #853-#856): operator-confirmed delivery review sealed in the FailSafe ledger; the Sovereign Checkpoint Protocol is retired.
 - B347 (#565, #857-#859): the G4 provenance-race test fix.
-- Dependabot #561 (#860-#862, MCP SDK 1.32.0), #562 (#863-#865, markdown-it 14.3.3, development only) and #552 (#873-#875, hono 4.13.13).
+- Dependabot #561 (#860-#862, MCP SDK 1.32.0), #562 (#863-#865, markdown-it 14.3.3, development only), #552 (#873-#875, hono 4.13.13) and #584 (#911-#913, ip-address 10.7.4 through the Console's rate limiter, GHSA-rxp7-6hxx-x8q5).
 - #564 (#573, #866-#869): the Console WebSocket accepts only its own page, and every route refuses a non-loopback Host.
 - L3 route guard (#576, #870-#872): the Console request guard and limiters on the L3 decision routes, and the guard on Panic Stop.
 - C1 (#577, #876-#879): the MCP tool-input cap; sharp 0.35.5.
