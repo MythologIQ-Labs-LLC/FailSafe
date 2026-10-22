@@ -134,11 +134,11 @@ suite('Lane E XSS: server-rendered console routes (R1-R11)', () => {
   test('R10 /console/preflight: scope id in text and hidden value (S33)', () => {
     const res = makeRes();
     PreflightRoute.render(req(), res as any, { permissionManager: {
-      getAllRequestedScopes: () => [{ id: DQ, active: true, grantedAt: TAG }],
+      getAllRequestedScopes: () => [{ id: DQ, active: true, grantedAt: TAG }, { id: TAG, active: false, grantedAt: 't' }],
     } } as any);
     const doc = inertText(res.sent);
     const values = Array.from(doc.querySelectorAll('input[name=scopeId]')).map((i) => i.getAttribute('value'));
-    assert.deepEqual(values, [DQ, DQ]);
+    assert.deepEqual(values, [DQ, DQ, TAG, TAG]);
   });
 
   test('R11 /console/sre: fleet status in title, uncoerced numbers (S34)', () => {
