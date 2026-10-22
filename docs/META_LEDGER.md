@@ -35287,3 +35287,114 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `f06c28731246aba402f27ed74cb1388f0dfd400f17d5d102594b925e6e4615b8`
 
 **Decision**: After seal #895, PR #580's Linux CI failed Playwright U1b. Root cause: a test-fixture race; the fixture's WebSocket init carried {} and could overwrite the real hub after the HTTP fetch. It was reproduced on Windows by delaying the init. The product is unchanged. Test-only fix ea1432f7 (labelled as written after the fix): an opt-in liveHubInit sends the real hub on init, as production does, and U1b forces the CI ordering on every platform. U1b is not weakened: it still asserts the visible BLOCK alert from a workspace META_LEDGER through the real producer and the payload staying inert, and M1 still makes it red. Evidence: U1b 5/5 repeated; console-xss 9/9; fixture-dependent specs 32 passed.
+
+---
+
+### Entry #897: GATE TRIBUNAL - plan-b340-enforce-approval (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:33:37Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-3d1913`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B340 owner cap exception (bounded 4th iteration); disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-3d1913/audit-iter1.json`
+
+**Content Hash**: `078c70d38c19dfbcb2ea007f08963cb3fefd39225ce4fbf5a0456996ab7fdf01`
+**Previous Hash**: `f06c28731246aba402f27ed74cb1388f0dfd400f17d5d102594b925e6e4615b8`
+**Chain Hash (Merkle seal)**: `c5af857ac9d70eca4de9acd0087385062be9ced54e6a737e8195e924da2d201b`
+
+**Decision**: VETO on plan-b340-enforce-approval.md iteration 1, audit340, Option B. Blocking: the ACP proxy trusts the file (disclose B373); truncation and anchored-head fail-closed; row-id ordering; the production factory; should-fixes.
+
+---
+
+### Entry #898: GATE TRIBUNAL - plan-b340-enforce-approval (iteration 2) - VETO
+
+**Timestamp**: 2026-10-21T14:49:02Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-3d1913`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B340 owner cap exception (bounded 4th iteration); disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-3d1913/audit-iter2.json`
+
+**Content Hash**: `6b6e93db4f2809f7457c3f83d0373162600436332567d3303aca0d589a6b1b2b`
+**Previous Hash**: `c5af857ac9d70eca4de9acd0087385062be9ced54e6a737e8195e924da2d201b`
+**Chain Hash (Merkle seal)**: `901934b819ae10cadb7829613502a53067fd89dcb961457b7444961922632814`
+
+**Decision**: VETO on plan-b340-enforce-approval.md iteration 2 (sha256 bf81bd7e), audit340b, Option B. Blocking: (1) a VETO is erasable without truncation, because reportStatus reads 'verified' despite prev-link and hash-mismatch; PASS must require verifyLedger().ok; (2) the memo key is blind to in-place edits (add data_version); (3) the B371 residual omits the sentinel.yaml governance.mode override (ConfigManager.ts:80). Owner ruling: disclose B371, fix next cycle.
+
+---
+
+### Entry #899: GATE TRIBUNAL - plan-b340-enforce-approval (iteration 3) - VETO
+
+**Timestamp**: 2026-10-21T15:01:41Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-3d1913`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B340 owner cap exception (bounded 4th iteration); disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-3d1913/audit-iter3.json`
+
+**Content Hash**: `341db12798e5c3672fc573ebe1f89a025d55149ce36f506f0ea282fd3cc39254`
+**Previous Hash**: `901934b819ae10cadb7829613502a53067fd89dcb961457b7444961922632814`
+**Chain Hash (Merkle seal)**: `df4d50ad89265ac5042e96da1776dce0146c5a2feacd291c059d8594fdbbc0bc`
+
+**Decision**: VETO on plan-b340-enforce-approval.md iteration 3 (sha256 f51691b3), audit340c, Option B. One structural blocker: decision rows were read through an indexed WHERE query separate from the verified rows, so a writer of the sqlite file could desync idx_soa_event_type and hide a VETO while ok stayed true. The 3-iteration cap was reached; owner authorized a bounded 4th iteration.
+
+---
+
+### Entry #900: GATE TRIBUNAL - plan-b340-enforce-approval (iteration 4) - PASS
+
+**Timestamp**: 2026-10-21T15:18:45Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-3d1913`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B340 owner cap exception (bounded 4th iteration); disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-3d1913/audit-iter4.json`
+
+**Content Hash**: `7fafbed93fbb2ea8d2dc886041f673415e0a2a9d6e68e6100228eae7a7895f03`
+**Previous Hash**: `df4d50ad89265ac5042e96da1776dce0146c5a2feacd291c059d8594fdbbc0bc`
+**Chain Hash (Merkle seal)**: `04fab16486cc4c3b5776ecb9cb5ed44b10669f73a2f5a7d4c7fdceddd7f66518`
+
+**Decision**: PASS on plan-b340-enforce-approval.md iteration 4 (sha256 0780da6a), audit340d, Option B, owner cap exception. verifiedSnapshot decides only from the rows verified in one readAllRows pass; the memo pairs the verdict with those rows; establishedAtId closes late re-anchoring. M9a (LIVE alone) and the null-head guard are mutually redundant, so only the pair is falsifiable. Must-folds S1-S8 (the E22 fixture drops V's mirror with unsafeMode and writable_schema RESET; E22m spies prepare; the memo lives in the caller; E21b history +1; E15 bad-decision-row; null establishedAtId blocks).
+
+---
+
+### Entry #901: IMPLEMENTATION - plan-b340-enforce-approval
+
+**Timestamp**: 2026-10-22T14:52:14Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1426-3d1913`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-21T1426-3d1913/implement.json`
+
+**Content Hash**: `b7b0700892090fe7ac5702c59b19cb515cedcb9e4b1a7ec27e1e06f77a3c0e3d`
+**Previous Hash**: `04fab16486cc4c3b5776ecb9cb5ed44b10669f73a2f5a7d4c7fdceddd7f66518`
+**Chain Hash (Merkle seal)**: `484ab7e6690ab4bc28c04fa9a60aeef34bcd9fce71c85fa3fdd72f259c5f838f`
+
+**Decision**: IMPLEMENTATION of plan-b340-enforce-approval.md iteration 4 on fix/b340-enforce-approval (rebased on main 63251b03). Enforce mode gets an operator-confirmed intent decision path. Decisions are sealed INTENT_DECIDED rows plus intent-history mirrors. The effective status comes only from verifiedSnapshot: report.ok, a LIVE anchor, id <= headId, id > establishedAtId when established late, no unanchored-VETO latch, a matching workspaceKey and content digest. The memo is keyed on data_version, row count and head, and is held by the caller. One createEnforcementEngine factory is used. An unwired mode getter reads as enforce. A note with control, bidi or line-separator characters is refused and the note is trimmed, so what is recorded is exactly what was shown. Contract ledger_entry 1.1 -> 1.2.
+
+---
+
+### Entry #902: SESSION SEAL - plan-b340-enforce-approval
+
+**Timestamp**: 2026-10-22T14:52:14Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-3d1913`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1426-3d1913/substantiate.json`
+
+**Content Hash**: `0780da6a2ffd58b15577d50106e7831c907887d3bf8986c8caa8dec7a048a0ec`
+**Previous Hash**: `484ab7e6690ab4bc28c04fa9a60aeef34bcd9fce71c85fa3fdd72f259c5f838f`
+**Chain Hash (Merkle seal)**: `5ea6e973cc6e136fa3ad92a6a66b9f3e6dc741b529947a8d5587d78fa5775af6`
+
+**Decision**: SESSION SEAL for plan-b340-enforce-approval.md (content hash = the audited iteration-4 plan, sha256 0780da6a). Reality = Promise, with disclosures. In enforce mode, an intent can be approved again, through an operator-confirmed decision recorded as a sealed ledger row. A forged intent file, forged history or forged verdict is not honoured. A deleted, edited, reordered or index-hidden VETO cannot be bypassed: the status is computed only from the ledger rows the verifier checked in that same pass. Disclosures: bounded override; the cap exception; B371 (a workspace writer can change the mode); B373 and B374; editor saves are reported, not prevented; the B372 residuals; documented equivalent mutants. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
