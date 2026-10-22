@@ -35099,3 +35099,114 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `e7988b2910994efb481e1a43f36a71c21c462e5f9ba743bde1a7a3cc6f967a9f`
 
 **Decision**: SESSION SEAL for plan-563-roadmap-xss.md. Reality = Promise, with disclosures. The Console's governance alert list and alert-details modal can no longer be made to inject HTML or CSS classes through an alert's type or ledger entry. The type maps only to the veto, block or warning class, so a crafted type can no longer hide a VETO, and the entry is escaped. This removes the flow behind CodeQL js/xss alert #19 at roadmap.js:304. Disclosures: bounded override (#467 unresolved); lead takeover of another session's PR; 2 red rows plus 1 pin; #19 closure to be observed post-merge; sibling sink handed to Lane E; B389 follow-ups. Next: push to the PR branch, run the full required CI including CodeQL, merge pinned to the head, then confirm #19 on main. No release.
+
+---
+
+### Entry #887: GATE TRIBUNAL - plan-b344-veto-rework (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:26:44Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1418-cf0b4a`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B344 owner cap exception (bounded 4th iteration) and owner-authorized implementation from the iteration-4 VETO with mandatory folds; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1418-cf0b4a/audit-iter1.json`
+
+**Content Hash**: `33000216d2f3caf4b252029db491a39ea823189308faabb20720a095804b8cd2`
+**Previous Hash**: `e7988b2910994efb481e1a43f36a71c21c462e5f9ba743bde1a7a3cc6f967a9f`
+**Chain Hash (Merkle seal)**: `e77f37fff585ab70ed1e5b6a3c0f143ab37228b166b2974e4b0888cae6dd0aeb`
+
+**Decision**: VETO on plan-b344-veto-rework.md iteration 1, audit344, Option B. Blocking: a single CHANGELOG-touch attack satisfied a one-way majority, so the relation rule needed two-way strictness; plus fixture and refusal-code gaps.
+
+---
+
+### Entry #888: GATE TRIBUNAL - plan-b344-veto-rework (iteration 2) - VETO
+
+**Timestamp**: 2026-10-21T14:34:07Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1418-cf0b4a`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B344 owner cap exception (bounded 4th iteration) and owner-authorized implementation from the iteration-4 VETO with mandatory folds; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1418-cf0b4a/audit-iter2.json`
+
+**Content Hash**: `0d036d0602c6176c9652d39278230b53360b0c53fa666fab02434b9baac3c833`
+**Previous Hash**: `e77f37fff585ab70ed1e5b6a3c0f143ab37228b166b2974e4b0888cae6dd0aeb`
+**Chain Hash (Merkle seal)**: `6d23ad9bdffd59c764ed3028efdaaf4a58a240bb38c73023dc787226a7514427`
+
+**Decision**: VETO on plan-b344-veto-rework.md iteration 2 (sha256 5bd98f37), audit344b, Option B. Blocking: the R3 fixtures could not falsify the R half of the two-way majority (B3/D/F; boundary-accept row; a killing row per mutation).
+
+---
+
+### Entry #889: GATE TRIBUNAL - plan-b344-veto-rework (iteration 3) - VETO
+
+**Timestamp**: 2026-10-21T14:45:42Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1418-cf0b4a`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B344 owner cap exception (bounded 4th iteration) and owner-authorized implementation from the iteration-4 VETO with mandatory folds; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1418-cf0b4a/audit-iter3.json`
+
+**Content Hash**: `e325b850cadabaa79ddb2ea5e7a85bfbce723ef29c05da5654286776f605064c`
+**Previous Hash**: `6d23ad9bdffd59c764ed3028efdaaf4a58a240bb38c73023dc787226a7514427`
+**Chain Hash (Merkle seal)**: `477d0b70bc4cd66d5c28b330200495d8d746d2ce60f83119e6614b56c30c231a`
+
+**Decision**: VETO on plan-b344-veto-rework.md iteration 3 (sha256 e2c014e6), audit344c, Option B. Fixture-only blockers: R3d missed the parent check; no boundary row for the strict V half (R3g); R3f/R5 fixtures were unpinned. The 3-iteration cap was reached; the owner authorized a bounded 4th iteration.
+
+---
+
+### Entry #890: GATE TRIBUNAL - plan-b344-veto-rework (iteration 4) - VETO
+
+**Timestamp**: 2026-10-21T15:00:40Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1418-cf0b4a`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21; B344 owner cap exception (bounded 4th iteration) and owner-authorized implementation from the iteration-4 VETO with mandatory folds; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1418-cf0b4a/audit-iter4.json`
+
+**Content Hash**: `0d397fe7f4805d085944e9d63349e468beabb6d3b6fe560fecf6876da6a4b05c`
+**Previous Hash**: `477d0b70bc4cd66d5c28b330200495d8d746d2ce60f83119e6614b56c30c231a`
+**Chain Hash (Merkle seal)**: `0af8793a67bb2a898872200b551ac14e99ee3eb54632d3f7f3fecb36678c9665`
+
+**Decision**: VETO on plan-b344-veto-rework.md iteration 4 (sha256 167b5728), audit344d, Option B, owner cap exception. One fixture-only blocker: the read-time unavailable double was global, so it is now aimed at V's sha with 3 named killing variants. The owner authorized implementing from iteration 4 with that blocker and every should-fix as mandatory folds; there was no 5th iteration.
+
+---
+
+### Entry #891: IMPLEMENTATION - plan-b344-veto-rework
+
+**Timestamp**: 2026-10-22T05:56:34Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1418-cf0b4a`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-21T1418-cf0b4a/implement.json`
+
+**Content Hash**: `a7dbf1d5a771f4f4330b4240110aaecf31d1b40b136bc533f25761ee7c7267f2`
+**Previous Hash**: `0af8793a67bb2a898872200b551ac14e99ee3eb54632d3f7f3fecb36678c9665`
+**Chain Hash (Merkle seal)**: `1fd17e28327e862cb2c68d7e2822e615e8404e3d80dba4229e84b256018d37db`
+
+**Decision**: IMPLEMENTATION of plan-b344-veto-rework.md iteration 4 with owner-authorized folds on fix/b344-veto-rework (rebased on main 2b2148c5, 18 commits). A delivery-review VETO is superseded only by declared rework that git verifies as amended or rebased. Amended means same parent and a two-way strict majority (2*shared > |V|, 2*shared >= |R|) over non-bookkeeping paths, with a V of only bookkeeping files refused. Rebased means an identical diff identity under pinned flags. Every refusal carries a code; git reads fail closed; ancestry is checked before rework. The operator dialog shows escaped paths (control, separator, non-ASCII space and default-ignorable characters) with A/M/D/T status, bookkeeping files listed apart, and paths chunked at 40 with a backslash-greater-than continuation marker and a legend that states the rule without claiming proof. Post-audit folds per owner rulings: D4 chunking (40 <= 64), bookkeeping exclusion.
+
+---
+
+### Entry #892: SESSION SEAL - plan-b344-veto-rework
+
+**Timestamp**: 2026-10-22T05:56:35Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1418-cf0b4a`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1418-cf0b4a/substantiate.json`
+
+**Content Hash**: `167b572810cdc056fdf49cd7f6eb2e994809da905b3b5ea429d8f42f8f5e55f9`
+**Previous Hash**: `1fd17e28327e862cb2c68d7e2822e615e8404e3d80dba4229e84b256018d37db`
+**Chain Hash (Merkle seal)**: `fff194bd58ec21b0821f65165358c5519ecd535d4dddf49ac7f6218433b035c2`
+
+**Decision**: SESSION SEAL for plan-b344-veto-rework.md (content hash = the audited iteration-4 plan, sha256 167b5728). Reality = Promise, with disclosures. A delivery-review VETO can now be superseded by declared rework that git verifies as an amended or rebased version of the vetoed commit, with the operator confirming each in a dialog that shows every relevant path escaped and unclipped. Unrelated work, including work that merely touches the same bookkeeping files, cannot clear a VETO or inherit a PASS. Disclosures: bounded override (#467 unresolved); cap exception plus folds; the D4 method and residual clipping (B385); escaping scope; the fixed bookkeeping list; the equivalent mutant. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
