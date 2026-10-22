@@ -147,7 +147,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(log.sentinelStarted, 1);
@@ -171,7 +171,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring', body: {} });
     assert.equal(res.status, 200);
     assert.equal(log.sentinelStarted, 0, 'start() should NOT be called when already running');
   });
@@ -192,7 +192,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(res.body.chainValid, true);
@@ -208,7 +208,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.chainValid, false);
   });

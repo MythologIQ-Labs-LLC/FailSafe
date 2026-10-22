@@ -111,6 +111,11 @@ export interface ConsoleServerFixtures {
   onL3Decision?: (id: string, decision: string) => void;
   /** Lane D: every request that reaches the server is appended here (method and path). */
   requestLog?: Array<{ method: string; path: string }>;
+  /** Lane D2: when given, the fake Sentinel is stopped (as after a Panic Stop) and its `start` calls this. */
+  onSentinelStart?: () => void;
+  /** Lane D2: when given, called for every hub chain verify and checkpoint record, before the real call. */
+  onVerifyChain?: () => void;
+  onCheckpoint?: (checkpointType: string) => void;
   /** #532 part B: the IntentService behind the delivery routes (default: none, so they answer 503). */
   intentService?: unknown;
   /** B312: the editor-open dependency (default: none, so architecture open answers 503). */
@@ -181,9 +186,17 @@ function buildFakeManagers(initialHub: HubFixture | null, fixtures: ConsoleServe
       getUnresolvedEntries: () => [],
     }),
   };
-  const sentinelDaemon = {
-    getStatus: () => ({ running: false, queueDepth: 0 }),
-  };
+  let running = false;
+  const onStart = fixtures.onSentinelStart;
+  const sentinelDaemon = onStart
+    ? {
+      getStatus: () => ({ running, queueDepth: 0 }),
+      isRunning: () => running,
+      start: async () => { onStart(); running = true; },
+      stop: () => { running = false; },
+      getRecentObservationIds: () => [], // read by the hub when it records a checkpoint
+    }
+    : { getStatus: () => ({ running: false, queueDepth: 0 }) };
   return { planManager, qorelogicManager, sentinelDaemon, hubRef };
 }
 
@@ -213,6 +226,22 @@ function applyPrivateCast(
     promptfoo: false,
     lastChecked: new Date().toISOString(),
   });
+}
+
+/** Lane D2: count hub chain verifies and checkpoint records before calling through, so a throwing real call still counts. */
+function spyOnHub(server: ConsoleServer, fixtures: ConsoleServerFixtures): void {
+  const hub = (server as unknown as {
+    hub: { verifyCheckpointChain: () => boolean; recordCheckpoint: (input: { checkpointType: string }) => void };
+  }).hub;
+  const { onVerifyChain, onCheckpoint } = fixtures;
+  if (onVerifyChain) {
+    const verify = hub.verifyCheckpointChain.bind(hub);
+    hub.verifyCheckpointChain = () => { onVerifyChain(); return verify(); };
+  }
+  if (onCheckpoint) {
+    const record = hub.recordCheckpoint.bind(hub);
+    hub.recordCheckpoint = (input) => { onCheckpoint(input.checkpointType); record(input); };
+  }
 }
 
 function attachWebSocket(
@@ -325,6 +354,7 @@ export async function serveConsoleServerUI(
     { workspaceRoot },
   );
   applyPrivateCast(server, checkpointRef);
+  spyOnHub(server, fixtures);
 
   if (fixtures.bicameralClient) {
     server.setBicameralClient(fixtures.bicameralClient);
