@@ -43,7 +43,6 @@ export const RECORD_TYPE = 'agent.observation.imported';
 /** Current processes use a mkdir lock; old releases left an empty regular file. */
 const LOCK_TIMEOUT_MS = 2000;
 const LOCK_STALE_MS = 30_000;
-const LEGACY_STALE_MS = 120_000;
 const locked = () => new Error('OPENHANDS_IMPORT_LOCKED: import lock is held or cannot be safely recovered');
 const LOCK_ERRORS: LockErrors = {
   timeout: () => locked(),
@@ -53,25 +52,22 @@ const LOCK_ERRORS: LockErrors = {
 };
 
 /**
- * Migrate old regular .lock files only after a conservative inactivity window.
- * Old files contain no owner PID, so a recent lock is never presumed stale.
- * Proper-lockfile handles new directory locks independently.
+ * Legacy regular-file locks never refreshed mtime. Even a very old file may
+ * belong to a live writer, so age-based unlink can admit two writers.
+ * Refuse until the operator has stopped the old host and removed its lock;
+ * modern directory locks retain the shared lock's own stale recovery.
  */
-function recoverLegacyLockFile(lockPath: string): void {
-  let first: fs.Stats;
-  try { first = fs.lstatSync(lockPath); } catch (error) {
+function refuseLegacyLockFile(lockPath: string): void {
+  let info: fs.Stats;
+  try { info = fs.lstatSync(lockPath); } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
     throw error;
   }
-  if (first.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: redirected lock');
-  if (first.isDirectory()) return;
-  if (!first.isFile() || first.nlink !== 1 || Date.now() - first.mtimeMs < LEGACY_STALE_MS) throw locked();
-  const current = fs.lstatSync(lockPath);
-  if (!current.isFile() || current.nlink !== 1 ||
-      current.dev !== first.dev || current.ino !== first.ino ||
-      current.mtimeMs !== first.mtimeMs || current.ctimeMs !== first.ctimeMs ||
-      current.size !== first.size) throw locked();
-  fs.unlinkSync(lockPath);
+  if (info.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: redirected lock');
+  if (info.isDirectory()) return;
+  // Neither an old mtime nor a second stat can attest that the old owner exited.
+  // Leave the original lock bytes and filesystem object untouched on refusal.
+  throw locked();
 }
 
 
@@ -276,7 +272,7 @@ export async function persistOpenHandsObservations(
   refuseLinkedFolders(workspaceRoot);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   refuseLinks(workspaceRoot, target, lockPath);
-  recoverLegacyLockFile(lockPath);
+  refuseLegacyLockFile(lockPath);
   const lock = acquireFileLock(target, {
     timeoutMs: LOCK_TIMEOUT_MS, staleMs: LOCK_STALE_MS,
     label: 'OpenHands historical import', errors: LOCK_ERRORS,

@@ -198,18 +198,25 @@ suite('OpenHands historical import: store, keys, redaction (#477)', () => {
   });
 
 
-  test('B231 stale legacy regular lock recovers and the signed import stays idempotent', async () => {
+  test('B231 old legacy lock may still have a live owner; refuses until explicit recovery', async () => {
     const root = workspace();
     const { keys } = autoKeys();
     const lock = evidencePath(root) + '.lock';
     fs.mkdirSync(path.dirname(lock), { recursive: true });
-    fs.writeFileSync(lock, '');
-    const old = new Date(Date.now() - 180000);
-    fs.utimesSync(lock, old, old);
+    fs.writeFileSync(lock, 'old writer owns this file');
+    const fd = fs.openSync(lock, 'r+'); // model a legacy writer still holding its descriptor
+    try {
+      const old = new Date(Date.now() - 180000);
+      fs.utimesSync(lock, old, old);
+      await assert.rejects(importInto(root, [SDK('legacy')], keys), /OPENHANDS_IMPORT_LOCKED/);
+      assert.equal(fs.readFileSync(lock, 'utf8'), 'old writer owns this file');
+      assert.equal(fs.existsSync(evidencePath(root)), false);
+    } finally { fs.closeSync(fd); }
+    // Operator has verified the old host exited and removes its lock manually.
+    fs.unlinkSync(lock);
     const first = await importInto(root, [SDK('legacy')], keys);
     const second = await importInto(root, [SDK('legacy')], keys);
     assert.deepEqual([first.imported, second.imported, second.duplicates], [1, 0, 1]);
-    assert.equal(fs.existsSync(lock), false);
     assert.equal(lines(root).length, 1);
   });
 
