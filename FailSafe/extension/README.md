@@ -36,7 +36,9 @@ See the [changelog](https://github.com/MythologIQ-Labs-LLC/FailSafe/blob/main/CH
 
 ## Optional Integrations
 
-FailSafe connects to the tools your AI agents use. Every integration is opt-in. Integrations that call an outside service stay off until you enable them in settings and store a credential with **FailSafe: Set Integration Credential**; the installers and the risk scorer do nothing until you run them.
+FailSafe includes optional integration implementations. **This is not a list of live, end-to-end qualified connections.** External provider adapters require configuration and credentials, and some paths are intentionally disabled or limited. Enable each separately, review its permissions, and use **FailSafe: Set Integration Credential** for supported secrets; running an integration may send data to its configured provider. The installers and risk scorer require operator action.
+
+**A recent call is not end-to-end qualification or proof of customer value.** Catalog results show the last observed attempt, not operational readiness: a configuration flag proves no connection, one service response proves no complete workflow, and a process start proves no accepted outcome. There are no recorded live-service integration tests in the [canonical integration portfolio](../../docs/architecture/INTEGRATION_PORTFOLIO.md); customer-value improvement has not been measured for these adapters. **Capabilities below describe implemented or bounded pathways**, not demonstrated production interoperability or return on investment. The separate FailSafe governance MCP server runs on in-process stdio and is **not reachable by external MCP clients** (B209); the shared Bicameral/Open Design MCP client is not a universal interceptor. FailSafe does not ship an Omium outcome-verification adapter.
 
 Supported agent integrations can add controlled workflows and evidence:
 
@@ -54,11 +56,11 @@ Supported agent integrations can add controlled workflows and evidence:
 | 📥 **Linear / Jira intent drafts** | Fetch one Linear or Jira issue, review it in an unsaved preview, and create a governed intent draft only when you approve (`FailSafe: Import Linear Issue as Intent Draft`, `FailSafe: Import Jira Issue as Intent Draft`). Read-only toward the tracker. | The ticket becomes reviewed intent without retyping it. Nothing is written to Linear or Jira and nothing is synced (#480). |
 | ✅ **GitHub advisory checks** | Publish a neutral, manual advisory Check Run on the current commit (`FailSafe: Publish Manual GitHub Advisory`). When the commit has a pull request, the same command also posts a PR-linkage Check Run. It is not a SHIELD verdict. | The SHIELD check name is reserved for a verified, commit-bound receipt. No command publishes a verified SHIELD check yet. Fork PRs degrade to local-only. |
 | 🐞 **Sentry regression import** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`), with first and last release from each issue's detail. | Production failures become governed risk records tied to project / environment / release, with an exact count of what was created, updated, unchanged or failed; your triage survives re-imports. No raw event payloads, and no commit correlation. |
-| 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo: every finding becomes a *governed* risk in the same audit trail as agent decisions. |
-| 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Governance becomes a **team** signal: the right people see a blocked action or a queued approval in their channel. |
+| 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Successfully imported, accepted findings become local risk records; scanner efficacy and downstream governance impact have not been measured. |
+| 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Implemented notification paths can send those signals when configured; real-delivery qualification is separate. |
 | 🧮 **MCP Registry risk scoring** | Score any MCP server locally: read-only, with field sanitization: before you trust it. | Adopt MCP servers on **evidence, not vibes**: a supply-chain admission check at the door. |
-| 📦 **MCP Catalog installers** | Risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json`, written only after you confirm (`FailSafe: Install MCP Integration (governed)`). | Governed installs of tools that make your agents measurably better, with the trust check built in. |
-| 🧠 **Bicameral MCP** | Detect, connect, and ratify architecture *decision* records and their drift inline. | Every Bicameral tool call passes through FailSafe's universal interceptor. |
+| 📦 **MCP Catalog installers** | Risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json`, written only after you confirm (`FailSafe: Install MCP Integration (governed)`). | Configured MCP tools can be installed with risk scoring and explicit confirmation; performance gains have not been measured. |
+| 🧠 **Bicameral MCP** | Detect, connect, and ratify architecture *decision* records and their drift inline. | Governed routing exists, but auto-connect interceptor binding remains under review (#555); do not assume universal coverage until qualified. |
 | 🎨 **Open Design** | Observe Open Design agent runs and read its projects through a read-only MCP connection. | Artifact creation (`create_artifact`) is refused in this release, even after an L3 approval, until approvals can be verified where the call is made (#481). |
 | 🧰 **Agent Governance Toolkit installer** | Detect your workspace environment and pre-fill the matching AGT install command in a terminal; you run it. | One entry point to the right per-language or per-host package. |
 
@@ -66,7 +68,7 @@ Each integration ships with its own README and its external API names are back-c
 
 **Agent Marketplace:** install, update and scan are disabled until isolated setup and fail-closed scanning land (#468, #469).
 
-Open the **Integrations** tab to configure an integration. Each card shows the result of that integration's last real call (Verified, Connected, Failing with a reason, or Stale after 7 days); an integration that is only configured shows Configured · unverified.
+Open the **Integrations** tab to configure an integration. Cards distinguish Disabled, Needs config and Configured · unverified from a stored last-call observation: format match, connection/start, failure category or stale evidence (older than 7 days). These are **not live health checks, complete capability certification or value proof**; they never justify calling an adapter operational. The Catalog performs no network probes on render.
 
 ---
 

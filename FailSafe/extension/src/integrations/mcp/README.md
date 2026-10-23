@@ -1,6 +1,6 @@
 # MCP client host integration
 
-> One-line: shared MCP-over-stdio client substrate — FailSafe governs every external MCP server it talks to through a single lifecycle owner (spawn, capability cache, idle disconnect, fail-closed hooks), so each MCP integration adds only its own gating, not its own transport.
+> One-line: reusable MCP-over-stdio **client** lifecycle for the Bicameral and Open Design integrations. Their individual policy wiring determines actual governance coverage; this substrate alone neither governs arbitrary MCP servers nor exposes FailSafe governance tools to third-party clients.
 
 - **Pattern:** mcp
 - **Direction:** governed execution (MCP stdio subprocess, lazy connect, idle teardown)
@@ -10,6 +10,13 @@
 
 ## What it does
 This folder is not a standalone integration; it is the **shared substrate** that the Bicameral and Open Design MCP clients extend. `McpClientHost` owns the 95%-shared lifecycle that those two clients previously duplicated: stdio transport spawn, MCP `Client` construction, connect/disconnect, concurrent-connect coalescing, a capability cache populated from `listTools()`, idle disconnect, `transport.onclose` teardown, and a generic `callRaw`. Per-integration governance is injected through three hooks — `preCallGate` (reject a tool before it runs), `postConnectAssertion` (fail-closed teardown after capability fetch), and `runtimeGuard` (reject malformed tool results) — so a subclass contributes only its policy, never its own transport.
+
+## Capability boundaries
+
+- **Shipped substrate:** stdio transport, connection lifecycle, tool listing, and opt-in per-client governance hooks. A hook existing in this library does **not** prove every consumer attaches and retains the correct interceptor.
+- **Independent client integrations:** Bicameral and Open Design are the actual consumers. The Bicameral auto-connect/interceptor identity path has an open remediation PR [#555](https://github.com/MythologIQ-Labs-LLC/FailSafe/pull/555); until that change is accepted and tested, do not claim every auto-connected Bicameral call is governed.
+- **Not this module:** the `FailSafeMCPServer` under `src/mcp/` registers server-side governance tools but currently has an unreachable extension-host stdio transport ([B209](../../../../../docs/architecture/integrations/failsafe-mcp-server.md)). The MCP catalog can configure selected servers but does not convert this client host into a generic gateway.
+- **No Omium adapter:** external outcome-verification integration would be separate, proposed work with its own consent, credential and receipt contract.
 
 ## Configuration
 This substrate has no settings of its own. Each consuming integration owns its config namespace (`failsafe.integrations.bicameral.*`, `failsafe.integrations.openDesign.*`). The one tunable the host exposes per-subclass is the idle-disconnect TTL.

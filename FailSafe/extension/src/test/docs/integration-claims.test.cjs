@@ -204,6 +204,34 @@ test("F0b the product page may name an integration only with its fact phrase", (
   assert.throws(() => assertProductPage({ holds: true, phrase: "x", overclaim: "one-shot token", mention: /Open Design/i }, "Open Design uses a one-shot token."), /overclaims/);
 });
 
+test("F7 README integration claims do not turn implementation or last-call evidence into live/value proof", () => {
+  const phrase = "A recent call is not end-to-end qualification or proof of customer value.";
+  for (const readme of READMES) {
+    assert.ok(read(readme).includes(phrase), `${rel(readme)} must disclose evidence limits`);
+  }
+  const renderer = read(path.join(SRC, "roadmap", "ui", "modules", "integration-catalog-renderer.js"));
+  assert.ok(renderer.includes("Value impact: not measured"), "the UI must disclose missing measured customer value");
+  assert.ok(renderer.includes("Implemented path (not live-qualified):"), "capability listing cannot imply live qualification");
+  assert.ok(!renderer.includes("3 verified by their last call"), "last-call counts cannot be described as verified integrations");
+});
+
+test("F8 MCP reachability and third-party outcome claims track the source boundary", () => {
+  const server = read(path.join(SRC, "mcp", "FailSafeServer.ts"));
+  const app = read(CLAIM_README);
+  const product = read(ROOT_README);
+  const limited = server.includes("new StdioServerTransport()") && !server.includes("new StreamableHTTPServerTransport(");
+  const phrase = "not reachable by external MCP clients";
+  if (limited) {
+    assert.ok(app.includes(phrase), "extension README must disclose the in-process MCP limitation");
+    assert.ok(product.includes(phrase), "product README must disclose the in-process MCP limitation");
+  } else {
+    assert.ok(!app.includes(phrase) && !product.includes(phrase),
+      "the transport changed: requalify actual external reachability before retaining the old claim");
+  }
+  assert.ok(app.includes("does not ship an Omium outcome-verification adapter"),
+    "a proposed interoperability bridge must not be described as shipped");
+});
+
 test("F6 OpenHands: while the import holds a Secret Storage key, its README says so", () => {
   const signing = path.join(SRC, "integrations", "agent-observe", "openhands-signing.ts");
   assert.ok(fs.existsSync(signing), "anchor: openhands-signing.ts is gone");

@@ -48,6 +48,9 @@ const ANCHOR_STATUSES: ReadonlySet<string> = new Set<AnchorStatus>([
 export function weakerProperties(report: LedgerVerification): string[] {
     const weaker: string[] = [];
     const { v1Rows, v2Rows, unfrozenLegacyRows } = report.coverage;
+    if (report.sealScope !== 'full') {
+        weaker.push(`ledger seal scope ${report.sealScope}, not full-column v3`);
+    }
     if (v1Rows + v2Rows > 0) {
         weaker.push(`${v1Rows} v1 and ${v2Rows} v2 legacy row(s) authenticate only part of each row; their integrity before activation is INCONCLUSIVE`);
     }
@@ -82,14 +85,49 @@ function normalizeFailure(raw: unknown): LedgerFailure {
     return { id, code: code as LedgerFailure['code'], detail: detail.slice(0, MAX_DETAIL) };
 }
 
-/** The fields weakerProperties dereferences, checked before it runs. */
+/** Reject green anchor metadata that no actual anchored verifier could emit. */
+function anchorMetadataWellShaped(anchor: Record<string, unknown>): boolean {
+    if (['verified', 'established-now', 'established-late'].includes(String(anchor.status))) {
+        return typeof anchor.headId === 'number'
+            && typeof anchor.establishedAtId === 'number'
+            && anchor.establishedAtId <= anchor.headId
+            && typeof anchor.establishedAt === 'string'
+            && anchor.establishedAt.trim().length > 0;
+    }
+    if (anchor.status === 'unanchored') {
+        return anchor.headId === null && anchor.establishedAtId === null && anchor.establishedAt === null;
+    }
+    return true; // Broken anchor statuses are handled separately by the verifier.
+}
+
+/** Strictly check fields needed to describe an intact, anchored ledger. */
 function wellShaped(report: Record<string, unknown>): boolean {
     const coverage = report.coverage;
     const anchor = report.anchor;
-    return isObject(coverage) && COVERAGE_KEYS.every((k) => typeof coverage[k] === 'number' && Number.isFinite(coverage[k]))
-        && isObject(anchor) && typeof anchor.status === 'string' && ANCHOR_STATUSES.has(anchor.status) && typeof anchor.workspaceBound === 'boolean'
-        && typeof anchor.unanchoredTail === 'number'
-        && (report.rotation === undefined || report.rotation === null || isObject(report.rotation));
+    const scope = report.sealScope;
+    const rotation = report.rotation;
+    const nonnegative = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+    const idOrNull = (v: unknown): boolean => v === null || nonnegative(v);
+    if (!nonnegative(report.rows) || !['full', 'frozen-legacy', 'partial', 'none'].includes(String(scope))) return false;
+    if (!isObject(coverage) || !COVERAGE_KEYS.every((k) => nonnegative(coverage[k]))) return false;
+    if (!isObject(anchor) || typeof anchor.status !== 'string' || !ANCHOR_STATUSES.has(anchor.status)) return false;
+    if (typeof anchor.workspaceBound !== 'boolean' || !nonnegative(anchor.unanchoredTail)) return false;
+    if (!idOrNull(anchor.headId) || !idOrNull(anchor.establishedAtId)) return false;
+    if (!(anchor.establishedAt === null || typeof anchor.establishedAt === 'string')) return false;
+    if (!anchorMetadataWellShaped(anchor)) return false;
+    if (rotation !== undefined && rotation !== null) {
+        if (!isObject(rotation) || typeof rotation.retiredFile !== 'string' || typeof rotation.retiredVerificationOk !== 'boolean') return false;
+    }
+    // A successful verification cannot report a known failed anchor. Source
+    // verification reports these statuses with failures; reject contradictions.
+    if (report.ok === true && ['head-missing', 'ledger-mismatch', 'unavailable'].includes(String(anchor.status))) return false;
+    // Every verified row must contribute exactly one seal version. Frozen and
+    // unfrozen counts partition only legacy rows, not new v3 entries.
+    const legacy = (coverage.v1Rows as number) + (coverage.v2Rows as number);
+    if (legacy + (coverage.v3Rows as number) !== report.rows) return false;
+    if ((coverage.frozenLegacyRows as number) + (coverage.unfrozenLegacyRows as number) !== legacy) return false;
+    if (report.ok === true && scope === 'full' && legacy !== 0) return false;
+    return true;
 }
 
 function summary(status: LedgerIntegrityStatus, reason: string, now: Date, extra: Partial<LedgerIntegritySummary> = {}): LedgerIntegritySummary {

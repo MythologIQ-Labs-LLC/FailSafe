@@ -34,6 +34,21 @@ suite('OpenDesignRenderer live-state (GH #166, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
+  test('never offers a working create_artifact request while its L3 receipt cannot be enforced (#481)', async () => {
+    const ctx = setupDom(async () => ({ ok: true, json: async () => ({ ok: true, connected: true, capabilities: ['read'] }) }));
+    try {
+      const r = new OpenDesignRenderer('integrations');
+      r.render();
+      await flush();
+      const button = ctx.doc.querySelector('.cc-od-create-artifact') as HTMLButtonElement;
+      const input = ctx.doc.querySelector('.cc-od-artifact-name') as HTMLInputElement;
+      assert.equal(button.disabled, true, 'unavailable write request is disabled');
+      assert.equal(input.disabled, true);
+      assert.match(ctx.doc.querySelector('.cc-open-design-card')?.textContent ?? '', /verified L3 receipt cannot currently be enforced/);
+      assert.match(ctx.doc.querySelector('.cc-open-design-card')?.textContent ?? '', /transport reachability only/);
+    } finally { ctx.cleanup(); }
+  });
+
   test('probes the status endpoint and shows "connected" when the client is connected', async () => {
     const urls: string[] = [];
     const ctx = setupDom(async (url: string) => {

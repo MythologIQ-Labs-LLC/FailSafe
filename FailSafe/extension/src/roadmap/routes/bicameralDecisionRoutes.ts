@@ -7,6 +7,7 @@ import { Request, Response } from "express";
 import {
   type BicameralRouteDeps,
   governToolCall,
+  rejectStaleBicameralClient,
   emitDriftVerdicts,
   parseVerdict,
 } from "./bicameralRouteShared";
@@ -34,10 +35,12 @@ export function registerBicameralDecisionRoutes(
       return;
     }
     try {
-      // B151: govern the tool call through the universal interceptor.
-      if (await governToolCall(deps, { name: "bicameral.history", arguments: {} }, res)) {
+      // Snapshot both client and evaluator across the awaited governance call.
+      const evaluator = deps.getMcpInterceptor?.() ?? null;
+      if (await governToolCall(deps, { name: "bicameral.history", arguments: {} }, res, client)) {
         return;
       }
+      if (rejectStaleBicameralClient(deps, client, res, true, evaluator)) return;
       const features = await client.history();
       res.json({ ok: true, features });
     } catch (e) {
@@ -63,14 +66,16 @@ export function registerBicameralDecisionRoutes(
       return;
     }
     try {
-      // B151: govern the tool call through the universal interceptor.
+      const evaluator = deps.getMcpInterceptor?.() ?? null;
       if (await governToolCall(
         deps,
         { name: "bicameral.drift", arguments: { file_path: filePath } },
         res,
+        client,
       )) {
         return;
       }
+      if (rejectStaleBicameralClient(deps, client, res, true, evaluator)) return;
       const drift = await client.drift(filePath);
       res.json({ ok: true, drift });
       // B-BIC-16: forward to drift-to-L3 mediator AFTER responding so a slow
@@ -129,14 +134,16 @@ export function registerBicameralDecisionRoutes(
       return;
     }
     try {
-      // B151: govern the tool call through the universal interceptor.
+      const evaluator = deps.getMcpInterceptor?.() ?? null;
       if (await governToolCall(
         deps,
         { name: "bicameral.ratify", arguments: { decision_id: decisionId, verdict } },
         res,
+        client,
       )) {
         return;
       }
+      if (rejectStaleBicameralClient(deps, client, res, true, evaluator)) return;
       await client.ratify(decisionId, verdict);
       // B-BIC-1: anchor the operator's ratify decision into META_LEDGER as a
       // USER_OVERRIDE entry. Ratify is the canonical "operator intentionally
