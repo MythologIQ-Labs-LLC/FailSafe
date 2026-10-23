@@ -1,7 +1,7 @@
 {
   "name": "mythologiq-failsafe",
   "displayName": "FailSafe (feat. Qor-Logic)",
-  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
+  "description": "Local-first governance, workspace risk monitoring, and audit evidence for AI-assisted development.",
   "icon": "media/icon.png",
   "version": "6.0.10",
   "publisher": "MythologIQ",
@@ -14,28 +14,25 @@
     "vscode": "^1.101.0"
   },
   "categories": [
-    "Machine Learning",
-    "Testing",
-    "Visualization"
+    "Other"
   ],
   "keywords": [
-    "ai",
-    "governance",
-    "hallucination",
-    "verification",
-    "trust",
-    "qorelogic",
-    "sentinel",
-    "ai safety",
+    "ai coding agents",
     "agent governance",
+    "developer governance",
+    "policy enforcement",
     "code audit",
-    "risk management",
-    "compliance",
-    "deterministic governance",
+    "code review",
+    "audit trail",
+    "risk monitoring",
+    "workspace monitoring",
     "intent management",
     "checkpoint",
     "rollback",
-    "roi"
+    "compliance",
+    "deterministic governance",
+    "sentinel",
+    "qor-logic"
   ],
   "activationEvents": [
     "onChatParticipant:failsafe.chat",
