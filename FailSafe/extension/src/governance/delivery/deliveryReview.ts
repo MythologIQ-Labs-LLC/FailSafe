@@ -19,8 +19,10 @@
  *   ledger range that holds this intent's reviews (the continuity walk);
  * - a blocking item clears only when a later valid PASS lists exactly its {kind, id, hash} in
  *   `supersedes`, which only the server computes and only the dialog shows. A trusted VETO (kind
- *   `veto`) also needs its commit to be the reviewed commit or an ancestor of it, re-checked here
- *   on every read.
+ *   `veto`) also needs its commit to be the reviewed commit or an ancestor of it, or (#532 B344) a
+ *   declared rework with that commit's diff (rebased) or its parent and a two-way majority of its
+ *   non-bookkeeping paths (amended); both are re-checked here on
+ *   every read.
  *
  * Completion needs a current covering PASS: the latest valid PASS, on a commit that equals or
  * descends from every linked commit, whose covered set, tree and evidence digest still match the
@@ -46,15 +48,17 @@ import { withProposalLock } from '../architecture/ArchitectureIndexProposal';
 import type { IntentReviewMirror, IntentRecord } from '../IntentService';
 import {
   IntentIdSchema, IntentReviewDetailsSchema, ReviewCommitRefSchema, ReviewEvaluatesSchema, ReviewSupersededSchema,
-  ReviewVerdictSchema, type IntentReviewDetails, type ReviewBlockingKind, type ReviewSuperseded, type ReviewVerdict,
+  ReviewVerdictSchema, REWORK_ENTRY_LIMIT, ReworksSchema, type IntentReviewDetails, type ReviewBlockingKind,
+  type ReviewSuperseded, type ReviewVerdict, type ReworkEntry,
 } from '../types/IntentTypes';
 import type { RotationHead, SealedLedgerRow } from '../../qorelogic/ledger/LedgerManager';
 import { describeOperatorAuthentication } from '../../shared/types/operatorAuthentication';
-import { sanitizeDialogText } from '../../extension/operatorConfirmation';
-import type { CommitResolution, Ancestry } from './deliveryGit';
-import { commitSubject, isAncestor, resolveCommit } from './deliveryGit';
+import { reworkSectionLines, sanitizeDialogText } from '../../extension/operatorConfirmation';
+import type { Ancestry, ChangedPath, ChangedPaths, CommitParents, CommitResolution, DiffIdentity } from './deliveryGit';
+import { changedPaths, commitParents, commitSubject, diffIdentity, isAncestor, resolveCommit } from './deliveryGit';
 import { findGovernanceEvidence, REVIEW_EVENT_TYPE, type EvidenceLedger, type GovernanceEvidence } from './deliveryEvidence';
 import type { DeliveryContext } from './deliveryService';
+import { isBookkeepingPath } from './reworkBookkeeping';
 
 export const DELIVERY_REVIEW_DID = 'did:myth:failsafe:delivery-review';
 export const DELIVERY_REVIEW_METHOD = 'operator-delivery-review';
@@ -64,6 +68,12 @@ export const REVIEW_MODAL_METHOD = 'vscode-modal-confirmation';
 /** 30 days: the scenarios' proposed staleness age (INTEGRATION_SCENARIOS.md), inclusive. */
 export const REVIEW_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const REVIEW_NOTE_LIMIT = 500;
+/** #532 B344 (plan-b344 LD2/LD5): an amended rework over this many paths on either side cannot be shown in full. */
+export const REWORK_PATH_LIMIT = 50;
+/** A path longer than this is not shown, so it is refused. */
+export const REWORK_PATH_CHARS = 4096;
+/** The rework section of a confirmation dialog above this many characters is refused. */
+export const REWORK_DIALOG_LIMIT = 8000;
 export const REVIEW_CHANNELS = {
   console: 'console:/api/actions/delivery/review',
   command: 'command:failsafe.delivery.recordReview',
@@ -93,6 +103,8 @@ export const ReviewPayloadSchema = z.object({
   note: z.string().max(REVIEW_NOTE_LIMIT),
   operationId: z.string().min(1).max(80),
   authentication: AuthenticationSchema,
+  /** #532 B344: absent when the PASS declares no rework. */
+  reworks: ReworksSchema.optional(),
 }).strict();
 export type ReviewPayload = z.infer<typeof ReviewPayloadSchema>;
 export type ReviewBinding = z.infer<typeof BindingSchema>;
@@ -222,6 +234,8 @@ export interface ReviewRecordView {
   operationId: string;
   mirrorEntryHash: string | null;
   historyPosition: number;
+  /** #532 B344: the VETOs this PASS supersedes by a declared rework (absent when none). */
+  reworks?: ReworkEntry[];
 }
 
 export interface PassCurrency {
@@ -239,6 +253,10 @@ export interface LinkedCommit {
 export interface ReviewGit {
   resolve(sha: string): CommitResolution;
   ancestry(ancestor: string, descendant: string): Ancestry;
+  /** #532 B344 (plan-b344 LD6): the reads behind a rework relation. */
+  diffId(sha: string): DiffIdentity;
+  parents(sha: string): CommitParents;
+  paths(sha: string): ChangedPaths;
 }
 
 export interface ReviewAssessInput {
@@ -258,7 +276,7 @@ export type ReviewAssessment =
   | {
     state: 'checked';
     blocking: BlockingItem[];
-    cleared: Array<BlockingItem & { clearedBy: string }>;
+    cleared: Array<BlockingItem & { clearedBy: string; clearedNote?: string }>;
     reviews: ReviewRecordView[];
     latestPass: PassCurrency | null;
   };
@@ -266,6 +284,15 @@ export type ReviewAssessment =
 class GitUnavailable extends Error {}
 
 const canon = (v: unknown): string => JSON.stringify(v);
+/**
+ * #532 B344 review fold: JSON with every object's keys sorted (arrays keep their order), so two
+ * values compare equal whatever order their keys were built or parsed in.
+ */
+export function sortedJson(v: unknown): string {
+  return JSON.stringify(v, (_key, value: unknown) => (value && typeof value === 'object' && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+    : value));
+}
 const sameRefs = (a: Array<{ commitSha: string; edgeEntryHash: string }>, b: Array<{ commitSha: string; edgeEntryHash: string }>): boolean =>
   canon([...a].sort((x, y) => x.commitSha.localeCompare(y.commitSha))) === canon([...b].sort((x, y) => x.commitSha.localeCompare(y.commitSha)));
 
@@ -293,6 +320,7 @@ function viewOf(r: SealedLedgerRow, p: ReviewPayload, m: { mirror: IntentReviewM
     covers: p.binding.covers, evidenceDigest: p.binding.evidenceDigest, evidenceCount: p.binding.evidenceCount,
     supersedes: p.supersedes, note: p.note, reviewerDid: String(r.row.overseer_did), authentication: p.authentication,
     operationId: p.operationId, mirrorEntryHash: m?.mirror.entryHash ?? null, historyPosition: m?.mirror.position ?? -1,
+    ...(p.reworks ? { reworks: p.reworks } : {}),
   };
 }
 
@@ -301,7 +329,7 @@ function mirrorMatches(d: IntentReviewDetails, r: SealedLedgerRow, p: ReviewPayl
   return d.reviewId === p.reviewId && d.ledgerEntryId === r.row.id && d.ledgerEntryHash === r.row.entry_hash
     && d.verdict === p.verdict && d.operationId === p.operationId && d.evidenceDigest === p.binding.evidenceDigest
     && canon(d.evaluates) === canon(p.binding.evaluates) && canon(d.covers) === canon(p.binding.covers)
-    && canon(d.supersedes) === canon(p.supersedes);
+    && canon(d.supersedes) === canon(p.supersedes) && canon(d.reworks ?? null) === canon(p.reworks ?? null);
 }
 
 const payloadCommit = (payload: Record<string, unknown> | null): string | null => {
@@ -330,7 +358,10 @@ export function assessReviews(input: ReviewAssessInput): ReviewAssessment {
     return assessReviewsOrThrow(input);
   } catch (error) {
     if (error instanceof GitUnavailable) {
-      return { state: 'unavailable', cause: 'git-unavailable', reason: 'Git could not answer whether one commit descends from another, so the review cannot be assessed.' };
+      return {
+        state: 'unavailable', cause: 'git-unavailable',
+        reason: 'Git could not answer whether one commit descends from another, or what a declared rework changed, so the review cannot be assessed.',
+      };
     }
     throw error;
   }
@@ -345,6 +376,135 @@ function ancestorOrEqual(git: ReviewGit, ancestor: string, descendant: string): 
   const answer = git.ancestry(ancestor, descendant);
   if (answer === 'unavailable') throw new GitUnavailable();
   return answer === 'ancestor';
+}
+
+// ---------------------------------------------------------------- #532 B344: declared rework
+
+type ReworkEvidence = ReworkEntry['evidence'];
+type RelationResult =
+  | { ok: true; relation: ReworkEntry['relation']; evidence: ReworkEvidence }
+  | { ok: false; status: number; code: RefusalCode; detail: string };
+
+const byPath = (a: { path: string }, b: { path: string }): number => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+
+/**
+ * #532 B344 (plan-b344 LD2 rules 4-6): whether R is V rebased (equal diff identities) or V amended
+ * (the same single parent and a two-way path majority: R changes more than half of V's paths, and
+ * at least half of R's paths are V's, neither side counting bookkeeping files; a V that changed only
+ * bookkeeping files has no amended rework), with the evidence the row records. The caller has
+ * resolved both commits. A git read that cannot answer throws GitUnavailable; it is never read as
+ * "unrelated".
+ */
+function reworkRelation(git: ReviewGit, v: string, r: string): RelationResult {
+  const no = (status: number, code: RefusalCode, detail: string): RelationResult => ({ ok: false, status, code, detail });
+  // Rule 4: unreachable at record time (rules 2 and 3 imply it); a guard for the read path.
+  if (r === v || ancestorOrEqual(git, v, r)) return no(400, 'rework-unnecessary', `${v} is ${r} or an ancestor of it, so no rework is needed`);
+  const parentsOf = (sha: string): string[] => {
+    const out = git.parents(sha);
+    if (out.state === 'unavailable') throw new GitUnavailable();
+    return out.parents;
+  };
+  const pv = parentsOf(v);
+  const pr = parentsOf(r);
+  for (const [sha, parents] of [[v, pv], [r, pr]] as const) {
+    if (parents.length !== 1) {
+      return no(409, 'rework-merge', `${sha} has ${parents.length} parents; a rework relation needs exactly one (a root commit has none, a merge has two or more)`);
+    }
+  }
+  const idOf = (sha: string): string | null => {
+    const out = git.diffId(sha);
+    if (out.state === 'unavailable') throw new GitUnavailable();
+    return out.state === 'ok' ? out.id : null;
+  };
+  const dv = idOf(v);
+  const dr = idOf(r);
+  const pathsOf = (sha: string): ChangedPath[] => {
+    const out = git.paths(sha);
+    if (out.state === 'unavailable') throw new GitUnavailable();
+    return out.paths;
+  };
+  const cv = pathsOf(v);
+  const cr = pathsOf(r);
+  const base = { vetoParent: pv[0], reworkParent: pr[0], vetoDiffId: dv, reworkDiffId: dr, vetoPathCount: cv.length, reworkPathCount: cr.length };
+  if (dv !== null && dv === dr) return { ok: true, relation: 'rebased', evidence: { ...base, shared: [], onlyInVeto: [], onlyInRework: [] } };
+  if (pv[0] !== pr[0]) {
+    return no(409, 'rework-unrelated',
+      `their diffs differ, and ${r} has parent ${pr[0]} while ${v} has parent ${pv[0]}; an amended rework has the same parent as the commit it replaces`);
+  }
+  if (cv.length > REWORK_PATH_LIMIT || cr.length > REWORK_PATH_LIMIT) {
+    return no(409, 'rework-too-many-paths',
+      `${v} changes ${cv.length} paths and ${r} changes ${cr.length}; a rework of more than ${REWORK_PATH_LIMIT} paths on either side cannot be shown in full, so it is refused. Record this delivery under a new intent`);
+  }
+  const unshowable = [...cv, ...cr].find((p) => !p.showable || p.path.length > REWORK_PATH_CHARS);
+  if (unshowable) {
+    return no(409, 'rework-path-unshowable', unshowable.showable
+      ? `a changed path is ${unshowable.path.length} characters, over the ${REWORK_PATH_CHARS} the dialog shows, so the rework cannot be shown exactly`
+      : 'a changed path is not UTF-8, so the rework cannot be shown exactly');
+  }
+  const inV = new Map(cv.map((p) => [p.path, p.status]));
+  const inR = new Map(cr.map((p) => [p.path, p.status]));
+  const shared = cv.filter((p) => inR.has(p.path)).map((p) => ({ path: p.path, vetoStatus: p.status, reworkStatus: inR.get(p.path)! })).sort(byPath);
+  const onlyInVeto = cv.filter((p) => !inR.has(p.path)).map((p) => ({ path: p.path, status: p.status })).sort(byPath);
+  const onlyInRework = cr.filter((p) => !inV.has(p.path)).map((p) => ({ path: p.path, status: p.status })).sort(byPath);
+  // Review fold (owner ruling 2026-10-21): bookkeeping files are left out of both halves of the majority.
+  const counted = (p: { path: string }): boolean => !isBookkeepingPath(p.path);
+  const nv = cv.filter(counted).length;
+  const nr = cr.filter(counted).length;
+  const ns = shared.filter(counted).length;
+  if (nv === 0) {
+    return no(409, 'rework-unrelated',
+      `the vetoed commit ${v} changed only bookkeeping files (${cv.map((p) => p.path).join(', ')}), which an amended rework does not count, so nothing ties ${r} to it`);
+  }
+  if (!(2 * ns > nv)) {
+    return no(409, 'rework-unrelated',
+      `they share ${ns} of the ${nv} non-bookkeeping paths ${v} changed (bookkeeping files are not counted), and an amended rework must change more than half of them (the V half fails)`);
+  }
+  if (!(2 * ns >= nr)) {
+    return no(409, 'rework-unrelated',
+      `they share ${ns} of the ${nr} non-bookkeeping paths ${r} changed (bookkeeping files are not counted), and at least half of an amended rework must be the vetoed commit's paths (the R half fails)`);
+  }
+  return { ok: true, relation: 'amended', evidence: { ...base, shared, onlyInVeto, onlyInRework } };
+}
+
+export const REWORK_PRUNED_NOTE = 'rework verified when recorded; the vetoed commit is no longer in this repository';
+
+/**
+ * #532 B344 (plan-b344 LD4): whether `pass` clears the trusted VETO `b` by a declared rework. The
+ * caller runs the ancestry rule first: ancestorOrEqual resolves V and throws GitUnavailable when git
+ * cannot answer, so here V is `found` or `missing`, and `missing` means git reported it missing.
+ * - V and R resolve: the relation is recomputed and must give the recorded kind and evidence.
+ * - R missing: the VETO stands.
+ * - V missing (B376): R's parent and its diff identity (rebased) or complete path list (amended)
+ *   must equal the record; the V half is the sealed record's, and the cleared item says so.
+ * Any git read that cannot answer throws GitUnavailable (the step is `unavailable`).
+ */
+function reworkClears(git: ReviewGit, b: BlockingItem, pass: ReviewRecordView): { note?: string } | null {
+  const entry = pass.reworks?.find((e) => e.vetoEntryId === b.id && e.vetoEntryHash === b.hash);
+  if (!entry || entry.vetoCommit !== b.commitSha) return null;
+  if (!ancestorOrEqual(git, entry.reworkCommit, pass.commitSha)) return null;
+  const v = git.resolve(entry.vetoCommit);
+  const r = git.resolve(entry.reworkCommit);
+  if (v.state === 'unavailable' || r.state === 'unavailable') throw new GitUnavailable();
+  if (r.state === 'missing') return null;
+  if (v.state === 'found') {
+    const again = reworkRelation(git, entry.vetoCommit, entry.reworkCommit);
+    return again.ok && again.relation === entry.relation && sortedJson(again.evidence) === sortedJson(entry.evidence) ? {} : null;
+  }
+  const parents = git.parents(entry.reworkCommit);
+  if (parents.state === 'unavailable') throw new GitUnavailable();
+  if (parents.parents.length !== 1 || parents.parents[0] !== entry.evidence.reworkParent) return null;
+  if (entry.relation === 'rebased') {
+    const id = git.diffId(entry.reworkCommit);
+    if (id.state === 'unavailable') throw new GitUnavailable();
+    if (id.state !== 'ok' || id.id !== entry.evidence.reworkDiffId) return null;
+  } else {
+    const paths = git.paths(entry.reworkCommit);
+    if (paths.state === 'unavailable') throw new GitUnavailable();
+    const now = paths.paths.map((p) => ({ path: p.path, status: p.status })).sort(byPath);
+    const recorded = [...entry.evidence.shared.map((s) => ({ path: s.path, status: s.reworkStatus })), ...entry.evidence.onlyInRework].sort(byPath);
+    if (sortedJson(now) !== sortedJson(recorded)) return null;
+  }
+  return { note: REWORK_PRUNED_NOTE };
 }
 
 function assessReviewsOrThrow(input: ReviewAssessInput): ReviewAssessment {
@@ -456,18 +616,27 @@ function assessReviewsOrThrow(input: ReviewAssessInput): ReviewAssessment {
     });
   }
 
-  // Supersession: a later valid PASS that names the item (and, for a trusted VETO, descends from its commit).
+  // Supersession: a later valid PASS that names the item (and, for a trusted VETO, descends from its
+  // commit or declares a rework of it that re-verifies).
   const passes = pairs.filter((x) => x.verdict === 'PASS').sort((a, b) => a.entryId - b.entryId);
   const remaining: BlockingItem[] = [];
-  const cleared: Array<BlockingItem & { clearedBy: string }> = [];
+  const cleared: Array<BlockingItem & { clearedBy: string; clearedNote?: string }> = [];
   for (const b of blocking) {
+    let clearedNote: string | undefined;
     const by = passes.find((pass) => {
       if (!pass.supersedes.some((s) => s.kind === b.kind && s.id === b.id && s.hash === b.hash)) return false;
       if (b.after.ledgerId !== null && pass.entryId <= b.after.ledgerId) return false;
       if (b.after.historyPosition !== null && pass.historyPosition <= b.after.historyPosition) return false;
-      return b.kind !== 'veto' || (!!b.commitSha && ancestorOrEqual(git, b.commitSha, pass.commitSha));
+      if (b.kind !== 'veto') return true;
+      if (!b.commitSha) return false;
+      // Ancestry runs before rework: ancestorOrEqual resolves V and throws when git cannot answer,
+      // so reworkClears never mistakes an unavailable read of V for V missing (B376).
+      if (ancestorOrEqual(git, b.commitSha, pass.commitSha)) return true;
+      const rework = reworkClears(git, b, pass);
+      clearedNote = rework?.note;
+      return rework !== null;
     });
-    if (by) cleared.push({ ...b, clearedBy: by.reviewId }); else remaining.push(b);
+    if (by) cleared.push({ ...b, clearedBy: by.reviewId, ...(clearedNote ? { clearedNote } : {}) }); else remaining.push(b);
   }
 
   // Currency of the latest valid PASS.
@@ -507,7 +676,17 @@ export interface ReviewRead {
 function reviewGit(ctx: DeliveryContext): ReviewGit {
   const resolved = new Map<string, CommitResolution>();
   const ancestry = new Map<string, Ancestry>();
+  const memo = <T>(read: (root: string, sha: string, git: DeliveryContext['git']) => T): ((sha: string) => T) => {
+    const seen = new Map<string, T>();
+    return (sha) => {
+      if (!seen.has(sha)) seen.set(sha, read(ctx.workspaceRoot, sha, ctx.git));
+      return seen.get(sha)!;
+    };
+  };
   return {
+    diffId: memo(diffIdentity),
+    parents: memo(commitParents),
+    paths: memo(changedPaths),
     resolve: (sha) => {
       if (!resolved.has(sha)) resolved.set(sha, resolveCommit(ctx.workspaceRoot, sha, ctx.git));
       return resolved.get(sha)!;
@@ -552,11 +731,19 @@ export async function readIntentReviews(ctx: DeliveryContext, record: IntentReco
 
 // ---------------------------------------------------------------- building and recording a review
 
+/** #532 B344: the operator's declaration that a linked commit is the rework of a VETO. */
+export interface ReworkDeclaration {
+  vetoEntryId: number;
+  reworkCommit: string;
+}
+
 export interface ReviewRequest {
   intentId: string;
   verdict: ReviewVerdict;
   commitSha: string;
   note: string;
+  /** #532 B344: declared reworks; without them the ancestry rule applies unchanged. */
+  reworks?: ReworkDeclaration[];
 }
 
 const RequestSchema = z.object({
@@ -564,14 +751,25 @@ const RequestSchema = z.object({
   verdict: ReviewVerdictSchema,
   commitSha: z.string().regex(/^[0-9a-f]{40}([0-9a-f]{24})?$/),
   note: z.string().max(4000).optional(),
+  reworks: z.array(z.object({
+    vetoEntryId: z.number().int().positive(),
+    reworkCommit: z.string().regex(/^[0-9a-f]{40}([0-9a-f]{24})?$/),
+  }).strict()).min(1).max(REWORK_ENTRY_LIMIT).optional(),
 });
 
-/** Only intentId, verdict, commitSha and note are read; a tree, digest or `supersedes` in the request is ignored. */
+/**
+ * Only intentId, verdict, commitSha, note and (#532 B344) reworks are read; a tree, digest,
+ * `supersedes` or rework evidence in the request is ignored, because the server computes them.
+ */
 export function parseReviewRequest(body: unknown): ReviewRequest | string {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
-  const parsed = RequestSchema.safeParse({ intentId: b.intentId, verdict: b.verdict, commitSha: b.commitSha, note: b.note });
-  return parsed.success ? { ...parsed.data, note: parsed.data.note ?? '' }
-    : 'intentId must be an intent id, verdict PASS or VETO, commitSha a full commit name, and note at most 4000 characters';
+  const parsed = RequestSchema.safeParse({ intentId: b.intentId, verdict: b.verdict, commitSha: b.commitSha, note: b.note, reworks: b.reworks });
+  if (!parsed.success) {
+    return 'intentId must be an intent id, verdict PASS or VETO, commitSha a full commit name, note at most 4000 characters, '
+      + `and reworks, when given, 1 to ${REWORK_ENTRY_LIMIT} {vetoEntryId, reworkCommit} pairs`;
+  }
+  const { reworks, ...rest } = parsed.data;
+  return { ...rest, note: rest.note ?? '', ...(reworks ? { reworks } : {}) };
 }
 
 export interface ReviewPlan {
@@ -586,10 +784,22 @@ export interface ReviewPlan {
   /** The note as the dialog shows it and the row records it. */
   note: string;
   reviewerDid: string;
+  /** #532 B344: each VETO superseded by a declared, verified rework (shown first in the dialog). */
+  reworks: ReworkEntry[];
 }
 
-export type ReviewRefusal = { ok: false; status: number; error: string };
-const refuse = (status: number, error: string): ReviewRefusal => ({ ok: false, status, error });
+/** #532 B344 (plan-b344 terms): the specific reason a review was refused. */
+export type RefusalCode =
+  | 'veto-not-ancestor'
+  | 'rework-unknown-veto' | 'rework-unnecessary' | 'rework-duplicate'
+  | 'rework-not-linked' | 'rework-not-in-history'
+  | 'rework-veto-missing' | 'rework-merge'
+  | 'rework-unrelated'
+  | 'rework-too-many-paths' | 'rework-path-unshowable' | 'rework-dialog-too-large';
+
+export type ReviewRefusal = { ok: false; status: number; error: string; code?: RefusalCode; veto?: { entryId: number; commitSha: string } };
+const refuse = (status: number, error: string, code?: RefusalCode): ReviewRefusal => ({ ok: false, status, error, ...(code ? { code } : {}) });
+const GIT_REWORK_UNAVAILABLE = 'Git could not read what the vetoed commit or its declared rework changed; nothing was recorded.';
 
 /**
  * Check a review request against server state and compute everything the dialog shows and the
@@ -618,6 +828,27 @@ export async function buildReviewPlan(
   if (resolved.tree !== edge.tree) return refuse(409, `${req.commitSha} now resolves to tree ${resolved.tree}, not the tree ${edge.tree} recorded when it was linked; nothing was recorded.`);
 
   const git = reviewGit(ctx);
+  // #532 B344: the declaration's own structure is checked before coverage, so these codes are reachable.
+  const declared = req.reworks ?? [];
+  if (declared.length && req.verdict !== 'PASS') return refuse(400, 'Only a PASS can declare a rework; nothing was recorded.');
+  const seen = new Set<number>();
+  for (const d of declared) {
+    if (seen.has(d.vetoEntryId)) {
+      return refuse(400, `The VETO in ledger entry #${d.vetoEntryId} is declared more than once; declare each VETO once. Nothing was recorded.`, 'rework-duplicate');
+    }
+    seen.add(d.vetoEntryId);
+    if (!linked.some((l) => l.commitSha === d.reworkCommit)) {
+      return refuse(409, `The declared rework ${d.reworkCommit} is not linked to this intent; link it in Workspace > Delivery first. Nothing was recorded.`, 'rework-not-linked');
+    }
+    const r = git.resolve(d.reworkCommit);
+    if (r.state === 'unavailable') return refuse(503, `Git cannot read this repository: ${r.detail}`);
+    if (r.state === 'missing') return refuse(409, `The declared rework ${d.reworkCommit}: ${r.reason}; nothing was recorded.`);
+    let inHistory: boolean;
+    try { inHistory = ancestorOrEqual(git, d.reworkCommit, req.commitSha); } catch { return refuse(503, 'Git could not answer whether the declared rework is part of the reviewed commit; nothing was recorded.'); }
+    if (!inHistory) {
+      return refuse(409, `The declared rework ${d.reworkCommit} is not ${req.commitSha} or an ancestor of it; a rework must be part of the reviewed commit's history. Nothing was recorded.`, 'rework-not-in-history');
+    }
+  }
   if (req.verdict === 'PASS') {
     for (const l of linked) {
       if (l.commitSha === req.commitSha) continue;
@@ -631,14 +862,49 @@ export async function buildReviewPlan(
   if (read.assessment.state === 'unavailable') return refuse(503, `${read.assessment.reason} Nothing was recorded.`);
   if (read.evidence.state !== 'ok') return refuse(503, LEDGER_UNAVAILABLE + ' Nothing was recorded.');
   const blocking = req.verdict === 'PASS' ? read.assessment.blocking : [];
+  // #532 B344: each declaration names an uncleared trusted VETO of this intent, by ledger id (no hash is read from the request).
+  for (const d of declared) {
+    if (!blocking.some((b) => b.kind === 'veto' && b.commitTrusted && !!b.commitSha && b.id === d.vetoEntryId)) {
+      return refuse(400, `Ledger entry #${d.vetoEntryId} is not a VETO blocking this delivery (it is unknown, already cleared, or not a trusted VETO), so no rework can supersede it. Nothing was recorded.`, 'rework-unknown-veto');
+    }
+  }
+  const reworks: ReworkEntry[] = [];
   for (const b of blocking) {
     if (b.kind !== 'veto' || !b.commitSha) continue;
     let ok: boolean;
     try { ok = ancestorOrEqual(git, b.commitSha, req.commitSha); } catch { return refuse(503, 'Git could not answer whether the vetoed commit is part of the reviewed commit; nothing was recorded.'); }
-    if (!ok) {
-      return refuse(409, `The VETO in ledger entry #${b.id} is on ${b.commitSha}, which is not ${req.commitSha} or an ancestor of it. ` +
-        'A PASS supersedes only a VETO on the reviewed commit or one of its ancestors; that VETO stands. Nothing was recorded.');
+    const d = declared.find((x) => x.vetoEntryId === b.id);
+    if (ok) {
+      if (d) {
+        return refuse(400, `The VETO in ledger entry #${b.id} is on ${b.commitSha}, which is ${req.commitSha} or an ancestor of it, so this PASS supersedes it without a rework; remove the declaration. Nothing was recorded.`, 'rework-unnecessary');
+      }
+      continue;
     }
+    if (!d) {
+      return {
+        ...refuse(409, `The VETO in ledger entry #${b.id} is on ${b.commitSha}, which is not ${req.commitSha} or an ancestor of it. ` +
+          'A PASS supersedes only a VETO on the reviewed commit or one of its ancestors; that VETO stands. Nothing was recorded.', 'veto-not-ancestor'),
+        veto: { entryId: b.id, commitSha: b.commitSha },
+      };
+    }
+    const v = git.resolve(b.commitSha);
+    if (v.state === 'unavailable') return refuse(503, GIT_REWORK_UNAVAILABLE);
+    if (v.state === 'missing') {
+      return refuse(409, `The vetoed commit ${b.commitSha} (ledger entry #${b.id}) is no longer in this repository, so git cannot show that ${d.reworkCommit} reworks it. That VETO stands. Nothing was recorded.`, 'rework-veto-missing');
+    }
+    let relation: RelationResult;
+    try { relation = reworkRelation(git, b.commitSha, d.reworkCommit); } catch (error) {
+      if (error instanceof GitUnavailable) return refuse(503, GIT_REWORK_UNAVAILABLE);
+      throw error;
+    }
+    if (!relation.ok) {
+      return refuse(relation.status, `The VETO in ledger entry #${b.id} on ${b.commitSha} is not reworked by ${d.reworkCommit}: ${relation.detail}. That VETO stands. Nothing was recorded.`, relation.code);
+    }
+    reworks.push({ vetoEntryId: b.id, vetoEntryHash: b.hash, vetoCommit: b.commitSha, reworkCommit: d.reworkCommit, relation: relation.relation, evidence: relation.evidence });
+  }
+  const section = reworkSectionLines(reworks).join('\n').length;
+  if (section > REWORK_DIALOG_LIMIT) {
+    return refuse(409, `The rework section of the confirmation dialog would be ${section} characters, over the ${REWORK_DIALOG_LIMIT} it can show in full, so it is refused. Record this delivery under a new intent. Nothing was recorded.`, 'rework-dialog-too-large');
   }
   const covers = linked.map((l) => ({ commitSha: l.commitSha, edgeEntryHash: l.edgeEntryHash as string }));
   const supersedes = blocking.map((b) => ({ kind: b.kind, id: b.id, hash: b.hash }));
@@ -648,14 +914,14 @@ export async function buildReviewPlan(
     covers, evidenceDigest: read.evidence.digest, evidenceCount: read.evidence.total,
   };
   const note = sanitizeDialogText(req.note, REVIEW_NOTE_LIMIT);
-  const unrecordable = recordProblem(record.intent.id, req.verdict, binding, supersedes, note);
+  const unrecordable = recordProblem(record.intent.id, req.verdict, binding, supersedes, note, reworks);
   if (unrecordable) return refuse(409, `This review cannot be recorded: ${unrecordable}. Nothing was shown or recorded.`);
   return {
     ok: true,
     plan: {
       intent: { id: record.intent.id, purpose: record.intent.purpose }, verdict: req.verdict,
       commit: { sha: req.commitSha, subject: commitSubject(ctx.workspaceRoot, req.commitSha, ctx.git), tree: resolved.tree, branch: binding.evaluates.branch },
-      linked: covers, binding, supersedes, superseded: blocking, note, reviewerDid: LOCAL_OVERSEER_DID,
+      linked: covers, binding, supersedes, superseded: blocking, note, reviewerDid: LOCAL_OVERSEER_DID, reworks,
     },
   };
 }
@@ -667,15 +933,17 @@ export async function buildReviewPlan(
  */
 export function recordProblem(
   intentId: string, verdict: ReviewVerdict, binding: ReviewBinding, supersedes: ReviewSuperseded[], note: string,
+  reworks: ReworkEntry[] = [],
 ): string | null {
   const placeholderId = '00000000-0000-4000-8000-000000000000';
+  const withReworks = reworks.length ? { reworks } : {};
   const payload = ReviewPayloadSchema.safeParse({
     reviewId: placeholderId, intentId, verdict, binding, supersedes, note, operationId: 'op_check',
-    authentication: { method: REVIEW_MODAL_METHOD, channel: REVIEW_CHANNELS.console, proves: 'check' },
+    authentication: { method: REVIEW_MODAL_METHOD, channel: REVIEW_CHANNELS.console, proves: 'check' }, ...withReworks,
   });
   const mirror = IntentReviewDetailsSchema.safeParse({
     reviewId: placeholderId, verdict, evaluates: binding.evaluates, covers: binding.covers, evidenceDigest: binding.evidenceDigest,
-    supersedes, ledgerEntryId: 1, ledgerEntryHash: '0'.repeat(64), operationId: 'op_check',
+    supersedes, ledgerEntryId: 1, ledgerEntryHash: '0'.repeat(64), operationId: 'op_check', ...withReworks,
   });
   const issue = !payload.success ? payload.error.issues[0] : !mirror.success ? mirror.error.issues[0] : null;
   if (!issue) return null;
@@ -692,7 +960,7 @@ function edgeBranch(record: IntentRecord, sha: string): string | null {
 }
 
 /** What must be unchanged between the dialog and the write (everything the row binds). */
-const bound = (p: ReviewPlan): string => canon({ verdict: p.verdict, binding: p.binding, supersedes: p.supersedes, note: p.note });
+const bound = (p: ReviewPlan): string => canon({ verdict: p.verdict, binding: p.binding, supersedes: p.supersedes, note: p.note, reworks: p.reworks });
 
 export interface RecordedReview {
   status: number;
@@ -718,7 +986,9 @@ export async function recordDeliveryReview(
 ): Promise<RecordedReview> {
   return withProposalLock(`delivery-review:${ctx.workspaceRoot}`, async () => {
     const again = await buildReviewPlan(ctx, request, hooks.now ? hooks.now() : Date.now());
-    if (!again.ok) return { status: again.status, body: { ok: false, error: again.error } };
+    if (!again.ok) {
+      return { status: again.status, body: { ok: false, error: again.error, ...(again.code ? { code: again.code } : {}), ...(again.veto ? { veto: again.veto } : {}) } };
+    }
     if (bound(again.plan) !== bound(shown)) {
       return { status: 409, body: { ok: false, stale: true, error: 'The delivery changed while you were confirming (a link, new evidence or another review); nothing was recorded. Review again.' } };
     }
@@ -730,7 +1000,7 @@ export async function recordDeliveryReview(
     const authentication = { ...describeOperatorAuthentication({ method: REVIEW_MODAL_METHOD, channel: REVIEW_CHANNELS[confirmation.channel] }) };
     const payload: ReviewPayload = {
       reviewId, intentId: plan.intent.id, verdict: plan.verdict, binding: plan.binding, supersedes: plan.supersedes,
-      note: plan.note, operationId: confirmation.operationId, authentication,
+      note: plan.note, operationId: confirmation.operationId, authentication, ...(plan.reworks.length ? { reworks: plan.reworks } : {}),
     };
     const entry = await ledger.appendEntry({
       eventType: 'DELIVERY_REVIEWED', agentDid: DELIVERY_REVIEW_DID, overseerDid: LOCAL_OVERSEER_DID,
@@ -743,7 +1013,7 @@ export async function recordDeliveryReview(
     const details: IntentReviewDetails = {
       reviewId, verdict: plan.verdict, evaluates: plan.binding.evaluates, covers: plan.binding.covers,
       evidenceDigest: plan.binding.evidenceDigest, supersedes: plan.supersedes, ledgerEntryId: entry.id,
-      ledgerEntryHash: entry.entryHash, operationId: confirmation.operationId,
+      ledgerEntryHash: entry.entryHash, operationId: confirmation.operationId, ...(plan.reworks.length ? { reworks: plan.reworks } : {}),
     };
     const mirrored = await ctx.intents.recordReview({ intentId: plan.intent.id, actor: 'user', details });
     if (!mirrored.ok) {

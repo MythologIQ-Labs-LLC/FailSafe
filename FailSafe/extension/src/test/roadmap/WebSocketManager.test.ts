@@ -44,8 +44,8 @@ suite('FX240 WebSocketManager — real-socket lifecycle (#240 slice)', () => {
     const manager = new WebSocketManager();
     manager.setup(httpServer, () => {});
 
-    const clientA = new WebSocket(`ws://127.0.0.1:${port}`);
-    const clientB = new WebSocket(`ws://127.0.0.1:${port}`);
+    const clientA = new WebSocket(`ws://127.0.0.1:${port}`, { origin: `http://127.0.0.1:${port}` });
+    const clientB = new WebSocket(`ws://127.0.0.1:${port}`, { origin: `http://127.0.0.1:${port}` });
     await Promise.all([waitOpen(clientA), waitOpen(clientB)]);
 
     const received: unknown[] = [];
@@ -76,7 +76,7 @@ suite('FX240 WebSocketManager — real-socket lifecycle (#240 slice)', () => {
     const manager = new WebSocketManager();
     manager.setup(httpServer, () => {});
 
-    const client = new WebSocket(`ws://127.0.0.1:${port}`);
+    const client = new WebSocket(`ws://127.0.0.1:${port}`, { origin: `http://127.0.0.1:${port}` });
     await waitOpen(client);
     assert.equal(client.readyState, WebSocket.OPEN, 'precondition: client is connected before close()');
 
@@ -98,7 +98,7 @@ suite('FX240 WebSocketManager — real-socket lifecycle (#240 slice)', () => {
 
     for (let cycle = 0; cycle < 3; cycle += 1) {
       manager.setup(httpServer, () => {});
-      const client = new WebSocket(`ws://127.0.0.1:${port}`);
+      const client = new WebSocket(`ws://127.0.0.1:${port}`, { origin: `http://127.0.0.1:${port}` });
       await waitOpen(client);
       manager.close();
       await waitClose(client);

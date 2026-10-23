@@ -8,11 +8,10 @@
 
 import { renderGenomeMode, bindGenome } from './shadow-genome-graph.js';
 import { renderTrustPanel, renderFederationPanel, renderMaturity } from './shadow-genome-panels.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 function esc(value) {
-  const d = document.createElement('div');
-  d.textContent = String(value ?? '');
-  return d.innerHTML;
+  return escapeHtml(value ?? '');
 }
 
 // #454: per-record honesty badge. 'recorded' = a live event from active governance;

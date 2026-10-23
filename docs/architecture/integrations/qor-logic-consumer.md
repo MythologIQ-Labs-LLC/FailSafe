@@ -31,7 +31,7 @@ The installer drives pip as a module with the package spec `qor-logic>=<floor>` 
 ## Privileges and scopes
 
 Credential: none; pip uses the interpreter's own index configuration (unverified: FailSafe passes no index URL or credential to pip) `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts:97` (`'-P', '-m', 'pip', 'install', '--upgrade', spec`).
-The interpreter override is read only from user settings and never from inside a workspace folder `FailSafe/extension/package.json:396-400` (`"failsafe.qorlogic.pythonPath": {`).
+The interpreter override is read only from user settings and never from inside a workspace folder `FailSafe/extension/package.json:406-410` (`"failsafe.qorlogic.pythonPath": {`).
 The spawned interpreter is the trusted resolver's absolute path, an argv array and no shell `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts:225-230` (`exe = trustedPythonPath(cmd, options.cwd)`).
 `-P` keeps pip from importing a module from the process working directory `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts:96` (`-P: never import pip from the process cwd (LD11).`).
 The artifact adapter is read-only by contract `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:7-8` (`Read-only by contract: the adapter never writes or repairs canonical`).
@@ -40,9 +40,9 @@ The artifact adapter is read-only by contract `FailSafe/extension/src/qorlogic/c
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| package-install | verified-shipped | `QorLogicPackageInstaller` `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts:74` (`export class QorLogicPackageInstaller implements IQorLogicPackageInstaller`) | `FailSafe/extension/src/extension/bootstrapServers.ts:298-302` (`const packageInstaller = new QorLogicPackageInstaller(`) | `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` (unit) | Command `FailSafe/extension/package.json:211-212` (`"command": "failsafe.bootstrap"`) |
-| version-floor-check | verified-shipped | `verifyInstalledVersion` `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts:113` (`async verifyInstalledVersion(): Promise<QorLogicVersionStatus>`) | `FailSafe/extension/src/extension/bootstrapServers.ts:164` (`return qorLogicPackageInstallerRef.verifyInstalledVersion();`) | `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` (unit) | Floor constant `FailSafe/extension/src/qorlogic/hostLayouts.ts:70` (`export const MIN_QOR_LOGIC_VERSION`) |
-| artifact-classification | verified-shipped | `readMetaLedgerArtifact` `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:199` (`export function readMetaLedgerArtifact(`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:297` (`readMetaLedgerEnvelope: () => readMetaLedgerArtifact(h.workspaceRoot)`) | `FailSafe/extension/src/test/qorlogic/consumer/consumer-adapter.test.ts` (unit) | Also read by the tracker route `FailSafe/extension/src/roadmap/routes/TrackerRoute.ts:73` (`const ledger = readMetaLedgerArtifact(workspaceRoot);`) |
+| package-install | verified-shipped | `QorLogicPackageInstaller` `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts:74` (`export class QorLogicPackageInstaller implements IQorLogicPackageInstaller`) | `FailSafe/extension/src/extension/bootstrapServers.ts:319-323` (`const packageInstaller = new QorLogicPackageInstaller(`) | `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` (unit) | Command `FailSafe/extension/package.json:213-214` (`"command": "failsafe.bootstrap"`) |
+| version-floor-check | verified-shipped | `verifyInstalledVersion` `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts:113` (`async verifyInstalledVersion(): Promise<QorLogicVersionStatus>`) | `FailSafe/extension/src/extension/bootstrapServers.ts:169` (`return qorLogicPackageInstallerRef.verifyInstalledVersion();`) | `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` (unit) | Floor constant `FailSafe/extension/src/qorlogic/hostLayouts.ts:70` (`export const MIN_QOR_LOGIC_VERSION`) |
+| artifact-classification | verified-shipped | `readMetaLedgerArtifact` `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:199` (`export function readMetaLedgerArtifact(`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:299` (`readMetaLedgerEnvelope: () => readMetaLedgerArtifact(h.workspaceRoot)`) | `FailSafe/extension/src/test/qorlogic/consumer/consumer-adapter.test.ts` (unit) | Also read by the tracker route `FailSafe/extension/src/roadmap/routes/TrackerRoute.ts:73` (`const ledger = readMetaLedgerArtifact(workspaceRoot);`) |
 | compatibility-diagnostics | verified-shipped | `buildConsumerDiagnostics` `FailSafe/extension/src/qorlogic/consumer/diagnostics.ts:41` (`export function buildConsumerDiagnostics(`) | `FailSafe/extension/src/roadmap/services/WorkspaceArtifactBuilder.ts:108` (`qorConsumer: buildConsumerDiagnostics(this.workspaceRoot, {`) | `FailSafe/extension/src/test/qorlogic/consumer/consumer-diagnostics.test.ts` (unit) | Carried in the hub payload `FailSafe/extension/src/roadmap/services/hub-payload-assembler.ts:63` (`qorConsumer: input.artifacts.qorConsumer,`) |
 
 ## Inbound fields
@@ -58,8 +58,8 @@ Metadata: yes, pip itself contacts the configured Python package index for `qor-
 Graph relationships: no `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:7-8` (`envelopes are views`).
 Governance evidence: no; the adapter never writes the artifacts it classifies `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:7` (`the adapter never writes or repairs canonical`).
 Consent for the install: the bootstrap command asks before pip in interactive mode `FailSafe/extension/src/extension/bootstrapWorkspace.ts:95-103` (`Install now?`).
-Consent for the install: activation runs bootstrap in silent mode, which defers pip `FailSafe/extension/src/extension/bootstrapServers.ts:486` (`void runWorkspaceBootstrap(bootstrapDeps, "silent")`).
-Consent for the install: on main the Console scaffold route shows the validated hosts, scope and skills in a modal VS Code dialog and runs pip and `qor install` only after approval `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:99-113` (`const approved = await authorizeOperatorAction(`); as released in v6.0.8 it asked nothing (B274, fixed in #538).
+Consent for the install: activation runs bootstrap in silent mode, which defers pip `FailSafe/extension/src/extension/bootstrapServers.ts:507` (`void runWorkspaceBootstrap(bootstrapDeps, "silent")`).
+Consent for the install: on main the Console scaffold route shows the validated hosts, scope and skills in a modal VS Code dialog and runs pip and `qor install` only after approval `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:113-117` (`const approved = await authorizeOperatorAction(`); as released in v6.0.8 it asked nothing (B274, fixed in #538).
 
 ## Transformations
 
@@ -81,7 +81,7 @@ Proposed (not built): ledger-entry-to-receipt and plan-to-intent edges, specifie
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)" `FailSafe/extension/package.json:211-212` (`"title": "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)"`).
+Command palette: "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)" `FailSafe/extension/package.json:215-216` (`"title": "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)"`).
 Console: the Install Skills modal posts to the scaffold route, which probes Python, ensures the package and installs skills per host after you confirm in the VS Code dialog `FailSafe/extension/src/roadmap/ui/modules/install-skills-modal.js:230` (`settleGated(fetch('/api/actions/scaffold-skills', jsonPost(body)))`).
 The hub payload carries the consumer diagnostics; no Console renderer reads `qorConsumer` (unverified: searched `roadmap/ui` for `qorConsumer` at c36b9ee2).
 
@@ -114,5 +114,5 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. Th
 
 ## Open defects
 
-Fixed in #538: [B274] the scaffold route installed the package without a server-side VS Code confirmation and without a remote-request check (observed outside the LD3 list); it now runs the Console request guard, a rate limit and the dialog `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:99` (`app.post("/api/actions/scaffold-skills", consoleRequestGuard(`).
+Fixed in #538: [B274] the scaffold route installed the package without a server-side VS Code confirmation and without a remote-request check (observed outside the LD3 list); it now runs the Console request guard, a rate limit and the dialog `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:104` (`app.post("/api/actions/scaffold-skills", consoleRequestGuard(`).
 The web path reaches pip through `ensurePackageInstalled` `FailSafe/extension/src/extension/installSkillsHandler.ts:131-132` (`const pip = await runPipStep(ingestor, callbacks.onProgress);`).

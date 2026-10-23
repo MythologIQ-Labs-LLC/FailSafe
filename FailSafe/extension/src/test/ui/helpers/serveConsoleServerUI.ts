@@ -106,10 +106,27 @@ export interface ConsoleServerFixtures {
   ledgerManager?: unknown;
   /** #531: the fake qorelogicManager's L3 queue (default: a stub that records nothing). */
   queueL3Approval?: (request: Record<string, unknown>) => Promise<string>;
+  /** Lane D: the queue the L3 decision routes read (default: empty), and a recorder for their decisions. */
+  l3Queue?: unknown[];
+  onL3Decision?: (id: string, decision: string) => void;
+  /** Lane D: every request that reaches the server is appended here (method and path). */
+  requestLog?: Array<{ method: string; path: string }>;
+  /** Lane D2: every response the server finished sending is appended here (method, path, status). */
+  responseLog?: Array<{ method: string; path: string; status: number }>;
+  /** Lane D2: when given, the fake Sentinel is stopped (as after a Panic Stop) and its `start` calls this. */
+  onSentinelStart?: () => void;
+  /** Lane D2: when given, called for every hub chain verify and checkpoint record, before the real call. */
+  onVerifyChain?: () => void;
+  onCheckpoint?: (checkpointType: string) => void;
   /** #532 part B: the IntentService behind the delivery routes (default: none, so they answer 503). */
   intentService?: unknown;
   /** B312: the editor-open dependency (default: none, so architecture open answers 503). */
   openFileInEditor?: (filePath: string, startLine?: number) => Promise<void>;
+  /** Lane E: with no initialHub, send the server's real hub snapshot as the WebSocket
+   *  `init` payload, as production does (ConsoleLifecycleService.setupWebSocket), instead
+   *  of `{}`. Without it an `{}` init that lands after the page's `/api/hub` fetch replaces
+   *  the real hub in the page (the ordering seen on ubuntu-latest for PR #580). */
+  liveHubInit?: boolean;
 }
 
 export interface ConsoleServerController {
@@ -160,7 +177,8 @@ function buildFakeManagers(initialHub: HubFixture | null, fixtures: ConsoleServe
   };
   const qorelogicManager = {
     getLedgerManager: () => fixtures.ledgerManager ?? null,
-    getL3Queue: () => [],
+    getL3Queue: () => fixtures.l3Queue ?? [],
+    processL3Decision: async (id: string, decision: string) => { fixtures.onL3Decision?.(id, decision); },
     // #531: the architecture propose route queues through this.
     queueL3Approval: fixtures.queueL3Approval ?? (async () => "stub-l3"),
     getTrustEngine: () => ({ getAllAgents: async () => [] }),
@@ -170,9 +188,17 @@ function buildFakeManagers(initialHub: HubFixture | null, fixtures: ConsoleServe
       getUnresolvedEntries: () => [],
     }),
   };
-  const sentinelDaemon = {
-    getStatus: () => ({ running: false, queueDepth: 0 }),
-  };
+  let running = false;
+  const onStart = fixtures.onSentinelStart;
+  const sentinelDaemon = onStart
+    ? {
+      getStatus: () => ({ running, queueDepth: 0 }),
+      isRunning: () => running,
+      start: async () => { onStart(); running = true; },
+      stop: () => { running = false; },
+      getRecentObservationIds: () => [], // read by the hub when it records a checkpoint
+    }
+    : { getStatus: () => ({ running: false, queueDepth: 0 }) };
   return { planManager, qorelogicManager, sentinelDaemon, hubRef };
 }
 
@@ -204,20 +230,44 @@ function applyPrivateCast(
   });
 }
 
+/** Lane D2: count hub chain verifies and checkpoint records before calling through, so a throwing real call still counts. */
+function spyOnHub(server: ConsoleServer, fixtures: ConsoleServerFixtures): void {
+  const hub = (server as unknown as {
+    hub: { verifyCheckpointChain: () => boolean; recordCheckpoint: (input: { checkpointType: string }) => void };
+  }).hub;
+  const { onVerifyChain, onCheckpoint } = fixtures;
+  if (onVerifyChain) {
+    const verify = hub.verifyCheckpointChain.bind(hub);
+    hub.verifyCheckpointChain = () => { onVerifyChain(); return verify(); };
+  }
+  if (onCheckpoint) {
+    const record = hub.recordCheckpoint.bind(hub);
+    hub.recordCheckpoint = (input) => { onCheckpoint(input.checkpointType); record(input); };
+  }
+}
+
 function attachWebSocket(
   server: ConsoleServer,
   harness: http.Server,
   sockets: Set<WebSocket>,
   hubRef?: { current: HubFixture | null },
+  liveHubInit = false,
 ): void {
   const wsm = (server as unknown as { wsManager: WebSocketManager }).wsManager;
+  const liveHub = (server as unknown as { hub: { buildHubSnapshot(): Promise<Record<string, unknown>> } }).hub;
   wsm.setup(harness, (ws) => {
     sockets.add(ws);
-    const initPayload = { type: "init", payload: hubRef?.current ?? {} };
-    try {
-      ws.send(JSON.stringify(initPayload));
-    } catch {
-      /* socket may already be closing — safe to ignore in fixture */
+    const send = (payload: unknown) => {
+      try {
+        ws.send(JSON.stringify({ type: "init", payload }));
+      } catch {
+        /* socket may already be closing — safe to ignore in fixture */
+      }
+    };
+    if (liveHubInit && !hubRef?.current) {
+      liveHub.buildHubSnapshot().then(send, () => send({}));
+    } else {
+      send(hubRef?.current ?? {});
     }
     ws.on("close", () => sockets.delete(ws));
   });
@@ -306,6 +356,7 @@ export async function serveConsoleServerUI(
     { workspaceRoot },
   );
   applyPrivateCast(server, checkpointRef);
+  spyOnHub(server, fixtures);
 
   if (fixtures.bicameralClient) {
     server.setBicameralClient(fixtures.bicameralClient);
@@ -344,6 +395,12 @@ export async function serveConsoleServerUI(
   // position 0 so it runs FIRST on every request. Per-request read of
   // hubRef.current means controller.setHub() updates surface on next fetch.
   app.use((req, res, next) => {
+    fixtures.requestLog?.push({ method: req.method, path: req.path });
+    const responseLog = fixtures.responseLog;
+    if (responseLog) {
+      const { method, path: reqPath } = req;
+      res.on("finish", () => { responseLog.push({ method, path: reqPath, status: res.statusCode }); });
+    }
     if (req.method === 'GET' && (req.originalUrl === '/api/hub' || req.path === '/api/hub') && fakes.hubRef.current) {
       res.json(fakes.hubRef.current);
       return;
@@ -360,7 +417,7 @@ export async function serveConsoleServerUI(
   }
   const harness = http.createServer(app);
   const sockets = new Set<WebSocket>();
-  attachWebSocket(server, harness, sockets, fakes.hubRef);
+  attachWebSocket(server, harness, sockets, fakes.hubRef, fixtures.liveHubInit === true);
 
   const url = await listenAndResolveUrl(harness);
   return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });

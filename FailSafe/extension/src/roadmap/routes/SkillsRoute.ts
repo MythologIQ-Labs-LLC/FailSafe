@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { RouteDeps } from './index';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 import { renderEmptyState } from '../../genesis/EmptyStates';
 
 export const SkillsRoute = {
@@ -11,7 +12,7 @@ export const SkillsRoute = {
     }
 
     const rows = (skills as Array<{ name: string; version?: string }>).map(s =>
-      `<tr><td>${s.name}</td><td>${s.version ?? '-'}</td></tr>`
+      `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.version ?? '-')}</td></tr>`
     ).join('');
 
     res.send(`<!DOCTYPE html><html><head><title>Skills</title></head><body>

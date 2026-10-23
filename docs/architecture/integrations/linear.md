@@ -31,7 +31,7 @@ The code posts one GraphQL query to the fixed endpoint `FailSafe/extension/src/i
 ## Privileges and scopes
 
 Credential: a Linear API key in VS Code Secret Storage, sent as the Authorization header `FailSafe/extension/src/integrations/linear/linear-client.ts:72` (`{ 'Content-Type': 'application/json', Authorization: apiKey }`).
-The plain-text setting is deprecated and not read `FailSafe/extension/package.json:425-427` (`Plain-text settings are no longer read.`).
+The plain-text setting is deprecated and not read `FailSafe/extension/package.json:446-448` (`Plain-text settings are no longer read.`).
 Scope: the key carries its owner's Linear permissions; FailSafe sends only a read query `FailSafe/extension/src/integrations/linear/linear-import.ts:39-42` (`query FailSafeIssue($id: String!) { issue(id: $id) {`).
 The endpoint is not configurable from settings: the command never passes one `FailSafe/extension/src/extension/linear-command.ts:48` (`fetchLinearIssue(issue, apiKey, deps.post)`).
 Any webhook, sync or write-back capability would need write scopes and is marked requires separate approval (unverified: none is implemented).
@@ -40,7 +40,7 @@ Any webhook, sync or write-back capability would need write scopes and is marked
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| issue-preview | verified-shipped | `fetchLinearIssue` `FailSafe/extension/src/integrations/linear/linear-client.ts:58` (`export async function fetchLinearIssue(`) | `FailSafe/extension/src/extension/main.ts:261` (`registerLinearImportCommand(context, credentials.creds)`) | `FailSafe/extension/src/test/integrations/linear/linear.test.ts` (unit) | Command `FailSafe/extension/package.json:156` (`"command": "failsafe.linear.import"`) |
+| issue-preview | verified-shipped | `fetchLinearIssue` `FailSafe/extension/src/integrations/linear/linear-client.ts:58` (`export async function fetchLinearIssue(`) | `FailSafe/extension/src/extension/main.ts:262` (`registerLinearImportCommand(context, credentials.creds)`) | `FailSafe/extension/src/test/integrations/linear/linear.test.ts` (unit) | Command `FailSafe/extension/package.json:159` (`"command": "failsafe.linear.import"`) |
 | intent-draft | verified-shipped | `reviewAndImport` `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:208` (`export async function reviewAndImport(`) | `FailSafe/extension/src/extension/linear-command.ts:77` (`review: (issue) => reviewTrackerIssue(issue, vscodeReviewUi())`) | `FailSafe/extension/src/test/integrations/tracker-import/tracker-import.extensionHost.test.ts` (installed-vscode) | Drafts need governance to install the intent deps first `FailSafe/extension/src/extension/integrationEvidenceWiring.ts:85` (`setTrackerIntentDeps({`) |
 | rate-limit-awareness | shipped-inert | `readRateLimit` `FailSafe/extension/src/integrations/linear/linear-client.ts:41` (`export function readRateLimit(`) | none | none | Absent call site: the parsed headers are returned in the result but no caller reads `rateLimit` `FailSafe/extension/src/extension/linear-command.ts:48-49` (`recordIntegrationHealth('linear', ...healthFromLinearFetch(result));`) |
 | backlog-sync | proposed | none | none | none | Not implemented; nothing is synced `FailSafe/extension/src/extension/linear-command.ts:6` (`nothing is written to Linear and nothing is synced`) |
@@ -81,12 +81,12 @@ The preview is an unsaved, untitled document `FailSafe/extension/src/extension/t
 
 Implemented: the intent's externalRef is `linear:<IDENTIFIER>`, which links a draft to its issue `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:78-79` (`export function externalRefFor(issue: TrackerIssue)`).
 Implemented: a re-import of an identifier whose earlier intent is sealed records `reimportOf` `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:290` (`reimportOf: last.intentId`).
-Delivery (main only, not in v6.0.8): in Workspace > Delivery the issue step of an imported Linear intent is `recorded` from the content hash in its CREATED entry, never re-fetched `FailSafe/extension/src/governance/delivery/deliveryAssessment.ts:126` (`function issueStep(issue: DeliveryInputs['issue']): DeliveryStep {`), and the operator links the architecture documents and commits it delivered, each after a VS Code confirmation `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:146` (`for (const action of ["link", "unlink"] as const) {`).
+Delivery (main only, not in v6.0.8): in Workspace > Delivery the issue step of an imported Linear intent is `recorded` from the content hash in its CREATED entry, never re-fetched `FailSafe/extension/src/governance/delivery/deliveryAssessment.ts:126` (`function issueStep(issue: DeliveryInputs['issue']): DeliveryStep {`), and the operator links the architecture documents and commits it delivered, each after a VS Code confirmation `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:150` (`for (const action of ["link", "unlink"] as const) {`).
 Proposed (not built): the issue-to-receipt edge, specified in `docs/architecture/INTEGRATION_SCENARIOS.md` (unverified: no code exists).
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Import Linear Issue as Intent Draft" `FailSafe/extension/package.json:156-157` (`"title": "FailSafe: Import Linear Issue as Intent Draft"`).
+Command palette: "FailSafe: Import Linear Issue as Intent Draft" `FailSafe/extension/package.json:160-161` (`"title": "FailSafe: Import Linear Issue as Intent Draft"`).
 Input: an issue URL or identifier in an input box `FailSafe/extension/src/extension/linear-command.ts:69` (`Paste a Linear issue URL or identifier (e.g. ENG-123)`).
 Approval: a modal "Create intent draft" button, then an editable purpose, then a plan picker in enforce mode `FailSafe/extension/src/extension/trackerReviewUi.ts:32-33` (`{ modal: true, detail }, APPROVE`).
 Status: a Console Integrations catalog card, read from `/api/v1/integrations/catalog` `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).

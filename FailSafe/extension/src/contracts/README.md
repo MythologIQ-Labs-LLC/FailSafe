@@ -36,6 +36,7 @@ v1.0 of each schema ships in this cycle. Future schema changes get a `$schema-ve
 | Schema | From | To | Change | Effect on an older validator |
 |---|---|---|---|---|
 | `ledger_entry.json` | 1.0 | 1.1 | `eventType` adds `DELIVERY_REVIEWED` (#532 B320/B321: an operator-confirmed delivery review) | a 1.0 validator rejects `DELIVERY_REVIEWED` rows; every other row validates unchanged |
+| `ledger_entry.json` | 1.1 | 1.2 | `eventType` adds `INTENT_DECIDED` (B340: an operator-confirmed PASS, VETO or SEALED on the active intent) | a 1.1 validator rejects `INTENT_DECIDED` rows; every other row validates unchanged |
 
 ## Origin
 

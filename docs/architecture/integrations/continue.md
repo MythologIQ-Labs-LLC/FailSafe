@@ -31,7 +31,7 @@ The wrapper uses `cn -p <prompt>` and repeated `--allow <tool>` `FailSafe/extens
 
 Credential: an optional Continue API key from VS Code Secret Storage; with none, Continue's own login is used `FailSafe/extension/src/extension/agent-cli-command.ts:149-152` (`No key at all is fine (Continue may use its own login)`).
 The key is placed only in the child environment as `CONTINUE_API_KEY`, never in argv or the receipt `FailSafe/extension/src/integrations/agent-cli/continue-wrapper.ts:86-87` (`API key in the child ENV only (never argv/receipt).`).
-The plain-text key setting is deprecated and not read `FailSafe/extension/package.json:532-534` (`Plain-text settings are no longer read`).
+The plain-text key setting is deprecated and not read `FailSafe/extension/package.json:542-544` (`Plain-text settings are no longer read`).
 Process privileges: the child inherits the extension host's environment and user account `FailSafe/extension/src/extension/agent-cli-command.ts:157` (`baseEnv: process.env`).
 Tool scope: whatever `failsafe.integrations.continue.allow` grants, except shell or exec tools, which are refused `FailSafe/extension/src/integrations/agent-cli/continue-wrapper.ts:82-83` (`the allowlist grants shell/exec tools`).
 Executable: only an absolute PATH entry outside the workspace; on Windows only `.exe` or `.com` `FailSafe/extension/src/integrations/agent-cli/agent-cli-core.ts:84-86` (`for (const file of win ? [`).
@@ -42,7 +42,7 @@ A process sandbox, or any OS-level confinement of the agent, would need new priv
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
 | isolated-run | verified-shipped | `runContinueGoverned` `FailSafe/extension/src/integrations/agent-cli/continue-wrapper.ts:73` (`export async function runContinueGoverned(`) | `FailSafe/extension/src/extension/agent-cli-command.ts:146` (`registerCommand('failsafe.continue.run'`) | `FailSafe/extension/src/test/integrations/agent-cli/agent-cli.test.ts` (unit) | The test uses a scripted agent runner and a real temporary git repository `FailSafe/extension/src/test/integrations/agent-cli/agent-cli.test.ts:88-89` (`spawn cwd is a disposable worktree, never the workspace`) |
-| quarantine-review | verified-shipped | `handleOutcome` `FailSafe/extension/src/extension/agent-cli-command.ts:109` (`export async function handleOutcome(`) | `FailSafe/extension/src/extension/main.ts:275` (`registerAgentCliCommands(context, {`) | `FailSafe/extension/src/test/extension/agent-cli-command.test.cjs` (unit) | Discard, Review diff or Apply in one modal `FailSafe/extension/src/extension/agent-cli-command.ts:75` (`'Discard', 'Review diff', 'Apply'`) |
+| quarantine-review | verified-shipped | `handleOutcome` `FailSafe/extension/src/extension/agent-cli-command.ts:109` (`export async function handleOutcome(`) | `FailSafe/extension/src/extension/main.ts:276` (`registerAgentCliCommands(context, {`) | `FailSafe/extension/src/test/extension/agent-cli-command.test.cjs` (unit) | Discard, Review diff or Apply in one modal `FailSafe/extension/src/extension/agent-cli-command.ts:75` (`'Discard', 'Review diff', 'Apply'`) |
 | apply-reviewed-change-set | verified-shipped | `applyQuarantined` `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:74` (`export async function applyQuarantined(`) | `FailSafe/extension/src/extension/agent-cli-command.ts:94` (`await (deps.apply ?? applyQuarantined)(cs)`) | `FailSafe/extension/src/test/integrations/agent-cli/agent-run-promotion.test.ts` (unit) | Shared with aider |
 | l3-approval-for-high-risk-runs | proposed | none | none | none | The risk grade is shown in the Apply modal but no L3 approval is queued `FailSafe/extension/src/extension/agent-cli-command.ts:74` (`risk ${risk ?? 'L1'}) are held in quarantine`) |
 | json-output-evidence | proposed | none | none | none | The argv carries no `--format json`; stdout is kept as text (unverified beyond `buildContinueArgs`) |
@@ -74,8 +74,8 @@ A receipt is built from argv, status, risk, exit code and diff summary, never th
 ## Persisted artifacts
 
 A QUARANTINE_START and a QUARANTINE_END entry in the FailSafe ledger, carrying the receipt, risk grade and patch hash `FailSafe/extension/src/extension/agent-cli-command.ts:84-86` (`artifactHash: cs.patchSha256`).
-The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:162` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
-A write-only audit copy (`change-set.patch` and `record.json`) under the extension's global storage `agent-runs` folder `FailSafe/extension/src/extension/main.ts:278` (`auditDir: path.join(context.globalStorageUri.fsPath, "agent-runs")`).
+The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:168` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
+A write-only audit copy (`change-set.patch` and `record.json`) under the extension's global storage `agent-runs` folder `FailSafe/extension/src/extension/main.ts:280` (`auditDir: path.join(context.globalStorageUri.fsPath, "agent-runs")`).
 Only the newest 20 audit copies are kept `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:41` (`export const AUDIT_RETENTION = 20;`).
 The audit copy is never read back for review or apply `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:13` (`The audit copy on disk is write-only`).
 Health evidence of the last run in VS Code workspace state `FailSafe/extension/src/integrations/catalog/integration-health.ts:51` (`export const HEALTH_STATE_KEY = 'failsafe.integrationHealth.v1';`).
@@ -89,7 +89,7 @@ Proposed (not built): run-to-intent and run-to-receipt edges in the relationship
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Run Continue (governed)" `FailSafe/extension/package.json:191-192` (`"title": "FailSafe: Run Continue (governed)"`).
+Command palette: "FailSafe: Run Continue (governed)" `FailSafe/extension/package.json:195-196` (`"title": "FailSafe: Run Continue (governed)"`).
 Progress: a notification while the run is in progress `FailSafe/extension/src/extension/agent-cli-command.ts:155` (`Running Continue in an isolated worktree`).
 Decision: a modal with Discard, Review diff and Apply, stating the isolation boundary `FailSafe/extension/src/extension/agent-cli-command.ts:74-75` (`detail: BOUNDARY_NOTE`).
 Review: a read-only diff document served from memory `FailSafe/extension/src/extension/agent-cli-command.ts:66-69` (`setTextDocumentLanguage(doc, 'diff')`).

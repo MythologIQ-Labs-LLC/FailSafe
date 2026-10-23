@@ -60,8 +60,12 @@ function createArchitectureWorkspace() {
 
 const architectureWorkspace = createArchitectureWorkspace();
 // Junction-safe removal when the CLI exits; cleanup must never change the exit code.
+// B397: both profile folders above are this process's own mkdtemp folders and are removed
+// too (a file still held by a lingering host process leaves one behind, best-effort).
 process.on('exit', () => {
   try { removeTempTree(architectureWorkspace); } catch { /* best-effort */ }
+  try { removeTempTree(isolatedUserDataDir); } catch { /* best-effort */ }
+  try { removeTempTree(architectureUserDataDir); } catch { /* best-effort */ }
 });
 
 // @vscode/test-cli ignores --extensionTestsPath when this config exists, so

@@ -55,6 +55,8 @@ suite('FailSafeChatParticipant (FX054-FX059)', () => {
     intentService = {
       activeIntent: null,
       getActiveIntent: async () => intentService.activeIntent,
+      // B340: displays read the effective status (here the same object).
+      getEnforcedActiveIntent: async () => intentService.activeIntent,
       sealIntent: async () => undefined,
     };
     sentinel = {
@@ -187,17 +189,24 @@ suite('FailSafeChatParticipant (FX054-FX059)', () => {
     assert.match(all, /No active intent to seal/);
   });
 
-  test('FX059 /seal — non-PASS status refuses to seal', async () => {
+  // B340 (plan-b340 LD6): /seal no longer seals. Sealing needs a confirmed modal, so the
+  // participant offers the seal command (failsafe.intent.seal) for any active intent and the
+  // command checks the effective status itself.
+  test('FX059 /seal — a non-PASS intent is offered the seal command, never sealed', async () => {
+    let sealed = 0;
     intentService.activeIntent = { purpose: 'X', status: 'PULSE', scope: { riskGrade: 'L1', files: [] } };
+    intentService.sealIntent = async () => { sealed++; };
     const stream = makeStream();
     await (participant as unknown as { handleRequest: any }).handleRequest(
       mkRequest('seal'), FAKE_CTX, stream, FAKE_TOK,
     );
-    const all = (stream as unknown as CapturedStream).markdownChunks.join('');
-    assert.match(all, /Cannot seal.*PULSE/);
+    const captured = stream as unknown as CapturedStream;
+    assert.equal(sealed, 0);
+    assert.match(captured.markdownChunks.join(''), /PULSE/);
+    assert.ok(captured.buttons.some((b) => b.command === 'failsafe.intent.seal'));
   });
 
-  test('FX059 /seal — PASS status calls sealIntent + reports archived', async () => {
+  test('FX059 /seal — a PASS intent is offered the seal command and sealIntent is not called', async () => {
     let sealActor: string | undefined;
     intentService.activeIntent = { purpose: 'Done refactor', status: 'PASS', scope: { riskGrade: 'L1', files: [] } };
     intentService.sealIntent = async (actor: string) => { sealActor = actor; };
@@ -205,9 +214,10 @@ suite('FailSafeChatParticipant (FX054-FX059)', () => {
     await (participant as unknown as { handleRequest: any }).handleRequest(
       mkRequest('seal'), FAKE_CTX, stream, FAKE_TOK,
     );
-    const all = shown(stream as unknown as CapturedStream);
-    assert.equal(sealActor, 'chat-participant');
-    assert.match(all, /Intent Sealed.*Done refactor/);
+    const captured = stream as unknown as CapturedStream;
+    assert.equal(sealActor, undefined, 'the participant never seals');
+    assert.match(shown(captured), /Done refactor/);
+    assert.ok(captured.buttons.some((b) => b.command === 'failsafe.intent.seal'));
   });
 
   test('FX054 default (unknown command) — renders help with command list', async () => {

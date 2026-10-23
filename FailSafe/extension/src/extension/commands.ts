@@ -258,6 +258,7 @@ export function registerCommands(
         `Sentinel: ${status.running ? "Active" : "Stopped"} (${status.mode}) | ` +
           `Files: ${status.filesWatched} | Queue: ${status.queueDepth}`,
       );
+      return status;
     }),
   );
 
@@ -623,7 +624,8 @@ export function registerGovernanceCommands(
   // Show Menu / Status
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.showMenu", async () => {
-      const active = await intentService.getActiveIntent();
+      // B340: in enforce mode the menu shows the effective status, never the file's.
+      const active = await intentService.getEnforcedActiveIntent();
       if (!active) {
         const choice = await vscode.window.showInformationMessage(
           "FailSafe: No Active Intent. Writes are BLOCKED.",
@@ -640,25 +642,16 @@ export function registerGovernanceCommands(
 
       const choice = await vscode.window.showInformationMessage(
         `Active Intent: ${active.purpose} [${active.status}]`,
+        "Approve or Veto",
         "Seal Intent",
       );
 
-      if (choice === "Seal Intent") {
-        if (active.status !== "PASS") {
-          vscode.window.showErrorMessage(
-            "Only Intents with PASS status can be SEALED.",
-          );
-          return;
-        }
-        try {
-          await intentService.sealIntent("user");
-          vscode.window.showInformationMessage(
-            `Intent "${active.purpose}" SEALED and Archived.`,
-          );
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          vscode.window.showErrorMessage(`Failed to seal intent: ${message}`);
-        }
+      // B340 (plan-b340 LD6): both go through their confirmed commands; the seal command checks
+      // the effective status itself and refuses without a dialog when the intent is not approved.
+      if (choice === "Approve or Veto") {
+        await vscode.commands.executeCommand("failsafe.intent.decide");
+      } else if (choice === "Seal Intent") {
+        await vscode.commands.executeCommand("failsafe.intent.seal");
       }
     }),
   );

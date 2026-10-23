@@ -62,7 +62,8 @@ async function readJson<T>(store: ISecretStore, key: string, ms: number): Promis
     return raw === undefined || raw === null ? null : JSON.parse(raw) as T;
 }
 
-const LIVE: readonly AnchorStatus[] = ['verified', 'established-now', 'established-late'];
+/** The anchor statuses under which a head record protects the ledger (B340 reads them too). */
+export const LIVE: readonly AnchorStatus[] = ['verified', 'established-now', 'established-late'];
 
 /**
  * LD11 proof of a stored record against the database: same genesis (and the

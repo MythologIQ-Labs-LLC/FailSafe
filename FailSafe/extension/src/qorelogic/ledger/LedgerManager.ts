@@ -49,6 +49,12 @@ export interface SealedLedgerRow {
     seal: { version: SealVersion | null; ok: boolean; code: FailureCode | null };
 }
 
+/** B340: one verification report and the rows it covered (LedgerManager.verifiedSnapshot). */
+export interface LedgerSnapshot {
+    report: LedgerVerification;
+    rows: SealedLedgerRow[];
+}
+
 /** #532 B320: the table's first row is a verified rotation genesis (LedgerWriter.rotationEvidence). */
 export interface RotationHead {
     genesisId: number;
@@ -418,13 +424,29 @@ export class LedgerManager {
 
     /** Full report against freshly re-read anchor records (#473 LD8). */
     async verifyLedger(timeoutMs: number = STORE_TIMEOUT_MS): Promise<LedgerVerification> {
+        return (await this.verifiedSnapshot(timeoutMs)).report;
+    }
+
+    /**
+     * B340 (plan-b340 LD3): the verification report together with exactly the rows it verified,
+     * each with its own seal result, from one `readAllRows` pass. Callers that decide from rows
+     * (the intent decision) filter this snapshot in memory, so an index or a WHERE query can never
+     * show them a different set of rows than the one the report covers.
+     */
+    async verifiedSnapshot(timeoutMs: number = STORE_TIMEOUT_MS): Promise<LedgerSnapshot> {
         if (!this.db || !this.anchor) {
             const empty = verifyRows([], this.cachedSecret);
-            return { ...empty, ok: false, sealScope: 'none', failures: [{ id: null, code: 'no-database', detail: 'Ledger DB not initialized' }] };
+            return {
+                report: { ...empty, ok: false, sealScope: 'none', failures: [{ id: null, code: 'no-database', detail: 'Ledger DB not initialized' }] },
+                rows: [],
+            };
         }
         await this.anchor.flush(timeoutMs);
         const context = await this.anchor.reload();
-        return verifyRows(readAllRows(this.db), this.cachedSecret, context);
+        const raw = readAllRows(this.db);
+        const report = verifyRows(raw, this.cachedSecret, context);
+        const secret = this.cachedSecret;
+        return { report, rows: secret ? raw.map((row) => sealedRow(row, secret)) : [] };
     }
 
     async verifyEntry(entryId: number): Promise<EntryVerification> {

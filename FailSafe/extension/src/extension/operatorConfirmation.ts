@@ -17,6 +17,8 @@ import { randomUUID } from "crypto";
 import type { Response } from "express";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 import type { RollbackPlan } from "../governance/revert/types";
+import type { ReworkEntry } from "../governance/types/IntentTypes";
+import { isBookkeepingPath } from "../governance/delivery/reworkBookkeeping";
 
 export interface OperatorActionRequest {
   title: string;
@@ -60,9 +62,17 @@ export function sanitizeDialogText(value: unknown, limit = FIELD_LIMIT): string 
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
+/** B381: the live open state of each confirmer built here, read through an accessor. */
+const OPEN_STATE = new WeakMap<ConfirmOperatorAction, () => boolean>();
+
+/** True while a confirmer built by createOperatorConfirmer has its dialog open; false for any other. */
+export function isConfirmationOpen(confirm: ConfirmOperatorAction | undefined): boolean {
+  return confirm ? OPEN_STATE.get(confirm)?.() === true : false;
+}
+
 export function createOperatorConfirmer(window: ConfirmationWindow): ConfirmOperatorAction {
   let open = false;
-  return async (request) => {
+  const confirm: ConfirmOperatorAction = async (request) => {
     if (open) return "busy";
     open = true;
     try {
@@ -78,6 +88,8 @@ export function createOperatorConfirmer(window: ConfirmationWindow): ConfirmOper
       open = false;
     }
   };
+  OPEN_STATE.set(confirm, () => open);
+  return confirm;
 }
 
 export function withFooter(lines: string[]): string {
@@ -443,6 +455,137 @@ export interface DeliveryReviewFacts {
   superseded: DeliveryReviewSuperseded[];
   note: string;
   reviewerDid: string;
+  /** #532 B344: VETOs superseded by a declared, verified rework. */
+  reworks?: ReworkEntry[];
+}
+
+/** U+FFFD, what a byte sequence that is not UTF-8 decodes to. */
+const REPLACEMENT_CHAR = String.fromCodePoint(0xfffd);
+/**
+ * Every control, format, unassigned or private-use code point (\p{C}), every space separator
+ * (\p{Zs}; U+0020 is kept inside a path), line and paragraph separator, every default-ignorable code
+ * point (variation selectors, joiners, fillers), the fillers U+3164, U+FFA0 and U+2800 that render
+ * blank, U+FFFD and backslash.
+ */
+const PATH_ESCAPES = new RegExp(`[\\p{C}\\p{Zs}\\p{Zl}\\p{Zp}\\p{Default_Ignorable_Code_Point}\\u{3164}\\u{FFA0}\\u{2800}\\\\${REPLACEMENT_CHAR}]`, "gu");
+
+/**
+ * #532 B344 (plan-b344 LD5, review folds): a path exactly as git names it, with nothing cut or
+ * collapsed. Each code point that could reshape, hide or pass for blank space in the dialog is
+ * written as \u{XXXX}: controls, format characters, separators, default-ignorable code points,
+ * blank fillers, U+FFFD, every space other than U+0020 (U+00A0 looks like U+0020) and a U+0020 at
+ * either end of the path (it would not be seen). A backslash is written as \\, so every backslash
+ * shown is half of "\\" or starts "\u{". The escaping is injective: two different code point
+ * sequences never show the same text. It does not normalize or judge look-alikes: a name in NFC and
+ * the same name in NFD, or a Cyrillic letter beside the Latin one it resembles, show different text
+ * that can look alike (out of scope, B385). sanitizeDialogText is never used for paths.
+ */
+export function escapeDialogPath(path: string): string {
+  return path.replace(PATH_ESCAPES, (ch: string, at: number) =>
+    ch === "\\" ? "\\\\"
+      : ch === " " && at > 0 && at < path.length - 1 ? " "
+        : `\\u{${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}}`);
+}
+
+/**
+ * #532 B344 D4 fold: the longest run of a shown path on one dialog line. The owner ruling allows at
+ * most 64; 40 because the native dialog cuts a run of 48 wide capitals (M, W) and shows 44.
+ */
+export const REWORK_PATH_CHUNK = 40;
+/**
+ * Starts each continuation line of a shown path. In escaped text every backslash is half of "\\" or
+ * starts "\u{", so "\>" after a space or at a line start is only ever this marker.
+ */
+export const REWORK_CONTINUATION = "\\>";
+/** One escaped unit: "\\", a "\u{...}" escape or a single code point, never split across chunks. */
+const ESCAPED_UNIT = /\\\\|\\u\{[0-9A-F]+\}|[\s\S]/gu;
+/** A U+0020 as the escape escapeDialogPath writes for one at a path's edge. */
+const SPACE_ESCAPE = "\\u{0020}";
+
+/**
+ * #532 B344 D4 fold (owner ruling 2026-10-21): the native dialog wraps only at spaces and cuts a
+ * longer unbroken run with an ellipsis, so an escaped path is split into chunks of at most
+ * REWORK_PATH_CHUNK characters, after the last '/' that fits when the rest does not, otherwise at the
+ * limit, and never inside an escape. A U+0020 at a line's edge would not be seen, so a break is
+ * moved back off a U+0020 when it can be; when it cannot (a run of spaces leaves no clean break),
+ * the chunk shows each U+0020 at its start or end as \u{0020}, counted in its length. A shown chunk
+ * therefore never starts or ends with a U+0020, and every chunk decodes to its part of the path.
+ */
+export function chunkDialogPath(escaped: string): string[] {
+  const units = escaped.match(ESCAPED_UNIT) ?? [];
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < units.length) {
+    let j = i;
+    let length = 0;
+    let lastSlash = -1;
+    while (j < units.length && length + units[j].length <= REWORK_PATH_CHUNK) {
+      length += units[j].length;
+      if (units[j] === "/") lastSlash = j;
+      j++;
+    }
+    if (j < units.length && lastSlash >= i) j = lastSlash + 1;
+    let k = j;
+    while (k < units.length && k > i + 1 && (units[k - 1] === " " || units[k] === " ")) k--;
+    if (!(k < units.length && (units[k - 1] === " " || units[k] === " "))) j = k;
+    // Edge spaces shown as \u{0020} are longer; shorten the chunk until it fits again.
+    while (j > i + 1 && shownChunk(units.slice(i, j)).length > REWORK_PATH_CHUNK) j--;
+    chunks.push(shownChunk(units.slice(i, j)));
+    i = j;
+  }
+  return chunks.length ? chunks : [""];
+}
+
+/** The units of one chunk, with each U+0020 at its start or end written as \u{0020}. */
+function shownChunk(units: string[]): string {
+  let a = 0;
+  let b = units.length;
+  while (a < b && units[a] === " ") a++;
+  while (b > a && units[b - 1] === " ") b--;
+  return SPACE_ESCAPE.repeat(a) + units.slice(a, b).join("") + SPACE_ESCAPE.repeat(units.length - b);
+}
+
+/** A path line ("    <status> <chunk>") and one continuation line per further chunk. */
+function pathLines(status: string, path: string): string[] {
+  const [first, ...rest] = chunkDialogPath(escapeDialogPath(path));
+  return [`    ${status} ${first}`, ...rest.map((c) => `      ${REWORK_CONTINUATION} ${c}`)];
+}
+
+/**
+ * #532 B344 (plan-b344 LD5): the "Superseded by rework" section of a review dialog, shown before the
+ * supersedes list and never truncated (buildReviewPlan refuses one over REWORK_DIALOG_LIMIT, counted
+ * with the chunked paths). Empty when there is no declared rework.
+ */
+export function reworkSectionLines(reworks: ReworkEntry[]): string[] {
+  if (!reworks.length) return [];
+  const lines = [`Superseded by rework (${reworks.length}): each declared rework has an identical diff (rebased), or the same parent and more than half of the vetoed commit's non-bookkeeping paths, with at least half of its own among them (amended); bookkeeping files are listed but not counted (a line starting ${REWORK_CONTINUATION} continues the path above it):`];
+  for (const r of reworks) {
+    const e = r.evidence;
+    lines.push(
+      `- VETO #${r.vetoEntryId} ${sanitizeDialogText(r.vetoEntryHash, 70)} on ${r.vetoCommit}, superseded by rework ${r.reworkCommit} (${r.relation})`,
+      `  Parents: vetoed ${e.vetoParent}, rework ${e.reworkParent}`,
+      `  Diff ids: vetoed ${e.vetoDiffId ?? "none"}, rework ${e.reworkDiffId ?? "none"}`,
+      `  Paths: the vetoed commit changes ${e.vetoPathCount}, the rework changes ${e.reworkPathCount}`,
+    );
+    if (r.relation === "amended") {
+      const counted = (p: { path: string }): boolean => !isBookkeepingPath(p.path);
+      const shared = e.shared.filter(counted);
+      const onlyInVeto = e.onlyInVeto.filter(counted);
+      const onlyInRework = e.onlyInRework.filter(counted);
+      const bookkeeping = [
+        ...e.shared.filter((p) => !counted(p)).map((p) => ({ status: `${p.vetoStatus}/${p.reworkStatus}`, path: p.path })),
+        ...e.onlyInVeto.filter((p) => !counted(p)).map((p) => ({ status: `${p.status}/-`, path: p.path })),
+        ...e.onlyInRework.filter((p) => !counted(p)).map((p) => ({ status: `-/${p.status}`, path: p.path })),
+      ].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+      lines.push(`  Shared (${shared.length}), status in the vetoed commit/the rework:`, ...shared.flatMap((p) => pathLines(`${p.vetoStatus}/${p.reworkStatus}`, p.path)));
+      lines.push(`  Only in the vetoed commit (${onlyInVeto.length}):`, ...onlyInVeto.flatMap((p) => pathLines(p.status, p.path)));
+      lines.push(`  Only in the rework (${onlyInRework.length}):`, ...onlyInRework.flatMap((p) => pathLines(p.status, p.path)));
+      if (bookkeeping.length) {
+        lines.push(`  Bookkeeping files, not counted (${bookkeeping.length}), status in the vetoed commit/the rework (- where unchanged):`, ...bookkeeping.flatMap((p) => pathLines(p.status, p.path)));
+      }
+    }
+  }
+  return lines;
 }
 
 /**
@@ -474,12 +617,16 @@ export function deliveryReviewRequest(
     lines.push(`Covers every linked commit (${facts.linked.length}):`, ...covered);
   }
   lines.push(`Governance evidence: ${facts.binding.evidenceCount} ledger entr${facts.binding.evidenceCount === 1 ? "y" : "ies"}, digest ${facts.binding.evidenceDigest}`);
+  const reworks = facts.reworks ?? [];
+  if (reworks.length) lines.push("", ...reworkSectionLines(reworks));
   if (facts.superseded.length) {
     lines.push("", `Supersedes (${facts.superseded.length}); this PASS clears exactly these and nothing else:`);
     for (const s of facts.superseded.slice(0, BATCH_LIST_LIMIT)) {
+      const rework = s.kind === "veto" ? reworks.find((r) => r.vetoEntryId === s.id) : undefined;
       const commit = !s.commitSha ? "commit unknown"
-        : s.commitTrusted ? `on ${s.commitSha} (${s.commitSha === facts.commit.sha ? "the reviewed commit" : "an ancestor of the reviewed commit"})`
-          : `commit ${s.commitSha} (recorded, unverified)`;
+        : rework ? `on ${s.commitSha}, superseded by rework ${rework.reworkCommit} (see above)`
+          : s.commitTrusted ? `on ${s.commitSha} (${s.commitSha === facts.commit.sha ? "the reviewed commit" : "an ancestor of the reviewed commit"})`
+            : `commit ${s.commitSha} (recorded, unverified)`;
       const what = s.kind === "veto" ? "VETO" : "unverifiable record";
       lines.push(`- ${what}, ${s.kind} #${s.id} ${sanitizeDialogText(s.hash, 70)}, ${commit}${s.timestamp ? `, at ${sanitizeDialogText(s.timestamp, 40)}` : ""}${s.note ? `, note: ${sanitizeDialogText(s.note, 120)}` : ""}`);
     }
@@ -493,7 +640,7 @@ export function deliveryReviewRequest(
     "This proves a person approved a VS Code dialog; it does not identify who.",
     facts.verdict === "PASS"
       ? "A PASS is current only while the linked commits, their trees and the governance evidence stay as shown; new evidence will need a fresh review. The receipt stays unavailable (#467)."
-      : "A VETO blocks this delivery until a later PASS on this commit or a descendant of it names it.",
+      : "A VETO blocks this delivery until a later PASS names it: a PASS on this commit or a descendant of it, or a PASS on a declared rework with this commit's diff (rebased), or with its parent, more than half of its non-bookkeeping paths, and at least half of its own non-bookkeeping paths among them (amended).",
     "FailSafe records this review in its ledger and the intent history. Nothing leaves this machine.",
   );
   const footer = source === "console" ? LOOPBACK_FOOTER : source === "command-arguments" ? COMMAND_CALL_FOOTER : null;
@@ -501,6 +648,133 @@ export function deliveryReviewRequest(
     title: DELIVERY_REVIEW_TITLES[facts.verdict],
     approveLabel: facts.verdict === "PASS" ? "Record PASS" : "Record VETO",
     detail: footer ? [...lines, "", footer].join("\n") : lines.join("\n"),
+  };
+}
+
+/** B340: dialog titles for an intent decision and its seal. */
+export const INTENT_DECISION_TITLES = {
+  PASS: "Approve this intent for implementation?",
+  VETO: "Veto this intent?",
+  SEAL: "Seal this intent?",
+  FINISH: "Finish sealing this intent?",
+} as const;
+
+/** B340: the scope an approval grants, as the dialog states it (intentDecision.scopeFacts). */
+export interface IntentScopeFacts {
+  count: number;
+  /** The first BATCH_LIST_LIMIT entries, sanitized. */
+  shown: string[];
+  more: number;
+  /** Computed over every entry, shown or not; `position` is 1-based. */
+  warnings: Array<{ position: number; entry: string; kind: "root" | "outside" }>;
+}
+
+/** B340: the intent a decision binds, from server state. */
+export interface IntentFacts {
+  id: string;
+  purpose: string;
+  type: string;
+  planId: string | null;
+  riskGrade: string;
+  createdEntryHash: string;
+}
+
+/** B340 (plan-b340 LD1): what a decision records, as the dialog shows it (intentDecision.buildDecisionPlan). */
+export interface IntentDecisionFacts {
+  verdict: "PASS" | "VETO";
+  note: string;
+  intent: IntentFacts;
+  scope: IntentScopeFacts;
+  effective: { status: string; reason: string };
+  digest: { version: number; value: string };
+}
+
+/** B340 (plan-b340 LD6): what a seal records (intentDecision.buildSealPlan). */
+export interface IntentSealFacts {
+  kind: "seal" | "finish";
+  intent: IntentFacts;
+  decisionRowId: number | null;
+  digest: { version: number; value: string };
+  review: string;
+}
+
+function intentLines(intent: IntentFacts): string[] {
+  return [
+    `Intent: ${sanitizeDialogText(intent.purpose)} (${sanitizeDialogText(intent.id, 60)})`,
+    `Type: ${sanitizeDialogText(intent.type, 40)}; plan: ${intent.planId ? sanitizeDialogText(intent.planId, 120) : "none"}; risk grade: ${sanitizeDialogText(intent.riskGrade, 10)}`,
+    `Created history entry: ${sanitizeDialogText(intent.createdEntryHash, 70)}`,
+  ];
+}
+
+/** B340: the scope lines; warnings name every entry that covers the whole workspace or lies outside it. */
+export function intentScopeLines(scope: IntentScopeFacts): string[] {
+  const lines = [`Scope (${scope.count} entr${scope.count === 1 ? "y" : "ies"}):`, ...scope.shown.map((e) => `- ${e}`)];
+  if (scope.more > 0) lines.push(`- and ${scope.more} more`);
+  if (!scope.count) lines.push("- (none: no governed write is in scope)");
+  for (const w of scope.warnings.slice(0, BATCH_LIST_LIMIT)) {
+    lines.push(`Warning: entry ${w.position} "${w.entry}" ${w.kind === "root" ? "covers the whole workspace" : "is outside the workspace; it covers nothing"}`);
+  }
+  if (scope.warnings.length > BATCH_LIST_LIMIT) {
+    lines.push(`Warning: and ${scope.warnings.length - BATCH_LIST_LIMIT} more entries that cover the whole workspace or lie outside it`);
+  }
+  return lines;
+}
+
+/**
+ * B340 (plan-b340 LD1): approve (PASS) or veto the active intent. Every value is server-side except
+ * the verdict and the note, which are labelled by where they came from and recorded exactly as shown.
+ */
+export function intentDecisionRequest(
+  facts: IntentDecisionFacts,
+  operationId: string,
+  source: "command-arguments" | "command-palette",
+): OperatorActionRequest {
+  const how = source === "command-palette" ? "your pick" : "as requested";
+  const lines = [
+    `Operation: ${operationId}`,
+    ...intentLines(facts.intent),
+    `Current status: ${sanitizeDialogText(facts.effective.status, 20)} (${sanitizeDialogText(facts.effective.reason, 300)})`,
+    `Verdict (${how}): ${facts.verdict}`,
+    ...intentScopeLines(facts.scope),
+    `Approved content: intent-content/v${facts.digest.version} ${facts.digest.value}`,
+    "",
+    facts.verdict === "PASS"
+      ? "Approved for implementation: governed writes inside this scope are allowed until the intent changes or is sealed."
+      : "A VETO blocks governed writes under this intent until a later approval.",
+    "No audit evidence is bound to this intent; your confirmation is the approval.",
+    "This proves a person approved a VS Code dialog; it does not identify who.",
+    `Note (${how}): ${facts.note ? sanitizeDialogText(facts.note, REASON_LIMIT) : "(none)"}`,
+    "FailSafe records this decision in its ledger and the intent history. Nothing leaves this machine.",
+  ];
+  return {
+    title: INTENT_DECISION_TITLES[facts.verdict],
+    approveLabel: facts.verdict === "PASS" ? "Approve" : "Veto",
+    detail: source === "command-arguments" ? [...lines, "", COMMAND_CALL_FOOTER].join("\n") : lines.join("\n"),
+  };
+}
+
+/** B340 (plan-b340 LD6): seal the active intent, or finish an interrupted seal. */
+export function intentSealRequest(
+  facts: IntentSealFacts,
+  operationId: string,
+  source: "command-arguments" | "command-palette",
+): OperatorActionRequest {
+  const lines = [
+    `Operation: ${operationId}`,
+    ...intentLines(facts.intent),
+    facts.kind === "finish"
+      ? `Decision row #${facts.decisionRowId ?? "unknown"} is already recorded; this finishes archiving the intent and writes no new decision.`
+      : `Approval: ledger entry #${facts.decisionRowId ?? "unknown"}`,
+    `Approved content: intent-content/v${facts.digest.version} ${facts.digest.value}`,
+    `Delivery review: ${sanitizeDialogText(facts.review, 300)} (shown for information; Seal does not require it)`,
+    "",
+    "Sealing archives the intent; nothing more can be recorded for it.",
+    "This proves a person approved a VS Code dialog; it does not identify who.",
+  ];
+  return {
+    title: facts.kind === "finish" ? INTENT_DECISION_TITLES.FINISH : INTENT_DECISION_TITLES.SEAL,
+    approveLabel: facts.kind === "finish" ? "Finish Sealing" : "Seal Intent",
+    detail: source === "command-arguments" ? [...lines, "", COMMAND_CALL_FOOTER].join("\n") : lines.join("\n"),
   };
 }
 

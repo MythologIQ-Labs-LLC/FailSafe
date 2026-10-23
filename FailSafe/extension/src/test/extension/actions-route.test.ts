@@ -92,7 +92,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/panic-stop' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/panic-stop', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(log.sentinelStopped, 1);
@@ -119,7 +119,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/panic-stop' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/panic-stop', body: {} });
     assert.equal(res.status, 409);
     assert.equal(res.body.confirmation, 'declined');
     assert.equal(c.shown.length, 1);
@@ -135,7 +135,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/panic-stop' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/panic-stop', body: {} });
     assert.equal(res.status, 503);
     assert.equal(res.body.confirmation, 'unwired');
     assert.equal(log.sentinelStopped, 0);
@@ -147,7 +147,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(log.sentinelStarted, 1);
@@ -171,7 +171,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/resume-monitoring', body: {} });
     assert.equal(res.status, 200);
     assert.equal(log.sentinelStarted, 0, 'start() should NOT be called when already running');
   });
@@ -182,8 +182,13 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
       rejectIfRemote: (_req, res) => { res.status(403).json({ error: 'remote' }); return true; },
     });
     setupActionsRoutes(app, deps);
-    const captured = await invokeRemote(app, 'POST', '/api/actions/resume-monitoring');
+    // Lane D2 review: a loopback Host and JSON pass the guard's Host and content-type checks, so
+    // only rejectIfRemote can refuse this request.
+    const captured = await invokeRemote(app, 'POST', '/api/actions/resume-monitoring', {
+      headers: { host: '127.0.0.1:9376', 'content-type': 'application/json' }, body: {},
+    });
     assert.equal(captured.statusCode, 403);
+    assert.deepEqual(captured.body, { error: 'remote' });
   });
 
   test('POST /api/actions/verify-integrity — returns chain valid status + verifiedAt timestamp + broadcasts', async () => {
@@ -192,7 +197,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(res.body.chainValid, true);
@@ -208,7 +213,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/verify-integrity', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.chainValid, false);
   });
@@ -219,8 +224,13 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
       rejectIfRemote: (_req, res) => { res.status(403).json({ error: 'remote' }); return true; },
     });
     setupActionsRoutes(app, deps);
-    const captured = await invokeRemote(app, 'POST', '/api/actions/verify-integrity');
+    // Lane D2 review: a loopback Host and JSON pass the guard's Host and content-type checks, so
+    // only rejectIfRemote can refuse this request.
+    const captured = await invokeRemote(app, 'POST', '/api/actions/verify-integrity', {
+      headers: { host: '127.0.0.1:9376', 'content-type': 'application/json' }, body: {},
+    });
     assert.equal(captured.statusCode, 403);
+    assert.deepEqual(captured.body, { error: 'remote' });
   });
 
   test('POST /api/actions/scaffold-skills — invokes scaffoldSkills and forwards report', async () => {
@@ -399,7 +409,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     assert.deepEqual(processed, [{ id: 'q1', decision: 'REJECTED' }, { id: 'q2', decision: 'REJECTED' }]);
   });
 
-  test('#514 A4 POST /api/actions/approve-l3-batch — a request with no body is confirmed as APPROVED', async () => {
+  test('#514 A4 POST /api/actions/approve-l3-batch — a JSON request with no body is confirmed as APPROVED (lane D: a request with no content type is refused, l3RoutesGuard.test.ts)', async () => {
     const app = makeApp();
     const decisions: string[] = [];
     const c = confirmer('approved');
@@ -413,7 +423,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/approve-l3-batch' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/approve-l3-batch', headers: { 'content-type': 'application/json' } });
     assert.equal(res.status, 200);
     assert.deepEqual(decisions, ['APPROVED']);
     assert.equal(c.shown[0].title, 'Approve all 1 queued L3 item?');

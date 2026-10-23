@@ -1,3 +1,10 @@
+import { escapeSelectorValue } from './escape-selector.js';
+
+/** Lane E: the tab button selector for a hash route's tab, safe for any value. */
+export function tabButtonSelector(tab) {
+  return `.tab-btn[data-target="${escapeSelectorValue(tab)}"]`;
+}
+
 export function parseCommandCenterHash(hash) {
   const raw = String(hash || '').replace(/^#/, '');
   const [path = '', query = ''] = raw.split('?');

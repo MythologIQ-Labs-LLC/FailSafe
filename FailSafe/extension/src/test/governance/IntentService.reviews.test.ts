@@ -96,4 +96,30 @@ suite('IntentService delivery review mirrors (plan-b320 LD5)', () => {
     const out = replayIntentReviews(entries, id);
     assert.deepEqual(out.map((r) => [(r.details as { n: number }).n, r.position]), [[1, 1], [2, 3]]);
   });
+
+
+  test('B344 (red-first): a mirror carrying reworks is accepted; over 20 entries or a malformed entry is refused and nothing is appended', async () => {
+    const s = svc();
+    const intent = await s.createIntent(params());
+    const rework = (over: Record<string, unknown> = {}) => ({
+      vetoEntryId: 3, vetoEntryHash: 'f'.repeat(64), vetoCommit: 'b'.repeat(40), reworkCommit: 'a'.repeat(40), relation: 'amended',
+      evidence: { vetoParent: '9'.repeat(40), reworkParent: '9'.repeat(40), vetoDiffId: '1'.repeat(64), reworkDiffId: '2'.repeat(64),
+        vetoPathCount: 1, reworkPathCount: 1, shared: [{ path: 'a.ts', vetoStatus: 'M', reworkStatus: 'M' }], onlyInVeto: [], onlyInRework: [] },
+      ...over,
+    });
+    const withReworks = (reworks: unknown) => ({ ...details({ verdict: 'PASS' }), reworks }) as unknown as IntentReviewDetails;
+    assert.deepEqual(await s.recordReview({ intentId: intent.id, actor: 'user', details: withReworks([rework()]) }), { ok: true });
+    const rec = await s.getIntentRecord(intent.id);
+    const reviews = (rec as { record: { reviews: Array<{ details: { reworks?: unknown[] } }> } }).record.reviews;
+    assert.deepEqual(reviews[0].details.reworks, [rework()]);
+    const before = lines().length;
+    for (const bad of [
+      Array.from({ length: 21 }, (_, i) => rework({ vetoEntryId: i + 1 })), [],
+      [rework({ relation: 'squashed' })], [rework({ reworkCommit: 'HEAD' })], [{ ...rework(), extra: 1 }],
+      [rework({ evidence: { ...rework().evidence as object, shared: [{ path: 'a.ts', vetoStatus: 'R', reworkStatus: 'M' }] } })],
+    ]) {
+      assert.deepEqual(await s.recordReview({ intentId: intent.id, actor: 'user', details: withReworks(bad) }), { ok: false, reason: 'invalid' }, JSON.stringify(bad).slice(0, 80));
+    }
+    assert.equal(lines().length, before);
+  });
 });

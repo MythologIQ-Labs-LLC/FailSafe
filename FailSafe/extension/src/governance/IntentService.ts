@@ -3,14 +3,22 @@ import { randomUUID } from 'node:crypto';
 import {
   Intent, IntentType, IntentScope, IntentMetadata, IntentStatus, IntentEvidence, IntentSchema,
   IntentEdgeKind, IntentHistoryEntry, IntentEdgeDetailsSchema, IntentIdSchema,
-  IntentReviewDetailsSchema, type IntentReviewDetails,
+  IntentReviewDetailsSchema, type IntentReviewDetails, IntentDecisionDetailsSchema, type IntentDecisionDetails,
 } from './types/IntentTypes';
 import { IntentStore } from './IntentStore';
 import { IntentHistoryLog } from './IntentHistoryLog';
 import { SessionManager } from './SessionManager';
 import type { GovernanceMode } from './EnforcementEngine';
+import { readEffectiveStatus, type EffectiveRead } from './intentDecision';
 
 export type GovernanceModeGetter = () => GovernanceMode;
+
+/** B340: the active intent as enforce mode sees it: `status` is the effective status, never the file's. */
+export type EnforcedIntent = Intent & { statusReason?: string; statusCode?: string };
+
+/** B340 (plan-b340 LD5): the refusal for a decision status written outside the confirmed commands. */
+export const DECISION_COMMAND_ONLY =
+  'In enforce mode an intent decision is recorded only through FailSafe: Approve or Veto the Active Intent (and a seal only through FailSafe: Seal the Active Intent).';
 
 /** #480: an earlier CREATED entry whose provenance names an external reference. */
 export interface ExternalRefImport {
@@ -160,8 +168,11 @@ export class IntentService {
   private history: IntentHistoryLog;
   private session: SessionManager;
   private getGovernanceMode: GovernanceModeGetter | null = null;
+  private getLedger: (() => unknown) | null = null;
+  private readonly workspaceRoot: string;
 
   constructor(workspaceRoot: string, sessionManager: SessionManager) {
+    this.workspaceRoot = workspaceRoot;
     this.store = new IntentStore(workspaceRoot);
     this.history = new IntentHistoryLog(this.store.getManifestDir());
     this.session = sessionManager;
@@ -169,6 +180,46 @@ export class IntentService {
 
   setGovernanceModeGetter(getter: GovernanceModeGetter): void {
     this.getGovernanceMode = getter;
+  }
+
+  /** B340: the SOA ledger the effective status reads (main.ts wires it once the ledger exists). */
+  setLedgerGetter(getter: () => unknown): void {
+    this.getLedger = getter;
+  }
+
+  /** B340: every history entry and whether the chain verified (an unreadable history is empty and invalid). */
+  async readHistory(): Promise<{ entries: IntentHistoryEntry[]; valid: boolean }> {
+    try {
+      const chain = await this.history.verifyChainIntegrity();
+      return { entries: await this.history.loadAllEntries(), valid: chain.valid };
+    } catch {
+      return { entries: [], valid: false };
+    }
+  }
+
+  /** B340 (plan-b340 LD3): the effective status of `intent` from the sealed decisions, whatever the mode. */
+  async effectiveStatusOf(intent: Intent): Promise<EffectiveRead> {
+    return readEffectiveStatus({
+      workspaceRoot: this.workspaceRoot, intent, history: await this.readHistory(), ledger: this.getLedger?.(),
+    });
+  }
+
+  /**
+   * B340 (plan-b340 LD4): the active intent for enforcement and the enforce-mode displays. In enforce
+   * mode (and when no mode getter is wired: fail closed) `status` is the effective status (blocked
+   * reads VETO), with its reason; the file is read once, so the digest and the result come from the
+   * same parsed object. In observe and assist modes the file intent is returned unchanged.
+   */
+  async getEnforcedActiveIntent(): Promise<EnforcedIntent | null> {
+    const intent = await this.getActiveIntent();
+    if (!intent) return null;
+    const mode = this.getGovernanceMode ? this.getGovernanceMode() : 'enforce';
+    if (mode !== 'enforce') return intent;
+    const { effective } = await this.effectiveStatusOf(intent);
+    return {
+      ...intent, status: effective.status === 'blocked' ? 'VETO' : effective.status,
+      statusReason: effective.reason, statusCode: effective.code,
+    };
   }
 
   // D1: Runtime validation using Zod
@@ -374,24 +425,51 @@ export class IntentService {
     return { ok: true };
   }
 
-  async updateStatus(newStatus: IntentStatus, actor: string, auditVerified?: boolean): Promise<void> {
+  /**
+   * A low-level status write. B340 (plan-b340 LD5): in enforce mode a PASS, VETO or SEALED is
+   * refused here, whatever the caller passes; a decision is recorded only by intentDecision after a
+   * confirmed modal. In observe mode the write still works (enforcement never honours it).
+   */
+  async updateStatus(newStatus: IntentStatus, actor: string): Promise<void> {
     const active = await this.getActiveIntent();
     if (!active) throw new Error('No active Intent.');
     if (active.status === 'SEALED') throw new Error(`Intent "${active.id}" is SEALED.`);
-    // B67: PASS status requires audit sign-off in enforce mode.
     // LD-4: 'observe' fallback = unwired-getter guard (see createIntent above).
     const mode = this.getGovernanceMode?.() ?? 'observe';
-    if (newStatus === 'PASS' && mode === 'enforce' && !auditVerified) {
-      throw new Error('Intent cannot reach PASS without audit sign-off in enforce mode.');
+    if (mode === 'enforce' && (newStatus === 'PASS' || newStatus === 'VETO' || newStatus === 'SEALED')) {
+      throw new Error(DECISION_COMMAND_ONLY);
     }
+    await this.writeStatus(active, newStatus, actor);
+  }
 
+  private async writeStatus(active: Intent, newStatus: IntentStatus, actor: string, details?: Record<string, unknown>): Promise<void> {
     const prevStatus = active.status;
     active.status = newStatus;
     active.updatedAt = new Date().toISOString();
     if (newStatus === 'SEALED') active.sealedAt = active.updatedAt;
 
     await this.store.saveActiveIntent(active);
-    await this.history.appendEntry({ intentId: active.id, timestamp: active.updatedAt, event: 'STATUS_CHANGED', previousStatus: prevStatus, newStatus, actor });
+    await this.history.appendEntry({
+      intentId: active.id, timestamp: active.updatedAt, event: 'STATUS_CHANGED', previousStatus: prevStatus, newStatus, actor,
+      ...(details ? { details } : {}),
+    });
+  }
+
+  /**
+   * B340 (plan-b340 LD2): append the STATUS_CHANGED mirror of a sealed intent-decision ledger row for the
+   * active, unsealed intent and update the file status for display. Called only by intentDecision,
+   * after the operator confirmed and the row was appended. Refused while the chain is broken, for an
+   * intent that is not the active one, and for details the strict schema rejects.
+   */
+  async recordDecision(params: { intentId: string; actor: string; verdict: 'PASS' | 'VETO'; details: IntentDecisionDetails }): Promise<EdgeWriteResult> {
+    const ctx = await this.edgeWriteContext(params.intentId);
+    if (!ctx.ok) return ctx;
+    const details = IntentDecisionDetailsSchema.safeParse(params.details);
+    if (!details.success) return { ok: false, reason: 'invalid' };
+    const active = await this.getActiveIntent();
+    if (!active || active.id !== params.intentId) return { ok: false, reason: 'not-active' };
+    await this.writeStatus(active, params.verdict, params.actor, details.data);
+    return { ok: true };
   }
 
   async updateEvidence(evidence: Partial<IntentEvidence>, actor: string): Promise<void> {
@@ -405,16 +483,26 @@ export class IntentService {
     await this.history.appendEntry({ intentId: active.id, timestamp: active.updatedAt, event: 'EVIDENCE_UPDATED', actor, details: evidence });
   }
 
+  /**
+   * Archive the active intent. B340 (plan-b340 LD6): the only production caller (intentDecision)
+   * proves the effective status first, so the file status is not checked here, and every step is
+   * skipped when already done, so an interrupted seal can be finished: the status write when the
+   * file already says SEALED, the archive when it exists, the SEALED entry when one is recorded.
+   */
   async sealIntent(actor: string): Promise<void> {
     const active = await this.getActiveIntent();
     if (!active) throw new Error('No active Intent.');
-    if (active.status !== 'PASS') throw new Error(`Status must be PASS (current: ${active.status}).`);
 
-    await this.updateStatus('SEALED', actor); 
-    const sealed = await this.getActiveIntent(); // Reload sealed state
-    if (sealed) await this.store.archiveIntent(sealed);
-    
-    await this.history.appendEntry({ intentId: active.id, timestamp: new Date().toISOString(), event: 'SEALED', actor });
+    if (active.status !== 'SEALED') await this.writeStatus(active, 'SEALED', actor);
+    const sealed = (await this.getActiveIntent()) ?? active; // Reload sealed state
+    let archived: Intent | null = null;
+    try { archived = this.store.getArchivedIntent(active.id); } catch { archived = null; }
+    if (!archived) await this.store.archiveIntent(sealed);
+
+    const entries = (await this.readHistory()).entries;
+    if (!entries.some((e) => e.intentId === active.id && e.event === 'SEALED')) {
+      await this.history.appendEntry({ intentId: active.id, timestamp: new Date().toISOString(), event: 'SEALED', actor });
+    }
     await this.store.deleteActiveIntent();
     await this.session.setActiveIntent(null);
   }

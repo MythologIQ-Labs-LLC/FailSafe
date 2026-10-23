@@ -129,6 +129,69 @@ suite('governance-alert rows a11y (FX920)', () => {
     } finally { restore(); }
   });
 
+  test('legitimate VETO and BLOCK retain exact semantic classes, including modal (#563)', () => {
+    const { dom, host, render, restore } = setup();
+    try {
+      render(ALERTS);
+      for (const [id, expected] of [['veto-548', 'veto'], ['block-549', 'block']]) {
+        const row = host.querySelector(`[data-alert-id="${id}"]`) as HTMLElement;
+        assert.equal(row.className, `governance-alert ${expected}`,
+          `${expected}: the exact security-relevant row class must be preserved`);
+        row.click();
+        const modal = dom.window.document.querySelector('.alert-modal-type') as HTMLElement;
+        assert.ok(modal, 'details modal must be shown');
+        assert.equal(modal.className, `alert-modal-type ${expected}`,
+          `${expected}: the exact modal type class must be preserved`);
+        dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      }
+    } finally { restore(); }
+  });
+
+  test('hostile and unrelated type tokens cannot hide an alert or inject extra classes (#563)', () => {
+    const { dom, host, render, restore } = setup();
+    try {
+      for (const type of ['HIDDEN', 'hidden', 'warning foo', 'warning\\tfoo', 'constructor',
+        'VETO" onmouseover="window.hacked=true']) {
+        render([{ id: 'hostile-type', type, message: 'Important governance alert', entry: 123 }]);
+        const row = host.querySelector('.governance-alert') as HTMLElement;
+        assert.ok(row, `alert must remain rendered for ${JSON.stringify(type)}`);
+        assert.equal(row.className, 'governance-alert warning',
+          `untrusted token ${JSON.stringify(type)} must not select hidden/extra CSS classes`);
+        assert.equal(row.getAttribute('onmouseover'), null);
+        assert.equal(row.classList.contains('hidden'), false);
+        row.click();
+        const modal = dom.window.document.querySelector('.alert-modal-type') as HTMLElement;
+        assert.ok(modal);
+        assert.equal(modal.className, 'alert-modal-type warning');
+        dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      }
+    } finally { restore(); }
+  });
+
+  test('hostile governance type and ledger entry remain inert DOM text', () => {
+    const { dom, host, render, restore } = setup();
+    try {
+      const injected = [{
+        id: 'unsafe', type: 'VETO" onmouseover="window.hacked=true',
+        message: 'Visible message', entry: '<img src=x onerror="window.hacked=true">',
+      }];
+      render(injected);
+      const row = host.querySelector('.governance-alert') as HTMLElement;
+      assert.ok(row);
+      assert.equal(row.getAttribute('onmouseover'), null);
+      assert.equal(row.classList.contains('warning'), true);
+      assert.equal(host.querySelector('img'), null);
+      assert.ok(row.textContent?.includes('<img src=x'));
+      row.click();
+      const modal = dom.window.document.querySelector('.alert-modal-type') as HTMLElement;
+      assert.ok(modal);
+      assert.equal(modal.getAttribute('onmouseover'), null);
+      assert.equal(modal.classList.contains('warning'), true);
+      assert.equal(dom.window.document.querySelector('.alert-modal-entry img'), null);
+      assert.ok(dom.window.document.querySelector('.alert-modal-entry')?.textContent?.includes('<img src=x'));
+    } finally { restore(); }
+  });
+
   test('resolved-while-open residual — selector miss leaves focus as-is (no throw)', () => {
     const { dom, host, render, restore } = setup();
     try {

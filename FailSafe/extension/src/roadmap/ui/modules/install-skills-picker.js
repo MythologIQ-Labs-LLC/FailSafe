@@ -7,7 +7,10 @@
 //   bindPickerEvents(container, options)
 //   collectSkillFilter(modalEl) → { [host]: string[] }
 
+import { escapeHtml } from './brainstorm-templates.js';
+
 const skillCache = new Map();
+const esc = (value) => escapeHtml(value ?? '');
 
 export function renderPickerSection(_hosts, _running) {
   return [
@@ -36,15 +39,15 @@ function getScope(modalEl) {
 
 function renderHostBlock(host, payload) {
   if (payload && payload.degraded) {
-    return `<div class="cc-picker-host" data-host="${host}"><h4>${host}</h4>` +
+    return `<div class="cc-picker-host" data-host="${esc(host)}"><h4>${esc(host)}</h4>` +
       `<p class="cc-picker-degraded">All skills will be installed (this version of qor-logic doesn't support per-skill selection).</p></div>`;
   }
   const skills = (payload && payload.skills) || [];
   const items = skills.map((s) => {
     const name = String(s.name || '');
-    return `<label class="cc-picker-skill"><input type="checkbox" data-skill-host="${host}" value="${name}" checked> ${name}</label>`;
+    return `<label class="cc-picker-skill"><input type="checkbox" data-skill-host="${esc(host)}" value="${esc(name)}" checked> ${esc(name)}</label>`;
   }).join('');
-  return `<div class="cc-picker-host" data-host="${host}"><h4>${host}</h4><div class="cc-picker-grid">${items || '<em>no skills</em>'}</div></div>`;
+  return `<div class="cc-picker-host" data-host="${esc(host)}"><h4>${esc(host)}</h4><div class="cc-picker-grid">${items || '<em>no skills</em>'}</div></div>`;
 }
 
 async function fetchHostSkills(host, scope, fetchImpl) {
@@ -65,7 +68,7 @@ async function populatePicker(body, hosts, scope, fetchImpl) {
       const payload = await fetchHostSkills(host, scope, fetchImpl);
       blocks.push(renderHostBlock(host, payload));
     } catch (_err) {
-      blocks.push(`<div class="cc-picker-host" data-host="${host}"><h4>${host}</h4><p class="cc-picker-error">Failed to load skills.</p></div>`);
+      blocks.push(`<div class="cc-picker-host" data-host="${esc(host)}"><h4>${esc(host)}</h4><p class="cc-picker-error">Failed to load skills.</p></div>`);
     }
   }
   body.innerHTML = blocks.join('\n');

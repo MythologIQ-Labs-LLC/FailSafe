@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://failsafe.mythologiq.studio/contracts/ledger_entry.json",
-  "$schema-version": "1.1",
+  "$schema-version": "1.2",
   "title": "LedgerEntry",
   "description": "A single Merkle-chained entry in the FailSafe SOA Ledger (META_LEDGER). Records governance events with cryptographic chain integrity.",
   "type": "object",
@@ -22,7 +22,7 @@
         "DISCOVERY_RECORDED", "DISCOVERY_PROMOTED",
         "COMMIT_CHECKED", "PROVENANCE_RECORDED",
         "MARKETPLACE_INSTALL", "MARKETPLACE_UNINSTALL",
-        "DELIVERY_REVIEWED"
+        "DELIVERY_REVIEWED", "INTENT_DECIDED"
       ]
     },
     "agentDid": { "type": "string", "description": "DID (Decentralized Identifier) of the agent that initiated the event." },

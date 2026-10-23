@@ -1,4 +1,5 @@
 // FailSafe Command Center — Transparency Stream Renderer
+import { escapeHtml } from './brainstorm-templates.js';
 import { eventId, eventKey, eventTimestamp, hasAuditHashFilter, highlightRecordFromHash, recordLevel, summarizeTransparencyEvent } from './transparency-records.js';
 const CATEGORIES = ['All', 'Sentinel', 'Prompt', 'Governance', 'Trust', 'Risk'];
 // Severity triage row (operator ruling ui-data-point-value-test): pass records
@@ -292,7 +293,7 @@ export class TransparencyRenderer {
     URL.revokeObjectURL(a.href);
   }
 
-  esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+  esc(str) { return escapeHtml(str ?? ''); }
 
   renderRightPanel() {
     return `

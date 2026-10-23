@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { SystemRegistry, AgentLandscape } from '../../qorelogic/SystemRegistry';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 
 interface AgentCoverageDeps {
   systemRegistry: SystemRegistry;
@@ -12,12 +13,12 @@ async function renderLandscape(landscape: AgentLandscape, registry: SystemRegist
     const detection = await registry.detect(system);
     const governed = registry.hasGovernance(system);
     systemRows.push(
-      `<tr><td>${manifest.name}</td><td>${detection.detected ? 'Yes' : 'No'}</td><td>${governed ? 'Yes' : 'No'}</td></tr>`,
+      `<tr><td>${escapeHtml(manifest.name)}</td><td>${detection.detected ? 'Yes' : 'No'}</td><td>${governed ? 'Yes' : 'No'}</td></tr>`,
     );
   }
 
   const terminalRows = landscape.activeTerminals
-    .map((t) => `<tr><td>${t.name}</td><td>${t.agentType}</td><td>${t.terminalIndex}</td></tr>`)
+    .map((t) => `<tr><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.agentType)}</td><td>${t.terminalIndex}</td></tr>`)
     .join('');
 
   const teamsStatus = landscape.agentTeams.enabled ? 'Enabled' : 'Disabled';
@@ -32,7 +33,7 @@ async function renderLandscape(landscape: AgentLandscape, registry: SystemRegist
     <tbody>${terminalRows}</tbody></table>
     <h2>Agent Teams</h2>
     <p>Status: ${teamsStatus}</p>
-    <p>Settings: ${landscape.agentTeams.settingsPath}</p>
+    <p>Settings: ${escapeHtml(landscape.agentTeams.settingsPath)}</p>
     <a href="/console/home">Back</a>
   </body></html>`;
 }

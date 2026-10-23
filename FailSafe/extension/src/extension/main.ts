@@ -176,6 +176,9 @@ export async function activate(
 
     // 3.4 Late-bind ledger to governance services created before QorLogic
     gov.releasePipelineGate.setLedgerManager(qor.ledgerManager);
+    // B340 (plan-b340 LD4): the effective intent status reads the SOA ledger; until now it read PULSE.
+    gov.intentService.setLedgerGetter(() => qor.ledgerManager);
+    gov.governanceStatusBar.update(await gov.intentService.getEnforcedActiveIntent());
     gov.complianceExporter.setLedgerManager(qor.ledgerManager);
     gov.complianceExporter.setShadowGenomeManager(qor.shadowGenomeManager);
     gov.provenanceTracker.setLedgerManager(qor.ledgerManager);
@@ -368,6 +371,10 @@ export async function activate(
         credentials,
         // #532 part B: delivery routes, commit-check active-intent read, assessment command.
         intentService: gov.intentService,
+        // B340: refresh the status bar with the effective status after a decision or seal.
+        onIntentDecided: () => {
+          void gov.intentService.getEnforcedActiveIntent().then((intent) => gov.governanceStatusBar.update(intent), () => undefined);
+        },
       },
       logger,
     );

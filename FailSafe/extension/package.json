@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
-  "version": "6.0.9",
+  "version": "6.0.10",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -78,7 +78,9 @@
     "onCommand:failsafe.openhands.observe",
     "onCommand:failsafe.architecture.bootstrapIndex",
     "onCommand:failsafe.delivery.assessActiveIntent",
-    "onCommand:failsafe.delivery.recordReview"
+    "onCommand:failsafe.delivery.recordReview",
+    "onCommand:failsafe.intent.decide",
+    "onCommand:failsafe.intent.seal"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -227,6 +229,14 @@
       {
         "command": "failsafe.delivery.recordReview",
         "title": "FailSafe: Record a Delivery Review"
+      },
+      {
+        "command": "failsafe.intent.decide",
+        "title": "FailSafe: Approve or Veto the Active Intent"
+      },
+      {
+        "command": "failsafe.intent.seal",
+        "title": "FailSafe: Seal the Active Intent"
       },
       {
         "command": "failsafe.sentinel.forgetLlmApprovals",
@@ -839,8 +849,8 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.24.0",
-    "@modelcontextprotocol/sdk": "^1.31.0",
-    "chokidar": "^3.5.3",
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "chokidar": "^4.0.3",
     "d3": "^7.8.5",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",

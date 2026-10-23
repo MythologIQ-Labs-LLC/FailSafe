@@ -7,10 +7,11 @@
  * and this command share one busy guard), and only then are the sealed ledger row and its
  * intent-history mirror written. Confirmation is never skipped.
  *
- * From the command palette it asks for the verdict, one of the linked commits and a note. Any
- * extension can also call the command with arguments ({ verdict, commitSha, note }); those values
- * are shown "as requested" with a footer saying a command call asked, and recorded exactly as
- * shown. Declined, busy, unwired and expired write nothing. Nothing leaves the machine.
+ * From the command palette it asks for the verdict, one of the linked commits and a note, and
+ * (#532 B344) once for each VETO the reviewed commit does not contain, which linked commit reworks
+ * it. Any extension can also call the command with arguments ({ verdict, commitSha, note, reworks });
+ * those values are shown "as requested" with a footer saying a command call asked, and recorded
+ * exactly as shown. Declined, busy, unwired and expired write nothing. Nothing leaves the machine.
  */
 
 import * as vscode from "vscode";
@@ -29,6 +30,8 @@ export interface ReviewCommandUi {
   pickCommit(commits: Array<{ sha: string; label: string }>): Promise<string | undefined>;
   inputNote(): Promise<string | undefined>;
   info(message: string): void;
+  /** #532 B344: asked once per VETO that is not in the reviewed commit's history; a linked commit, or undefined to stop. */
+  pickRework?(veto: { entryId: number; commitSha: string }, commits: Array<{ sha: string; label: string }>): Promise<string | undefined>;
 }
 
 export interface DeliveryReviewCommandDeps {
@@ -76,10 +79,18 @@ const vscodeUi: ReviewCommandUi = {
     ignoreFocusOut: true,
   }),
   info: (message) => { void vscode.window.showInformationMessage(message); },
+  pickRework: async (veto, commits) => {
+    const pick = await vscode.window.showQuickPick(commits.map((c) => ({ label: c.label, sha: c.sha })), {
+      title: `Record a Delivery Review: which linked commit reworks the VETO in ledger entry #${veto.entryId} (on ${veto.commitSha.slice(0, 12)})?`,
+      placeHolder: "It must have that commit's diff (rebased), or its parent, more than half of its non-bookkeeping files, and at least half of its own non-bookkeeping files among them (amended); dismiss to record nothing.",
+      ignoreFocusOut: true,
+    });
+    return pick?.sha;
+  },
 };
 
 const hasArguments = (args: unknown): args is Record<string, unknown> =>
-  !!args && typeof args === "object" && ["verdict", "commitSha", "note"].some((k) => k in (args as Record<string, unknown>));
+  !!args && typeof args === "object" && ["verdict", "commitSha", "note", "reworks"].some((k) => k in (args as Record<string, unknown>));
 
 /** The command body; registerDeliveryReviewCommand wires it to VS Code. */
 export async function runDeliveryReviewCommand(deps: DeliveryReviewCommandDeps, args?: unknown): Promise<DeliveryReviewCommandResult> {
@@ -92,7 +103,7 @@ export async function runDeliveryReviewCommand(deps: DeliveryReviewCommandDeps, 
   const source = hasArguments(args) ? "command-arguments" : "command-palette";
   if (source === "command-arguments") {
     const a = args as Record<string, unknown>;
-    const parsed = parseReviewRequest({ intentId: active.id, verdict: a.verdict, commitSha: a.commitSha, note: a.note });
+    const parsed = parseReviewRequest({ intentId: active.id, verdict: a.verdict, commitSha: a.commitSha, note: a.note, reworks: a.reworks });
     if (typeof parsed === "string") return finish({ outcome: "invalid", detail: `nothing was recorded: ${parsed}.` });
     request = parsed;
   } else {
@@ -113,7 +124,21 @@ export async function runDeliveryReviewCommand(deps: DeliveryReviewCommandDeps, 
     workspaceRoot: deps.workspaceRoot, intents: deps.intents, ledger: deps.getLedger(), git: deps.git,
     indexPathSetting: deps.getIndexPathSetting?.(), now: deps.hooks?.now,
   };
-  const built = await buildReviewPlan(ctx, request, ctx.now ? ctx.now() : Date.now());
+  let built = await buildReviewPlan(ctx, request, ctx.now ? ctx.now() : Date.now());
+  // #532 B344: from the palette, a VETO outside the reviewed commit's history is asked about once.
+  const asked = new Set<number>();
+  while (!built.ok && source === "command-palette" && built.code === "veto-not-ancestor" && built.veto && ui.pickRework && !asked.has(built.veto.entryId)) {
+    const veto = built.veto;
+    asked.add(veto.entryId);
+    const lookup = await deps.intents.getIntentRecord(request.intentId);
+    const commits = (lookup.integrity === "valid" && lookup.record ? lookup.record.edges : [])
+      .filter((e) => e.edge === "committed-under" && e.target !== veto.commitSha)
+      .map((e) => ({ sha: e.target, label: `${e.target.slice(0, 12)} linked ${e.linkedAt}` }));
+    const reworkCommit = await ui.pickRework(veto, commits);
+    if (!reworkCommit) return { outcome: "dismissed", detail: "nothing was recorded." };
+    request = { ...request, reworks: [...(request.reworks ?? []), { vetoEntryId: veto.entryId, reworkCommit }] };
+    built = await buildReviewPlan(ctx, request, ctx.now ? ctx.now() : Date.now());
+  }
   if (!built.ok) return finish({ outcome: "refused", status: built.status, detail: built.error });
   const confirmed = await confirmBoundCommand(deps.confirm, built.plan, (plan, id) => deliveryReviewRequest(plan, id, source),
     { deadlineMs: deps.deadlineMs });

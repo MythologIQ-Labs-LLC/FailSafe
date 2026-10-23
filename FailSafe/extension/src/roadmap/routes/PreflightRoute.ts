@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PermissionScopeManager } from '../../governance/PermissionScopeManager';
+import { escapeHtml } from '../../shared/utils/htmlSanitizer';
 
 interface PreflightDeps {
   permissionManager: PermissionScopeManager;
@@ -11,16 +12,16 @@ export const PreflightRoute = {
 
     const rows = scopes.map(s =>
       `<tr>
-        <td>${s.id}</td>
+        <td>${escapeHtml(s.id)}</td>
         <td>${s.active ? 'Granted' : 'Denied'}</td>
-        <td>${s.grantedAt}</td>
+        <td>${escapeHtml(s.grantedAt)}</td>
         <td>
           <form method="POST" action="/console/preflight/grant" style="display:inline">
-            <input type="hidden" name="scopeId" value="${s.id}"/>
+            <input type="hidden" name="scopeId" value="${escapeHtml(s.id)}"/>
             <button type="submit">Grant</button>
           </form>
           <form method="POST" action="/console/preflight/deny" style="display:inline">
-            <input type="hidden" name="scopeId" value="${s.id}"/>
+            <input type="hidden" name="scopeId" value="${escapeHtml(s.id)}"/>
             <button type="submit">Deny</button>
           </form>
         </td>

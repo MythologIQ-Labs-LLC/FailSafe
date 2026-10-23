@@ -110,6 +110,38 @@ export const ReviewSupersededSchema = z.object({
   id: z.number().int().nonnegative(),
   hash: z.string().min(1).max(128),
 }).strict();
+/**
+ * #532 B344 (plan-b344 LD3): one VETO superseded by a declared, git-verified rework, as the PASS
+ * row and its mirror record it. Path lists are complete (at most 50 per side) for `amended` and
+ * empty for `rebased`.
+ */
+export const ReworkRelationSchema = z.enum(['rebased', 'amended']);
+export const ReworkPathStatusSchema = z.enum(['A', 'M', 'D', 'T']);
+const ReworkPathSchema = z.object({ path: z.string().min(1).max(4096), status: ReworkPathStatusSchema }).strict();
+const ReworkSharedPathSchema = z.object({ path: z.string().min(1).max(4096), vetoStatus: ReworkPathStatusSchema, reworkStatus: ReworkPathStatusSchema }).strict();
+export const ReworkEntrySchema = z.object({
+  vetoEntryId: z.number().int().positive(),
+  vetoEntryHash: z.string().regex(HASH64),
+  vetoCommit: z.string().regex(OBJECT_NAME),
+  reworkCommit: z.string().regex(OBJECT_NAME),
+  relation: ReworkRelationSchema,
+  evidence: z.object({
+    vetoParent: z.string().regex(OBJECT_NAME),
+    reworkParent: z.string().regex(OBJECT_NAME),
+    vetoDiffId: z.string().regex(HASH64).nullable(),
+    reworkDiffId: z.string().regex(HASH64).nullable(),
+    vetoPathCount: z.number().int().nonnegative(),
+    reworkPathCount: z.number().int().nonnegative(),
+    shared: z.array(ReworkSharedPathSchema).max(50),
+    onlyInVeto: z.array(ReworkPathSchema).max(50),
+    onlyInRework: z.array(ReworkPathSchema).max(50),
+  }).strict(),
+}).strict();
+/** The same cap as the dialog's BATCH_LIST_LIMIT (operatorConfirmation.ts). */
+export const REWORK_ENTRY_LIMIT = 20;
+export const ReworksSchema = z.array(ReworkEntrySchema).min(1).max(REWORK_ENTRY_LIMIT);
+export type ReworkEntry = z.infer<typeof ReworkEntrySchema>;
+export type ReworkPathStatus = z.infer<typeof ReworkPathStatusSchema>;
 export const IntentReviewDetailsSchema = z.object({
   reviewId: z.string().uuid(),
   verdict: ReviewVerdictSchema,
@@ -120,11 +152,29 @@ export const IntentReviewDetailsSchema = z.object({
   ledgerEntryId: z.number().int().positive(),
   ledgerEntryHash: z.string().regex(HASH64),
   operationId: z.string().min(1).max(80),
+  /** #532 B344: absent when the PASS declares no rework. */
+  reworks: ReworksSchema.optional(),
 }).strict();
 export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
 export type ReviewBlockingKind = z.infer<typeof ReviewBlockingKindSchema>;
 export type ReviewSuperseded = z.infer<typeof ReviewSupersededSchema>;
 export type IntentReviewDetails = z.infer<typeof IntentReviewDetailsSchema>;
+
+/**
+ * B340 (plan-b340 LD2): the details of an intent-decision mirror, a STATUS_CHANGED entry whose
+ * `newStatus` is the verdict. It names one sealed intent-decision ledger row by id and entry hash and
+ * repeats what the row bound. A mirror alone proves nothing (the history chain is unkeyed): a PASS
+ * counts only with its sealed row, and each row binds through at most one mirror (intentDecision).
+ */
+export const IntentDecisionDetailsSchema = z.object({
+  decisionId: z.string().uuid(),
+  ledgerEntryId: z.number().int().positive(),
+  ledgerEntryHash: z.string().regex(HASH64),
+  operationId: z.string().min(1).max(80),
+  digestVersion: z.number().int().positive(),
+  contentDigest: z.string().regex(HASH64),
+}).strict();
+export type IntentDecisionDetails = z.infer<typeof IntentDecisionDetailsSchema>;
 
 export const IntentHistoryEntrySchema = z.object({
   intentId: IntentIdSchema,
