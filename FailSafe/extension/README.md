@@ -10,7 +10,7 @@ FailSafe runs locally in VS Code and Cursor. It monitors agent and workspace act
 - **Establish intent before execution.** Associate work with a defined intent and inspect policy decisions before approving higher-risk actions.
 - **Review agent changes.** Govern supported agent workflows and inspect changes before applying them. Some integrations observe activity rather than prevent all writes.
 - **Preserve an audit trail.** Record decisions, checkpoints, and provenance so operators can investigate what happened and what remains unverified.
-- **Navigate architecture and delivery evidence.** On newer source builds, Workspace Architecture and Delivery connect human-reviewed architecture and implementation evidence. These additions are not part of the published v6.0.9 VSIX.
+- **Navigate architecture and delivery evidence.** Workspace Architecture and Delivery connect human-reviewed architecture and implementation evidence.
 
 **Where to start:** Open the FailSafe Console for workspace status and risks. Use the Governance views for decisions, and the Audit Log for evidence. [Full feature reference](../../docs/COMPONENT_HELP.md).
 
@@ -23,15 +23,14 @@ FailSafe runs locally in VS Code and Cursor. It monitors agent and workspace act
 5. Run `FailSafe: Audit Current File` to generate a governance verdict for the active editor.
 6. If you want commit-time guardrails, run `FailSafe: Install Commit Hook` inside a git workspace with `curl` available on the path.
 
-## What's New in v6.0.9
+## What's New in v6.0.10
 
-A security and reliability patch: what leaves your machine, what runs from the Console and what FailSafe records are now held to explicit operator approval.
-
-- **Your code stays local unless you approve otherwise.** A workspace can point Sentinel and Brainstorm only at a model server on this machine. A remote server from your user settings is used only after you approve that exact server for that exact use, and **FailSafe: Forget Sentinel LLM Approvals** withdraws every approval. Requests check each address at connect time and never follow a redirect.
-- **Your GitHub Enterprise token goes only to your Enterprise host.** The PR-linkage check reads from the configured host, the token is attached only to that host and port, and a redirect is a failure. An `http://` API base for another machine is refused; use `https://`.
-- **Console installs ask you first.** MCP Catalog, Bicameral MCP, Qor-logic skills, the agent-failsafe adapter and the Agent Governance terminal pre-fill run only after you confirm the exact action in VS Code, and requests from another web page are refused before any dialog. L3 decisions record how they were confirmed.
-- **Truthful records.** Compliance exports state ledger integrity as intact, partial seal, failed or unavailable instead of true or false. Voice Pack downloads check every redirect hop. Slack and Teams L3 notices show the file path and nothing else from the request.
-- **New in the Console Workspace:** an Architecture view for your repository's architecture index and a Delivery view that shows what an intent delivered, with the receipt step unavailable until the governance ledger is repaired.
+- **The Console shows your workspace's text as text.** Ledger verdicts, plans, risks, skills, alerts and integration fields are escaped everywhere the Console shows them, so crafted workspace content can no longer run script in the Console page.
+- **Other web pages can no longer reach the Console's dialogs or live updates.** Live updates accept only the Console's own page, and the Console answers only requests addressed to a loopback name. Another page cannot open the L3 approval or Panic Stop dialogs, or resume the Sentinel or run Verify Integrity. Still open: a few body-less actions (B384), `show-output` (B383), and re-checking the chain by loading the checkpoint list (B396), and running git repeatedly by loading the tracker data (B402).
+- **Dependency security.** The MCP server refuses a tool call with more than 10,000 argument elements, the Sentinel file watcher moves to chokidar 4, and the production dependency audit reports no findings. The chokidar 4 watcher change was not tested on a Mac (B368).
+- **Enforce mode works again in the VS Code extension host.** You can approve or veto, and then seal, the active intent, and forged intent files are not honoured for editor writes or governance verdicts. A denied editor save is still reported, not prevented. A workspace writer can still switch enforce off (B371), the ACP proxy is not covered (B373), some displays still read the intent file (B370), and the release gate and the commit check still read it (B374).
+- **Workspace.** Record a delivery review, including a declared rework of a vetoed commit; see contradicted or missing design authority in Architecture; and compare Taxonomy with the Console's sub-views, with save containment (B330); on Windows a folder swapped during a save is narrowed, not fully closed (B332).
+- **Behaviour change.** A Console opened through Codespaces, vscode.dev or code-server behind a proxy name is refused (403) on every page and live update. Use a local browser or the VS Code commands.
 
 See the [changelog](https://github.com/MythologIQ-Labs-LLC/FailSafe/blob/main/CHANGELOG.md) for compatibility changes and known limitations.
 
@@ -73,7 +72,7 @@ Open the **Integrations** tab to configure an integration. Cards distinguish Dis
 
 ---
 
-**Current Release**: v6.0.9 (2026-10-18)
+**Current Release**: v6.0.10 (2026-10-22)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
