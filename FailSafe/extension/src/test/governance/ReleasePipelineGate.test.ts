@@ -1,11 +1,18 @@
 import { describe, it } from 'mocha';
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { IntentService } from '../../governance/IntentService';
 import { ReleasePipelineGate } from '../../governance/ReleasePipelineGate';
 import type { LedgerVerification } from '../../qorelogic/ledger/LedgerVerifier';
 import { GOLDEN, appendN, isAnchorKey, makeEnv, openLedger, writeGoldenLedger } from '../qorelogic/ledgerTestKit';
 
 function createMockIntentService(activeIntent: { id: string; status: string } | null) {
-  return { getActiveIntent: async () => activeIntent } as Parameters<typeof ReleasePipelineGate['prototype']['evaluate']> extends never ? never : any;
+  return {
+    getActiveIntent: async () => activeIntent,
+    getActiveIntentForRelease: async () => activeIntent,
+  } as any;
 }
 
 function report(overrides: Partial<LedgerVerification> = {}): LedgerVerification {
@@ -23,6 +30,7 @@ function report(overrides: Partial<LedgerVerification> = {}): LedgerVerification
 
 function createMockLedger(chainValid: boolean) {
   return {
+    isAvailable: () => true,
     verifyLedger: async () => chainValid
       ? report()
       : report({ ok: false, sealScope: 'none', failures: [{ id: 2, code: 'hash-mismatch', detail: 'x' }] }),
@@ -61,6 +69,39 @@ describe('ReleasePipelineGate', () => {
     const result = await gate.evaluate('v4.2.0');
     assert.equal(result.allowed, true);
     assert.equal(result.failures.length, 0);
+  });
+
+  it('returns an explicit release BLOCK when active-intent storage cannot be read (#473)', async () => {
+    const broken = { getActiveIntentForRelease: async () => { throw new Error('intent store I/O unavailable'); } };
+    const gate = new ReleasePipelineGate(broken as any, createMockLedger(true));
+    const result = await gate.evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.equal(result.failures.length, 1);
+    assert.equal(result.failures[0].name, 'unsealed-intents');
+    assert.match(result.failures[0].reason, /Unable to verify active intent/);
+    assert.match(result.failures[0].reason, /intent store I\/O unavailable/);
+    assert.deepEqual(result.warnings, []);
+  });
+
+  it('blocks on corrupt active_intent.json instead of treating it as no active intent (#473)', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-release-corrupt-'));
+    try {
+      const file = path.join(root, '.failsafe', 'manifest', 'active_intent.json');
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      // Invalid JSON and invalid schema are both suppressed by the ordinary UI reader.
+      // Release acceptance must use the strict reader, not that permissive fallback.
+      const service = new IntentService(root, {} as any);
+      for (const raw of ['{ torn json', JSON.stringify({ schemaVersion: 2, id: 'bad-intent' })]) {
+        fs.writeFileSync(file, raw);
+        assert.equal(await service.getActiveIntent(), null, 'ordinary read is forgiving for UI');
+        const result = await new ReleasePipelineGate(service, createMockLedger(true)).evaluate('v6.0.10');
+        assert.equal(result.allowed, false, raw);
+        assert.equal(result.failures[0].name, 'unsealed-intents');
+        assert.match(result.failures[0].reason, /Unable to verify active intent/, raw);
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('blocks release with invalid version format', async () => {
@@ -181,17 +222,121 @@ describe('ReleasePipelineGate ledger scope (#473 LD9)', function () {
   });
 
   it('blocks on an unknown seal version and names it', async () => {
-    const ledger = { verifyLedger: async () => report({ ok: false, sealScope: 'none', failures: [{ id: 4, code: 'unknown-version', detail: 'x' }] }) };
+    const ledger = { isAvailable: () => true, verifyLedger: async () => report({ ok: false, sealScope: 'none', failures: [{ id: 4, code: 'unknown-version', detail: 'x' }] }) };
     const result = await gateFor(ledger).evaluate('v6.0.7');
     assert.equal(result.allowed, false);
     assert.match(result.failures[0].reason, /unknown-version at id 4/);
   });
 
   it('fails closed when verifyLedger throws (review N2)', async () => {
-    const ledger = { verifyLedger: async () => { throw new Error('disk I/O error'); } };
+    const ledger = { isAvailable: () => true, verifyLedger: async () => { throw new Error('disk I/O error'); } };
     const result = await gateFor(ledger).evaluate('v6.0.7');
     assert.equal(result.allowed, false);
     assert.match(result.failures[0].reason, /disk I\/O error/);
+  });
+
+  it('rejects a contradictory green report with recorded verification failures (#473)', async () => {
+    const ledger = {
+      isAvailable: () => true,
+      verifyLedger: async () => report({
+        ok: true,
+        failures: [{ id: 2, code: 'hash-mismatch', detail: 'tampered verdict column' }],
+      }),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.equal(result.warnings.length, 0);
+    assert.match(result.failures[0].reason, /hash-mismatch at id 2/);
+  });
+
+  it('rejects a malformed supposedly green report instead of throwing (#473)', async () => {
+    const ledger = {
+      isAvailable: () => true,
+      verifyLedger: async () => ({ ok: true, failures: [] }),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.match(result.failures[0].reason, /malformed report/);
+  });
+
+  it('rejects an unavailable ledger even if its verifier could return green (#473)', async () => {
+    const ledger = {
+      isAvailable: () => false,
+      getDisabledReason: () => 'ledger database unavailable',
+      verifyLedger: async () => report(),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.match(result.failures[0].reason, /ledger database unavailable/);
+  });
+
+  it('rejects green ledger reports with missing row counts or anchor head IDs (#473)', async () => {
+    const variants = [
+      { ...report(), rows: undefined },
+      { ...report(), anchor: { ...report().anchor, headId: undefined } },
+      { ...report(), coverage: { ...report().coverage, v3Rows: -1 } },
+      { ...report(), rotation: { retiredFile: null, retiredVerificationOk: true } },
+    ];
+    for (const candidate of variants) {
+      const ledger = { isAvailable: () => true, verifyLedger: async () => candidate };
+      const result = await gateFor(ledger).evaluate('v6.0.10');
+      assert.equal(result.allowed, false, JSON.stringify(candidate));
+      assert.match(result.failures[0].reason, /malformed report/, JSON.stringify(candidate));
+    }
+  });
+
+  it('rejects contradictory green anchors and coverage instead of claiming intact (#473)', async () => {
+    const base = report();
+    const variants = [
+      report({ anchor: { ...base.anchor, status: 'head-missing' } }),
+      report({ anchor: { ...base.anchor, status: 'ledger-mismatch' } }),
+      report({ anchor: { ...base.anchor, status: 'unavailable' } }),
+      report({ coverage: { ...base.coverage, v3Rows: 2 } }),
+      report({ coverage: { ...base.coverage, frozenLegacyRows: 1 } }),
+      report({ sealScope: 'full', coverage: { ...base.coverage, v1Rows: 1, v3Rows: 2 } }),
+    ];
+    for (const candidate of variants) {
+      const ledger = { isAvailable: () => true, verifyLedger: async () => candidate };
+      const result = await gateFor(ledger).evaluate('v6.0.10');
+      assert.equal(result.allowed, false, JSON.stringify(candidate));
+      assert.match(result.failures[0].reason, /malformed report/);
+    }
+  });
+
+  it('blocks inconsistent anchor metadata rather than upgrading a forged green report (#473)', async () => {
+    const base = report().anchor;
+    const variants = [
+      { ...base, status: 'established-now' as const, headId: null },
+      { ...base, status: 'established-late' as const, establishedAtId: null },
+      { ...base, status: 'verified' as const, establishedAt: null },
+      { ...base, status: 'established-now' as const, establishedAt: '' },
+      { ...base, status: 'verified' as const, establishedAtId: 4 },
+      { ...base, status: 'unanchored' as const },
+    ];
+    for (const anchor of variants) {
+      const candidate = report({ anchor });
+      const ledger = { isAvailable: () => true, verifyLedger: async () => candidate };
+      const result = await gateFor(ledger).evaluate('v6.0.10');
+      assert.equal(result.allowed, false, JSON.stringify(anchor));
+      assert.match(result.failures[0].reason, /malformed report/, JSON.stringify(anchor));
+      assert.equal(result.warnings.length, 0);
+    }
+    const good = report({ anchor: { ...base, status: 'established-now' } });
+    const accepted = await gateFor({ isAvailable: () => true, verifyLedger: async () => good }).evaluate('v6.0.10');
+    assert.equal(accepted.allowed, true, 'a newly established and fully documented anchor is valid');
+    assert.equal(accepted.warnings.length, 0);
+  });
+
+  it('does not call a green but non-full seal intact (#473)', async () => {
+    const ledger = {
+      isAvailable: () => true,
+      verifyLedger: async () => report({ sealScope: 'partial' }),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, true, 'existing warning-only release policy preserved');
+    assert.equal(result.warnings.length, 1);
+    assert.match(result.warnings[0].reason, /PARTIAL SEAL.*scope partial/);
+    assert.doesNotMatch(result.warnings[0].reason, /chain intact/);
   });
 
   it('blocks when no ledger is wired', async () => {

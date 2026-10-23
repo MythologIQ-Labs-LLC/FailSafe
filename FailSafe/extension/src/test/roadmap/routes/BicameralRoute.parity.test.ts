@@ -117,6 +117,10 @@ function findHandler(handlers: CapturedHandler[], p: string): CapturedHandler {
 }
 
 function makeDeps(client: BicameralMcpClient, withInterceptor: boolean): BicameralRouteDeps {
+  // A live server does not reconstruct its evaluator on each accessor read.
+  const wiredInterceptor = withInterceptor
+    ? Object.assign(allowInterceptor(), { getClient: () => client })
+    : null;
   return {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
@@ -127,13 +131,43 @@ function makeDeps(client: BicameralMcpClient, withInterceptor: boolean): Bicamer
     setAutoConnect: async () => undefined,
     // #514: ratify is operator-confirmed; these suites run with an approving confirmer.
     confirmOperatorAction: async () => "approved",
-    getMcpInterceptor: () => (withInterceptor ? allowInterceptor() : null),
+    getMcpInterceptor: () => wiredInterceptor,
   };
 }
 
 const SNAP = loadSnapshot();
 
 suite("FX551 BicameralRoute behavioural parity (B151 Phase 3)", () => {
+  test("B233 a rewire after ALLOW refuses all three decision routes", async () => {
+    for (const [endpoint, body] of [
+      ["history", {}],
+      ["drift", { filePath: "src/a.ts" }],
+      ["ratify", { decisionId: "d-1", verdict: "ratify" }],
+    ] as const) {
+      const invoked: string[] = [];
+      const original = {
+        isConnected: () => true,
+        history: async () => { invoked.push("history"); return []; },
+        drift: async () => { invoked.push("drift"); return []; },
+        ratify: async () => { invoked.push("ratify"); },
+      } as unknown as BicameralMcpClient;
+      const replacement = { isConnected: () => true } as BicameralMcpClient;
+      const deps = makeDeps(original, true);
+      let reads = 0;
+      // Reads 1-3 use the authorized client. Read 4 changes immediately
+      // after the interceptor resolves but before the route invokes the tool.
+      deps.getBicameralClient = () => ++reads >= 4 ? replacement : original;
+      const { app, handlers } = makeFakeApp();
+      setupBicameralRoutes(app as never, deps);
+      const response = fakeRes();
+      await findHandler(handlers, `/api/actions/bicameral-${endpoint}`)
+        .handler(fakeReq(body), response.res);
+      assert.equal(response.status(), 409, endpoint);
+      assert.match(String((response.body() as { error: string }).error), /client changed/, endpoint);
+      assert.deepEqual(invoked, [], `${endpoint}: stale tool must not run`);
+    }
+  });
+
   test("bicameral-history success body matches the pre-migration snapshot", async () => {
     const client = {
       isConnected: () => true,

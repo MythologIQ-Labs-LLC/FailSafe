@@ -72,7 +72,7 @@ function makeDeps(
     getBicameralClient: () => client as never,
     getAutoConnect: () => false,
     setAutoConnect: async () => undefined,
-    getMcpInterceptor: () => interceptor,
+    getMcpInterceptor: () => (interceptor ? Object.assign(interceptor, { getClient: () => client }) : null),
   };
 }
 

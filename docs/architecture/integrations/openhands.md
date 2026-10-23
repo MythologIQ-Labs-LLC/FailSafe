@@ -19,7 +19,7 @@ A team that ran an OpenHands agent wants the run's actions in the same timeline 
 
 ## Measurable value
 
-Metric: the share of imported events that are signed for this install and folder and deduplicated on re-import; on main every saved line is signed and keyed `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:253-262` (`record.sig = signRecord(key, folder, record);`).
+Metric: the share of imported events that are signed for this install and folder and deduplicated on re-import; on main every saved line is signed and keyed `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:304-309` (`record.sig = signRecord(key, folder, record);`).
 Baseline: no usage data is collected, so import counts and review time saved are unverified.
 
 ## Why not simply ask an agent
@@ -52,7 +52,7 @@ No OpenHands API scope is used; a live connection to an OpenHands server would n
 
 From the export: a bare events array or a `{ version, events }` envelope `FailSafe/extension/src/extension/openhands-import-command.ts:112-116` (`A bare events array or a { version, events } envelope.`).
 Per event, only kind, verb (from `tool_name`), tool, a risk hint and a parsable time are kept `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:136-147` (`riskHint: riskHintFor(riskBasis),`).
-Run identity: a conversation or session id when it is a UUID or a long token `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:66-76` (`export function runIdentityOf(envelope: unknown)`).
+Run identity: a conversation or session id when it is a UUID or a long token `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:98-108` (`export function runIdentityOf(envelope: unknown)`).
 From settings: an optional version used only when the export declares none `FailSafe/extension/package.json:588-591` (`used for the supported-version gate when the run export does not declare one`).
 
 ## Outbound fields and egress
@@ -67,21 +67,21 @@ Governance evidence: no; the evidence file and the transparency summary stay in 
 Export text that is not a short token (for example a flattened command line) is replaced by `unrecognized` `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:56-59` (`anything else (a`).
 An id that is not a short token is hashed; integer ids are keyed by position `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:130-134` (`An id that is not a short token is replaced by its hash`).
 The risk hint is high for run, execute, shell and browse verbs and warn for edits `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:75-76` (`const HIGH_VERBS = ['run', 'execute', 'cmd'`).
-The deduplication key hashes run id and event id, or the file hash and position `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:80-84` (`export function importKeyFor(`).
+The deduplication key hashes run id and event id, or the file hash and position `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:116-120` (`export function importKeyFor(`).
 Each record is signed with HMAC-SHA256 over the folder's real path and the record's canonical JSON `FailSafe/extension/src/integrations/agent-observe/openhands-signing.ts:7-9` (`Every record line therefore carries an HMAC-SHA256`).
 
 ## Persisted artifacts
 
-`.failsafe/logs/openhands-imports.jsonl` in the workspace, one signed record per event, written only after the operator confirms `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:51-52` (`return path.join(workspaceRoot, '.failsafe', 'logs', EVIDENCE_FILE);`).
-Each write is fsynced before the import is reported as saved `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:188-190` (`fs.fsyncSync(fd);`).
-One summary line per import in `.failsafe/logs/transparency.jsonl` `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:274-279` (`type: 'agent.import.summary'`).
-A lock file `openhands-imports.jsonl.lock` while an import runs `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:228` (`const lockPath = `).
+`.failsafe/logs/openhands-imports.jsonl` in the workspace, one signed record per event, written only after the operator confirms `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:87-88` (`return path.join(workspaceRoot, '.failsafe', 'logs', EVIDENCE_FILE);`).
+Each write is fsynced before the import is reported as saved `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:228-230` (`fs.fsyncSync(fd);`).
+One summary line per import in `.failsafe/logs/transparency.jsonl` `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:319-324` (`type: 'agent.import.summary'`).
+A shared lock directory `openhands-imports.jsonl.lock` while an import runs `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:269` (`const lockPath = `).
 The signing key in VS Code Secret Storage under `failsafe.openhandsEvidenceKey.v1` `FailSafe/extension/src/integrations/agent-observe/openhands-signing.ts:27` (`export const EVIDENCE_KEY_ID = 'failsafe.openhandsEvidenceKey.v1';`).
 Health evidence of the last import in VS Code workspace state `FailSafe/extension/src/integrations/catalog/integration-health.ts:51` (`export const HEALTH_STATE_KEY = 'failsafe.integrationHealth.v1';`).
 
 ## Graph links
 
-Implemented: each record carries the export's sha256 and, when known, the run id and source event id `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:256-258` (`importKey, sourceSha256`).
+Implemented: each record carries the export's sha256 and, when known, the run id and source event id `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:304-306` (`importKey, sourceSha256`).
 Proposed (not built): run-to-evidence-to-governance edges in the relationship graph of `docs/architecture/INTEGRATION_SCENARIOS.md` scenario 3 (unverified: no code exists).
 
 ## Customer UI and actions
@@ -97,7 +97,7 @@ Status: the Console Integrations catalog card `FailSafe/extension/src/roadmap/ui
 Enforced: nothing is written without the modal confirmation `FailSafe/extension/src/extension/openhands-import-command.ts:134` (`if (!ok) return finish({ kind: 'dismissed' }`).
 Enforced: an export over 20 MB or 10000 events is refused `FailSafe/extension/src/extension/openhands-import-command.ts:18-19` (`export const MAX_EXPORT_EVENTS = 10_000;`).
 Enforced: an unsupported version maps nothing `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:162-163` (`observing disabled.`).
-Enforced: links under `.failsafe` and hard-linked targets are refused, so the import cannot append to a file outside the workspace `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:99-100` (`refusing a hard-linked`).
+Enforced: links under `.failsafe` and hard-linked targets are refused, so the import cannot append to a file outside the workspace `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:135-136` (`refusing a hard-linked`).
 Observed: the record is of a past run; it is not enforcement `FailSafe/extension/src/extension/openhands-import-command.ts:131` (`it is not live enforcement`).
 Advisory: whoever can read the Secret Storage entry can sign forged records `FailSafe/extension/src/integrations/agent-observe/openhands-signing.ts:11-12` (`whoever can read the Secret Storage entry can`).
 
@@ -107,7 +107,7 @@ Disabled: the command warns and returns `FailSafe/extension/src/extension/openha
 Unreadable file or invalid JSON records failing / contract on the card `FailSafe/extension/src/integrations/agent-observe/agent-observe-health.ts:27` (`case 'unreadable': return ['failing', 'contract'];`).
 An unsupported version records failing / unsupported_version `FailSafe/extension/src/integrations/agent-observe/agent-observe-health.ts:26` (`case 'unsupported-version': return ['failing', 'unsupported_version'];`).
 No evidence key installed: the import is refused and nothing is written `FailSafe/extension/src/extension/openhands-import-command.ts:135-137` (`OpenHands import NOT saved`).
-A held lock refuses the import until the lock is inspected and removed `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:240-241` (`another import holds the lock`).
+An active lock refuses concurrent import; stale modern lock directories use the shared lease recovery. A legacy regular-file lock always blocks until the operator confirms older writers have exited and removes it manually; its age cannot prove abandonment. Mixed-version concurrent imports are not allowed `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:44-45` (`const LOCK_TIMEOUT_MS`).
 Only an export that declares its own version can make the card contract-verified `FailSafe/extension/src/integrations/agent-observe/agent-observe-health.ts:22-25` (`Only a version declared in the export file itself counts toward contract-verified.`).
 Offline: the import never needs the network (unverified beyond the module imports named above).
 Stale: lines that no longer verify (edited by hand, or written by another install) are ignored and counted `FailSafe/extension/src/extension/openhands-import-command.ts:148` (`could not be verified and were ignored`).

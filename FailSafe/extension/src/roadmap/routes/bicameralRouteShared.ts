@@ -10,7 +10,7 @@ import type {
   BicameralMcpClient,
   runBicameralInstall,
 } from "../../integrations/bicameral";
-import type { McpInterceptor, McpEnvelope } from "../../governance/interceptor";
+import type { McpInterceptor, McpEnvelope, McpInterceptorBackingClient } from "../../governance/interceptor";
 import type { ReceiptContract } from "../../contracts";
 import type { BicameralDriftStatus } from "../../integrations/bicameral/types";
 import type { BicameralVerdictEventPayload } from "../../shared/types/events";
@@ -166,19 +166,35 @@ const RECEIPT_HTTP_TABLE: Record<string, { status: number }> = {
 };
 
 /**
- * B151: govern a bicameral tool call through the optional McpInterceptor.
- * Returns `null` when the route may proceed (no interceptor wired, or an ALLOW
- * verdict). Returns `true` when the request has been answered by a non-ALLOW
- * receipt (the caller must stop). Pure HTTP side effect on the `res`.
+ * B233: govern only the currently wired MCP client. A missing or stale
+ * interceptor must not turn a configured governance route into an allow path.
+ * Legacy test surfaces without getMcpInterceptor retain their pre-B151 behavior.
  */
 export async function governToolCall(
   deps: BicameralRouteDeps,
   envelope: McpEnvelope,
   res: Response,
+  expectedClient?: McpInterceptorBackingClient | null,
 ): Promise<boolean> {
+  const client = deps.getBicameralClient();
+  if (expectedClient && client !== expectedClient) {
+    res.status(409).json({ ok: false, error: "Bicameral client changed during request" });
+    return true;
+  }
   const interceptor = deps.getMcpInterceptor?.() ?? null;
-  if (!interceptor) return false;
+  if (deps.getMcpInterceptor && (!interceptor || !client || interceptor.getClient() !== client)) {
+    res.status(503).json({ ok: false, error: "Bicameral governance interceptor unavailable or stale" });
+    return true;
+  }
+  if (!interceptor) return false; // legacy, explicitly ungoverned fixture only
   const receipt: ReceiptContract = await interceptor.intercept(envelope);
+  if (client !== deps.getBicameralClient()
+    || deps.getMcpInterceptor?.() !== interceptor
+    || deps.getMcpInterceptor?.()?.getClient() !== client
+    || client?.isConnected() !== true) {
+    res.status(409).json({ ok: false, error: "Bicameral client changed during governance evaluation" });
+    return true;
+  }
   if (receipt.verdict === "ALLOW") return false;
   const mapped = RECEIPT_HTTP_TABLE[receipt.verdict] ?? { status: 500 };
   res.status(mapped.status).json({
@@ -186,6 +202,21 @@ export async function governToolCall(
     error: receipt.verdictRationale ?? `governance verdict: ${receipt.verdict}`,
     verdict: receipt.verdict,
   });
+  return true;
+}
+
+/** Reject a client rewire between authorization and the actual invocation. */
+export function rejectStaleBicameralClient(
+  deps: BicameralRouteDeps,
+  expectedClient: { isConnected(): boolean },
+  res: Response,
+  governed = false,
+): boolean {
+  const current = deps.getBicameralClient();
+  const interceptorMatches = !governed || !deps.getMcpInterceptor
+    || deps.getMcpInterceptor()?.getClient() === expectedClient;
+  if (current === expectedClient && expectedClient.isConnected() && interceptorMatches) return false;
+  res.status(409).json({ ok: false, error: "Bicameral client changed during request" });
   return true;
 }
 

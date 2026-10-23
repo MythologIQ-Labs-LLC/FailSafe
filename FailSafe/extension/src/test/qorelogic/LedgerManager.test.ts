@@ -542,7 +542,7 @@ suite('#473 head anchor and workspace binding', () => {
     const first = await mgr.verifyLedger();
     assert.deepEqual({ ok: first.ok, status: first.anchor.status, headId: first.anchor.headId, tail: first.anchor.unanchoredTail },
       { ok: true, status: 'unanchored', headId: null, tail: 1 });
-    const gate = new ReleasePipelineGate({ getActiveIntent: async () => null } as any, mgr);
+    const gate = new ReleasePipelineGate({ getActiveIntentForRelease: async () => null } as any, mgr);
     const reason = (await gate.evaluate('v6.0.7')).warnings[0]?.reason ?? '';
     assert.match(reason, /^PARTIAL SEAL/);
     assert.match(reason, /anchor never established/);
@@ -556,7 +556,7 @@ suite('#473 head anchor and workspace binding', () => {
       const report = await again.verifyLedger();
       assert.equal(report.anchor.status, 'established-late', `initialize ${i + 2}`);
       assert.equal(report.anchor.establishedAtId, 2);
-      const g = await new ReleasePipelineGate({ getActiveIntent: async () => null } as any, again).evaluate('v6.0.7');
+      const g = await new ReleasePipelineGate({ getActiveIntentForRelease: async () => null } as any, again).evaluate('v6.0.7');
       assert.match(g.warnings[0]?.reason ?? '', /^PARTIAL SEAL/);
       again.close();
     }
@@ -599,7 +599,7 @@ suite('#473 head anchor and workspace binding', () => {
       assert.equal(report.ok, true);
       assert.equal(report.anchor.status, 'established-late');
       assert.equal(env.secrets.record(genesisHashOf(again))?.establishedLate, true);
-      const g = await new ReleasePipelineGate({ getActiveIntent: async () => null } as any, again).evaluate('v6.0.7');
+      const g = await new ReleasePipelineGate({ getActiveIntentForRelease: async () => null } as any, again).evaluate('v6.0.7');
       const reason = [...g.failures, ...g.warnings].map((c) => c.reason).join(' | ');
       assert.match(reason, /PARTIAL SEAL/);
       assert.doesNotMatch(reason, /intact/);
@@ -710,7 +710,7 @@ suite('#473 head anchor and workspace binding', () => {
     const again = await openLedger(env);
     const report = await again.verifyLedger();
     assert.equal(report.anchor.status, 'established-now', 'nothing stored survived to compare against');
-    const g = await new ReleasePipelineGate({ getActiveIntent: async () => null } as any, again).evaluate('v6.0.7');
+    const g = await new ReleasePipelineGate({ getActiveIntentForRelease: async () => null } as any, again).evaluate('v6.0.7');
     assert.equal(g.warnings.length, 0);
     assert.equal(g.allowed, true);
     again.close();
