@@ -85,6 +85,21 @@ function normalizeFailure(raw: unknown): LedgerFailure {
     return { id, code: code as LedgerFailure['code'], detail: detail.slice(0, MAX_DETAIL) };
 }
 
+/** Reject green anchor metadata that no actual anchored verifier could emit. */
+function anchorMetadataWellShaped(anchor: Record<string, unknown>): boolean {
+    if (['verified', 'established-now', 'established-late'].includes(String(anchor.status))) {
+        return typeof anchor.headId === 'number'
+            && typeof anchor.establishedAtId === 'number'
+            && anchor.establishedAtId <= anchor.headId
+            && typeof anchor.establishedAt === 'string'
+            && anchor.establishedAt.trim().length > 0;
+    }
+    if (anchor.status === 'unanchored') {
+        return anchor.headId === null && anchor.establishedAtId === null && anchor.establishedAt === null;
+    }
+    return true; // Broken anchor statuses are handled separately by the verifier.
+}
+
 /** Strictly check fields needed to describe an intact, anchored ledger. */
 function wellShaped(report: Record<string, unknown>): boolean {
     const coverage = report.coverage;
@@ -99,7 +114,7 @@ function wellShaped(report: Record<string, unknown>): boolean {
     if (typeof anchor.workspaceBound !== 'boolean' || !nonnegative(anchor.unanchoredTail)) return false;
     if (!idOrNull(anchor.headId) || !idOrNull(anchor.establishedAtId)) return false;
     if (!(anchor.establishedAt === null || typeof anchor.establishedAt === 'string')) return false;
-    if (anchor.status === 'verified' && anchor.headId === null) return false;
+    if (!anchorMetadataWellShaped(anchor)) return false;
     if (rotation !== undefined && rotation !== null) {
         if (!isObject(rotation) || typeof rotation.retiredFile !== 'string' || typeof rotation.retiredVerificationOk !== 'boolean') return false;
     }

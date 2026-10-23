@@ -303,6 +303,30 @@ describe('ReleasePipelineGate ledger scope (#473 LD9)', function () {
     }
   });
 
+  it('blocks inconsistent anchor metadata rather than upgrading a forged green report (#473)', async () => {
+    const base = report().anchor;
+    const variants = [
+      { ...base, status: 'established-now' as const, headId: null },
+      { ...base, status: 'established-late' as const, establishedAtId: null },
+      { ...base, status: 'verified' as const, establishedAt: null },
+      { ...base, status: 'established-now' as const, establishedAt: '' },
+      { ...base, status: 'verified' as const, establishedAtId: 4 },
+      { ...base, status: 'unanchored' as const },
+    ];
+    for (const anchor of variants) {
+      const candidate = report({ anchor });
+      const ledger = { isAvailable: () => true, verifyLedger: async () => candidate };
+      const result = await gateFor(ledger).evaluate('v6.0.10');
+      assert.equal(result.allowed, false, JSON.stringify(anchor));
+      assert.match(result.failures[0].reason, /malformed report/, JSON.stringify(anchor));
+      assert.equal(result.warnings.length, 0);
+    }
+    const good = report({ anchor: { ...base, status: 'established-now' } });
+    const accepted = await gateFor({ isAvailable: () => true, verifyLedger: async () => good }).evaluate('v6.0.10');
+    assert.equal(accepted.allowed, true, 'a newly established and fully documented anchor is valid');
+    assert.equal(accepted.warnings.length, 0);
+  });
+
   it('does not call a green but non-full seal intact (#473)', async () => {
     const ledger = {
       isAvailable: () => true,
