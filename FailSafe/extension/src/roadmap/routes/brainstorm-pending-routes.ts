@@ -1,5 +1,6 @@
 import express, { type Application, type Request, type Response } from "express";
 import type { ApiRouteDeps } from "./types";
+import { isCanonicalAudioId } from "../services/AudioVaultService";
 
 async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
   if (deps.rejectIfRemote(req, res)) return;
@@ -16,7 +17,9 @@ async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
 async function getAudio(req: Request, res: Response, deps: ApiRouteDeps) {
   if (deps.rejectIfRemote(req, res)) return;
   try {
-    const audio = await deps.audioVaultService.getAudio(String(req.params.hash));
+    const hash = req.params.hash;
+    if (!isCanonicalAudioId(hash)) { res.status(400).send("Invalid audio id"); return; }
+    const audio = await deps.audioVaultService.getAudio(hash);
     if (!audio) { res.status(404).send("Not found"); return; }
     res.setHeader("Content-Type", "audio/webm");
     res.send(audio);
