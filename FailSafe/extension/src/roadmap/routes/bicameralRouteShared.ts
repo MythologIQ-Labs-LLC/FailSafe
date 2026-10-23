@@ -205,6 +205,21 @@ export async function governToolCall(
   return true;
 }
 
+/** Reject a client rewire between authorization and the actual invocation. */
+export function rejectStaleBicameralClient(
+  deps: BicameralRouteDeps,
+  expectedClient: { isConnected(): boolean },
+  res: Response,
+  governed = false,
+): boolean {
+  const current = deps.getBicameralClient();
+  const interceptorMatches = !governed || !deps.getMcpInterceptor
+    || deps.getMcpInterceptor()?.getClient() === expectedClient;
+  if (current === expectedClient && expectedClient.isConnected() && interceptorMatches) return false;
+  res.status(409).json({ ok: false, error: "Bicameral client changed during request" });
+  return true;
+}
+
 export function parseInstallMode(raw: unknown): InstallMode | null {
   if (raw === "solo" || raw === "team") return raw;
   return null;

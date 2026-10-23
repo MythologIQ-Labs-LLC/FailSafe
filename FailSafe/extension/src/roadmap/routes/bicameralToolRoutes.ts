@@ -11,7 +11,7 @@
 // history/drift/ratify precedent — see the plan's F6 note.
 
 import type { Request, Response } from "express";
-import { governToolCall, type BicameralRouteDeps } from "./bicameralRouteShared";
+import { governToolCall, rejectStaleBicameralClient, type BicameralRouteDeps } from "./bicameralRouteShared";
 
 /**
  * A tool route spec. `client` resolves the typed client method's result from
@@ -93,11 +93,8 @@ export function bicameralToolRoute(
         );
         if (blocked) return;
       }
-      // A rewire during an awaited verdict must never invoke the old MCP client.
-      if (deps.getBicameralClient() !== client) {
-        res.status(409).json({ ok: false, error: "Bicameral client changed during request" });
-        return;
-      }
+      // The final client-identity check is shared by all Bicameral tool routes.
+      if (rejectStaleBicameralClient(deps, client, res, spec.governed)) return;
       const result = await spec.invoke(client, body);
       res.json({ ok: true, result });
     } catch (e) {
