@@ -222,7 +222,7 @@ export function rejectStaleBicameralClient(
       && interceptor === evaluatedInterceptor
       && interceptor.getClient() === expectedClient);
   if (current === expectedClient && expectedClient.isConnected() && interceptorMatches) return false;
-  res.status(409).json({ ok: false, error: "Bicameral client or evaluator changed during request" });
+  res.status(409).json({ ok: false, error: "Bicameral client changed or evaluator changed during request" });
   return true;
 }
 
