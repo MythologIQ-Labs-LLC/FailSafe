@@ -232,24 +232,30 @@ export class ConsoleRouteRegistrar {
     });
   }
 
-  /** Root and health share one selection; only two literal HTML names are served. */
-  private chooseUiEntry(req: Request): "index.html" | "command-center.html" | null {
-    const isUsable = (file: "index.html" | "command-center.html"): boolean => {
+  /**
+   * Return only one of two fixed packaged asset paths. The request chooses
+   * between trusted literals; it is never interpolated into a filesystem path.
+   * Refuse symlinked or unreadable assets rather than serving an arbitrary file.
+   */
+  private chooseUiEntry(req: Request): string | null {
+    const indexPath = path.join(this.host.uiDir, "index.html");
+    const consolePath = path.join(this.host.uiDir, "command-center.html");
+    const isUsable = (filePath: string): boolean => {
       try {
-        const target = path.join(this.host.uiDir, file);
-        const stat = fs.statSync(target);
-        fs.accessSync(target, fs.constants.R_OK);
-        return stat.isFile();
+        const stat = fs.lstatSync(filePath);
+        if (!stat.isFile() || stat.isSymbolicLink()) return false;
+        fs.accessSync(filePath, fs.constants.R_OK);
+        return true;
       } catch { return false; }
     };
-    if (this.host.getUiEntryFile(req) === "index.html" && isUsable("index.html")) return "index.html";
-    return isUsable("command-center.html") ? "command-center.html" : null;
+    if (this.host.getUiEntryFile(req) === "index.html" && isUsable(indexPath)) return indexPath;
+    return isUsable(consolePath) ? consolePath : null;
   }
 
   private serveUiEntry(req: Request, res: Response): void {
     const file = this.chooseUiEntry(req);
     if (!file) { res.status(503).send("FailSafe Console UI is unavailable."); return; }
-    res.sendFile(path.join(this.host.uiDir, file), { dotfiles: "allow" as const });
+    res.sendFile(file, { dotfiles: "allow" as const });
   }
 
   private serveRoadmap(_req: Request, res: Response): void {
