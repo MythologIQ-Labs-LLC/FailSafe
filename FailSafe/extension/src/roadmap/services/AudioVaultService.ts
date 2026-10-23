@@ -58,15 +58,31 @@ export class AudioVaultService {
     const metadata = {
       id: hash, timestamp: new Date().toISOString(), transcriptSnippet: transcript.slice(0, 100),
     };
-    // wx refuses a pre-existing file or attacker-planted symlink.
-    await fs.promises.writeFile(webmPath, audioData, { flag: "wx" });
-    try {
-      await fs.promises.writeFile(sidecarPath, JSON.stringify(metadata, null, 2), { encoding: "utf8", flag: "wx" });
-    } catch (error) {
-      await fs.promises.unlink(webmPath).catch(() => undefined);
-      throw error;
-    }
+    // Exclusive creation refuses collisions and planted symlinks.
+    await fs.promises.writeFile(webmPath, audioData, { flag: "wx", mode: 0o600 });
+    await this.writeSidecarOrRollback(sidecarPath, webmPath, JSON.stringify(metadata, null, 2));
     return hash;
+  }
+
+  /** A partially written sidecar must never remain as apparent evidence. */
+  private async writeSidecarOrRollback(sidecar: string, audio: string, contents: string): Promise<void> {
+    let file: fs.promises.FileHandle | undefined;
+    let created = false;
+    try {
+      file = await fs.promises.open(sidecar, "wx", 0o600);
+      created = true;
+      await file.writeFile(contents, "utf8");
+      await file.close();
+      file = undefined;
+    } catch (failure) {
+      const errors: unknown[] = [failure];
+      if (file) try { await file.close(); } catch (e) { errors.push(e); }
+      // Never unlink a pre-existing sidecar on EEXIST; we did not create it.
+      if (created) try { await fs.promises.unlink(sidecar); } catch (e) { errors.push(e); }
+      try { await fs.promises.unlink(audio); } catch (e) { errors.push(e); }
+      if (errors.length > 1) throw new AggregateError(errors, "AUDIO_VAULT_ROLLBACK_INCOMPLETE");
+      throw failure;
+    }
   }
 
   async getAudio(hash: string): Promise<Buffer | null> {

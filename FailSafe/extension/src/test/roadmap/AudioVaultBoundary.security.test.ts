@@ -64,6 +64,34 @@ suite("AudioVaultService security boundary (#465)", () => {
     }
   });
 
+  test("partially failed sidecar publication rolls back audio and metadata (#465)", async () => {
+    const io = fs.promises as unknown as { open: typeof fs.promises.open };
+    const originalOpen = io.open;
+    let injected = false;
+    io.open = (async (filePath: any, flags: any, mode?: any) => {
+      const handle = await originalOpen(filePath, flags, mode);
+      if (String(filePath).endsWith(".json") && flags === "wx") {
+        injected = true;
+        const originalWrite = handle.writeFile.bind(handle);
+        handle.writeFile = (async () => {
+          await originalWrite("{partial", "utf8");
+          throw new Error("SIMULATED_SIDECAR_IO_FAILURE");
+        }) as typeof handle.writeFile;
+      }
+      return handle;
+    }) as typeof io.open;
+    try {
+      await assert.rejects(
+        () => vault.storeAudio(Buffer.from("captured speech")),
+        /SIMULATED_SIDECAR_IO_FAILURE/,
+      );
+      assert.equal(injected, true, "the sidecar failure was actually exercised");
+      assert.deepEqual(fs.readdirSync(path.join(workspaceRoot, ".failsafe", "audio")), []);
+    } finally {
+      io.open = originalOpen;
+    }
+  });
+
   test("per-capture size limit rejects before creating any files", async () => {
     await assert.rejects(
       () => vault.storeAudio(Buffer.alloc(50 * 1024 * 1024 + 1)),
