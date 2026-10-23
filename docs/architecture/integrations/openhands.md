@@ -67,7 +67,7 @@ Governance evidence: no; the evidence file and the transparency summary stay in 
 Export text that is not a short token (for example a flattened command line) is replaced by `unrecognized` `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:56-59` (`anything else (a`).
 An id that is not a short token is hashed; integer ids are keyed by position `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:130-134` (`An id that is not a short token is replaced by its hash`).
 The risk hint is high for run, execute, shell and browse verbs and warn for edits `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:75-76` (`const HIGH_VERBS = ['run', 'execute', 'cmd'`).
-The deduplication key hashes run id and event id, or the file hash and position `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:116-120` (`export function importKeyFor(`).
+The deduplication key hashes run id and event id, or the file hash and position `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:112` (`export function importKeyFor(`).
 Each record is signed with HMAC-SHA256 over the folder's real path and the record's canonical JSON `FailSafe/extension/src/integrations/agent-observe/openhands-signing.ts:7-9` (`Every record line therefore carries an HMAC-SHA256`).
 
 ## Persisted artifacts
@@ -75,13 +75,13 @@ Each record is signed with HMAC-SHA256 over the folder's real path and the recor
 `.failsafe/logs/openhands-imports.jsonl` in the workspace, one signed record per event, written only after the operator confirms `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:87-88` (`return path.join(workspaceRoot, '.failsafe', 'logs', EVIDENCE_FILE);`).
 Each write is fsynced before the import is reported as saved `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:228-230` (`fs.fsyncSync(fd);`).
 One summary line per import in `.failsafe/logs/transparency.jsonl` `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:319-324` (`type: 'agent.import.summary'`).
-A shared lock directory `openhands-imports.jsonl.lock` while an import runs `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:269` (`const lockPath = `).
+A shared lock directory `openhands-imports.jsonl.lock` while an import runs `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:265` (`const lockPath = `).
 The signing key in VS Code Secret Storage under `failsafe.openhandsEvidenceKey.v1` `FailSafe/extension/src/integrations/agent-observe/openhands-signing.ts:27` (`export const EVIDENCE_KEY_ID = 'failsafe.openhandsEvidenceKey.v1';`).
 Health evidence of the last import in VS Code workspace state `FailSafe/extension/src/integrations/catalog/integration-health.ts:51` (`export const HEALTH_STATE_KEY = 'failsafe.integrationHealth.v1';`).
 
 ## Graph links
 
-Implemented: each record carries the export's sha256 and, when known, the run id and source event id `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:304-306` (`importKey, sourceSha256`).
+Implemented: each record carries the export's sha256 and, when known, the run id and source event id `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:300` (`importKey, sourceSha256`).
 Proposed (not built): run-to-evidence-to-governance edges in the relationship graph of `docs/architecture/INTEGRATION_SCENARIOS.md` scenario 3 (unverified: no code exists).
 
 ## Customer UI and actions

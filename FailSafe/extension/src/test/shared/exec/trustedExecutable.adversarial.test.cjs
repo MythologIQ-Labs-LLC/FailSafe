@@ -111,8 +111,21 @@ test('T7: resolvePrNumber(ws) never runs the planted gh', () => {
     assert.equal(resolvePrNumber(ws), undefined);
     assert.deepEqual(marks(), [], 'the marker is empty');
     if (te.trustedExecutablePath) {
-      const real = te.trustedExecutablePath(te.GH, ws);
-      assert.ok(path.isAbsolute(real) && !real.toLowerCase().startsWith(ws.toLowerCase()), `the real gh: ${real}`);
+      try {
+        const real = te.trustedExecutablePath(te.GH, ws);
+        assert.ok(path.isAbsolute(real) && !real.toLowerCase().startsWith(ws.toLowerCase()), `the real gh: ${real}`);
+      } catch (error) {
+        // GitHub Actions hosts need not have gh installed. Absence is safe only
+        // when the resolver explicitly refused the workspace plant and no
+        // planted command executed. Do not weaken production executable trust.
+        assert.equal(error && error.code, 'TRUSTED_EXECUTABLE_UNAVAILABLE');
+        assert.ok(Array.isArray(error.rejected), 'structured rejection evidence is required');
+        assert.ok(error.rejected.some(({ candidate, reason }) =>
+          typeof candidate === 'string' && candidate.toLowerCase().startsWith(ws.toLowerCase() + path.sep) &&
+          typeof reason === 'string' && reason.includes('excluded folder')
+        ), 'the planted gh was explicitly rejected as untrusted');
+        assert.deepEqual(marks(), [], 'an unavailable trusted gh must never run the plant');
+      }
     }
   } finally { delete process.env.NODE_OPTIONS; }
 });
