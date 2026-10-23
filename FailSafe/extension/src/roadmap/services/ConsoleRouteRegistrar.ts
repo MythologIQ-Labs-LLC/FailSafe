@@ -216,9 +216,7 @@ export class ConsoleRouteRegistrar {
       // #471: the HTTP handler being reached is evidence of serving this request,
       // not a verified governance PASS. Test the UI entry actually selected by
       // serveUiEntry, including its command-center fallback, not unrelated index.html.
-      const requested = this.host.getUiEntryFile(req);
-      const uiAssetsPresent = this.isUsableUiEntry(requested)
-        || this.isUsableUiEntry("command-center.html");
+      const uiAssetsPresent = this.chooseUiEntry(req) !== null;
       res.status(uiAssetsPresent ? 200 : 503).json({
         ready: uiAssetsPresent,
         httpServing: true,
@@ -234,20 +232,22 @@ export class ConsoleRouteRegistrar {
     });
   }
 
-  /** Health and the root route must use the same actual HTML selection predicate. */
-  private isUsableUiEntry(file: string): boolean {
-    try {
-      const target = path.join(this.host.uiDir, file);
-      const stat = fs.statSync(target);
-      fs.accessSync(target, fs.constants.R_OK);
-      return stat.isFile();
-    } catch { return false; }
+  /** Root and health share one selection; only two literal HTML names are served. */
+  private chooseUiEntry(req: Request): "index.html" | "command-center.html" | null {
+    const isUsable = (file: "index.html" | "command-center.html"): boolean => {
+      try {
+        const target = path.join(this.host.uiDir, file);
+        const stat = fs.statSync(target);
+        fs.accessSync(target, fs.constants.R_OK);
+        return stat.isFile();
+      } catch { return false; }
+    };
+    if (this.host.getUiEntryFile(req) === "index.html" && isUsable("index.html")) return "index.html";
+    return isUsable("command-center.html") ? "command-center.html" : null;
   }
 
   private serveUiEntry(req: Request, res: Response): void {
-    const preferred = this.host.getUiEntryFile(req);
-    const file = this.isUsableUiEntry(preferred) ? preferred
-      : this.isUsableUiEntry("command-center.html") ? "command-center.html" : null;
+    const file = this.chooseUiEntry(req);
     if (!file) { res.status(503).send("FailSafe Console UI is unavailable."); return; }
     res.sendFile(path.join(this.host.uiDir, file), { dotfiles: "allow" as const });
   }
