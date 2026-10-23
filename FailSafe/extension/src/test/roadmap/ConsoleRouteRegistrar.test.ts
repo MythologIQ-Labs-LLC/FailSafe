@@ -141,8 +141,8 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     app.get = (name: string, handler: (req: unknown, res: unknown) => void) => { handlers[name] = handler; };
     const host = makeHost(app, makeFakeHub());
     host.uiDir = uiDir;
-    let requested: 'index.html' | 'command-center.html' = 'command-center.html';
-    host.getUiEntryFile = () => requested;
+    let requested = 'command-center.html';
+    host.getUiEntryFile = () => requested as 'index.html' | 'command-center.html';
     new ConsoleRouteRegistrar(host).setupAllRoutes();
 
     const health = (): { status: number; body: any } => {
@@ -159,7 +159,12 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       const response = {
         statusCode: 200, file: null as string | null,
         status(value: number) { this.statusCode = value; return this; },
-        sendFile(file: string) { this.file = file; return this; },
+        sendFile(file: string, options?: { root?: string }) {
+          assert.ok(file === 'index.html' || file === 'command-center.html', 'sendFile must receive a literal asset');
+          assert.equal(options?.root, uiDir, 'sendFile must be confined to the packaged UI root');
+          this.file = path.join(options.root, file);
+          return this;
+        },
         send(_body: string) { return this; },
       };
       handlers['/']({}, response);
@@ -200,6 +205,11 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       fs.writeFileSync(path.join(uiDir, 'index.html'), '<html>index</html>');
       assert.equal(health().status, 200);
       assert.deepEqual(served(), { status: 200, file: path.join(uiDir, 'index.html') });
+      // An invalid preference is never forwarded to sendFile, even when a
+      // malformed host implementation breaks the declared return type.
+      requested = '../outside.html';
+      assert.equal(health().status, 503, 'untrusted preference is not a usable entry');
+      assert.deepEqual(served(), { status: 503, file: null }, 'invalid preference must not be served');
     } finally {
       fs.rmSync(uiDir, { recursive: true, force: true });
     }

@@ -237,7 +237,7 @@ export class ConsoleRouteRegistrar {
    * between trusted literals; it is never interpolated into a filesystem path.
    * Refuse symlinked or unreadable assets rather than serving an arbitrary file.
    */
-  private chooseUiEntry(req: Request): string | null {
+  private chooseUiEntry(req: Request): "index.html" | "command-center.html" | null {
     const indexPath = path.join(this.host.uiDir, "index.html");
     const consolePath = path.join(this.host.uiDir, "command-center.html");
     const isUsable = (filePath: string): boolean => {
@@ -248,14 +248,15 @@ export class ConsoleRouteRegistrar {
         return true;
       } catch { return false; }
     };
-    if (this.host.getUiEntryFile(req) === "index.html" && isUsable(indexPath)) return indexPath;
-    return isUsable(consolePath) ? consolePath : null;
+    if (this.host.getUiEntryFile(req) === "index.html" && isUsable(indexPath)) return "index.html";
+    return isUsable(consolePath) ? "command-center.html" : null;
   }
 
   private serveUiEntry(req: Request, res: Response): void {
     const file = this.chooseUiEntry(req);
     if (!file) { res.status(503).send("FailSafe Console UI is unavailable."); return; }
-    res.sendFile(file, { dotfiles: "allow" as const });
+    if (file === "index.html") { res.sendFile("index.html", { root: this.host.uiDir }); return; }
+    res.sendFile("command-center.html", { root: this.host.uiDir });
   }
 
   private serveRoadmap(_req: Request, res: Response): void {
