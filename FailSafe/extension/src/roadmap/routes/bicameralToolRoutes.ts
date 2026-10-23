@@ -84,6 +84,7 @@ export function bicameralToolRoute(
       return;
     }
     try {
+      const evaluator = spec.governed ? deps.getMcpInterceptor?.() ?? null : null;
       if (spec.governed) {
         const blocked = await governToolCall(
           deps,
@@ -94,7 +95,7 @@ export function bicameralToolRoute(
         if (blocked) return;
       }
       // The final client-identity check is shared by all Bicameral tool routes.
-      if (rejectStaleBicameralClient(deps, client, res, spec.governed)) return;
+      if (rejectStaleBicameralClient(deps, client, res, spec.governed, evaluator)) return;
       const result = await spec.invoke(client, body);
       res.json({ ok: true, result });
     } catch (e) {

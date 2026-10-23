@@ -168,6 +168,37 @@ suite("FX551 BicameralRoute behavioural parity (B151 Phase 3)", () => {
     }
   });
 
+  test("B233 evaluator replacement after ALLOW refuses history, drift and ratify", async () => {
+    for (const [endpoint, body] of [
+      ["history", {}],
+      ["drift", { filePath: "src/a.ts" }],
+      ["ratify", { decisionId: "d-1", verdict: "ratify" }],
+    ] as const) {
+      const invoked: string[] = [];
+      const wiredClient = {
+        isConnected: () => true,
+        history: async () => { invoked.push("history"); return []; },
+        drift: async () => { invoked.push("drift"); return []; },
+        ratify: async () => { invoked.push("ratify"); },
+      } as unknown as BicameralMcpClient;
+      const original = Object.assign(allowInterceptor(), { getClient: () => wiredClient });
+      const replacement = Object.assign(allowInterceptor(), { getClient: () => wiredClient });
+      const deps = makeDeps(wiredClient, true);
+      let reads = 0;
+      // 1: capture, 2: govern before intercept, 3-4: govern after ALLOW.
+      // 5: final pre-invocation check sees a different evaluator, same client.
+      deps.getMcpInterceptor = () => ++reads >= 5 ? replacement : original;
+      const { app, handlers } = makeFakeApp();
+      setupBicameralRoutes(app as never, deps);
+      const response = fakeRes();
+      await findHandler(handlers, `/api/actions/bicameral-${endpoint}`)
+        .handler(fakeReq(body), response.res);
+      assert.equal(response.status(), 409, endpoint);
+      assert.match(String((response.body() as { error: string }).error), /evaluator changed/, endpoint);
+      assert.deepEqual(invoked, [], `${endpoint}: no tool may run under superseded evaluator`);
+    }
+  });
+
   test("bicameral-history success body matches the pre-migration snapshot", async () => {
     const client = {
       isConnected: () => true,

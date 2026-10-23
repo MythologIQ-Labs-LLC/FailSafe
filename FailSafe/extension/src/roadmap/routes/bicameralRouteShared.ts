@@ -211,12 +211,18 @@ export function rejectStaleBicameralClient(
   expectedClient: { isConnected(): boolean },
   res: Response,
   governed = false,
+  evaluatedInterceptor?: McpInterceptor | null,
 ): boolean {
   const current = deps.getBicameralClient();
+  // Client identity alone does not bind the authorization policy. A rewire
+  // can replace the evaluator while leaving the same MCP client connected.
+  const interceptor = deps.getMcpInterceptor?.() ?? null;
   const interceptorMatches = !governed || !deps.getMcpInterceptor
-    || deps.getMcpInterceptor()?.getClient() === expectedClient;
+    || (interceptor !== null
+      && interceptor === evaluatedInterceptor
+      && interceptor.getClient() === expectedClient);
   if (current === expectedClient && expectedClient.isConnected() && interceptorMatches) return false;
-  res.status(409).json({ ok: false, error: "Bicameral client changed during request" });
+  res.status(409).json({ ok: false, error: "Bicameral client or evaluator changed during request" });
   return true;
 }
 
