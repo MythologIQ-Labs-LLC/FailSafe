@@ -155,6 +155,16 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       handlers['/health']({}, response);
       return { status: response.statusCode, body: response.body };
     };
+    const served = (): { status: number; file: string | null } => {
+      const response = {
+        statusCode: 200, file: null as string | null,
+        status(value: number) { this.statusCode = value; return this; },
+        sendFile(file: string) { this.file = file; return this; },
+        send(_body: string) { return this; },
+      };
+      handlers['/']({}, response);
+      return { status: response.statusCode, file: response.file };
+    };
     try {
       // index.html existing does NOT make the chosen command-center entry available.
       fs.writeFileSync(path.join(uiDir, 'index.html'), '<html>index</html>');
@@ -179,9 +189,17 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       // A directory named like an entry is not an HTML file.
       fs.mkdirSync(path.join(uiDir, 'index.html'));
       assert.equal(health().status, 503);
+      assert.deepEqual(served(), { status: 503, file: null }, 'root refuses when neither HTML entry is usable');
+      // Previously health returned 200 here, but the root selected the bad
+      // directory because existsSync did not check whether it was a file.
+      fs.writeFileSync(path.join(uiDir, 'command-center.html'), '<html>fallback</html>');
+      assert.equal(health().status, 200);
+      assert.deepEqual(served(), { status: 200, file: path.join(uiDir, 'command-center.html') });
+      fs.unlinkSync(path.join(uiDir, 'command-center.html'));
       fs.rmdirSync(path.join(uiDir, 'index.html'));
       fs.writeFileSync(path.join(uiDir, 'index.html'), '<html>index</html>');
       assert.equal(health().status, 200);
+      assert.deepEqual(served(), { status: 200, file: path.join(uiDir, 'index.html') });
     } finally {
       fs.rmSync(uiDir, { recursive: true, force: true });
     }

@@ -216,16 +216,9 @@ export class ConsoleRouteRegistrar {
       // #471: the HTTP handler being reached is evidence of serving this request,
       // not a verified governance PASS. Test the UI entry actually selected by
       // serveUiEntry, including its command-center fallback, not unrelated index.html.
-      const isUsableEntry = (name: string): boolean => {
-        try {
-          const file = path.join(this.host.uiDir, name);
-          const stat = fs.statSync(file);
-          fs.accessSync(file, fs.constants.R_OK);
-          return stat.isFile();
-        } catch { return false; }
-      };
       const requested = this.host.getUiEntryFile(req);
-      const uiAssetsPresent = isUsableEntry(requested) || isUsableEntry("command-center.html");
+      const uiAssetsPresent = this.isUsableUiEntry(requested)
+        || this.isUsableUiEntry("command-center.html");
       res.status(uiAssetsPresent ? 200 : 503).json({
         ready: uiAssetsPresent,
         httpServing: true,
@@ -241,12 +234,22 @@ export class ConsoleRouteRegistrar {
     });
   }
 
+  /** Health and the root route must use the same actual HTML selection predicate. */
+  private isUsableUiEntry(file: string): boolean {
+    try {
+      const target = path.join(this.host.uiDir, file);
+      const stat = fs.statSync(target);
+      fs.accessSync(target, fs.constants.R_OK);
+      return stat.isFile();
+    } catch { return false; }
+  }
+
   private serveUiEntry(req: Request, res: Response): void {
-    const file = this.host.getUiEntryFile(req);
-    const target = path.join(this.host.uiDir, file);
-    const sendOpts = { dotfiles: "allow" as const };
-    if (fs.existsSync(target)) { res.sendFile(target, sendOpts); return; }
-    res.sendFile(path.join(this.host.uiDir, "command-center.html"), sendOpts);
+    const preferred = this.host.getUiEntryFile(req);
+    const file = this.isUsableUiEntry(preferred) ? preferred
+      : this.isUsableUiEntry("command-center.html") ? "command-center.html" : null;
+    if (!file) { res.status(503).send("FailSafe Console UI is unavailable."); return; }
+    res.sendFile(path.join(this.host.uiDir, file), { dotfiles: "allow" as const });
   }
 
   private serveRoadmap(_req: Request, res: Response): void {
