@@ -162,7 +162,7 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
         sendFile(file: string, options?: { root?: string }) {
           assert.ok(file === 'index.html' || file === 'command-center.html', 'sendFile must receive a literal asset');
           assert.equal(options?.root, uiDir, 'sendFile must be confined to the packaged UI root');
-          this.file = path.join(options.root, file);
+          this.file = path.join(options?.root ?? '', file);
           return this;
         },
         send(_body: string) { return this; },
