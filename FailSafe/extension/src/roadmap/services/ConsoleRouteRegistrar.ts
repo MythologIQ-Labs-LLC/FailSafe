@@ -233,9 +233,8 @@ export class ConsoleRouteRegistrar {
   }
 
   /**
-   * Return only one of two fixed packaged asset paths. The request chooses
-   * between trusted literals; it is never interpolated into a filesystem path.
-   * Refuse symlinked or unreadable assets rather than serving an arbitrary file.
+   * Return only fixed packaged file names, never request-derived paths.
+   * Refuse symlinked or unreadable packaged UI entries.
    */
   private chooseUiEntry(req: Request): "index.html" | "command-center.html" | null {
     const indexPath = path.join(this.host.uiDir, "index.html");

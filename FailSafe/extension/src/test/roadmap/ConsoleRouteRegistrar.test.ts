@@ -205,6 +205,30 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       fs.writeFileSync(path.join(uiDir, 'index.html'), '<html>index</html>');
       assert.equal(health().status, 200);
       assert.deepEqual(served(), { status: 200, file: path.join(uiDir, 'index.html') });
+
+      // Symlinks to external assets must not be served. Some Windows runners
+      // cannot create symlinks; existing directory/refusal tests still run.
+      const externalDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-ui-external-'));
+      try {
+        const externalFile = path.join(externalDir, 'untrusted.html');
+        fs.writeFileSync(externalFile, '<html>untrusted</html>');
+        fs.unlinkSync(path.join(uiDir, 'index.html'));
+        let linked = false;
+        try {
+          fs.symlinkSync(externalFile, path.join(uiDir, 'index.html'), 'file');
+          linked = true;
+        } catch (err) {
+          const code = (err as NodeJS.ErrnoException).code;
+          if (code !== 'EPERM' && code !== 'EACCES' && code !== 'ENOSYS') throw err;
+        }
+        if (linked) {
+          assert.equal(health().status, 503, 'symlinked entry cannot make Console healthy');
+          assert.deepEqual(served(), { status: 503, file: null }, 'symlink is not served');
+          fs.unlinkSync(path.join(uiDir, 'index.html'));
+        }
+      } finally {
+        fs.rmSync(externalDir, { recursive: true, force: true });
+      }
       // An invalid preference is never forwarded to sendFile, even when a
       // malformed host implementation breaks the declared return type.
       requested = '../outside.html';
