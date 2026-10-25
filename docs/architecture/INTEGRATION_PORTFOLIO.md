@@ -134,11 +134,11 @@ Computed by the check on every run; it fails when a number here differs from the
 
 | Measure | Count |
 |---|---|
-| `scan-1-files` | 53 |
-| `scan-1-call-sites` | 102 |
+| `scan-1-files` | 54 |
+| `scan-1-call-sites` | 104 |
 | `scan-2-files` | 7 |
-| `browser-files` | 38 |
-| `browser-targets` | 85 |
+| `browser-files` | 39 |
+| `browser-targets` | 87 |
 | `loopback-targets` | 2 |
 | `catalog-ids` | 11 |
 | `integration-entries` | 22 |

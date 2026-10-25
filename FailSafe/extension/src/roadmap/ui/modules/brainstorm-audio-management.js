@@ -1,5 +1,5 @@
 // Mind Map recording management (#465): no implicit upload, rendering of
-// server-derived recording IDs is text-only, never innerHTML.
+// server-derived recording IDs are rendered exclusively with textContent.
 export function wireSavedAudioManager(renderer) {
   const button = renderer._getEl('.cc-bs-audio-manage');
   const panel = renderer._getEl('.cc-bs-audio-recordings');
