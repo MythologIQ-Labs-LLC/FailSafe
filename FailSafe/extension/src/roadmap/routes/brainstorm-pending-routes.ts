@@ -66,6 +66,51 @@ async function getAudio(req: Request, res: Response, deps: ApiRouteDeps) {
   }
 }
 
+async function listSavedAudio(req: Request, res: Response, deps: ApiRouteDeps) {
+  if (deps.rejectIfRemote(req, res)) return;
+  try {
+    const recordings = await deps.audioVaultService.listAudio();
+    res.json({ recordings, limited: recordings.length >= 100 });
+  } catch {
+    res.status(503).json({ error: "Audio vault unavailable" });
+  }
+}
+
+async function deleteSavedAudio(req: Request, res: Response, deps: ApiRouteDeps) {
+  if (deps.rejectIfRemote(req, res)) return;
+  try {
+    const raw: unknown = req.params.hash;
+    if (!isCanonicalAudioId(raw)) { res.status(400).json({ error: "Invalid audio id" }); return; }
+    const id = raw;
+    const preview = await deps.audioVaultService.inspectDeletion(id);
+    if (!preview) { res.status(404).json({ error: "Recording unavailable" }); return; }
+    const visibleId = preview.id.slice(0, 12);
+    const visibleBytes = preview.bytes;
+    const approved = await confirmBoundOperation(
+      deps.confirmOperatorAction, preview,
+      (_operation, operationId) => ({
+        title: "Permanently delete this Mind Map recording?",
+        approveLabel: "Delete recording",
+        detail: withFooter([
+          `Recording: ${visibleId}… (${visibleBytes} bytes)`,
+          `Request: ${operationId}`,
+          "Delete the original .webm audio and its .json metadata from this workspace.",
+          "This operation cannot be undone. Declining will leave both files untouched.",
+        ]),
+      }),
+      res,
+    );
+    if (!approved) return;
+    if (!res.socket || res.socket.destroyed || res.writableEnded) return;
+    const outcome: "deleted" | "stale" | "partial" = await deps.audioVaultService.deleteAudio(approved.operation);
+    if (outcome === "stale") { res.status(409).json({ error: "Recording changed during approval" }); return; }
+    if (outcome === "partial") { res.status(500).json({ error: "Partial deletion: audio gone, metadata cleanup failed" }); return; }
+    res.json({ deleted: true });
+  } catch {
+    res.status(500).json({ error: "Audio deletion failed" });
+  }
+}
+
 async function retryPending(req: Request, res: Response, deps: ApiRouteDeps) {
   if (deps.rejectIfRemote(req, res)) return;
   try {
@@ -86,6 +131,8 @@ export function setupBrainstormPendingRoutes(app: Application, deps: ApiRouteDep
   app.post("/api/v1/brainstorm/audio", express.raw({ type: "audio/webm", limit: "50mb" }),
     (req, res) => storeAudio(req, res, deps));
   app.get("/api/v1/brainstorm/audio/:hash", (req, res) => getAudio(req, res, deps));
+  app.get("/api/v1/brainstorm/audio", (req, res) => listSavedAudio(req, res, deps));
+  app.delete("/api/v1/brainstorm/audio/:hash", (req, res) => deleteSavedAudio(req, res, deps));
   app.get("/api/v1/brainstorm/pending", (req, res) => {
     if (!deps.rejectIfRemote(req, res)) {
       res.json({ pending: deps.brainstormService.getPendingTranscripts() });

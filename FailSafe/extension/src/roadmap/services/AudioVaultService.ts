@@ -95,7 +95,7 @@ export class AudioVaultService {
     const directory = await fs.promises.opendir(root);
     for await (const entry of directory) {
       if (result.length >= 100) break;
-      if (!entry.isFile() || !/^[0-9a-f]{64}\\.webm$/.test(entry.name)) continue;
+      if (!entry.isFile() || !/^[0-9a-f]{64}\.webm$/.test(entry.name)) continue;
       try {
         const stat = await fs.promises.lstat(path.join(root, entry.name));
         if (stat.isSymbolicLink() || !stat.isFile()) continue;
