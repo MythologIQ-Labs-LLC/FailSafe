@@ -77,6 +77,21 @@ export class AudioVaultService {
     if (total + upcomingBytes > this.maxVaultBytes) throw new Error("AUDIO_VAULT_QUOTA_EXCEEDED");
   }
 
+  /** Close and remove only the unchanged lock inode this writer created. */
+  private async releaseCaptureLock(
+    lockPath: string, lock: fs.promises.FileHandle, owned?: fs.Stats,
+  ): Promise<void> {
+    await lock.close();
+    // Unknown ownership fails closed: never guess that a stale lock is ours.
+    if (!owned) return;
+    const actual = await fs.promises.lstat(lockPath);
+    if (!actual.isFile() || actual.isSymbolicLink() ||
+        actual.dev !== owned.dev || actual.ino !== owned.ino) {
+      throw new Error("AUDIO_VAULT_WRITE_LOCK_CHANGED");
+    }
+    await fs.promises.unlink(lockPath);
+  }
+
   /** Serialize captures here, then take a cross-process exclusive create lock. */
   private async captureExclusive<T>(root: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.writeTail;
@@ -99,19 +114,7 @@ export class AudioVaultService {
       return await operation();
     } finally {
       try {
-        if (lock) {
-          await lock.close();
-          // If the lock was acquired but could not be inspected, fail closed
-          // with the lock left for operator investigation, not an unsafe unlink.
-          if (owned) {
-            const actual = await fs.promises.lstat(lockPath);
-            if (!actual.isFile() || actual.isSymbolicLink() ||
-                actual.dev !== owned.dev || actual.ino !== owned.ino) {
-              throw new Error("AUDIO_VAULT_WRITE_LOCK_CHANGED");
-            }
-            await fs.promises.unlink(lockPath);
-          }
-        }
+        if (lock) await this.releaseCaptureLock(lockPath, lock, owned);
       } finally {
         release();
       }
