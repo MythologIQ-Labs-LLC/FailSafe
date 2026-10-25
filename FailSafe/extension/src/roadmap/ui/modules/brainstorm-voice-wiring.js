@@ -34,7 +34,10 @@ export function wireVoiceCallbacks(renderer) {
     // The extension host additionally asks for bound approval for EACH file.
     if (renderer._getEl('.cc-bs-save-audio-toggle')?.checked !== true) return;
     fetch('/api/v1/brainstorm/audio', { method: 'POST', headers: { 'Content-Type': 'audio/webm' }, body: blob })
-      .then(res => { if (!res.ok) renderer.showStatus('Audio save failed', 'var(--accent-red)'); })
+      .then(res => {
+        if (res.status === 507) renderer.showStatus('Audio vault full. Delete saved recordings to free space.', 'var(--accent-red)');
+        else if (!res.ok) renderer.showStatus('Audio save failed', 'var(--accent-red)');
+      })
       .catch(err => { console.warn('[brainstorm] audio POST failed:', err.message); renderer.showStatus('Audio capture not saved', 'var(--accent-gold)'); });
   };
   renderer.keyboard.onPttStart = () => renderer.voice.startPtt();

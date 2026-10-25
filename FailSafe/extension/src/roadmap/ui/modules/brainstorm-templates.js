@@ -134,7 +134,7 @@ export function renderRightPanel() {
 
         <label class="cc-bs-audio-save" style="display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--text-muted);cursor:pointer;">
           <input type="checkbox" class="cc-bs-save-audio-toggle" style="accent-color:var(--accent-cyan);margin-top:2px;" />
-          Save original audio locally. Each recording needs VS Code approval; files remain in .failsafe/audio even if transcription fails, until you delete them.
+          Save original audio locally (256 MiB shared storage limit). Each recording needs VS Code approval; files remain in .failsafe/audio even if transcription fails, until you delete them.
         </label>
         <button class="cc-btn cc-bs-audio-manage" aria-expanded="false" aria-controls="cc-bs-audio-recordings" title="Review or remove locally saved Mind Map audio">MANAGE SAVED AUDIO</button>
         <div id="cc-bs-audio-recordings" class="cc-bs-audio-recordings" role="region" aria-label="Saved Mind Map recordings" aria-live="polite" hidden></div>

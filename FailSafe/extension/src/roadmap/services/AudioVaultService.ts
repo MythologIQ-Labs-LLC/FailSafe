@@ -85,6 +85,7 @@ export class AudioVaultService {
     await previous;
     const lockPath = path.join(root, VAULT_WRITE_LOCK);
     let lock: fs.promises.FileHandle | undefined;
+    let owned: fs.Stats | undefined;
     try {
       try {
         lock = await fs.promises.open(lockPath, "wx", 0o600);
@@ -94,20 +95,26 @@ export class AudioVaultService {
         }
         throw error;
       }
-      const owned = await lock.stat();
-      try {
-        return await operation();
-      } finally {
-        await lock.close();
-        const actual = await fs.promises.lstat(lockPath);
-        if (!actual.isFile() || actual.isSymbolicLink() ||
-            actual.dev !== owned.dev || actual.ino !== owned.ino) {
-          throw new Error("AUDIO_VAULT_WRITE_LOCK_CHANGED");
-        }
-        await fs.promises.unlink(lockPath);
-      }
+      owned = await lock.stat();
+      return await operation();
     } finally {
-      release();
+      try {
+        if (lock) {
+          await lock.close();
+          // If the lock was acquired but could not be inspected, fail closed
+          // with the lock left for operator investigation, not an unsafe unlink.
+          if (owned) {
+            const actual = await fs.promises.lstat(lockPath);
+            if (!actual.isFile() || actual.isSymbolicLink() ||
+                actual.dev !== owned.dev || actual.ino !== owned.ino) {
+              throw new Error("AUDIO_VAULT_WRITE_LOCK_CHANGED");
+            }
+            await fs.promises.unlink(lockPath);
+          }
+        }
+      } finally {
+        release();
+      }
     }
   }
 

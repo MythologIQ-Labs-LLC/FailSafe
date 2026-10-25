@@ -34,6 +34,7 @@ async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
           "Destination: this workspace's .failsafe/audio directory.",
           "The original recording is kept even if transcription fails.",
           "No automatic deletion or retention deadline is currently configured.",
+          "Saved audio and metadata share a 256 MiB local storage limit.",
           "Nothing is saved unless you explicitly choose Save recording.",
         ]),
       }),
@@ -47,7 +48,11 @@ async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
     }
     const hash = await deps.audioVaultService.storeAudio(buffer);
     res.json({ audioHash: hash });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "AUDIO_VAULT_QUOTA_EXCEEDED") {
+      res.status(507).json({ error: "Audio storage limit reached. Delete saved recordings before saving more." });
+      return;
+    }
     res.status(500).json({ error: "Storage failed" });
   }
 }

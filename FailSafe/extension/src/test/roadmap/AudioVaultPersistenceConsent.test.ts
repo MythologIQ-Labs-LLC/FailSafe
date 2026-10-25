@@ -23,7 +23,7 @@ function response() {
   });
 }
 
-function harness(outcome: Outcome | null, remote = false) {
+function harness(outcome: Outcome | null, remote = false, storageError?: string) {
   const posts = new Map<string, Handler>();
   const app = {
     get() { return this; },
@@ -42,7 +42,10 @@ function harness(outcome: Outcome | null, remote = false) {
       return true;
     },
     audioVaultService: {
-      async storeAudio(bytes: Buffer) { stored++; recordings.push(Buffer.from(bytes)); return "a".repeat(64); },
+      async storeAudio(bytes: Buffer) {
+        if (storageError) throw new Error(storageError);
+        stored++; recordings.push(Buffer.from(bytes)); return "a".repeat(64);
+      },
     },
     ...(outcome === null ? {} : {
       confirmOperatorAction: async (request: { title: string; detail: string }) => {
@@ -128,6 +131,17 @@ suite("Mind Map audio saving requires native operator consent (#465)", () => {
       assert.equal(result.res.statusCode, 415);
     }
     assert.equal(h.asks(), 0);
+    assert.equal(h.reads(), 0);
+  });
+
+  test("quota exhaustion returns a specific status after approval without storing audio", async () => {
+    const h = harness("approved", false, "AUDIO_VAULT_QUOTA_EXCEEDED");
+    const { task, res } = h.invoke(Buffer.from("private"));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    h.approve();
+    await task;
+    assert.equal(res.statusCode, 507);
+    assert.match(String((res.body as { error: string }).error), /storage limit reached/i);
     assert.equal(h.reads(), 0);
   });
 
