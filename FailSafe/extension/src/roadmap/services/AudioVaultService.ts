@@ -4,6 +4,9 @@ import * as crypto from "crypto";
 
 const AUDIO_ID = /^[0-9a-f]{64}$/;
 const MAX_CAPTURE_BYTES = 50 * 1024 * 1024;
+const DEFAULT_VAULT_QUOTA_BYTES = 256 * 1024 * 1024;
+const VAULT_WRITE_LOCK = ".capture-write.lock";
+const MAX_VAULT_ENTRIES = 10_000;
 
 export function isCanonicalAudioId(value: unknown): value is string {
   return typeof value === "string" && AUDIO_ID.test(value);
@@ -12,10 +15,16 @@ export function isCanonicalAudioId(value: unknown): value is string {
 export class AudioVaultService {
   private readonly workspaceRoot: string;
   private readonly vaultPath: string;
+  private readonly maxVaultBytes: number;
+  private writeTail: Promise<void> = Promise.resolve();
 
-  constructor(workspaceRoot: string) {
+  constructor(workspaceRoot: string, maxVaultBytes = DEFAULT_VAULT_QUOTA_BYTES) {
+    if (!Number.isSafeInteger(maxVaultBytes) || maxVaultBytes < 1) {
+      throw new RangeError("AUDIO_VAULT_INVALID_QUOTA");
+    }
     this.workspaceRoot = path.resolve(workspaceRoot);
     this.vaultPath = path.join(this.workspaceRoot, ".failsafe", "audio");
+    this.maxVaultBytes = maxVaultBytes;
   }
 
   private async trustedVault(): Promise<string> {
@@ -46,6 +55,62 @@ export class AudioVaultService {
     await this.trustedVault();
   }
 
+  /**
+   * Count everything stored in the private vault, including sidecars, orphans
+   * and unknown regular files. Never silently undercount a link or unreadable
+   * directory entry. The lock is excluded because this operation owns it.
+   */
+  private async assertWithinQuota(root: string, upcomingBytes: number): Promise<void> {
+    let total = 0;
+    let entries = 0;
+    const directory = await fs.promises.opendir(root);
+    for await (const entry of directory) {
+      if (++entries > MAX_VAULT_ENTRIES) throw new Error("AUDIO_VAULT_TOO_MANY_ENTRIES");
+      if (entry.name === VAULT_WRITE_LOCK) continue;
+      const stat = await fs.promises.lstat(path.join(root, entry.name));
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) {
+        throw new Error("AUDIO_VAULT_UNTRUSTED_CONTENT");
+      }
+      total += stat.size;
+      if (total > this.maxVaultBytes) throw new Error("AUDIO_VAULT_QUOTA_EXCEEDED");
+    }
+    if (total + upcomingBytes > this.maxVaultBytes) throw new Error("AUDIO_VAULT_QUOTA_EXCEEDED");
+  }
+
+  /** Serialize captures here, then take a cross-process exclusive create lock. */
+  private async captureExclusive<T>(root: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.writeTail;
+    let release!: () => void;
+    this.writeTail = new Promise<void>(resolve => { release = resolve; });
+    await previous;
+    const lockPath = path.join(root, VAULT_WRITE_LOCK);
+    let lock: fs.promises.FileHandle | undefined;
+    try {
+      try {
+        lock = await fs.promises.open(lockPath, "wx", 0o600);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+          throw new Error("AUDIO_VAULT_WRITE_BUSY");
+        }
+        throw error;
+      }
+      const owned = await lock.stat();
+      try {
+        return await operation();
+      } finally {
+        await lock.close();
+        const actual = await fs.promises.lstat(lockPath);
+        if (!actual.isFile() || actual.isSymbolicLink() ||
+            actual.dev !== owned.dev || actual.ino !== owned.ino) {
+          throw new Error("AUDIO_VAULT_WRITE_LOCK_CHANGED");
+        }
+        await fs.promises.unlink(lockPath);
+      }
+    } finally {
+      release();
+    }
+  }
+
   async storeAudio(audioData: Buffer, transcript: string = ""): Promise<string> {
     if (audioData.length > MAX_CAPTURE_BYTES) {
       throw new RangeError("AUDIO_VAULT_CAPTURE_TOO_LARGE");
@@ -58,10 +123,15 @@ export class AudioVaultService {
     const metadata = {
       id: hash, timestamp: new Date().toISOString(), transcriptSnippet: transcript.slice(0, 100),
     };
-    // Exclusive creation refuses collisions and planted symlinks.
-    await fs.promises.writeFile(webmPath, audioData, { flag: "wx", mode: 0o600 });
-    await this.writeSidecarOrRollback(sidecarPath, webmPath, JSON.stringify(metadata, null, 2));
-    return hash;
+    const json = JSON.stringify(metadata, null, 2);
+    return this.captureExclusive(root, async () => {
+      await this.trustedVault();
+      await this.assertWithinQuota(root, audioData.length + Buffer.byteLength(json, "utf8"));
+      // Exclusive creation refuses collisions and planted symlinks.
+      await fs.promises.writeFile(webmPath, audioData, { flag: "wx", mode: 0o600 });
+      await this.writeSidecarOrRollback(sidecarPath, webmPath, json);
+      return hash;
+    });
   }
 
   /** A partially written sidecar must never remain as apparent evidence. */
