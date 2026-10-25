@@ -7,7 +7,7 @@ import { setupBrainstormPendingRoutes } from "../../roadmap/routes/brainstorm-pe
 type Handler = (req: any, res: any) => void | Promise<void>;
 type Approval = "approved" | "declined";
 const ID = "a".repeat(64);
-const preview = { id: ID, bytes: 7, audioDev: 1, audioIno: 9, sidecarDev: 1, sidecarIno: 10 };
+const preview = { id: ID, bytes: 7, audioDev: 1, audioIno: 9, audioMtimeMs: 100, audioCtimeMs: 101, sidecarDev: 1, sidecarIno: 10, sidecarMtimeMs: 100 };
 
 function reply() {
   return Object.assign(new EventEmitter(), {

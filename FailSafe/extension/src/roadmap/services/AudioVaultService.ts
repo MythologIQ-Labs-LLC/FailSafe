@@ -109,7 +109,7 @@ export class AudioVaultService {
    * Snapshot the two files before a destructive approval. Never trust metadata
    * from an HTTP request to decide which path is safe to delete.
    */
-  async inspectDeletion(id: string): Promise<{ id: string; bytes: number; audioDev: number; audioIno: number; sidecarDev: number | null; sidecarIno: number | null } | null> {
+  async inspectDeletion(id: string): Promise<{ id: string; bytes: number; audioDev: number; audioIno: number; audioMtimeMs: number; audioCtimeMs: number; sidecarDev: number | null; sidecarIno: number | null; sidecarMtimeMs: number | null } | null> {
     if (!isCanonicalAudioId(id)) return null;
     const root = await this.trustedVault();
     const audio = await fs.promises.lstat(path.join(root, `${id}.webm`)).catch(() => null);
@@ -117,7 +117,9 @@ export class AudioVaultService {
     const sidecar = await fs.promises.lstat(path.join(root, `${id}.json`)).catch(() => null);
     if (sidecar && (!sidecar.isFile() || sidecar.isSymbolicLink())) return null;
     return { id, bytes: audio.size, audioDev: audio.dev, audioIno: audio.ino,
-      sidecarDev: sidecar?.dev ?? null, sidecarIno: sidecar?.ino ?? null };
+      audioMtimeMs: audio.mtimeMs, audioCtimeMs: audio.ctimeMs,
+      sidecarDev: sidecar?.dev ?? null, sidecarIno: sidecar?.ino ?? null,
+      sidecarMtimeMs: sidecar?.mtimeMs ?? null };
   }
 
   /** Delete an explicitly approved, unchanged capture; audio is removed first. */

@@ -50,6 +50,17 @@ suite("Audio Vault list and deletion boundary (#465)", () => {
     assert.equal(fs.readFileSync(file, "utf8"), "replacement has different identity");
   });
 
+  test("same-size in-place audio changes invalidate an earlier deletion preview", async () => {
+    const id = await vault.storeAudio(Buffer.from("before"));
+    const preview = await vault.inspectDeletion(id);
+    assert.ok(preview);
+    const file = path.join(directory, `${id}.webm`);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    fs.writeFileSync(file, "after!");
+    assert.equal(await vault.deleteAudio(preview), "stale");
+    assert.equal(fs.readFileSync(file, "utf8"), "after!");
+  });
+
   test("linked recording is omitted and cannot be deleted", async () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-audio-not-owned-"));
     try {
