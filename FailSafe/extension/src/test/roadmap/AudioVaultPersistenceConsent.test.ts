@@ -30,6 +30,7 @@ function harness(outcome: Outcome | null, remote = false) {
     post(name: string, ...handlers: Handler[]) { posts.set(name, handlers[handlers.length - 1]); return this; },
   } as unknown as Application;
   let stored = 0;
+  const recordings: Buffer[] = [];
   let prompted = 0;
   const requests: Array<{ title: string; detail: string }> = [];
   let complete: ((value: Outcome) => void) | undefined;
@@ -40,7 +41,7 @@ function harness(outcome: Outcome | null, remote = false) {
       return true;
     },
     audioVaultService: {
-      async storeAudio(_bytes: Buffer) { stored++; return "a".repeat(64); },
+      async storeAudio(bytes: Buffer) { stored++; recordings.push(Buffer.from(bytes)); return "a".repeat(64); },
     },
     ...(outcome === null ? {} : {
       confirmOperatorAction: async (request: { title: string; detail: string }) => {
@@ -53,8 +54,8 @@ function harness(outcome: Outcome | null, remote = false) {
   setupBrainstormPendingRoutes(app, deps);
   const handler = posts.get("/api/v1/brainstorm/audio");
   assert.ok(handler);
-  const invoke = (buffer: Buffer, res = response()) => ({ task: Promise.resolve(handler({ body: buffer }, res)), res });
-  return { invoke, reads: () => stored, asks: () => prompted, requests, approve: () => complete?.("approved") };
+  const invoke = (body: unknown, res = response()) => ({ task: Promise.resolve(handler({ body }, res)), res });
+  return { invoke, reads: () => stored, recorded: () => recordings, asks: () => prompted, requests, approve: () => complete?.("approved") };
 }
 
 suite("Mind Map audio saving requires native operator consent (#465)", () => {
@@ -105,7 +106,7 @@ suite("Mind Map audio saving requires native operator consent (#465)", () => {
     assert.equal(h.reads(), 0);
   });
 
-  test("capture mutating while operator reviews is refused", async () => {
+  test("a request-body mutation during approval cannot change saved bytes", async () => {
     const h = harness("approved");
     const body = Buffer.from("before");
     const { task, res } = h.invoke(body);
@@ -113,7 +114,19 @@ suite("Mind Map audio saving requires native operator consent (#465)", () => {
     body.write("after!");
     h.approve();
     await task;
-    assert.equal(res.statusCode, 409);
+    assert.equal(res.statusCode, 200);
+    assert.equal(h.reads(), 1);
+    assert.equal(h.recorded()[0].toString(), "before", "approved copy, not later mutation");
+  });
+
+  test("string, array and object bodies are rejected before confirmation or writing", async () => {
+    const h = harness("approved");
+    for (const body of ["not audio", ["not", "audio"], { data: "not audio" }]) {
+      const result = h.invoke(body);
+      await result.task;
+      assert.equal(result.res.statusCode, 415);
+    }
+    assert.equal(h.asks(), 0);
     assert.equal(h.reads(), 0);
   });
 
