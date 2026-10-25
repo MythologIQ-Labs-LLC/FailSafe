@@ -85,6 +85,62 @@ export class AudioVaultService {
     }
   }
 
+  /**
+   * Only the first 100 regular recordings are returned. The listing exposes no
+   * transcript, sidecar contents or links to files outside the audio vault.
+   */
+  async listAudio(): Promise<Array<{ id: string; bytes: number; modifiedAt: string }>> {
+    const root = await this.trustedVault();
+    const result: Array<{ id: string; bytes: number; modifiedAt: string }> = [];
+    const directory = await fs.promises.opendir(root);
+    for await (const entry of directory) {
+      if (result.length >= 100) break;
+      if (!entry.isFile() || !/^[0-9a-f]{64}\\.webm$/.test(entry.name)) continue;
+      try {
+        const stat = await fs.promises.lstat(path.join(root, entry.name));
+        if (stat.isSymbolicLink() || !stat.isFile()) continue;
+        result.push({ id: entry.name.slice(0, 64), bytes: stat.size, modifiedAt: stat.mtime.toISOString() });
+      } catch { /* removed concurrently: don't expose */ }
+    }
+    return result.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+  }
+
+  /**
+   * Snapshot the two files before a destructive approval. Never trust metadata
+   * from an HTTP request to decide which path is safe to delete.
+   */
+  async inspectDeletion(id: string): Promise<{ id: string; bytes: number; audioDev: number; audioIno: number; sidecarDev: number | null; sidecarIno: number | null } | null> {
+    if (!isCanonicalAudioId(id)) return null;
+    const root = await this.trustedVault();
+    const audio = await fs.promises.lstat(path.join(root, `${id}.webm`)).catch(() => null);
+    if (!audio || !audio.isFile() || audio.isSymbolicLink()) return null;
+    const sidecar = await fs.promises.lstat(path.join(root, `${id}.json`)).catch(() => null);
+    if (sidecar && (!sidecar.isFile() || sidecar.isSymbolicLink())) return null;
+    return { id, bytes: audio.size, audioDev: audio.dev, audioIno: audio.ino,
+      sidecarDev: sidecar?.dev ?? null, sidecarIno: sidecar?.ino ?? null };
+  }
+
+  /** Delete an explicitly approved, unchanged capture; audio is removed first. */
+  async deleteAudio(expected: NonNullable<Awaited<ReturnType<AudioVaultService["inspectDeletion"]>>>): Promise<"deleted" | "stale" | "partial"> {
+    const actual = await this.inspectDeletion(expected.id);
+    if (!actual || JSON.stringify(actual) !== JSON.stringify(expected)) return "stale";
+    const root = await this.trustedVault();
+    // A second lstat narrows the mutation window. Full race-free pathname
+    // unlink needs OS-level directory handles and remains host qualification.
+    const latest = await this.inspectDeletion(expected.id);
+    if (!latest || JSON.stringify(latest) !== JSON.stringify(expected)) return "stale";
+    const audio = path.join(root, `${expected.id}.webm`);
+    const metadata = path.join(root, `${expected.id}.json`);
+    await fs.promises.unlink(audio);
+    try {
+      if (expected.sidecarDev !== null) await fs.promises.unlink(metadata);
+    } catch {
+      // Audio is gone but its sidecar remains: explicit failure, not success.
+      return "partial";
+    }
+    return "deleted";
+  }
+
   async getAudio(hash: string): Promise<Buffer | null> {
     // Check before constructing any caller-controlled filename.
     if (!isCanonicalAudioId(hash)) return null;
