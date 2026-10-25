@@ -12,6 +12,7 @@ suite("Audio vault HTTP boundary (#465)", () => {
         return this;
       },
       post() { return this; },
+      delete() { return this; },
     } as unknown as Application;
     let readCount = 0;
     const deps = {

@@ -28,6 +28,7 @@ function harness(outcome: Outcome | null, remote = false) {
   const app = {
     get() { return this; },
     post(name: string, ...handlers: Handler[]) { posts.set(name, handlers[handlers.length - 1]); return this; },
+    delete() { return this; },
   } as unknown as Application;
   let stored = 0;
   const recordings: Buffer[] = [];
