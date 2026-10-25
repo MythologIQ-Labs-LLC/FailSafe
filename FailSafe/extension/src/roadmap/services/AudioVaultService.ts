@@ -201,23 +201,27 @@ export class AudioVaultService {
 
   /** Delete an explicitly approved, unchanged capture; audio is removed first. */
   async deleteAudio(expected: NonNullable<Awaited<ReturnType<AudioVaultService["inspectDeletion"]>>>): Promise<"deleted" | "stale" | "partial"> {
-    const actual = await this.inspectDeletion(expected.id);
-    if (!actual || JSON.stringify(actual) !== JSON.stringify(expected)) return "stale";
     const root = await this.trustedVault();
-    // A second lstat narrows the mutation window. Full race-free pathname
-    // unlink needs OS-level directory handles and remains host qualification.
-    const latest = await this.inspectDeletion(expected.id);
-    if (!latest || JSON.stringify(latest) !== JSON.stringify(expected)) return "stale";
-    const audio = path.join(root, `${expected.id}.webm`);
-    const metadata = path.join(root, `${expected.id}.json`);
-    await fs.promises.unlink(audio);
-    try {
-      if (expected.sidecarDev !== null) await fs.promises.unlink(metadata);
-    } catch {
-      // Audio is gone but its sidecar remains: explicit failure, not success.
-      return "partial";
-    }
-    return "deleted";
+    // Share the same exclusive mutation lock as capture writes. Never delete
+    // a half-published recording, nor admit a capture while unlinking evidence.
+    return this.captureExclusive(root, async () => {
+      const actual = await this.inspectDeletion(expected.id);
+      if (!actual || JSON.stringify(actual) !== JSON.stringify(expected)) return "stale";
+      // A second lstat narrows the mutation window. Fully race-free pathname
+      // unlink needs OS-level directory handles and remains host qualification.
+      const latest = await this.inspectDeletion(expected.id);
+      if (!latest || JSON.stringify(latest) !== JSON.stringify(expected)) return "stale";
+      const audio = path.join(root, `${expected.id}.webm`);
+      const metadata = path.join(root, `${expected.id}.json`);
+      await fs.promises.unlink(audio);
+      try {
+        if (expected.sidecarDev !== null) await fs.promises.unlink(metadata);
+      } catch {
+        // Audio is gone but its sidecar remains: explicit failure, not success.
+        return "partial";
+      }
+      return "deleted";
+    });
   }
 
   async getAudio(hash: string): Promise<Buffer | null> {

@@ -66,6 +66,20 @@ suite("Audio-vault aggregate quota and writer coordination (#465)", () => {
     assert.equal(fs.readFileSync(lockPath, "utf8"), "another writer");
   });
 
+  test("deletion shares the writer lock and refuses a busy vault without unlinking", async () => {
+    const id = await vault.storeAudio(Buffer.from("must stay"));
+    const preview = await vault.inspectDeletion(id);
+    assert.ok(preview);
+    const lockPath = path.join(directory, ".capture-write.lock");
+    fs.writeFileSync(lockPath, "another writer");
+    try {
+      await assert.rejects(() => vault.deleteAudio(preview), /AUDIO_VAULT_WRITE_BUSY/);
+      assert.equal((await vault.getAudio(id))?.toString(), "must stay");
+    } finally { fs.unlinkSync(lockPath); }
+    assert.equal(await vault.deleteAudio(preview), "deleted");
+    assert.deepEqual(files(directory), []);
+  });
+
   test("unexpected linked content is a fail-closed quota decision", async () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-external-audio-"));
     try {

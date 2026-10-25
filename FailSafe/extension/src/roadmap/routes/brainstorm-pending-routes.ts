@@ -111,7 +111,11 @@ async function deleteSavedAudio(req: Request, res: Response, deps: ApiRouteDeps)
     if (outcome === "stale") { res.status(409).json({ error: "Recording changed during approval" }); return; }
     if (outcome === "partial") { res.status(500).json({ error: "Partial deletion: audio gone, metadata cleanup failed" }); return; }
     res.json({ deleted: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "AUDIO_VAULT_WRITE_BUSY") {
+      res.status(409).json({ error: "Audio storage is busy; retry when the other operation finishes." });
+      return;
+    }
     res.status(500).json({ error: "Audio deletion failed" });
   }
 }
