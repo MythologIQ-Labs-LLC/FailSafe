@@ -13,6 +13,7 @@ import { LlmStatusRenderer } from './llm-status.js';
 import { PrepBayController } from './prep-bay.js';
 import { NodeEditor } from './node-editor.js';
 import { wireVoiceCallbacks } from './brainstorm-voice-wiring.js';
+import { wireSavedAudioManager } from './brainstorm-audio-management.js';
 import { drawSidebarVisualizer } from './brainstorm-visualizer.js';
 import { wireToolbar, applyViewPrefs } from './brainstorm-toolbar-wiring.js';
 import { loadViewPrefs } from './brainstorm-graph-io.js';
@@ -251,6 +252,7 @@ export class BrainstormRenderer {
     // tab round trip because this method self-replaces below and destroy()
     // never restored it.
     this.prepBay.bindEvents();
+    wireSavedAudioManager(this);
     this._getEl('.cc-bs-voice')?.addEventListener('click', () => this.voice.toggle());
     this.llmStatus.render(this.client);
 
