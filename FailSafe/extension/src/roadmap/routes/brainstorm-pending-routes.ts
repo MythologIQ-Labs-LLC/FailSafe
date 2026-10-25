@@ -1,5 +1,7 @@
 import express, { type Application, type Request, type Response } from "express";
+import * as crypto from "crypto";
 import type { ApiRouteDeps } from "./types";
+import { confirmBoundOperation, withFooter } from "../../extension/operatorConfirmation";
 import { isCanonicalAudioId } from "../services/AudioVaultService";
 
 async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
@@ -7,6 +9,32 @@ async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
   try {
     const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
     if (buffer.length === 0) { res.status(400).json({ error: "Empty body" }); return; }
+    const digest = crypto.createHash("sha256").update(buffer).digest("hex");
+    // #465: an HTTP request is not recording consent. Require one live VS Code
+    // modal for this exact capture. No approval or client disconnect -> no write.
+    const approved = await confirmBoundOperation(
+      deps.confirmOperatorAction,
+      { bytes: buffer.length, digest },
+      ({ bytes, digest: hash }, operationId) => ({
+        title: "Save this Mind Map audio recording to disk?",
+        approveLabel: "Save recording",
+        detail: withFooter([
+          `Capture: ${bytes} bytes; SHA-256 ${hash.slice(0, 16)}…`,
+          `Request: ${operationId}`,
+          "Destination: this workspace's .failsafe/audio directory.",
+          "The original recording is kept even if transcription fails.",
+          "No automatic deletion or retention deadline is currently configured.",
+          "Nothing is saved unless you explicitly choose Save recording.",
+        ]),
+      }),
+      res,
+    );
+    if (!approved) return;
+    if (!res.socket || res.socket.destroyed || res.writableEnded) return;
+    if (crypto.createHash("sha256").update(buffer).digest("hex") !== approved.operation.digest) {
+      res.status(409).json({ error: "Audio changed while awaiting approval" });
+      return;
+    }
     const hash = await deps.audioVaultService.storeAudio(buffer);
     res.json({ audioHash: hash });
   } catch {

@@ -30,6 +30,9 @@ export function wireVoiceCallbacks(renderer) {
   renderer.voice.stt.onTranscript = (t, f) => renderer.prepBay.onTranscript(t, f);
   renderer.voice.stt.onTranscriptError = (r) => renderer.prepBay.onTranscriptError(r);
   renderer.voice.stt.onAudioCaptured = (blob) => {
+    // Raw audio stays in memory unless the operator explicitly selects save.
+    // The extension host additionally asks for bound approval for EACH file.
+    if (renderer._getEl('.cc-bs-save-audio-toggle')?.checked !== true) return;
     fetch('/api/v1/brainstorm/audio', { method: 'POST', headers: { 'Content-Type': 'audio/webm' }, body: blob })
       .then(res => { if (!res.ok) renderer.showStatus('Audio save failed', 'var(--accent-red)'); })
       .catch(err => { console.warn('[brainstorm] audio POST failed:', err.message); renderer.showStatus('Audio capture not saved', 'var(--accent-gold)'); });
