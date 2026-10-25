@@ -136,6 +136,8 @@ export function renderRightPanel() {
           <input type="checkbox" class="cc-bs-save-audio-toggle" style="accent-color:var(--accent-cyan);margin-top:2px;" />
           Save original audio locally. Each recording needs VS Code approval; files remain in .failsafe/audio even if transcription fails, until you delete them.
         </label>
+        <button class="cc-btn cc-bs-audio-manage" aria-expanded="false" aria-controls="cc-bs-audio-recordings" title="Review or remove locally saved Mind Map audio">MANAGE SAVED AUDIO</button>
+        <div id="cc-bs-audio-recordings" class="cc-bs-audio-recordings" role="region" aria-label="Saved Mind Map recordings" aria-live="polite" hidden></div>
         <div class="cc-bs-prep-controls" style="display: flex; gap: 8px;">
           <button class="cc-btn cc-bs-voice" style="flex: 1; padding: 10px; font-weight: bold; background: rgba(255,255,255,0.05);">[ RECORD ]</button>
           <button class="cc-btn cc-btn--primary cc-bs-prep-send" style="flex: 1.2; padding: 10px; font-weight: bold;">SEND TO MAP</button>
