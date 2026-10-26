@@ -134,7 +134,23 @@ async function runAgent(agent: AgentInvocation, cwd: string, tracker: TreeTracke
   await inFlight;
   let survivors: number[] = [];
   try { survivors = await tracker.killAll(); } catch (e) { trackingError = String(e); }
-  const res = await Promise.race([runP, new Promise<AgentRunResult>((r) => setTimeout(() => r({ stdout: '', stderr: 'agent did not exit after kill', code: null }), 10000))]);
+  // Clear the post-kill fallback when the child settles. An uncleared timer
+  // otherwise keeps the extension host event loop alive after every agent run.
+  let settleTimer: NodeJS.Timeout | undefined;
+  let res: AgentRunResult;
+  try {
+    res = await Promise.race([
+      runP,
+      new Promise<AgentRunResult>((resolve) => {
+        settleTimer = setTimeout(
+          () => resolve({ stdout: '', stderr: 'agent did not exit after kill', code: null }),
+          10000,
+        );
+      }),
+    ]);
+  } finally {
+    if (settleTimer) clearTimeout(settleTimer);
+  }
   return { res, timedOut, survivors, trackingError };
 }
 
