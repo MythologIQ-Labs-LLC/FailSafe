@@ -14,3 +14,17 @@ export function isGovernedSave<T extends SavedDocumentUri>(
 ): boolean {
   return uri.scheme === "file" && isInWorkspace(uri);
 }
+
+/**
+ * #505: VS Code's file-scheme save notification cannot veto disk writes.
+ * Keep the capability disclosure separate from policy verdicts.
+ */
+export const EDITOR_SAVE_LIMITATION_NOTICE =
+  "FailSafe Enforce mode cannot block ordinary VS Code editor saves. A policy denial is reported, but the file may still be written to disk. Use governed write/commit workflows for enforceable controls.";
+
+export function shouldShowEditorSaveLimitation(
+  mode: string,
+  alreadyAcknowledged: boolean,
+): boolean {
+  return mode === "enforce" && !alreadyAcknowledged;
+}
