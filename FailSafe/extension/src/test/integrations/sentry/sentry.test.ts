@@ -142,6 +142,55 @@ suite('Sentry pagination trust (FailSafe #478)', () => {
   const one = JSON.stringify([{ id: '1', title: 'Issue one', level: 'error' }]);
   const makeLink = (url: string, results = true) => `<${url}>; rel="next"; results="${results}"`;
 
+  test('cursor-only page retains original project, query, environment, sort and limit', () => {
+    const first = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend&query=is%3Aunresolved&sort=date&limit=100&environment=production';
+    const next = nextSentryPage(makeLink('https://sentry.io/api/0/organizations/acme/issues/?cursor=opaque%3Aone'), first, first);
+    assert.ok(next);
+    for (const key of ['project', 'query', 'sort', 'limit', 'environment']) {
+      assert.equal(new URL(next).searchParams.get(key), new URL(first).searchParams.get(key));
+    }
+    assert.equal(new URL(next).searchParams.get('cursor'), 'opaque:one');
+  });
+
+  test('rejects changed filters, extra parameters, missing and duplicate cursors', () => {
+    const first = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend&query=is%3Aunresolved';
+    for (const query of [
+      'cursor=x&project=other', 'cursor=x&query=is%3Aresolved',
+      'cursor=x&project=backend&unexpected=1', 'cursor=x&cursor=y',
+      'project=backend', 'cursor=',
+    ]) {
+      assert.throws(() => nextSentryPage(makeLink('https://sentry.io/api/0/organizations/acme/issues/?' + query), first, first));
+    }
+  });
+
+  test('rejects ambiguous next links, embedded credentials and fragments', () => {
+    const first = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend';
+    const good = makeLink('https://sentry.io/api/0/organizations/acme/issues/?cursor=x');
+    assert.throws(() => nextSentryPage(good + ', ' + good, first, first), /Ambiguous/);
+    for (const url of [
+      'https://user@sentry.io/api/0/organizations/acme/issues/?cursor=x',
+      'https://sentry.io/api/0/organizations/acme/issues/?cursor=x#fragment',
+    ]) {
+      assert.throws(() => nextSentryPage(makeLink(url), first, first), /Untrusted/);
+    }
+  });
+
+  test('cursor-only second page is fetched with the original Sentry scope', async () => {
+    const requested: URL[] = [];
+    const get: SentryGetFn = async (url) => {
+      requested.push(new URL(url));
+      return requested.length === 1
+        ? { status: 200, body: one, headers: { link: makeLink('https://sentry.io/api/0/organizations/acme/issues/?cursor=next') } }
+        : { status: 200, body: '[]' };
+    };
+    const result = await fetchSentryIssues(options, get, deps());
+    assert.equal(result.ok, true);
+    assert.equal(result.pagesFetched, 2);
+    assert.equal(requested[1].searchParams.get('project'), 'backend');
+    assert.equal(requested[1].searchParams.get('query'), 'is:unresolved');
+    assert.equal(requested[1].searchParams.get('cursor'), 'next');
+  });
+
   test('rejects other-origin pagination rather than sending the token to another host', async () => {
     let calls = 0;
     const get: SentryGetFn = async () => { calls++; return { status: 200, body: one, headers: { link: makeLink('https://attacker.invalid/steal') } }; };
@@ -158,7 +207,7 @@ suite('Sentry pagination trust (FailSafe #478)', () => {
     const get: SentryGetFn = async (url) => ({ status: 200, body: one, headers: { link: makeLink(url) } });
     const r = await fetchSentryIssues(options, get, deps());
     assert.equal(r.ok, false);
-    assert.match(r.error ?? '', /cursor loop/i);
+    assert.match(r.error ?? '', /pagination/i);
     assert.deepEqual(r.items, []);
   });
 
