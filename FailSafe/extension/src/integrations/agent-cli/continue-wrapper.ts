@@ -71,9 +71,6 @@ export type { AgentRunOutcome };
 /** Govern a Continue headless run: pre-spawn gate on authorization and the
  *  allowlist, then an isolated run whose changes are quarantined. */
 export async function runContinueGoverned(opts: ContinueRunOptions, deps: ContinueDeps): Promise<AgentRunOutcome> {
-  const det = await detectContinue(deps.run, opts.cwd, deps.resolve);
-  if (!det.available) return { available: false, spawned: false, error: '`cn` (Continue CLI) not found on PATH outside the workspace, or `cn --version` failed' };
-
   const argv = buildContinueArgs(opts.prompt, opts.allow);
   const allowlistRisk = mapAllowlistToRisk(opts.allow);
   if (!opts.writesAllowed) {
@@ -82,6 +79,10 @@ export async function runContinueGoverned(opts: ContinueRunOptions, deps: Contin
   if (allowlistRisk === 'L3') {
     return blockedOutcome('continue', argv, 'the allowlist grants shell/exec tools, which can write outside the isolated worktree; FailSafe does not run them', 'L3', deps.issuedAt);
   }
+
+  // Authorization must precede executable detection: --version is still a process launch.
+  const det = await detectContinue(deps.run, opts.cwd, deps.resolve);
+  if (!det.available) return { available: false, spawned: false, error: '`cn` (Continue CLI) not found on PATH outside the workspace, or `cn --version` failed' };
 
   // API key in the child ENV only (never argv/receipt).
   const env = { ...(opts.baseEnv ?? {}), ...(opts.apiKey ? { CONTINUE_API_KEY: opts.apiKey } : {}) };
