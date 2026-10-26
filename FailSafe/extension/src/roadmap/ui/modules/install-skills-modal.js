@@ -129,7 +129,8 @@ function setState(container, state) {
 
 function tryNewWebSocket() {
   if (typeof window === 'undefined') return null; // window-less hardening only (plan-240 LD3)
-  try { return new WebSocket('ws://localhost:9376'); } catch { return null; }
+  // #564: the Console socket only accepts its own page's Origin, so follow the page's host.
+  try { return new WebSocket(`ws://${window.location.host}`); } catch { return null; }
 }
 
 function openSubscription(container) {

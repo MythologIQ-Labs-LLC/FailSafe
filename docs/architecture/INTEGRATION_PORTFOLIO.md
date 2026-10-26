@@ -139,7 +139,7 @@ Computed by the check on every run; it fails when a number here differs from the
 | `scan-2-files` | 7 |
 | `browser-files` | 38 |
 | `browser-targets` | 85 |
-| `loopback-targets` | 2 |
+| `loopback-targets` | 1 |
 | `catalog-ids` | 11 |
 | `integration-entries` | 22 |
 | `contracts` | 30 |
@@ -161,7 +161,6 @@ Every entry of the expected set that no contract owns has a row here (`folded in
 | `FailSafe/extension/src/integrations/tracker-import/` | shared by jira, linear | none | `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:1-3` (`the governed path from a fetched Jira or Linear issue`) |
 | `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts` | folded into github-checks | LD1 lists `github-checks/pr-linkage-*` as shared; only the GitHub advisory command imports it, so github-checks owns the folder | `FailSafe/extension/src/extension/github-checks-command.ts:13` (`import { publishLinkageCheck } from '../integrations/github-checks/pr-linkage-publish';`) |
 | `FailSafe/extension/src/extension/commands.ts` | not an integration: loopback probe of FailSafe's own Console server before opening it | none | `FailSafe/extension/src/extension/commands.ts:26-32` (`/api/roadmap`) `FailSafe/extension/src/extension/commands.ts:27` (`http://localhost:${serverPort}`) |
-| `FailSafe/extension/src/roadmap/ui/modules/install-skills-modal.js` | not an integration: loopback socket to FailSafe's own Console for install progress | none | `FailSafe/extension/src/roadmap/ui/modules/install-skills-modal.js:133` (`new WebSocket('ws://localhost:9376')`) `FailSafe/extension/src/roadmap/ConsoleServer.ts:45` (`const PORT = 9376;`) |
 | `FailSafe/extension/src/roadmap/ui/modules/connection.js` | folded into sentinel-llm | One row for the file. Its only third-party target, the Ollama probe, is folded into sentinel-llm; all its other targets (Console REST, the event stream and the socket) are same-origin and covered by the `roadmap/ui/` prefix row and the base allowlist (rules b and e). `switchServer` may point those bases at a loopback Console on another port | `FailSafe/extension/src/roadmap/ui/modules/connection.js:345` (`fetch('http://localhost:11434/api/tags'`) |
 | `FailSafe/extension/src/roadmap/ui/` | not an integration: same-origin Console API | none; every target in these modules passes rules (a) to (e), checked per call site | `FailSafe/extension/src/roadmap/ui/modules/connection.js:7` (`Empty string resolves to same-origin`) |
 | `FailSafe/extension/src/webui/` | not an integration: same-origin Console API | none; the bases default to the page origin, and the bridges have no callers outside the folder | `FailSafe/extension/src/webui/protocol.ts:133-135` (`window.location.origin`) |

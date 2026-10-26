@@ -137,18 +137,34 @@ export function consoleHostGuard(): RequestHandler {
 }
 
 /**
+ * Host headers in Node's `rawHeaders` (alternating names and values). Node keeps only the first
+ * Host in `headers.host`, so a duplicate would otherwise be judged by its first value alone.
+ */
+function hostHeaderCount(rawHeaders: unknown): number {
+  if (!Array.isArray(rawHeaders)) return 0;
+  let count = 0;
+  for (let i = 0; i < rawHeaders.length; i += 2) {
+    if (String(rawHeaders[i]).toLowerCase() === "host") count += 1;
+  }
+  return count;
+}
+
+/**
  * Null, or why a WebSocket handshake is refused: not protocol 13 (`version`, which also refuses
- * protocol 8's Sec-WebSocket-Origin), a peer that is not loopback (`remote`), the Host rule
- * (`listener`, `host`), or an Origin that is not exactly `http://` + the Host (`origin`: missing,
- * `null`, another site, another port, a path, whitespace, or a duplicated header).
+ * protocol 8's Sec-WebSocket-Origin), a peer that is not loopback (`remote`), more than one Host
+ * header or the Host rule (`listener`, `host`), or an Origin that is not exactly `http://` + the
+ * Host (`origin`: missing, `null`, another site, another port, a path, whitespace, or a
+ * duplicated header).
  */
 export function consoleWebSocketRefusal(req: {
   headers: Record<string, unknown>;
+  rawHeaders?: unknown;
   socket?: { remoteAddress?: unknown; localAddress?: unknown };
 }): ConsoleWebSocketRefusal | null {
   const headers = req.headers;
   if (headers["sec-websocket-version"] !== "13") return "version";
   if (!isLoopbackAddress(req.socket?.remoteAddress)) return "remote";
+  if (hostHeaderCount(req.rawHeaders) > 1) return "host";
   const host = headers.host;
   const hostRefusal = consoleHostRefusal(host, req.socket?.localAddress);
   if (hostRefusal) return hostRefusal;
