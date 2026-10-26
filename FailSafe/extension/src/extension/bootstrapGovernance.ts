@@ -3,7 +3,7 @@ import { IntentService } from "../governance/IntentService";
 import type { EnforcementEngine } from "../governance/EnforcementEngine";
 import { createEnforcementEngine } from "../governance/enforcedIntentProvider";
 import { GovernanceRouter } from "../governance/GovernanceRouter";
-import { isGovernedSave } from "../governance/governedDocument";
+import { isGovernedSave, EDITOR_SAVE_LIMITATION_NOTICE, shouldShowEditorSaveLimitation } from "../governance/governedDocument";
 import { GovernanceStatusBar } from "../governance/GovernanceStatusBar";
 import { EvaluationRouter } from "../governance/EvaluationRouter";
 import { SessionManager } from "../governance/SessionManager";
@@ -112,6 +112,23 @@ export async function bootstrapGovernance(
   // Initial UI State
   // B340: the effective status (PULSE until main.ts wires the ledger, then refreshed there).
   governanceStatusBar.update(await intentService.getEnforcedActiveIntent());
+
+  // #505: disclose the actual VS Code editor-save boundary once per installation.
+  // This is a limitation notice, never evidence that a denied save was blocked.
+  const saveLimitNoticeKey = "failsafe.editorSaveLimitation.v1.acknowledged";
+  if (shouldShowEditorSaveLimitation(
+    enforcement.getGovernanceMode(),
+    context.globalState.get<boolean>(saveLimitNoticeKey) === true,
+  )) {
+    void vscode.window.showWarningMessage(EDITOR_SAVE_LIMITATION_NOTICE, "Understood")
+      .then((selection) => {
+        if (selection === "Understood") {
+          return context.globalState.update(saveLimitNoticeKey, true);
+        }
+        return undefined;
+      })
+      .then(undefined, (error: unknown) => logger.warn("Editor-save limitation notice failed", { error: String(error) }));
+  }
 
   // Wire File Hooks - extract fsPath from vscode.Uri at the boundary
   context.subscriptions.push(
