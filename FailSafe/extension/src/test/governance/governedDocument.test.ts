@@ -3,7 +3,7 @@
 // every workspace folder must not reach GovernanceRouter.handleFileOperation.
 import { strict as assert } from "assert";
 import { describe, it } from "mocha";
-import { isGovernedSave } from "../../governance/governedDocument";
+import { isGovernedSave, shouldShowEditorSaveLimitation, EDITOR_SAVE_LIMITATION_NOTICE } from "../../governance/governedDocument";
 
 const insideWorkspace = (uri: { fsPath: string }) => uri.fsPath.startsWith("/repo/");
 
@@ -23,5 +23,24 @@ describe("isGovernedSave (FX948)", () => {
 
   it("does not govern an untitled buffer", () => {
     assert.equal(isGovernedSave({ scheme: "untitled", fsPath: "Untitled-1" }, () => true), false);
+  });
+});
+
+describe("Editor-save enforcement limitation (#505)", () => {
+  it("discloses capability limitation in unacknowledged Enforce mode", () => {
+    assert.equal(shouldShowEditorSaveLimitation("enforce", false), true);
+  });
+  it("does not repeat an acknowledged disclosure", () => {
+    assert.equal(shouldShowEditorSaveLimitation("enforce", true), false);
+  });
+  it("does not surface as an Enforce notice in Observe or Assist", () => {
+    for (const mode of ["observe", "assist", "unknown"]) {
+      assert.equal(shouldShowEditorSaveLimitation(mode, false), false);
+    }
+  });
+  it("does not falsely promise ordinary editor save blocking", () => {
+    assert.match(EDITOR_SAVE_LIMITATION_NOTICE, /cannot block ordinary VS Code editor saves/);
+    assert.match(EDITOR_SAVE_LIMITATION_NOTICE, /may still be written to disk/);
+    assert.doesNotMatch(EDITOR_SAVE_LIMITATION_NOTICE, /save was blocked|write prevented/i);
   });
 });
