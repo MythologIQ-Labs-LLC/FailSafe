@@ -45,12 +45,13 @@ export interface AiderDeps extends Omit<IsolatedRunDeps, 'timeoutMs'> {
 
 /** Govern an Aider run: refuse without authorization, else run isolated and quarantine. */
 export async function runAiderGoverned(opts: AiderRunOptions, deps: AiderDeps): Promise<AgentRunOutcome> {
-  const det = await detectAider(deps.run, opts.cwd, deps.resolve);
-  if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH outside the workspace, or `aider --version` failed' };
   const argv = buildAiderArgs(opts.prompt);
   if (!opts.writesAllowed) {
     return blockedOutcome('aider', argv, 'running Aider requires `failsafe.integrations.aider.allowWrites`', 'L2', deps.issuedAt);
   }
+  // Denied runs cannot start even an executable version probe.
+  const det = await detectAider(deps.run, opts.cwd, deps.resolve);
+  if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH outside the workspace, or `aider --version` failed' };
   const r = await runIsolated(opts.cwd, { cmd: 'aider', args: argv }, { ...deps, timeoutMs: opts.timeoutMs });
   return isolatedOutcome('aider', argv, r, deps);
 }
