@@ -131,7 +131,7 @@ suite('governed wrappers run isolated (#475 FX831/FX832)', function () {
     for (const [out, calls] of [[co, c.calls], [ao, a.calls]] as const) {
       assert.equal(out.status, 'BLOCKED_PRE_EXECUTION');
       assert.equal(out.spawned, false);
-      assert.equal(spawnCalls(calls).length, 0);
+      assert.equal(calls.length, 0, 'not even --version can run before authorization');
       assert.equal(out.receipt?.status, 'BLOCKED_PRE_EXECUTION');
     }
   });
@@ -141,7 +141,7 @@ suite('governed wrappers run isolated (#475 FX831/FX832)', function () {
     const out = await runContinueGoverned({ prompt: 'rm', allow: ['runTerminalCommand'], cwd: root, writesAllowed: true, timeoutMs: T }, deps(run));
     assert.equal(out.status, 'BLOCKED_PRE_EXECUTION');
     assert.equal(out.riskGrade, 'L3');
-    assert.equal(spawnCalls(calls).length, 0);
+    assert.equal(calls.length, 0, 'shell allowlist must be denied before the CLI version probe');
   });
 
   test('binary not found -> unavailable, no spawn', async () => {
