@@ -116,10 +116,14 @@ async function runAgent(agent: AgentInvocation, cwd: string, tracker: TreeTracke
   const timer = setInterval(() => {
     inFlight = inFlight.then(() => tracker.sample()).catch((e) => { trackingError = String(e); });
   }, deps.sampleIntervalMs ?? (process.platform === 'win32' ? 1000 : 250));
-  const runP = deps.run(agent.cmd, agent.args, {
+  // A faulty injected runner may throw synchronously or reject after launching
+  // children. Normalize both to a failed result so killAll still runs.
+  const runP = Promise.resolve().then(() => deps.run(agent.cmd, agent.args, {
     cwd, env: { ...(agent.env ?? process.env), FAILSAFE_ISOLATED_RUN: marker },
     detached: process.platform !== 'win32', onSpawn: (pid) => tracker.attach(pid),
-  });
+  })).catch((): AgentRunResult => ({
+    stdout: '', stderr: 'agent runner failed', code: 127,
+  }));
   let timeout: NodeJS.Timeout | undefined;
   const timedOut = await Promise.race([
     runP.then(() => false),
