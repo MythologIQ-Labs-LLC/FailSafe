@@ -211,6 +211,34 @@ suite('Sentry pagination trust (FailSafe #478)', () => {
     assert.deepEqual(r.items, []);
   });
 
+  test('scope-changing second page is rejected without returning partial issue data', async () => {
+    let calls = 0;
+    const get: SentryGetFn = async () => {
+      calls++;
+      return { status: 200, body: one, headers: {
+        link: makeLink('https://sentry.io/api/0/organizations/acme/issues/?cursor=p2&project=attacker'),
+      } };
+    };
+    const result = await fetchSentryIssues(options, get, deps());
+    assert.equal(calls, 1, 'must refuse before sending a second request');
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.items, [], 'no partial risks on failed import');
+    assert.match(result.error ?? '', /pagination/i);
+  });
+
+  test('pagination without a next cursor terminates cleanly after the first page', async () => {
+    let calls = 0;
+    const result = await fetchSentryIssues(options, async () => {
+      calls++;
+      return { status: 200, body: one, headers: {
+        link: '<https://sentry.io/api/0/organizations/acme/issues/?cursor=ignored>; rel="next"; results="false"',
+      } };
+    }, deps());
+    assert.equal(result.ok, true);
+    assert.equal(calls, 1);
+    assert.equal(result.pagesFetched, 1);
+  });
+
   test('does not echo exception text containing a secret into result diagnostics', async () => {
     const r = await fetchSentryIssues(options, async () => { throw new Error('private-token leaked'); }, deps());
     assert.equal(r.ok, false);
