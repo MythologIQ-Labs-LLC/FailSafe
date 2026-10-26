@@ -235,6 +235,29 @@ suite('isolated-run (#475 FX951)', function () {
     assertCleanedUp(root, r);
   });
 
+  test('synchronous runner throw still cleans up the worktree and fails inconclusive', async () => {
+    const r = await runIsolated(root, AGENT, {
+      run: () => { throw new Error('sensitive-internal-runner-error'); },
+      timeoutMs: 60000,
+    });
+    assert.equal(r.status, 'FAILED_INCONCLUSIVE', r.reason);
+    assert.equal(r.exitCode, 127);
+    assert.equal(r.patch, undefined);
+    assert.equal(r.reason.includes('sensitive-internal-runner-error'), false, 'runner errors are redacted');
+    assertCleanedUp(root, r);
+  });
+
+  test('rejected runner promise still cleans up and never produces a promotable patch', async () => {
+    const r = await runIsolated(root, AGENT, {
+      run: async () => { throw new Error('untrusted child error'); },
+      timeoutMs: 60000,
+    });
+    assert.equal(r.status, 'FAILED_INCONCLUSIVE', r.reason);
+    assert.equal(r.exitCode, 127);
+    assert.equal(r.patch, undefined);
+    assertCleanedUp(root, r);
+  });
+
   test('non-zero exit -> FAILED_INCONCLUSIVE, nothing promotable', async () => {
     const { r } = await runScript(root, `require('fs').writeFileSync('a.txt', 'half\\n'); process.exit(3);`);
     assert.equal(r.status, 'FAILED_INCONCLUSIVE');
