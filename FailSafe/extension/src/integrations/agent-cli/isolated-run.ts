@@ -68,6 +68,16 @@ class RunStop extends Error {
 
 export const sha256 = (b: Buffer): string => createHash('sha256').update(b).digest('hex');
 
+/** Cleanup is part of the quarantine boundary, not optional post-success logging.
+ * Never expose a promotable patch if worktree removal was inconclusive. */
+export function failOnCleanupError(result: IsolatedRunResult): void {
+  if (!result.cleanupError) return;
+  result.status = 'FAILED_INCONCLUSIVE';
+  result.reason = 'isolated worktree cleanup failed; changes are not promotable';
+  result.patch = undefined;
+  result.patchSha256 = undefined;
+}
+
 interface Prepared { root: string; prefix: string; baseHead: string; pre: Snapshot }
 
 async function preconditions(git: SafeGit, cwd: string): Promise<Prepared> {
@@ -224,6 +234,7 @@ export async function runIsolated(cwd: string, agent: AgentInvocation, deps: Iso
   } finally {
     tracker?.dispose();
     if (wt && out.root) out.cleanupError = await removeWorktree(git, out.root, wt);
+    failOnCleanupError(out);
     git.dispose();
   }
 }
