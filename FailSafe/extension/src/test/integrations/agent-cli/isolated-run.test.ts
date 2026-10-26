@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { runIsolated, type IsolatedRunResult } from '../../../integrations/agent-cli/isolated-run';
+import { runIsolated, failOnCleanupError, type IsolatedRunResult } from '../../../integrations/agent-cli/isolated-run';
 import { startTreeTracker } from '../../../integrations/agent-cli/process-tree';
 import { extraWorktrees, git, isAlive, makeRepo, read, removeRepo, scriptedAgent, useGitConfig } from './git-fixture';
 
@@ -284,6 +284,32 @@ suite('isolated-run (#475 FX951)', function () {
       global.setTimeout = originalSet;
       global.clearTimeout = originalClear;
     }
+  });
+
+  test('cleanup failure revokes a previously promotable patch and digest', () => {
+    const r = {
+      status: 'QUARANTINED_PENDING_APPROVAL', reason: 'pending review',
+      cleanupError: 'worktree removal failed', patch: Buffer.from('untrusted'),
+      patchSha256: 'digest', agentStarted: true, exitCode: 0,
+      details: [], stdout: '', stats: { files: 1, additions: 1, deletions: 0, paths: ['x'] },
+    } as IsolatedRunResult;
+    failOnCleanupError(r);
+    assert.equal(r.status, 'FAILED_INCONCLUSIVE');
+    assert.equal(r.patch, undefined);
+    assert.equal(r.patchSha256, undefined);
+    assert.match(r.reason, /not promotable/);
+  });
+
+  test('clean worktree removal leaves a quarantined patch eligible for review', () => {
+    const r = {
+      status: 'QUARANTINED_PENDING_APPROVAL', reason: 'pending review',
+      patch: Buffer.from('patch'), patchSha256: 'digest',
+      agentStarted: true, exitCode: 0, details: [], stdout: '',
+      stats: { files: 1, additions: 1, deletions: 0, paths: ['x'] },
+    } as IsolatedRunResult;
+    failOnCleanupError(r);
+    assert.equal(r.status, 'QUARANTINED_PENDING_APPROVAL');
+    assert.ok(r.patch);
   });
 
   test('non-zero exit -> FAILED_INCONCLUSIVE, nothing promotable', async () => {
