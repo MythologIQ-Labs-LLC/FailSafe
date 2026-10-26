@@ -258,6 +258,34 @@ suite('isolated-run (#475 FX951)', function () {
     assertCleanedUp(root, r);
   });
 
+  test('post-kill fallback timeout is cleared when the agent settles promptly', async () => {
+    const originalSet = global.setTimeout;
+    const originalClear = global.clearTimeout;
+    const created = new Set<NodeJS.Timeout>();
+    const cleared = new Set<NodeJS.Timeout>();
+    // Record only the dedicated 10-second post-kill fallback, not timer
+    // activity from the subprocess fixture or test framework.
+    global.setTimeout = ((fn: (...args: unknown[]) => void, ms?: number, ...args: unknown[]) => {
+      const handle = originalSet(fn, ms, ...args);
+      if (ms === 10000) created.add(handle);
+      return handle;
+    }) as typeof setTimeout;
+    global.clearTimeout = ((handle: NodeJS.Timeout) => {
+      if (created.has(handle)) cleared.add(handle);
+      return originalClear(handle);
+    }) as typeof clearTimeout;
+    try {
+      const { r } = await runScript(root, "require('fs').readFileSync('a.txt');");
+      assert.equal(r.status, 'NO_CHANGES', r.reason);
+      assert.equal(created.size, 1, 'one post-kill fallback is allocated');
+      assert.equal(cleared.size, 1, 'the fallback must be cleared immediately');
+      assertCleanedUp(root, r);
+    } finally {
+      global.setTimeout = originalSet;
+      global.clearTimeout = originalClear;
+    }
+  });
+
   test('non-zero exit -> FAILED_INCONCLUSIVE, nothing promotable', async () => {
     const { r } = await runScript(root, `require('fs').writeFileSync('a.txt', 'half\\n'); process.exit(3);`);
     assert.equal(r.status, 'FAILED_INCONCLUSIVE');
