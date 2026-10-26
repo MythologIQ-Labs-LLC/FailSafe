@@ -65,22 +65,41 @@ export function buildIssuesPath(org: string, project: string, opts: { environmen
   return `/api/0/organizations/${encodeURIComponent(org)}/issues/?${params.toString()}`;
 }
 
-/** Returns the next page only when Sentry explicitly marks next results true.
- * Never follow arbitrary off-origin or unrelated-path Link destinations with a Bearer token. */
+/** Treat Sentry's Link URL as an untrusted cursor carrier, not a new import scope.
+ * Cursor-only Link URLs are supported, but returned filters can only repeat
+ * values from the original request. All requests retain their original filters. */
 export function nextSentryPage(link: string | undefined, currentUrl: string, firstUrl: string): string | null {
   if (!link) return null;
+  const first = new URL(firstUrl);
+  const originalFilters = new URLSearchParams(first.search);
+  if (originalFilters.has('cursor')) throw new Error('Unexpected cursor in initial Sentry request');
+  let chosen: string | null = null;
   for (const part of link.split(/,(?=\s*<)/)) {
-    if (!/\brel="?next"?/i.test(part) || !/\bresults="?true"?/i.test(part)) continue;
-    const match = part.match(/<([^>]+)>/);
+    if (!/\brel="?next"?(?:;|\s|$)/i.test(part) || !/\bresults="?true"?(?:;|\s|$)/i.test(part)) continue;
+    if (chosen !== null) throw new Error('Ambiguous Sentry next page');
+    const match = part.match(/<([^>]*)>/);
     if (!match) throw new Error('Malformed Sentry pagination Link');
     const next = new URL(match[1], currentUrl);
-    const first = new URL(firstUrl);
-    if (next.protocol !== 'https:' || next.origin !== first.origin || next.pathname !== first.pathname) {
+    if (next.protocol !== 'https:' || next.origin !== first.origin || next.pathname !== first.pathname ||
+        next.username || next.password || next.hash) {
       throw new Error('Untrusted Sentry pagination destination');
     }
-    return next.toString();
+    const cursors = next.searchParams.getAll('cursor');
+    if (cursors.length !== 1 || !cursors[0] || cursors[0].length > 2048) {
+      throw new Error('Invalid Sentry pagination cursor');
+    }
+    const allowed = [...originalFilters.entries()];
+    for (const [key, value] of next.searchParams.entries()) {
+      if (key === 'cursor') continue;
+      const i = allowed.findIndex(([k, v]) => k === key && v === value);
+      if (i < 0) throw new Error('Untrusted Sentry pagination filters');
+      allowed.splice(i, 1);
+    }
+    const target = new URL(first);
+    target.searchParams.set('cursor', cursors[0]);
+    chosen = target.toString();
   }
-  return null;
+  return chosen;
 }
 
 const empty = (extra: Partial<ListResult>): ListResult => ({ ok: false, items: [], pagesFetched: 0, ...extra });
