@@ -110,12 +110,22 @@ async function addWorktree(git: SafeGit, prep: Prepared, tmpRoot: string): Promi
     await git.tryRun(prep.root, ['worktree', 'prune']);
     throw new RunStop('FAILED_INCONCLUSIVE', `git worktree add failed: ${added.stderr.trim().slice(0, 300)}`);
   }
-  const link = /^gitdir:\s*(.+)$/m.exec(readOrAbsent(path.join(dir, '.git')));
-  if (!link) throw new RunStop('FAILED_INCONCLUSIVE', 'the new worktree has no .git link file');
-  const adminDir = path.resolve(dir, link[1].trim());
-  const markers = new Map<string, string>();
-  for (const f of [path.join(dir, '.git'), path.join(adminDir, 'gitdir'), path.join(adminDir, 'commondir')]) markers.set(f, readOrAbsent(f));
-  return { dir, adminDir, markers };
+  // A malformed or unreadable .git link must not escape before normal cleanup
+  // has taken ownership of the newly registered worktree.
+  try {
+    const link = /^gitdir:\s*(.+)$/m.exec(readOrAbsent(path.join(dir, '.git')));
+    if (!link) throw new RunStop('FAILED_INCONCLUSIVE', 'the new worktree has no .git link file');
+    const adminDir = path.resolve(dir, link[1].trim());
+    const markers = new Map<string, string>();
+    for (const f of [path.join(dir, '.git'), path.join(adminDir, 'gitdir'), path.join(adminDir, 'commondir')]) markers.set(f, readOrAbsent(f));
+    return { dir, adminDir, markers };
+  } catch (error) {
+    // Do not follow worktree-controlled links. Prune the registration even when
+    // removing the temporary directory itself fails.
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* report setup failure */ }
+    await git.tryRun(prep.root, ['worktree', 'prune']);
+    throw error;
+  }
 }
 
 interface AgentRun { res: AgentRunResult; timedOut: boolean; survivors: number[]; trackingError?: string }
