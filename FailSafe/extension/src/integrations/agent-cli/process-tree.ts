@@ -73,6 +73,7 @@ export const toFileTime = (ms: number): bigint => BigInt(ms) * 10000n + 11644473
 class WinSampler {
   private buf = '';
   private waiters: Array<(line: string) => void> = [];
+  private failed = false;
   constructor(private readonly ps: ChildProcessWithoutNullStreams) {
     ps.stdout.on('data', (c: Buffer) => {
       this.buf += c.toString();
@@ -85,12 +86,21 @@ class WinSampler {
     });
   }
   next(timeoutMs = 15000): Promise<string> {
+    if (this.failed) return Promise.reject(new Error('process sampler unavailable after timeout'));
     return new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('process sampler did not respond')), timeoutMs);
-      this.waiters.push((line) => { clearTimeout(t); resolve(line); });
+      const waiter = (line: string): void => { clearTimeout(t); resolve(line); };
+      const t = setTimeout(() => {
+        // Never let a delayed response to a timed-out command become the reply
+        // to a later KILL/ALIVE operation. The sampler session is poisoned.
+        this.failed = true;
+        this.waiters = [];
+        reject(new Error('process sampler did not respond'));
+      }, timeoutMs);
+      this.waiters.push(waiter);
     });
   }
   async send(cmd: string): Promise<string> {
+    if (this.failed) throw new Error('process sampler unavailable after timeout');
     const reply = this.next();
     this.ps.stdin.write(`${cmd}\n`);
     return reply;
