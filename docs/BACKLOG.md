@@ -847,6 +847,8 @@ Filed by the v6.0.10 release-prep cycle (`plan-v6010-release-prep.md`). B386-B38
 
 ## Version Summary
 
+> v6.0.11 RC0 source staging only (#588). Release remains blocked by #467. The Marketplace release remains v6.0.10; no v6.0.11 tag, package, or publication exists.
+
 | Version      | Codename                       | Status         | Description                                                                                                           |
 | ------------ | ------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------- |
 | v1.0.7       | Beta                           | ✅ RELEASED    | Current marketplace                                                                                                   |
