@@ -70,7 +70,7 @@ while (($line = [Console]::In.ReadLine()) -ne $null) {
 /** Windows FILETIME (100 ns since 1601) for a JS epoch-ms timestamp. */
 export const toFileTime = (ms: number): bigint => BigInt(ms) * 10000n + 116444736000000000n;
 
-class WinSampler {
+export class WinSampler {
   private buf = '';
   private waiters: Array<(line: string) => void> = [];
   private failed = false;
