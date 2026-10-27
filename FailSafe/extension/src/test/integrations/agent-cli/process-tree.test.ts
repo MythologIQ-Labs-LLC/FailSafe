@@ -1,9 +1,10 @@
 import { strict as assert } from 'assert';
-import { spawn } from 'child_process';
+import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
+import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { startTreeTracker, type ProcReader } from '../../../integrations/agent-cli/process-tree';
+import { startTreeTracker, WinSampler, type ProcReader } from '../../../integrations/agent-cli/process-tree';
 
 // FX951 (#475 LD5): POSIX tracking follows the run marker (linux), the parent
 // closure and the agent's process group; unrelated or identity-changed
@@ -201,5 +202,45 @@ suite('process-tree POSIX tracking, live (Linux only) (#475 LD5 FX951)', functio
       assert.deepEqual(await t.killAll(), []);
       assert.equal(running(c), false, 'group member killed');
     } finally { try { process.kill(c, 'SIGKILL'); } catch { /* gone */ } t.dispose(); fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+});
+
+suite('Windows process sampler timeout protocol (#475)', () => {
+  test('timed out reply poisons the session instead of being reused for KILL/ALIVE', async () => {
+    const stdout = new EventEmitter();
+    const commands: string[] = [];
+    const fake = {
+      stdout,
+      stdin: { write: (data: string) => { commands.push(data); return true; }, end: () => undefined },
+      kill: () => true,
+    } as unknown as ChildProcessWithoutNullStreams;
+    const sampler = new WinSampler(fake);
+    try {
+      await assert.rejects(sampler.next(5), /did not respond/);
+      stdout.emit('data', Buffer.from('PIDS 123:456\\n')); // stale response
+      await assert.rejects(sampler.send('KILL 123 456'), /unavailable after timeout/);
+      assert.deepEqual(commands, [], 'never issue another destructive command on a desynchronized channel');
+    } finally {
+      sampler.close();
+    }
+  });
+
+  test('normal command/reply remains functional', async () => {
+    const stdout = new EventEmitter();
+    const commands: string[] = [];
+    const fake = {
+      stdout,
+      stdin: { write: (data: string) => { commands.push(data); return true; }, end: () => undefined },
+      kill: () => true,
+    } as unknown as ChildProcessWithoutNullStreams;
+    const sampler = new WinSampler(fake);
+    try {
+      const result = sampler.send('ALIVE 123 456');
+      stdout.emit('data', Buffer.from('YES\\n'));
+      assert.equal(await result, 'YES');
+      assert.deepEqual(commands, ['ALIVE 123 456\\n']);
+    } finally {
+      sampler.close();
+    }
   });
 });
