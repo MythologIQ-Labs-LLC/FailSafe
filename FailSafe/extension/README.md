@@ -1,5 +1,10 @@
 # FailSafe: Governance for AI Coding Agents
 
+## What's New in v6.0.11
+
+**Unreleased RC0 staging candidate only.** Proposed Console WebSocket duplicate-Host hardening and install-skills socket host/port correction (#587). This version has not passed native #467 authorization, installed-host release qualification or publication. The shipped release remains v6.0.10.
+
+
 **Understand agent activity, check risky changes, and keep evidence of what happened.**
 
 FailSafe runs locally in VS Code and Cursor. It monitors agent and workspace activity, evaluates deterministic policies, and presents risks, decisions, and checkpoints in one Console. Some controls can stop a governed action; editor-save denials are reported but cannot prevent VS Code from saving a file.
