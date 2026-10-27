@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.11] - Unreleased (RC0 staging only)
+
+### Security
+- Refuse Console WebSocket upgrades carrying duplicate `Host` headers before the handshake is accepted (#564, #587).
+
+### Fixed
+- Connect the install-skills progress WebSocket to the Console page's actual host and port instead of a fixed localhost endpoint (#587).
+
+### Release qualification
+- **Not released.** This entry and the 6.0.11 version are staging metadata only on `release/6.0.11-rc0-prep-no-ci`.
+- Pending native governance #467, exact-head tests, installed-host security probes, package matrix, and release-owner authorization. Do not tag, publish, or claim acceptance from this branch.
+
+
 ## [6.0.10] - 2026-10-22
 
 ### Added
