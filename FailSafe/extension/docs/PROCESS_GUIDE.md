@@ -1,5 +1,8 @@
 # FailSafe Process Guide
 
+> v6.0.11 RC0 staging note: the proposed update adjusts Console WebSocket handshake and install-progress host handling. Continue using v6.0.10 operational guidance until #467 governance and installed-host acceptance permit a release.
+
+
 Audience: operators who need fast, accurate workflows for the shipped `v6.0.10` UI and governance stack.
 
 ## First Run (Recommended Path)
