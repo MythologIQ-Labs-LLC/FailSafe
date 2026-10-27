@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.11] - RC0 preparation (unreleased)
+
+### Security
+- Refuse ambiguous duplicate `Host` headers in Console WebSocket handshakes (#587).
+
+### Fixed
+- Match install-skills progress sockets to the actual Console host and port (#587).
+
+**Staging only:** #467 still blocks merge, tagging and publication. The released version remains v6.0.10.
+
 ## [6.0.10] - 2026-10-22
 
 ### Added
