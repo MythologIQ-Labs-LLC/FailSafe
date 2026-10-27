@@ -244,3 +244,22 @@ suite('Windows process sampler timeout protocol (#475)', () => {
     }
   });
 });
+
+suite('Windows sampler concurrent-timeout refusal (#475)', () => {
+  test('all pending replies reject when one request times out', async () => {
+    const stdout = new EventEmitter();
+    const fake = {
+      stdout,
+      stdin: { write: (_data: string) => true, end: () => undefined },
+      kill: () => true,
+    } as unknown as ChildProcessWithoutNullStreams;
+    const sampler = new WinSampler(fake);
+    try {
+      const results = await Promise.allSettled([sampler.next(5), sampler.next(1000)]);
+      assert.deepEqual(results.map((r) => r.status), ['rejected', 'rejected']);
+      await assert.rejects(sampler.send('KILL 123 456'), /unavailable after timeout/);
+    } finally {
+      sampler.close();
+    }
+  });
+});
