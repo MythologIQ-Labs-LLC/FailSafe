@@ -72,8 +72,13 @@ export const toFileTime = (ms: number): bigint => BigInt(ms) * 10000n + 11644473
 
 export class WinSampler {
   private buf = '';
-  private waiters: Array<(line: string) => void> = [];
+  private waiters: Array<{ accept: (line: string) => void; reject: (error: Error) => void }> = [];
   private failed = false;
+  private fail(error: Error): void {
+    if (this.failed) return;
+    this.failed = true;
+    for (const waiter of this.waiters.splice(0)) waiter.reject(error);
+  }
   constructor(private readonly ps: ChildProcessWithoutNullStreams) {
     ps.stdout.on('data', (c: Buffer) => {
       this.buf += c.toString();
@@ -81,20 +86,21 @@ export class WinSampler {
       while ((i = this.buf.indexOf('\n')) >= 0) {
         const line = this.buf.slice(0, i).trim();
         this.buf = this.buf.slice(i + 1);
-        this.waiters.shift()?.(line);
+        this.waiters.shift()?.accept(line);
       }
     });
   }
   next(timeoutMs = 15000): Promise<string> {
     if (this.failed) return Promise.reject(new Error('process sampler unavailable after timeout'));
     return new Promise((resolve, reject) => {
-      const waiter = (line: string): void => { clearTimeout(t); resolve(line); };
-      const t = setTimeout(() => {
-        // Never let a delayed response to a timed-out command become the reply
-        // to a later KILL/ALIVE operation. The sampler session is poisoned.
-        this.failed = true;
-        this.waiters = [];
-        reject(new Error('process sampler did not respond'));
+      const waiter = {
+        accept: (line: string): void => { clearTimeout(timer); resolve(line); },
+        reject: (error: Error): void => { clearTimeout(timer); reject(error); },
+      };
+      const timer = setTimeout(() => {
+        // Every in-flight reply is now ambiguous. Fail all callers, not merely
+        // the first timeout, and never reuse the desynchronized session.
+        this.fail(new Error('process sampler did not respond'));
       }, timeoutMs);
       this.waiters.push(waiter);
     });
