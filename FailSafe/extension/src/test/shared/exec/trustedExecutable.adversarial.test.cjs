@@ -312,9 +312,19 @@ test('T10c: the bootstrap runner starts the installers from their known location
       const w = await run('winget', ['--version']);
       assert.match(w.stdout.trim(), /^v1\.\d+/, `the real winget answered: ${w.stdout}`);
       assert.notEqual(w.stdout.trim(), process.version);
-      const c = await run('choco', ['--version']);
-      assert.match(c.stdout.trim(), /^\d+\.\d+\.\d+/, `the real choco answered: ${c.stdout}`);
-      assert.notEqual(c.stdout.trim(), process.version);
+      // Chocolatey is optional. An absent trusted installer must fail closed,
+      // never fall back to the planted choco.exe in the current directory.
+      const chocoPath = path.win32.join(process.env.ChocolateyInstall || 'C:\\ProgramData\\chocolatey', 'bin', 'choco.exe');
+      clearMarks();
+      if (fs.existsSync(chocoPath)) {
+        const c = await run('choco', ['--version']);
+        assert.match(c.stdout.trim(), /^\d+\.\d+\.\d+/, `the real choco answered: ${c.stdout}`);
+        assert.notEqual(c.stdout.trim(), process.version);
+      } else {
+        await assert.rejects(run('choco', ['--version']),
+          'without trusted Chocolatey, installer resolution must reject instead of running a plant');
+      }
+      assert.deepEqual(marks(), [], 'the cwd-planted choco.exe was never executed');
     } else {
       const a = await run('apt-get', ['--version']);
       assert.match(a.stdout, /^apt /, `the real apt-get answered: ${a.stdout}`);
