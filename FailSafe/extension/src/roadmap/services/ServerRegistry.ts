@@ -37,7 +37,8 @@ function ensureRegistryDir(): void {
 }
 
 function readRegistryFile(): RegistryFile {
-  ensureRegistryDir();
+  // Registry discovery must not create state in a user's home directory.
+  // Only a successful registration or update should initialize storage.
   const registryPath = getRegistryPath();
   if (!fs.existsSync(registryPath)) {
     return { servers: [] };
@@ -97,7 +98,11 @@ export function registerServer(
 
 export function unregisterServer(port: number): void {
   const registry = readRegistryFile();
-  registry.servers = registry.servers.filter((s) => s.port !== port);
+  const remaining = registry.servers.filter((s) => s.port !== port);
+  // Disconnect of a never-registered listener is a no-op, not a reason
+  // to initialize storage under the host's home directory.
+  if (remaining.length === registry.servers.length) return;
+  registry.servers = remaining;
   writeRegistryFile(registry);
 }
 
