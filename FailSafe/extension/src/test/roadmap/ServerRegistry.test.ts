@@ -51,6 +51,15 @@ describe("ServerRegistry", () => {
     }
   });
 
+  describe("readRegistry", () => {
+    it("does not create .failsafe when the registry does not exist", () => {
+      const dir = path.dirname(registryPath);
+      assert.strictEqual(fs.existsSync(dir), false);
+      assert.deepStrictEqual(readRegistry(), []);
+      assert.strictEqual(fs.existsSync(dir), false, "a read-only lookup must not touch the profile");
+    });
+  });
+
   describe("registerServer", () => {
     it("creates registry file if it does not exist", () => {
       registerServer({
