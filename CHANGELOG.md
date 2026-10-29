@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Connect the install-skills progress WebSocket to the Console page's actual host and port instead of a fixed localhost endpoint (#587).
+- Remove literal backslashes from the FailSafe Monitor footer text (`provided \"as is\"` now reads `provided "as is"`), found during v6.0.11 media capture (#589).
 
 ### Release qualification
 - **Not released.** This entry and the 6.0.11 version are staging metadata only on `release/6.0.11-rc0-prep-no-ci`.

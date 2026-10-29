@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Match install-skills progress sockets to the actual Console host and port (#587).
+- The FailSafe Monitor footer no longer shows literal backslashes (`provided \"as is\"`); it reads `provided "as is"` (found during v6.0.11 media capture, #589).
 
 **Release candidate, not published:** the date is the RC0 preparation date. #467 still blocks merge, tagging and publication; the released version remains v6.0.10.
 
