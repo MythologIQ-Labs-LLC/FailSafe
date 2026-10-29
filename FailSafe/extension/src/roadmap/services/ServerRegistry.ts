@@ -37,7 +37,8 @@ function ensureRegistryDir(): void {
 }
 
 function readRegistryFile(): RegistryFile {
-  ensureRegistryDir();
+  // Registry discovery must not create state in a user's home directory.
+  // Only a successful registration or update should initialize storage.
   const registryPath = getRegistryPath();
   if (!fs.existsSync(registryPath)) {
     return { servers: [] };
