@@ -52,6 +52,13 @@ describe("ServerRegistry", () => {
   });
 
   describe("readRegistry", () => {
+    it("does not create .failsafe when unregistering an absent server", () => {
+      const dir = path.dirname(registryPath);
+      assert.strictEqual(fs.existsSync(dir), false);
+      unregisterServer(9376);
+      assert.strictEqual(fs.existsSync(dir), false, "absent unregister must not initialize storage");
+    });
+
     it("does not create .failsafe when the registry does not exist", () => {
       const dir = path.dirname(registryPath);
       assert.strictEqual(fs.existsSync(dir), false);
