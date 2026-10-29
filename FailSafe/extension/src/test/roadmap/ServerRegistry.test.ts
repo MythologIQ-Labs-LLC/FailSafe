@@ -26,6 +26,11 @@ describe("ServerRegistry", () => {
     originalUserProfile = process.env.USERPROFILE;
     process.env.HOME = tmpHome;
     process.env.USERPROFILE = tmpHome;
+    // A test must never perform registry writes against an actual user profile.
+    // On Windows, os.homedir() can disagree with ambient HOME; fail before
+    // any tested API call if the test process did not resolve our isolated home.
+    assert.strictEqual(path.resolve(os.homedir()).toLowerCase(), path.resolve(tmpHome).toLowerCase(),
+      "test profile isolation failed: os.homedir() does not point at the disposable home");
   });
 
   afterEach(function () {
