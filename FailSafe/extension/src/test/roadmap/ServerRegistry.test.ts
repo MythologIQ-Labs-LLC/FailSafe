@@ -255,6 +255,16 @@ describe("ServerRegistry", () => {
       // Stale entry should be filtered out
       assert.strictEqual(registry.length, 1);
       assert.strictEqual(registry[0].workspaceName, "Active");
+      const raw = JSON.parse(fs.readFileSync(registryPath, "utf-8"));
+      assert.strictEqual(raw.servers.length, 2, "readRegistry must not rewrite stale entries");
+      // A subsequent explicit registration is allowed to persist stale cleanup.
+      registerServer({
+        port: 9378, workspaceName: "New", workspacePath: "/new",
+        pid: process.pid, startedAt: new Date().toISOString(),
+      });
+      const updated = JSON.parse(fs.readFileSync(registryPath, "utf-8"));
+      assert.strictEqual(updated.servers.length, 2);
+      assert.ok(updated.servers.every((entry: { pid: number }) => entry.pid === process.pid));
     });
   });
 });
