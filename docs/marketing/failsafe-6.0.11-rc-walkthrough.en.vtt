@@ -1,0 +1,52 @@
+WEBVTT
+Kind: captions
+Language: en
+
+NOTE
+Real screen recording of FailSafe 6.0.11 (release candidate, unpublished) in VS Code 1.143.1 on Windows 11.
+The repository is fictional. Editor actions were performed by a scripted driver standing in for a developer;
+no AI agent made these changes. FailSafe's reactions were not scripted. The video has no audio track.
+
+1
+00:00:00.000 --> 00:00:04.400
+Tasklet, a small fictional TypeScript repository, is open in VS Code with FailSafe 6.0.11 (release candidate).
+
+2
+00:00:04.400 --> 00:00:09.500
+Its open issue, TASK-14: impossible due dates such as 2026-02-30 are silently stored as a different day.
+
+3
+00:00:09.500 --> 00:00:12.000
+The FailSafe Monitor shows the Sentinel watching this workspace. FailSafe is running in Enforce mode.
+
+4
+00:00:12.000 --> 00:00:21.000
+The FailSafe Console shows the workspace, an active Sentinel, a valid checkpoint chain and the repository compliance grade.
+
+5
+00:00:21.000 --> 00:00:29.700
+A regression test for TASK-14 is added and saved. FailSafe flags the save: no intent is active. It reports the change; it does not prevent the write.
+
+6
+00:00:29.700 --> 00:00:35.900
+Running the tests confirms the bug: 6 pass, 1 fails.
+
+7
+00:00:35.900 --> 00:00:43.900
+The fix rejects days that do not exist in their month. FailSafe grades this source change L2 and flags it again.
+
+8
+00:00:43.900 --> 00:00:50.000
+The tests now pass: 7 of 7.
+
+9
+00:00:50.000 --> 00:01:00.000
+The Governance audit log records each Sentinel verdict and the L3 review request queued for the validation change.
+
+10
+00:01:00.000 --> 00:01:04.000
+Back on the overview: new checkpoints, and one L3 item waiting for review.
+
+11
+00:01:04.000 --> 00:01:15.100
+The resulting diff: the fix, its test, and the .gitignore entry FailSafe added on first run. The developer can review all of it before committing.

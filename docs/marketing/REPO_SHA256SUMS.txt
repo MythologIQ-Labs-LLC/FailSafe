@@ -1,0 +1,17 @@
+01fa82caa539ba4ea9eb703b36160150a96c866788718bfd3ed99ee5ca39c937 *docs/marketing/screenshots/failsafe-6.0.11-rc-01-console-overview-1600.jpg
+6a16e789ff36cfcf3808c7af7dccd8775a1f7292f5119f63ca9d6179347a5b4e *docs/marketing/screenshots/failsafe-6.0.11-rc-02-repository-open-issue-1600.jpg
+77fe9de61f3ddb940d3baacefa30f8024f0a0e797925a2258d74f8b404d64dfb *docs/marketing/screenshots/failsafe-6.0.11-rc-03-first-run-governance-mode-1600.jpg
+03fa0b49c68ba68d86a09de8bdd1ed35a0f7291bd6f76eed9d0cc07e2cb0a49d *docs/marketing/screenshots/failsafe-6.0.11-rc-04-change-flagged-no-intent-1600.jpg
+cf76777d0463db917f0d07b7e0d591db331e0af0ecd9b7321f1e9dec0ff2323f *docs/marketing/screenshots/failsafe-6.0.11-rc-05-fix-risk-graded-l2-1600.jpg
+b1bb350211e6ba70f7e877c16c351168822b4b73f03869ddd6e8e00d3b072962 *docs/marketing/screenshots/failsafe-6.0.11-rc-06-governance-audit-log-1600.jpg
+8dffd38e4c1808002a5e9888ad51fec2f233f9e08abb54e04ff55e00b6803a55 *docs/marketing/screenshots/failsafe-6.0.11-rc-07-outcome-diff-and-checkpoints-1600.jpg
+74b5f273aec280d3062c47120359a39839839dd082d44281e86b1f2f7b109312 *docs/marketing/brand/failsafe-icon-256.png
+748ad8968730455299fec1416218426b45e23fcea4d0cce5162f2741f8795e46 *docs/marketing/brand/failsafe-icon-mono.svg
+db4ffa88848ad9c634fd64f75fc7cafab8ca5e6e6eb2479dbb46b1931d381ca1 *docs/marketing/demo-fixture/failsafe-demo-workspace.bundle
+560d60a0b6be3dfe87861fab8cfcbe23d1e6c1de73b1c2a0dcb6556648558c70 *docs/marketing/capture-tools/launch-iso.ps1
+0da6efa162c80eaededf59ee80b5bbcaf8271eac413d3053f99256c9c1bbc331 *docs/marketing/capture-tools/qual-driver-extension.js
+fd8f8fcbdd6cf8bb656c1e7f756c11f3faeb9a5eba31fe312deff2cc6dc1767b *docs/marketing/capture-tools/qual-driver-package.json
+b08d11549cca6c2a6e9e92284b0ed5019d290478829f1023a1530fe3eca56195 *docs/marketing/capture-tools/walkthrough.cjs
+256ae87e49bd21c320ea44cc7cdad88d32ef82fc8c083c5bfbf64a1f84842b65 *docs/marketing/capture-tools/wincap.ps1
+dfd8ad31ba784bd8afce1067f0ce6cbdcf09b676908ca77f3e5ba80c427aab87 *docs/marketing/failsafe-6.0.11-rc-walkthrough.en.vtt
+eb51c8328b325bd066c83ab6f428a373045c5c705c9ad5223e7ee0a1becf63c4 *docs/marketing/failsafe-6.0.11-rc-walkthrough-transcript.md

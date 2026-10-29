@@ -31,11 +31,21 @@ FailSafe is a VS Code extension with a Monitor and a broader Console. It **does 
 
 ## See it in action
 
-![FailSafe Console overview](FailSafe/extension/media/FailSafe-Overview.PNG)
+These screenshots were captured from the **6.0.11 release candidate** in VS Code on Windows, working in a fictional demo repository ([how they were made](docs/marketing/MEDIA_MANIFEST.md)).
 
-![FailSafe Monitor sidebar](FailSafe/extension/media/FailSafe-Sidebar.PNG)
+![VS Code with the FailSafe Monitor sidebar and the FailSafe Console overview: Sentinel active, L3 chain valid, agent health Healthy, and the recent operations stream](docs/marketing/screenshots/failsafe-6.0.11-rc-01-console-overview-1600.jpg)
 
-For more screens, see the [UI and technical reference](docs/archive/README_LEGACY_REFERENCE.md).
+*The FailSafe Monitor and Console inside VS Code, watching a repository.*
+
+![A new regression test in the editor beside a FailSafe notification: policy denied editor save (write not prevented), no active intent, with a Create Intent button](docs/marketing/screenshots/failsafe-6.0.11-rc-04-change-flagged-no-intent-1600.jpg)
+
+*FailSafe flags a change made without an active intent. It reports editor saves; it does not prevent them.*
+
+![The FailSafe Console audit log listing Sentinel verdicts with risk grades and a queued L3 review request](docs/marketing/screenshots/failsafe-6.0.11-rc-06-governance-audit-log-1600.jpg)
+
+*Every verdict and review request is recorded in the Console's audit log.*
+
+For older screens, including the previous Console and Monitor captures, see the [UI and technical reference](docs/archive/README_LEGACY_REFERENCE.md).
 
 ## Get started
 
