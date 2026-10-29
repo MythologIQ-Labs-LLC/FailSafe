@@ -44,7 +44,7 @@ The page shows the Open VSX install count from `src/hooks/useOpenVSXStats.ts`. T
 
 - [ ] Approve or reject each screenshot and the video (see the manifest's approval status).
 - [ ] Decide the version label. These are **6.0.11 release-candidate** captures. Publish them as "current" only after v6.0.11 ships, or label them as a preview.
-- [ ] Host the MP4, WebM, poster and VTT, for example under `/assets/products/failsafe/`. Verify the checksums in `MEDIA_SHA256SUMS.txt` after upload.
+- [ ] Host the MP4, WebM, poster and VTT from `docs/marketing/media/video/` on this branch, for example under `/assets/products/failsafe/`. Verify the checksums in `docs/marketing/media/SHA256SUMS.txt` after upload.
 - [ ] Keep the "reports, does not block editor saves" wording wherever saves are mentioned.
 - [ ] Decide on the install-count fallback (above).
 - [ ] Optional: record narration. The video is silent and captioned; any voice-over must be original or licensed.

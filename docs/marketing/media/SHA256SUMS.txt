@@ -1,3 +1,4 @@
+7a3164759264c94ff229db867b2d08c095f918ff1724003a51588176d57a9340 *./V6011-RC-REPORT.md
 9cf21c7c3b8a9261201dd8086ab2d9b49c3e212cce34a2929d40c0dd415c3a4d *./screenshots/full/failsafe-6.0.11-rc-01-console-overview.png
 8b4c2b5f0acf679baaba85548447a2ce212e4215104c51ab34cb93833a75cb67 *./screenshots/full/failsafe-6.0.11-rc-02-repository-open-issue.png
 3f220c08b4574b5d48d103ea7b6e0443e57dc5bef0aceb1a1faae4614b0a5cfd *./screenshots/full/failsafe-6.0.11-rc-03-first-run-governance-mode.png

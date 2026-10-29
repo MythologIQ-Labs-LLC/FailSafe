@@ -21,7 +21,7 @@
 
 ## Assets
 
-Full-resolution PNGs, WebP/JPG web exports, thumbnails and the video live outside Git, in the owner's durable media folder `C:\dev\mythologiq\FailSafe-media\v6.0.11-rc\`. Their checksums are in [`MEDIA_SHA256SUMS.txt`](MEDIA_SHA256SUMS.txt) (run `sha256sum -c` from that folder). The 1600×900 JPG exports, captions, transcript, brand files, fixture bundle and capture tools are also in this directory; their checksums are in [`REPO_SHA256SUMS.txt`](REPO_SHA256SUMS.txt).
+Every deliverable is in this repository under [`media/`](media/): the full-resolution PNGs (`media/screenshots/full/`), WebP and JPG web exports (`media/screenshots/web/`), thumbnails (`media/thumbnails/`), the MP4 and WebM video, the poster, captions and transcript (`media/video/`), and the qualification report (`media/V6011-RC-REPORT.md`). Their checksums are in [`media/SHA256SUMS.txt`](media/SHA256SUMS.txt); run `sha256sum -c SHA256SUMS.txt` from `media/`. Binary files hash identically on any checkout. Text files (`.vtt`, `.md`) can hash differently on a checkout that converts line endings. The 1600×900 JPG copies used by the README, the brand files, the fixture bundle and the capture tools are listed in [`REPO_SHA256SUMS.txt`](REPO_SHA256SUMS.txt).
 
 | # | Asset | Resolution | Proposed placement | Caption | Alt text |
 |---|---|---|---|---|---|
