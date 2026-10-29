@@ -116,12 +116,7 @@ export function markDisconnected(port: number): void {
 }
 
 export function readRegistry(): ServerEntry[] {
-  const registry = readRegistryFile();
-  // Clean stale entries on read
-  const cleaned = cleanStaleEntries(registry.servers);
-  if (cleaned.length !== registry.servers.length) {
-    registry.servers = cleaned;
-    writeRegistryFile(registry);
-  }
-  return cleaned;
+  // Discovery is read-only even when stale entries exist. Persist cleanup on
+  // the next explicit registry mutation, not while rendering the Console.
+  return cleanStaleEntries(readRegistryFile().servers);
 }
