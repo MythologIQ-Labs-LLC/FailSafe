@@ -2,7 +2,7 @@
 
 ## What's New in v6.0.11
 
-**Unreleased RC0 staging candidate only.** Proposed Console WebSocket duplicate-Host hardening and install-skills socket host/port correction (#587). This version has not passed native #467 authorization, installed-host release qualification or publication. The shipped release remains v6.0.10.
+Security and reliability patch. The Console WebSocket refuses handshakes that carry duplicate `Host` headers, and the install-skills progress socket connects to the Console's actual host and port (#587). Console server discovery no longer creates `~/.failsafe` or rewrites the server registry when it only reads it (#591). The FailSafe Monitor footer no longer shows stray backslashes.
 
 
 **Understand agent activity, check risky changes, and keep evidence of what happened.**
@@ -75,7 +75,7 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 
 ---
 
-**Current Release**: v6.0.11 (2026-10-29) — release candidate, not yet published. The published release is v6.0.10 (2026-10-22).
+**Current Release**: v6.0.11 (2026-10-29)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 

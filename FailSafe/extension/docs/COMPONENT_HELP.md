@@ -1,6 +1,6 @@
 # FailSafe Component Help
 
-> v6.0.11 RC0 staging note: #587 proposes a Console WebSocket security correction. This document continues to describe the released v6.0.10 operator experience; v6.0.11 is not released or qualified (#467).
+> v6.0.11: the Console WebSocket refuses duplicate `Host` headers and the install-skills progress socket follows the Console host (#587); Console server discovery is read-only (#591). Components and operator workflows are otherwise unchanged from v6.0.10.
 
 
 Audience: operators using the packaged VS Code extension (`v6.0.10`).
