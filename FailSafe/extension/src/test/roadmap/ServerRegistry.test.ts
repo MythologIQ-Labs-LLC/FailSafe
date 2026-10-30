@@ -64,6 +64,24 @@ describe("ServerRegistry", () => {
       assert.strictEqual(fs.existsSync(dir), false, "absent unregister must not initialize storage");
     });
 
+    it("does not initialize a registry when marking an unknown server disconnected", () => {
+      const dir = path.dirname(registryPath);
+      assert.strictEqual(fs.existsSync(dir), false);
+      markDisconnected(9999);
+      assert.strictEqual(fs.existsSync(dir), false, "unknown disconnect must be a no-op");
+    });
+
+    it("does not rewrite an existing registry when unregister misses", () => {
+      registerServer({
+        port: 9376, workspaceName: "Existing", workspacePath: "/existing",
+        pid: process.pid, startedAt: new Date().toISOString(),
+      });
+      const before = fs.readFileSync(registryPath);
+      unregisterServer(9999);
+      assert.deepStrictEqual(fs.readFileSync(registryPath), before,
+        "unknown unregister must preserve existing registry bytes");
+    });
+
     it("does not create .failsafe when the registry does not exist", () => {
       const dir = path.dirname(registryPath);
       assert.strictEqual(fs.existsSync(dir), false);
