@@ -35602,3 +35602,33 @@ No duplicate PR.
 **Chain Hash (Merkle seal)**: `89b89eea7c8acc3c61ecd8dfe30c7efab120145abf9518c7cd2b95c697b7f8e5`
 
 **Decision**: SESSION SEAL for plan-dep-584.md (content hash = the audited plan, sha256 71315751). Reality = Promise, with disclosures. Dependabot #584 moves the Console rate limiter's ip-address to 10.7.4, clearing GHSA-rxp7-6hxx-x8q5 (published 2026-10-22 16:19Z, after the v6.0.10 release-prep merge). The production npm audit goes from 1 to 0 and the full audit from 14 to 13. The fixed code is the code bundled. The v6.0.10 release notes name the bump, so their production-audit claim holds. Disclosures: bounded override (#467 unresolved); low exposure, with no reproduction claimed; two lead SYSTEM_STATE deviation commits; one void DNS-failed test attempt. Next: push the seal to the #584 branch, run the full required CI, and merge pinned to the head. The merge commit becomes the v6.0.10 release candidate for Phase 4 qualification. No tag, no publication.
+
+---
+
+### Entry #914: EPOCH - clean ledger epoch after #382 (#467 operator decision)
+
+**Timestamp**: 2026-10-30T01:23:55Z
+**Phase**: MIGRATION
+**Author**: Governor
+**Risk Grade**: L3
+**Verdict**: OPERATOR-ACCEPTED DISCLOSURE (not an audit PASS)
+
+**Content Hash**: `7274699b42615378c2191cac2ab038d743933b5642e3ffab53ffbcc3ee9cb1b1`
+**Previous Hash**: `89b89eea7c8acc3c61ecd8dfe30c7efab120145abf9518c7cd2b95c697b7f8e5`
+**Chain Hash (Merkle seal)**: `96500e67bd9bf323d223f11de6097455b658457a40611ddef57ee32772a56f10`
+
+**Decision**: Operator decision (repository owner, 2026-10-29, recorded in #467): the ledger is broken at entries #341 and #382 and cannot be repaired without rewriting history, which is forbidden. Native qor-logic 0.176.1 measured on this ledger before this entry: verify-ledger --post-anchor --boundary 340 exits 1 with FAIL #341 (missing canonical hash markup, required at/after entry #123) and BREAK #382 (previous_hash bfd9f17c7d684d0b was not produced by the preceding entry, chain 24b5b3b5a43eb506); the full chain also carries the disclosed pre-anchor residue below #340 (duplicate #236, BREAK #340, entry-number gaps 158 and 298, unrecognized pre-convention hash values). The owner accepts these as known, unrepairable defects and opens a clean epoch: native ledger.post_anchor_boundary, previously undeclared (FailSafe's own gate used 340), is declared as 382. Native verification chain-verifies every entry numbered above #382, including this one, whenever it runs; entries numbered #382 or below are disclosed, not repaired.
+
+What this costs, stated plainly: the 42 entries #341-#382 lose native failure detection (measured with qor-logic 0.176.1: chain tampering at #341, #350 or #381, deletion of #360 or #381, and a duplicate #360 are all tolerated at boundary 382). Native tolerance is by entry number, not file position, so a heading numbered 382 or lower placed anywhere in the file is also tolerated natively.
+
+Compensating controls in FailSafe's check-ledger-anchor (FX946), held as reviewed code constants rather than by this text: (1) the exact bytes before the first entry heading numbered above #382 must match the pinned sha256 and length, so any edit, deletion or insertion in that band fails; (2) no entry heading numbered 382 or lower may appear after that point; (3) this entry must appear exactly once with its recomputed content hash, the pinned content hash and a valid chain hash; (4) the reconciled-entry set must be exactly #397, #401 (#467 G3). These make the band tamper-evident relative to reviewed code and git history; they are not a cryptographic attestation. #467 G1 (exact known failure set) is subsumed by the byte pin; #467 G4 (an independent witness or signature) is not implemented.
+
+History is kept byte-for-byte. Nothing above or below the boundary was edited, removed or renumbered.
+
+**Disclosed Band**: entries #1 through #382 (known failures: #341 markup, #382 link; pre-anchor residue as listed above)
+**Prefix Pin**: sha256 `5b2e18e2c27d14097dfeae0eafd3a122fbe73cc7f2ea08dbefcfb15f89f7cc40` over the first 1051993 bytes (LF-normalized) of docs/META_LEDGER.md, ending immediately before the heading of the first entry numbered above #382
+**Ledger Before Epoch**: sha256 `7c5c38242eab447870dd3d460147f20d86d913ab96788d0ac776477a0b2db01c` (LF-normalized), 931 entry headings, 531 above the new boundary
+**New Boundary**: .qorlogic/config.json ledger.post_anchor_boundary = 382 (was undeclared natively; consumer ledger_anchor.entry 340 -> 382)
+**Not Claimed**: this entry does not repair or re-verify entries at or below the boundary, is not an external witness or signature, and is not an audit PASS.
+
+---

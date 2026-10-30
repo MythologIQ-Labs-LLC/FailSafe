@@ -10,7 +10,10 @@
     "data_api_acl_lint": "This repository is a VS Code extension with no SQL migrations - zero .sql files exist and none is planned - so the Data-API grant and definer-view scan names a property no enforcer will ever satisfy here (ledger #602, #607)."
   },
   "ledger_anchor": {
-    "entry": 340,
-    "reason": "Lowest anchor at which the live ledger verifies clean (measured: 236 -> 94 failures, 331 -> 2, 340 -> 0). Entries at or below are disclosed pre-tooling residue - placeholder hashes, wrong-length hash values, and the #113-#236 duplicate band. Above it every entry is actively re-verified on each run, instead of the one-entry-deep surface upstream's auto-detected boundary leaves (#233 Scope D)."
+    "entry": 382,
+    "reason": "Operator decision 2026-10-29 (#467, ledger entry #914 EPOCH): #341 (no canonical hash markup) and #382 (previous-hash link break) cannot be repaired without rewriting history, which is forbidden. The native boundary (previously undeclared) and this consumer anchor (previously 340) are both 382: every entry numbered above #382 is chain-verified natively, and the 42 entries #341-#382 lose native failure detection. check-ledger-anchor (FX946) compensates with reviewed code constants: a byte pin of everything before the #383 heading, no entry numbered 382 or lower after it, #914 intact, and the reconciled set exactly #397/#401. Tamper-evident relative to reviewed code and git history; not a cryptographic attestation (#467 G4 not implemented)."
+  },
+  "ledger": {
+    "post_anchor_boundary": 382
   }
 }
