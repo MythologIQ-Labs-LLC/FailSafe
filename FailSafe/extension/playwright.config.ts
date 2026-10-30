@@ -8,6 +8,18 @@ import * as path from 'path';
 // constructed. Without this, a run wrote ~/.failsafe/marketplace/state.json into
 // the developer's real profile. The first process to load this config creates a
 // disposable home and exports it; workers inherit the same directory.
+// Playwright finds its browsers under the home directory on Linux and macOS
+// (~/.cache/ms-playwright, ~/Library/Caches/ms-playwright), so pin the default
+// cache from the ORIGINAL home before redirecting it. An explicit setting wins.
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH && !process.env.FAILSAFE_PLAYWRIGHT_HOME) {
+  const realHome = os.homedir();
+  process.env.PLAYWRIGHT_BROWSERS_PATH =
+    process.platform === 'win32'
+      ? path.join(process.env.LOCALAPPDATA || path.join(realHome, 'AppData', 'Local'), 'ms-playwright')
+      : process.platform === 'darwin'
+        ? path.join(realHome, 'Library', 'Caches', 'ms-playwright')
+        : path.join(process.env.XDG_CACHE_HOME || path.join(realHome, '.cache'), 'ms-playwright');
+}
 if (!process.env.FAILSAFE_PLAYWRIGHT_HOME) {
   process.env.FAILSAFE_PLAYWRIGHT_HOME = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-playwright-home-')),
