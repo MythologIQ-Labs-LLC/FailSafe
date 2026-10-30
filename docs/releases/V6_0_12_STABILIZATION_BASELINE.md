@@ -5,7 +5,7 @@
 ## v6.0.11 release
 
 - Main and v6.0.11 tag target: `73eca5b4`; merged release PR #594.
-- Release run: [40993501172](https://github.com/MythologIQ-Labs-LLC/FailSafe/actions/runs/40993501172). SemVer, Build & Test, and both marketplace publishing jobs passed at inventory time; GitHub Release creation was still in progress. Do **not** claim full closeout until final job and public listings are verified.
+- Release run: [40993501172](https://github.com/MythologIQ-Labs-LLC/FailSafe/actions/runs/40993501172). SemVer, Build & Test, both marketplace publishing jobs, and GitHub Release creation all completed successfully. Public marketplace listing/version parity still requires independent verification; do not conflate workflow success with storefront evidence.
 - #467 native Qor-logic clean-epoch governance reportedly passed, with append-only ledger epoch #914; independent witness G4 remains unimplemented. Preserve this distinction in status reporting.
 - #591/#592 fixes were included in merged release work; close only after linking exact acceptance evidence. #564 installed-host acceptance requires an exact release disposition.
 - Post-publication #502 Linux/macOS installed SQLite and upgrade parity remain open.
@@ -40,12 +40,19 @@
 - **#460** Claude Code Mod: separate integration initiative; do not silently expand 6.0.12.
 - **#232 / #239** remain umbrella programs; consolidate subordinate evidence under their canonical issues instead of creating duplicate tracking work.
 
-## Open PR inventory (snapshot)
+## Open PR inventory and pause dispositions (9 open PRs at latest check)
 
-- **#570** Integration hardening: large preexisting branch; inventory and extract bounded deliverables by corresponding integration issues before merge.
-- **#585** Audio-vault boundary: security qualification and end-to-end Mind Map acceptance required.
-- **#590** actions/setup-python Dependabot: CI compatibility review independently.
-- **#595** fast-uri, **#596** qs, **#597** @hono/node-server major upgrade, **#598** undici, **#599** MSAL/identity: check lockfiles, peer graph and security advisories; group compatible low-risk dependency updates for one focused qualification, keep #597 major version isolated and qualify API compatibility. No blind Dependabot merges during pause.
+- **#570** HOLD DRAFT: 42-file pre-v6.0.11 integration hardening candidate; inventory and extract bounded deliverables by corresponding integration issues before merge.
+- **#585** RETAIN DRAFT: audio-vault boundary needs security qualification and end-to-end Mind Map acceptance.
+- **#590** DEFER: actions/setup-python Dependabot requires CI compatibility review independently.
+- **#595** SECURITY PATCH: fast-uri 3.1.9; assess reachability, may batch with #596/#598.
+- **#596** PATCH/BATCH: qs 6.17.1; assess parser behavior and lockfile.
+- **#597** MAJOR UPGRADE HOLD: @hono/node-server 2.x; isolate and verify API, HTTP and installed-host compatibility.
+- **#598** SECURITY PATCH: undici 7.30.1; assess TLS exposure and Node compatibility, may batch with #595/#596.
+- **#599** AUTH MAJOR UPGRADE HOLD: paired @azure/msal-node and @azure/identity; require auth-flow integration acceptance.
+- **#600** DOCS REVIEW PENDING: this closeout baseline and README pointer, no merge during pause.
+
+All nine PRs are intentionally open; each has a disposition comment. Closing valid unmerged work would erase workflow clarity rather than improve hygiene. No code merges or CI runs during pause.
 
 ## Open issue inventory (snapshot, 35)
 
