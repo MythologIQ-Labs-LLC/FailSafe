@@ -184,6 +184,25 @@ suite('integrations/bicameral install-detector', () => {
     }
   }
 
+  // #591: inside the VS Code extension host os.homedir() is the real profile even when
+  // the runner redirects HOME/USERPROFILE, so these suites created fixtures in the owner's
+  // home directory. Point the home at a disposable directory for the suite, and refuse to
+  // run if os.homedir() did not follow (Windows reads USERPROFILE, POSIX reads HOME).
+  function useDisposableHome(): void {
+    const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
+    let dir = '';
+    suiteSetup(() => {
+      dir = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-bic-home-')));
+      process.env.HOME = dir;
+      process.env.USERPROFILE = dir;
+      assert.equal(path.resolve(os.homedir()).toLowerCase(), path.resolve(dir).toLowerCase(),
+        'disposable home not in effect; refusing to write fixtures into the real profile');
+    });
+    suiteTeardown(() => {
+      for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+      if (dir) fs.rmSync(dir, { recursive: true, force: true });
+    });
+  }
   // FX568/FX569 use real symlinks. On Windows symlink creation may need
   // elevation/Developer Mode; trySymlink reports whether the OS allowed it so
   // the dependent assertions can skip gracefully rather than fail spuriously.
@@ -310,6 +329,7 @@ suite('integrations/bicameral install-detector', () => {
   });
 
   suite('FX567 isSafeBicameralCommandResolved lexical parity', () => {
+    useDisposableHome();
     test('accepts a bare name without resolving a filesystem path', async () => {
       assert.equal(await isSafeBicameralCommandResolved('bicameral-mcp'), true);
       assert.equal(await isSafeBicameralCommandResolved('bicameral_mcp.v2'), true);
@@ -345,6 +365,7 @@ suite('integrations/bicameral install-detector', () => {
   });
 
   suite('FX568 isSafeBicameralCommandResolved symlink containment', () => {
+    useDisposableHome();
     test('rejects a symlink inside home resolving outside home (B-BIC-6 bypass)', async () => {
       const home = os.homedir();
       if (!home) {
@@ -398,6 +419,7 @@ suite('integrations/bicameral install-detector', () => {
   });
 
   suite('FX569 isSafeBicameralCommandResolved fail-closed', () => {
+    useDisposableHome();
     test('rejects a non-existent absolute path under home (realpath ENOENT)', async () => {
       const home = os.homedir();
       if (!home) {
