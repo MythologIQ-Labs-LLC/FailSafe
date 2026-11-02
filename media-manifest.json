@@ -1,0 +1,36 @@
+{
+  "product": "FailSafe",
+  "package": "failsafe-website-crop-2026-11-02",
+  "status": "DERIVED CROP, NOT APPROVED FOR PUBLICATION (owner approval of the v6.0.11 RC media is still pending)",
+  "supersedes": "nothing; derived from docs/589-marketing-media",
+  "license": "Apache-2.0",
+  "sourceRepository": "MythologIQ-Labs-LLC/FailSafe",
+  "sourceAsset": {
+    "branch": "docs/589-marketing-media",
+    "commit": "9d3ae320024d6b662178e78ae433a0513c952fbb",
+    "path": "docs/marketing/media/screenshots/full/failsafe-6.0.11-rc-05-fix-risk-graded-l2.png",
+    "sha256": "60a483416e90bf6967735ad8e204d52391e3d2b40e7d0e1eb0d5912df6491339",
+    "capturedFrom": "FailSafe 6.0.11 release candidate (RC commit 43ab0ecb) in VS Code on Windows, demo workspace 'failsafe-demo-workspace' (fictional Tasklet service, issue TASK-14). Edits were made by a scripted driver, not an AI agent."
+  },
+  "derivation": "Crop of the 1920x1080 source at left 360, top 256, 1552x776 (2:1). Pixels unaltered; WebP re-encode at quality 90.",
+  "files": [
+    {
+      "path": "homepage/failsafe-6.0.11-rc-05-risk-graded-crop-2x1.png",
+      "sha256": "02e00a17d864ee6a07913d50017b560b566e1ab3bab6bccf1f1ae1fb5d0667e2",
+      "bytes": 85635,
+      "width": 1552,
+      "height": 776,
+      "altText": "VS Code editing a due-date validator for issue TASK-14, with a FailSafe notification: the save needed an active intent for a risk level L2 change, the write was not prevented, risk grade L2, and buttons to Create Intent or View Active Intent.",
+      "caption": "FailSafe notices a risky change made without a declared intent, grades it, and tells you; it doesn't silently block your work."
+    },
+    {
+      "path": "homepage/failsafe-6.0.11-rc-05-risk-graded-crop-2x1.webp",
+      "sha256": "4f20d08a224e802d445bb2b00622bdaa9c00c66d18d9f4a13fd1962fb0dddb47",
+      "bytes": 92648,
+      "width": 1552,
+      "height": 776,
+      "altText": "VS Code editing a due-date validator for issue TASK-14, with a FailSafe notification: the save needed an active intent for a risk level L2 change, the write was not prevented, risk grade L2, and buttons to Create Intent or View Active Intent.",
+      "caption": "FailSafe notices a risky change made without a declared intent, grades it, and tells you; it doesn't silently block your work."
+    }
+  ]
+}
