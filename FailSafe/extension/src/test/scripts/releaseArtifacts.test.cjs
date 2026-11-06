@@ -466,7 +466,7 @@ test("#616: eight-target historical 6.0.11 remains valid without a PDF", () => {
 test("#616: 6.0.12, its prerelease and later minor/major versions require a PDF", () => {
   for (const version of ["6.0.12", "6.0.12-rc.1", "6.1.0", "7.0.0"]) {
     const errors = verifySet(makeSet({ version }), version, fakeDeps({
-      readManifest: (file) => ({ version, targetPlatform: /-(\\w+-\\w+)\\.vsix$/.exec(file)[1] }),
+      readManifest: (file) => ({ version, targetPlatform: /-(\w+-\w+)\.vsix$/.exec(file)[1] }),
     }));
     assert.ok(errors.some((e) => e.includes(pdfFor(version))), `${version}: ${errors.join("; ")}`);
   }
