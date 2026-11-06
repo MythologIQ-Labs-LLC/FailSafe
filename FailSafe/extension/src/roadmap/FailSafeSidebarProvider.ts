@@ -168,8 +168,14 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     // chrome follows the data-theme the embedded Console announces via the
     // failsafe.theme postMessage handled below.
 
-    // Restore label state; the host owns the decision logic.
+    // Persist the last known selection in the webview so the Monitor chrome
+    // does not flash the default every time its iframe reloads. The Console
+    // remains the preference authority and will announce its current theme.
+    const supportedThemes = new Set(['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere']);
     const state = vscode.getState() || { initDone: false };
+    if (supportedThemes.has(state.theme)) {
+      document.documentElement.setAttribute('data-theme', state.theme);
+    }
     if (state.initDone && initBtn) {
         initBtn.textContent = 'Organize';
         initBtn.title = 'Organize Workspace Structure';
@@ -187,8 +193,12 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     window.addEventListener('message', (event) => {
       const data = event && event.data ? event.data : null;
       if (!data || typeof data !== 'object') return;
-      if (data.type === 'failsafe.theme' && typeof data.theme === 'string') {
+      if (data.type === 'failsafe.theme') {
+        // Only the embedded Console may announce the active app theme.
+        // Never accept arbitrary postMessage data as a CSS selector value.
+        if (event.source !== mainFrame.contentWindow || !supportedThemes.has(data.theme)) return;
         document.documentElement.setAttribute('data-theme', data.theme);
+        vscode.setState({ ...vscode.getState(), theme: data.theme });
         return;
       }
       if (data.type === 'failsafe.button.update' && initBtn) {
