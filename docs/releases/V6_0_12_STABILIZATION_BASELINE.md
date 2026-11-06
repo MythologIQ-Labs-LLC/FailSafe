@@ -1,6 +1,6 @@
 # FailSafe v6.0.11 closeout and v6.0.12 stabilization baseline
 
-**Inventory date:** 2026-10-29 (America/New_York). **Status:** planning only; development pause for remainder of the week. This document is not authorization to merge, implement or release.
+**Baseline captured:** 2026-10-29. **Reconciled:** 2026-11-06. **Status:** active v6.0.12 development; not a release-candidate GO or publication authorization.
 
 ## v6.0.11 release
 
@@ -44,21 +44,11 @@
 - **#460** Claude Code Mod: separate integration initiative; do not silently expand 6.0.12.
 - **#232 / #239** remain umbrella programs; consolidate subordinate evidence under their canonical issues instead of creating duplicate tracking work.
 
-## Open PR inventory and pause dispositions (9 open PRs at latest check)
+## Pull request evidence and release disposition
 
-- **#570** HOLD DRAFT: 42-file pre-v6.0.11 integration hardening candidate; inventory and extract bounded deliverables by corresponding integration issues before merge.
-- **#585** RETAIN DRAFT: audio-vault boundary needs security qualification and end-to-end Mind Map acceptance.
-- **#590** DEFER: actions/setup-python Dependabot requires CI compatibility review independently.
-- **#595** SECURITY PATCH: fast-uri 3.1.9; assess reachability, may batch with #596/#598.
-- **#596** PATCH/BATCH: qs 6.17.1; assess parser behavior and lockfile.
-- **#597** MAJOR UPGRADE HOLD: @hono/node-server 2.x; isolate and verify API, HTTP and installed-host compatibility.
-- **#598** SECURITY PATCH: undici 7.30.1; assess TLS exposure and Node compatibility, may batch with #595/#596.
-- **#599** AUTH MAJOR UPGRADE HOLD: paired @azure/msal-node and @azure/identity; require auth-flow integration acceptance.
-- **#600** DOCS REVIEW PENDING: this closeout baseline and README pointer, no merge during pause.
+The earlier nine-PR snapshot from October 29 is historical and must not be used as a current queue count. Dependabot security and patch updates #590, #595, #596, #597, #598, #610 and #611 were subsequently merged. Open PRs are dynamically tracked in GitHub, including #570 integration, #585 audio vault, #599 Azure, #600 documentation, #609 Monitor, #612 Zod, and the bounded #613/#614/#615 hardening lanes. Each source PR requires exact-head checks and independent native acceptance where its contract requires it. A draft is not a shipped feature.
 
-All nine PRs are intentionally open; each has a disposition comment. Closing valid unmerged work would erase workflow clarity rather than improve hygiene. No code merges or CI runs during pause.
-
-## Open issue inventory (snapshot, 35)
+## Historical open issue inventory (snapshot, 35)
 
 - **Release/qualification:** #588 #589 #591 #592 #564 #502 #243 #467.
 - **P0 governance/security/claims:** #463 #468 #473 #474 #475 #476 #505.
@@ -78,13 +68,14 @@ All nine PRs are intentionally open; each has a disposition comment. Closing val
 - **v6.0.12:** stabilization, existing promised functionality, security, and mandatory #601 Monitor theme consistency.
 - **v6.0.13:** **#602 Statewright AI first-class integration**, read-only workflow observability and referral attribution. Partner APIs, billing and commercial terms are external dependencies and not presumed delivered. Do not silently import #602 into v6.0.12.
 
-## Restart sequence (after maintenance pause)
+## Development and release sequence
 
-1. Complete v6.0.11 publication verification and documentation cleanup, close truly superseded release tickets.
+1. Reconcile v6.0.11 publication receipts, current GitHub issue/PR inventory and documentation; close completed historical release tickets on evidence.
 2. Resolve P0 trust and containment promises first; build minimal adversarial acceptance matrix per affected product surface.
 3. Schedule bounded P1 integration/functionality deliveries, then full cross-platform qualification and documentation freeze for v6.0.12.
 
-This is an **initial scope**, subject to native evidence, prioritization and explicit owner release authorization.
+This scope remains subject to native evidence and an explicit owner release authorization.
+
 ## Backlog reconciliation, 2026-11-06
 
 A live audit began with **43 open issues** and closed three evidence-backed, completed v6.0.11 tasks: **#588** (release coordination), **#591** (Windows owner-profile test isolation), and **#564** (Console WebSocket handshake installed-host hardening). The remaining **40** are divided into **13 security/governance/product-truth issues**, **14 unfinished-functionality/platform/runtime-acceptance issues**, **4 deferred or independent initiatives**, **7 Statewright v6.0.13 issues**, and **2 umbrella programs**. These are workstream classifications, not blanket priority changes. The complete issue-number inventory and evidence disposition are recorded on umbrella **#239**, comment **6691206879**.
