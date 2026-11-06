@@ -146,6 +146,30 @@ suite('ConsoleLifecycleService listener evidence (FailSafe #471)', () => {
     });
   });
 
+  test('concurrent callers all reject a failed bind without registering a checkpoint', async () => {
+    await withTempHome(async home => {
+      const occupied = (await listen(0))!;
+      const port = (occupied.address() as net.AddressInfo).port;
+      const { service, checkpoints, observations } = fixture(port);
+      (service as any).findAvailablePort = async () => port;
+      try {
+        const results = await Promise.allSettled([service.start(), service.start(), service.start()]);
+        assert.equal(results.length, 3);
+        for (const result of results) {
+          assert.equal(result.status, 'rejected');
+          if (result.status === 'rejected') assert.equal(result.reason?.code, 'EADDRINUSE');
+        }
+        assert.equal(service.getServer(), null);
+        assert.deepEqual(checkpoints, []);
+        assert.deepEqual(observations, []);
+        assert.equal(registryEntries(home).length, 0);
+      } finally {
+        service.stop();
+        await closeAll([occupied]);
+      }
+    });
+  });
+
   test('stop during asynchronous port probe cancels startup without registration', async () => {
     await withTempHome(async home => {
       const { service, checkpoints, observations } = fixture();
