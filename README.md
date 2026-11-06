@@ -53,9 +53,7 @@ FailSafe's core monitoring and governance run locally. External integrations are
 
 ## Current release and what's coming
 
-**Maintenance pause:** Development is paused through the remainder of the week beginning October 29, 2026. The next planned release is **v6.0.12**, prioritizing previously promised security, governance, integration correctness, and platform acceptance over new features. See the [v6.0.12 stabilization baseline](docs/releases/V6_0_12_STABILIZATION_BASELINE.md) for the initial scope, unresolved evidence gates, and issue inventory.
-
-
+**v6.0.12 development:** Active stabilization work is tracked in the [v6.0.12 baseline](docs/releases/V6_0_12_STABILIZATION_BASELINE.md). The Monitor theme synchronization is a mandatory P0 acceptance gate (#601), alongside security and integration correctness. Publication requires separately qualified release evidence.
 
 **Current Release**: v6.0.11, the latest release ([release notes](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.11)). See the [release history](CHANGELOG.md) for fixes, security corrections, and packaged platform support.
 
