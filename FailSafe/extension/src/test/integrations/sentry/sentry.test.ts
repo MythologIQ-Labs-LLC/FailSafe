@@ -188,6 +188,16 @@ suite('Sentry pagination trust (FailSafe #478)', () => {
     assert.deepEqual(r.items, [], 'partially fetched issues cannot be imported');
   });
 
+  test('rejects pagination URLs with credentials or fragments even on approved host', () => {
+    const first = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend&query=is%3Aunresolved&sort=date&limit=100';
+    for (const candidate of [
+      'https://user:pass@sentry.io/api/0/organizations/acme/issues/?project=backend&query=is%3Aunresolved&sort=date&limit=100&cursor=next',
+      first + '&cursor=next#fragment',
+    ]) {
+      assert.throws(() => nextSentryPage(makeLink(candidate), first, first), /Untrusted Sentry pagination destination/);
+    }
+  });
+
   test('rejects unrelated paths and repeated cursors', async () => {
     const firstUrl = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend';
     assert.throws(() => nextSentryPage(makeLink('https://sentry.io/api/0/other/'), firstUrl, firstUrl), /Untrusted/);
