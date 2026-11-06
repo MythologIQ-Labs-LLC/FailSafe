@@ -123,6 +123,9 @@ jobs:
       # #616: a new release cannot start marketplace publication without the
       # authentic, versioned PDF in the immutable asset/checksum manifest.
       # A later generator step must add that PDF before this gate can pass.
+      - name: Generate branded release-notes PDF from exact tagged changelog
+        working-directory: FailSafe/extension
+        run: node scripts/build-release-notes-pdf.cjs --version "${VSIX_VERSION}" --out dist-vsix
       - name: Verify complete release set including required PDF
         working-directory: FailSafe/extension
         run: node scripts/release-artifacts.cjs verify-set "dist-vsix" --version "${VSIX_VERSION}"
