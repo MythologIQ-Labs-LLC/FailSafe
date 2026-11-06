@@ -96,6 +96,25 @@ suite('StateStore (FX189)', () => {
     assert.equal(ss.getTheme(), 'mythiq');
   });
 
+  test('Monitor sync accepts a supported theme from another same-origin Console', () => {
+    const ss = new StateStore();
+    assert.equal(ss.syncThemeStorageEvent({ key: 'fs-theme', newValue: 'pegasus' }), true);
+    const docEl = (globalThis as { document: { documentElement: { getAttribute: (k: string) => string | undefined } } }).document.documentElement;
+    assert.equal(docEl.getAttribute('data-theme'), 'pegasus');
+    // Receiving an event does not write back to storage or form an event loop.
+    assert.equal(stubs.store.has('fs-theme'), false);
+  });
+
+  test('Monitor sync ignores unrelated keys and unsupported theme values', () => {
+    const ss = new StateStore();
+    ss.setTheme('mythiq');
+    assert.equal(ss.syncThemeStorageEvent({ key: 'other-theme', newValue: 'pegasus' }), false);
+    assert.equal(ss.syncThemeStorageEvent({ key: 'fs-theme', newValue: 'unexpected' }), false);
+    assert.equal(ss.syncThemeStorageEvent({ key: 'fs-theme', newValue: null }), false);
+    const docEl = (globalThis as { document: { documentElement: { getAttribute: (k: string) => string | undefined } } }).document.documentElement;
+    assert.equal(docEl.getAttribute('data-theme'), 'mythiq');
+  });
+
   test('FX189 setTheme persists + applies data-theme on documentElement', () => {
     const ss = new StateStore();
     ss.setTheme('dark');
