@@ -80,11 +80,11 @@ function htmlFor(version, groups, logos) {
     '<title>FailSafe v'+esc(version)+' | Release Notes</title><style>'+
     '@page{size:Letter;margin:0.7in 0.72in 0.66in}'+
     '*{box-sizing:border-box}body{margin:0;font:11pt/1.44 Arial,Helvetica,sans-serif;color:#26334b}'+
-    'header{display:flex;gap:21px;align-items:center;border-bottom:2px solid #d9aa60;padding-bottom:19px}'+
-    '.logos{display:flex;gap:10px}.logos img{height:72px;width:72px;object-fit:contain}'+
-    '.brand{font-size:8pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#526179}'+
-    'h1{margin:4px 0 3px;font-size:28pt;line-height:1.1;color:#1b3258}'+
-    '.version{font-size:11pt;font-weight:600;color:#515c6f}'+
+    'header{display:flex;gap:18px;align-items:center;background:#0e213a;border-bottom:2px solid #d9aa60;border-radius:10px;padding:18px 18px;margin-bottom:6px}'+
+    '.logos{display:flex;align-items:center;gap:10px}.logos img{height:76px;width:76px;object-fit:contain}.logos img:first-child{width:112px}'+
+    '.brand{font-size:8pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#b9c6d7}'+
+    'h1{margin:4px 0 3px;font-size:28pt;line-height:1.1;color:#fff}'+
+    '.version{font-size:11pt;font-weight:600;color:#e2ebf7}'+
     '.overview{background:#f3f6fb;border-left:3px solid #d8b16d;padding:13px 16px;margin:19px 0 20px}'+
     'section{break-inside:avoid;margin:0 0 17px}h2{font-size:14pt;color:#18345d;margin:0 0 8px;border-bottom:1px solid #dfe6f0;padding-bottom:4px}'+
     'ul{margin:0;padding-left:20px}li{padding-left:3px;padding-bottom:6px;overflow-wrap:anywhere}'+
