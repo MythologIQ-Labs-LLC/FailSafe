@@ -230,6 +230,15 @@ export class IntentService {
     catch (e) { console.error('Intent validation failed:', e); return null; } // Failsafe fallback
   }
 
+  /**
+   * Release gate counterpart to the forgiving UI getter above. A corrupt or
+   * unreadable active intent must block release, never masquerade as missing.
+   */
+  async getActiveIntentForRelease(): Promise<Intent | null> {
+    const rawIntent = await this.store.readActiveIntentStrict();
+    return rawIntent === null ? null : IntentSchema.parse(rawIntent);
+  }
+
   async createIntent(params: {
     type: IntentType; purpose: string; scope: IntentScope;
     blueprint?: string; planId?: string; metadata: IntentMetadata;

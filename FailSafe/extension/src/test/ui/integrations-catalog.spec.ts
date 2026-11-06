@@ -73,7 +73,7 @@ test.describe('#479 — catalog status from recorded evidence', () => {
     }
   });
 
-  test('verified, failing, connected, stale, parsed and unverified cards show their own pills and last results', async ({ page }) => {
+  test('observed, failing, stale, parsed and unverified cards never claim live qualification', async ({ page }) => {
     const now = new Date().toISOString();
     const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
     const on = (id: string) => `failsafe.integrations.${id}.enabled`;
@@ -98,16 +98,21 @@ test.describe('#479 — catalog status from recorded evidence', () => {
     await page.locator('.tab-btn[data-target="integrations"]').click();
     const card = (id: string) => page.locator(`.cc-intcat-card[data-id="${id}"]`);
     await expect(card('jira')).toBeVisible({ timeout: 5000 });
-    await expect(card('jira').locator('.cc-intcat-pill-verified')).toHaveText('Verified');
+    await expect(card('jira').locator('.cc-intcat-pill-observed')).toHaveText('Last response matched expected format');
     await expect(card('sentry').locator('.cc-intcat-pill-failing')).toHaveText('Failing');
     await expect(card('sentry').locator('.cc-intcat-last')).toContainText('authentication was refused');
-    await expect(card('slack').locator('.cc-intcat-pill-connected')).toHaveText('Connected');
+    await expect(card('slack').locator('.cc-intcat-pill-observed')).toHaveText('Last service reached');
     await expect(card('linear').locator('.cc-intcat-pill-stale')).toHaveText('Stale');
-    await expect(card('sarif').locator('.cc-intcat-pill-verified')).toHaveText('Last import parsed');
+    await expect(card('sarif').locator('.cc-intcat-pill-observed')).toHaveText('Last import parsed');
     await expect(card('aider').locator('.cc-intcat-pill-configured')).toHaveText('Configured · unverified');
-    await expect(card('sentry').locator('.cc-intcat-pill-verified')).toHaveCount(0);
-    await expect(card('jira').locator('.cc-intcat-caps')).toHaveText('Can: preview issues, create intent drafts');
+    await expect(card('sentry').locator('.cc-intcat-pill-observed')).toHaveCount(0);
+    await expect(card('jira').locator('.cc-intcat-caps').first()).toHaveText('Implemented path (not live-qualified): preview issues, create intent drafts');
     await expect(page.locator('.cc-intcat-sub')).toContainText('1 failing');
+    await expect(page.locator('.cc-intcat-sub')).toContainText('observed connection or format results');
+    await expect(page.locator('.cc-intcat-sub')).toContainText('A recent call is not end-to-end qualification or proof of customer value');
+    await expect(card('jira')).toContainText('Value impact: not measured');
+    await expect(card('jira')).not.toContainText('Operational');
+
     const shot = process.env.FAILSAFE_SCREENSHOT_DIR;
     if (shot) {
       for (const id of ['jira', 'sentry', 'slack', 'linear', 'sarif', 'aider']) {
