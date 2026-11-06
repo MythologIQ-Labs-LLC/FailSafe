@@ -443,3 +443,71 @@ test("the runs route uses the workflow-file parameter", async () => {
   await publishHistory({ api, repo: "o/r", workflow: "native-vsix-qualification.yml", ref: "release/v6.0.7-rc1", runId: 100, attempt: 2, selfStep: SELF, sleep: async () => {} });
   assert.match(routes[0], /actions\/workflows\/native-vsix-qualification\.yml\/runs\?branch=release%2Fv6\.0\.7-rc1/);
 });
+
+
+// #616: published historical asset sets stay unchanged. New SemVer releases
+// refuse missing, renamed, corrupted or unlisted PDF release notes.
+const PDF_VERSION = "6.0.12";
+const pdfFor = (version) => `FailSafe-v${version}-Release-Notes.pdf`;
+function pdfBytes() {
+  return Buffer.concat([Buffer.from("%PDF-1.7\n"), Buffer.alloc(4100, 0x20), Buffer.from("\n%%EOF\n")]);
+}
+function makePdfSet(version = PDF_VERSION, { include = true, list = true } = {}) {
+  return makeSet({ version, mutate: (dir) => {
+    if (include) fs.writeFileSync(path.join(dir, pdfFor(version)), pdfBytes());
+    if (list) rewriteSums(dir, (text) => text + `${sha256(pdfBytes())}  ${pdfFor(version)}\n`);
+  } });
+}
+
+test("#616: eight-target historical 6.0.11 remains valid without a PDF", () => {
+  assert.deepEqual(verifySet(makeSet({ version: "6.0.11" }), "6.0.11", fakeDeps()), []);
+});
+
+test("#616: 6.0.12, its prerelease and later minor/major versions require a PDF", () => {
+  for (const version of ["6.0.12", "6.0.12-rc.1", "6.1.0", "7.0.0"]) {
+    const errors = verifySet(makeSet({ version }), version, fakeDeps({
+      readManifest: (file) => ({ version, targetPlatform: /-(\\w+-\\w+)\\.vsix$/.exec(file)[1] }),
+    }));
+    assert.ok(errors.some((e) => e.includes(pdfFor(version))), `${version}: ${errors.join("; ")}`);
+  }
+});
+
+test("#616: valid version-specific PDF extends the release to ten files without altering targets.json", () => {
+  const dir = makePdfSet();
+  assert.deepEqual(verifySet(dir, PDF_VERSION, fakeDeps()), []);
+  const assets = expectedAssets(dir);
+  assert.equal(assets.size, 10);
+  assert.ok(assets.has(pdfFor(PDF_VERSION)));
+  assert.ok(assets.has("SHA256SUMS.txt"));
+});
+
+test("#616: missing, mismatched, malformed and wrong-version PDF assets fail closed", () => {
+  const absent = makePdfSet(PDF_VERSION, { include: false });
+  assert.ok(verifySet(absent, PDF_VERSION, fakeDeps()).some((e) => /release notes .* missing/.test(e)));
+  const altered = makePdfSet();
+  fs.appendFileSync(path.join(altered, pdfFor(PDF_VERSION)), Buffer.from("tampered"));
+  assert.ok(verifySet(altered, PDF_VERSION, fakeDeps()).some((e) => /does not match/.test(e)));
+  const malformed = makePdfSet();
+  const bad = Buffer.alloc(5000, 0x20);
+  fs.writeFileSync(path.join(malformed, pdfFor(PDF_VERSION)), bad);
+  rewriteSums(malformed, (text) => text.replace(sha256(pdfBytes()), sha256(bad)));
+  assert.ok(verifySet(malformed, PDF_VERSION, fakeDeps()).some((e) => /not a complete PDF/.test(e)));
+  const wrong = makePdfSet();
+  fs.renameSync(path.join(wrong, pdfFor(PDF_VERSION)), path.join(wrong, pdfFor("6.0.13")));
+  rewriteSums(wrong, (text) => text.replace(pdfFor(PDF_VERSION), pdfFor("6.0.13")));
+  assert.ok(verifySet(wrong, PDF_VERSION, fakeDeps()).some((e) => /does not list|required|unexpected/.test(e)));
+});
+
+test("#616: direct publisher cannot create a draft when mandatory PDF is missing", async () => {
+  const client = memoryClient();
+  await assert.rejects(publishRelease({ dir: makeSet({ version: PDF_VERSION }), tag: "v6.0.12" }, client), /release artifact set rejected/);
+  assert.deepEqual(client.calls, []);
+});
+
+test("#616: ten-asset PDF set may be resumed with byte identity, not replaced", async () => {
+  const dir = makePdfSet();
+  const client = memoryClient();
+  const result = await publishRelease({ dir, tag: "v6.0.12" }, client);
+  assert.equal(result.action, "published");
+  assert.deepEqual(writes(client), ["createDraft", ...Array(10).fill("uploadAsset"), "publish"]);
+});
