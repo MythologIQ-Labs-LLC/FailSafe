@@ -85,3 +85,8 @@ All nine PRs are intentionally open; each has a disposition comment. Closing val
 3. Schedule bounded P1 integration/functionality deliveries, then full cross-platform qualification and documentation freeze for v6.0.12.
 
 This is an **initial scope**, subject to native evidence, prioritization and explicit owner release authorization.
+## Backlog reconciliation, 2026-11-06
+
+A live audit began with **43 open issues** and closed three evidence-backed, completed v6.0.11 tasks: **#588** (release coordination), **#591** (Windows owner-profile test isolation), and **#564** (Console WebSocket handshake installed-host hardening). The remaining **40** are divided into **13 security/governance/product-truth issues**, **14 unfinished-functionality/platform/runtime-acceptance issues**, **4 deferred or independent initiatives**, **7 Statewright v6.0.13 issues**, and **2 umbrella programs**. These are workstream classifications, not blanket priority changes. The complete issue-number inventory and evidence disposition are recorded on umbrella **#239**, comment **6691206879**.
+
+Historical issues **#242, #243, #244, #467 and #592** had their headings and status notes revised to distinguish completed prior tranches from unresolved acceptance. #467 remains P0 for the independent ledger witness; #601 remains P0 for the v6.0.12 Monitor theme; #602–#608 are **v6.0.13**. No unresolved security issue was closed solely because it was old or has an unmerged PR. Refresh this snapshot before final documentation merge or release-candidate freeze.
