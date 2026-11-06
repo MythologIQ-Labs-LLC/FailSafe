@@ -4,6 +4,7 @@
  *  ConsoleLifecycleService,ConsoleServerSupport}.ts hold all behavior. */
 import * as path from "path";
 import * as fs from "fs";
+import { randomBytes } from "crypto";
 import express, { Request, Response } from "express";
 import { WebSocketManager } from "./services/WebSocketManager";
 import { TransparencyLogger } from "./services/TransparencyLogger";
@@ -40,6 +41,8 @@ import {
   MAX_PHASE_RENDER as MAX_PHASE_RENDER_IMPL,
 } from "./services/ConsoleServerSupport";
 import type { WorkspaceArtifactSnapshot } from "./services/WorkspaceArtifactBuilder";
+import { ConsoleThemeAuthority, memoryThemeStore } from "./services/ConsoleThemeAuthority";
+import { registerConsoleThemeRoutes } from "./routes/ConsoleThemeRoute";
 
 const PORT = 9376;
 const HOST = "127.0.0.1";
@@ -72,6 +75,8 @@ type ConsoleServerOptions = {
   getEducationConfig?: () => import("../education/educationConfig").EducationConfig;
   /** #83A: commit-hook token validator for /api/v1/governance/commit-check. */
   validateCommitToken?: (token: string) => boolean;
+  /** #601: the shared app theme. Absent (tests) -> an in-memory authority. */
+  themeAuthority?: ConsoleThemeAuthority;
 };
 
 // Re-export public test surface from support module for backward compat.
@@ -129,6 +134,9 @@ export class ConsoleServer {
   private transparencyLogger: TransparencyLogger;
   private riskRegisterManager: RiskRegisterManager;
   private hub: HubSnapshotService;
+  /** #601: shared theme authority and the per-process key that authorizes theme writes. */
+  private themeAuthority: ConsoleThemeAuthority;
+  private readonly themeKey = randomBytes(32).toString("base64url");
   private lifecycle: ConsoleLifecycleService;
   private registrar: ConsoleRouteRegistrar;
   /** Shared so legacy fixtures that reassign priv.checkpointMemory/Db keep working. */
@@ -166,6 +174,15 @@ export class ConsoleServer {
     });
     this.registrar = new ConsoleRouteRegistrar(this.buildRouteHost());
     this.registrar.setupAllRoutes();
+    this.themeAuthority = options.themeAuthority ?? new ConsoleThemeAuthority(memoryThemeStore());
+    registerConsoleThemeRoutes(this.app, {
+      authority: this.themeAuthority, themeKey: this.themeKey,
+      rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
+    });
+    this.themeAuthority.onDidChange(() => {
+      const { theme, revision, epoch } = this.themeAuthority.snapshot();
+      this.broadcast({ type: "ui.theme", theme, revision, epoch });
+    });
     this.subscribeToEvents();
   }
 
@@ -196,6 +213,10 @@ export class ConsoleServer {
     this.hub.dispose();
   }
   getPort(): number { return this.lifecycle.getPort(); }
+  /** #601: the key a Console page needs to change the theme. Only the extension host's own
+   *  Console links carry it; it changes every time the extension host starts. */
+  getThemeKey(): string { return this.themeKey; }
+  getThemeAuthority(): ConsoleThemeAuthority { return this.themeAuthority; }
   broadcastEvent(data: Record<string, unknown>): void { this.broadcast(data); }
   /** @internal — preserved for legacy test reach-ins; routes use HubSnapshotService directly. */
   getTransparencyEvents(limit: number): Array<Record<string, unknown>> { return this.hub.getTransparencyEvents(limit); }

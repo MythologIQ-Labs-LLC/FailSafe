@@ -301,6 +301,39 @@ suite('#538 ledger integrity in the export', function () {
     const known = await exportWith({ getRecentEntries: async () => [], isAvailable: () => true, verifyLedger: async () => intactReport() });
     assert.equal(integrity(known).status, 'intact', 'a known status still reads intact (positive control)');
   });
+  test('C8 export never calls missing ledger head metadata intact and names non-full scope (#473)', async () => {
+    const entries = async () => [];
+    const ledgerFor = (candidate: Record<string, unknown>) => ({
+      getRecentEntries: entries, isAvailable: () => true, verifyLedger: async () => candidate,
+    });
+    for (const candidate of [
+      intactReport({ rows: undefined }),
+      intactReport({ anchor: { ...(intactReport().anchor as Record<string, unknown>), headId: undefined } }),
+    ]) {
+      const b = await exportWith(ledgerFor(candidate));
+      assert.equal(integrity(b).status, 'unavailable');
+      assert.match(integrity(b).reason, /malformed report/);
+    }
+    const partial = await exportWith(ledgerFor(intactReport({ sealScope: 'partial' })));
+    assert.equal(integrity(partial).status, 'partial-seal');
+    assert.match(integrity(partial).reason, /scope partial/);
+    assert.doesNotMatch(integrity(partial).reason, /chain intact/);
+  });
+  test('C9 export rejects forged anchored success but preserves valid established-now (#473)', async () => {
+    const anchor = intactReport().anchor as Record<string, unknown>;
+    const ledgerFor = (candidate: Record<string, unknown>) => ({
+      getRecentEntries: async () => [], isAvailable: () => true, verifyLedger: async () => candidate,
+    });
+    const invalid = intactReport({ anchor: { ...anchor, status: 'established-now', headId: null } });
+    const refused = await exportWith(ledgerFor(invalid));
+    assert.equal(integrity(refused).status, 'unavailable');
+    assert.match(integrity(refused).reason, /malformed report/);
+
+    const valid = intactReport({ anchor: { ...anchor, status: 'established-now' } });
+    const accepted = await exportWith(ledgerFor(valid));
+    assert.equal(integrity(accepted).status, 'intact');
+    assert.equal(integrity(accepted).anchor.headId, 1);
+  });
   test('C6 an unreadable ledger still writes a bundle with no entries and the read error', async () => {
     const b = await exportWith({ getRecentEntries: async () => { throw new Error('database is locked'); }, isAvailable: () => true, verifyLedger: async () => intactReport() });
     assert.deepEqual(b.ledger, []);

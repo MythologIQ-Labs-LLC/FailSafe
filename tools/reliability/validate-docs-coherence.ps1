@@ -65,12 +65,33 @@ if (!(Test-Path $extensionPackagePath)) {
   $version = [string]$pkg.version
   $escapedVersion = [regex]::Escape($version)
 
-  Assert-FilePattern -Path (Join-Path $RepoRoot "README.md") `
-    -Pattern ("Current Release\*\*:\s*v" + $escapedVersion + "\b") `
-    -Rule "DOCS-VERSION-ROOT-README"
-  Assert-FilePattern -Path (Join-Path $RepoRoot "FailSafe/extension/README.md") `
-    -Pattern ("Current Release\*\*:\s*v" + $escapedVersion + "\b") `
-    -Rule "DOCS-VERSION-EXT-README"
+  # A PR or an explicit RC branch is testing source that has not shipped.
+  # The live marketplace version must remain truthful in both READMEs.
+  # A production tag or main release workflow NEVER receives this exception.
+  $candidateRef = "^refs/heads/release/v" + $escapedVersion + "-rc[0-9A-Za-z._-]*$"
+  $candidateContext = ($env:GITHUB_EVENT_NAME -eq "pull_request") -or
+    (($env:GITHUB_EVENT_NAME -eq "push") -and ($env:GITHUB_REF -match $candidateRef))
+  foreach ($row in @(
+    @{ Path = (Join-Path $RepoRoot "README.md"); Rule = "DOCS-VERSION-ROOT-README" },
+    @{ Path = (Join-Path $RepoRoot "FailSafe/extension/README.md"); Rule = "DOCS-VERSION-EXT-README" }
+  )) {
+    $path = $row.Path
+    $rule = $row.Rule
+    if (!(Test-Path $path)) {
+      Add-Violation -Rule $rule -Detail "Missing file: $path"
+      continue
+    }
+    $raw = Get-Content $path -Raw
+    $currentMatch = [regex]::Match($raw, "Current Release\*\*:\s*v(\d+\.\d+\.\d+)\b")
+    if ($currentMatch.Success -and $currentMatch.Groups[1].Value -eq $version) { continue }
+    $candidatePattern = "Candidate Version\*\*:\s*v" + $escapedVersion + "\b"
+    $previous = $currentMatch.Success -and ([version]$currentMatch.Groups[1].Value -lt [version]$version)
+    if ($candidateContext -and $previous -and $raw -match $candidatePattern) {
+      Write-Host "[PASS] ${rule}: unpublished RC source v$version; published release remains v$($currentMatch.Groups[1].Value)"
+      continue
+    }
+    Add-Violation -Rule $rule -Detail "Expected published v$version or an explicitly labeled unpublished RC only on PR/RC refs: $path"
+  }
   Assert-FilePattern -Path (Join-Path $RepoRoot "CHANGELOG.md") `
     -Pattern ("##\s+\[" + $escapedVersion + "\]") `
     -Rule "DOCS-VERSION-ROOT-CHANGELOG"

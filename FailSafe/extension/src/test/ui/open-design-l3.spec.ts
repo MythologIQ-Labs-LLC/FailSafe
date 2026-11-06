@@ -59,7 +59,7 @@ test("FX811 Governance L3 queue surfaces a pending Open Design create_artifact +
   expect(body.decision).toBe("APPROVED");
 });
 
-test("FX811 Open Design Integrations card surfaces the Request create_artifact affordance", async ({ page }) => {
+test("FX811 Open Design Integrations card discloses disabled create_artifact while L3 receipt proof is unavailable", async ({ page }) => {
   controller = await serveConsoleServerUI({
     initialHub: { version: "test", bootstrapState: {} } as never,
   });
@@ -69,4 +69,8 @@ test("FX811 Open Design Integrations card surfaces the Request create_artifact a
   await expect(page.locator("#integrations .cc-open-design-card")).toBeVisible({ timeout: 10000 });
   await expect(page.locator("#integrations .cc-od-create-artifact")).toBeVisible();
   await expect(page.locator("#integrations .cc-od-artifact-name")).toBeVisible();
+  await expect(page.locator("#integrations .cc-od-create-artifact")).toBeDisabled();
+  await expect(page.locator("#integrations .cc-od-artifact-name")).toBeDisabled();
+  await expect(page.locator("#integrations .cc-open-design-card")).toContainText("a verified L3 receipt cannot currently be enforced");
+
 });

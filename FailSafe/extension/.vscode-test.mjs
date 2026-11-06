@@ -22,6 +22,16 @@ const { removeTempTree } = require('./src/test/shared/removeTempTree.cjs');
 const isolatedUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-vscode-test-'));
 const architectureUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-vscode-test-arch-'));
 
+// #591 follow-up: the extension activates inside the test host, and its Console server
+// registration and the ServerRegistry tests write ~/.failsafe/servers.json under
+// os.homedir(). Without these, a run whose Console could bind its port wrote that file into
+// the developer's real profile (seen on Windows for both v6.0.11 and v6.0.12 trees). Each
+// configuration gets its own disposable home; the extension host's os.homedir() follows
+// USERPROFILE (Windows) and HOME (elsewhere). VS Code's own folders keep using the OS profile.
+const isolatedHomeDir = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-vscode-test-home-')));
+const architectureHomeDir = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-vscode-test-arch-home-')));
+const homeEnv = (dir) => ({ HOME: dir, USERPROFILE: dir });
+
 // Release-gate determinism: pin the VS Code (Electron) version the test host
 // runs against. Defaulting to 'stable' silently tracks VS Code's auto-update,
 // and on 2026-06-03 the stable bump 1.122.1 -> 1.123.0 shipped a newer Electron
@@ -66,6 +76,8 @@ process.on('exit', () => {
   try { removeTempTree(architectureWorkspace); } catch { /* best-effort */ }
   try { removeTempTree(isolatedUserDataDir); } catch { /* best-effort */ }
   try { removeTempTree(architectureUserDataDir); } catch { /* best-effort */ }
+  try { removeTempTree(isolatedHomeDir); } catch { /* best-effort */ }
+  try { removeTempTree(architectureHomeDir); } catch { /* best-effort */ }
 });
 
 // @vscode/test-cli ignores --extensionTestsPath when this config exists, so
@@ -98,7 +110,7 @@ export default defineConfig([
     extensionDevelopmentPath: __dirname,
     workspaceFolder: path.join(__dirname, 'src', 'test', 'test-workspace'),
     launchArgs: ['--user-data-dir', isolatedUserDataDir],
-    env: { [LABEL_ENV]: 'default' },
+    env: { [LABEL_ENV]: 'default', ...homeEnv(isolatedHomeDir) },
     mocha,
   },
   {
@@ -108,7 +120,7 @@ export default defineConfig([
     extensionDevelopmentPath: __dirname,
     workspaceFolder: architectureWorkspace,
     launchArgs: ['--user-data-dir', architectureUserDataDir],
-    env: { [LABEL_ENV]: 'architecture-index' },
+    env: { [LABEL_ENV]: 'architecture-index', ...homeEnv(architectureHomeDir) },
     mocha,
   },
 ]);

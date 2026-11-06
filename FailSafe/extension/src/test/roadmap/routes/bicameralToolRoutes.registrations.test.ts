@@ -78,6 +78,8 @@ function makeDeps(
   client: BicameralToolClient,
   overrides: Partial<BicameralRouteDeps> = {},
 ): BicameralRouteDeps {
+  // One interceptor instance for the lifetime of this route fixture.
+  const wiredInterceptor = Object.assign(allowInterceptor(), { getClient: () => client });
   return {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
@@ -86,7 +88,7 @@ function makeDeps(
     getBicameralClient: () => client as never,
     getAutoConnect: () => false,
     setAutoConnect: async () => undefined,
-    getMcpInterceptor: () => allowInterceptor(),
+    getMcpInterceptor: () => wiredInterceptor,
     ...overrides,
   };
 }
@@ -141,6 +143,7 @@ suite("FX587 bicameral-<tool> registrations (B-INT-1)", () => {
     const { client, calls } = recordingClient();
     let interceptedName = "";
     const interceptor = {
+      getClient: () => client, // B233: same active MCP client evaluated and invoked
       intercept: async (env: { name: string }) => {
         interceptedName = env.name;
         return allowInterceptor().intercept(env as never);
