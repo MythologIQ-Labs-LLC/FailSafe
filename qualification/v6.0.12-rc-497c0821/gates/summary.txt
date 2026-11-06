@@ -1,0 +1,20 @@
+Candidate 497c0821aa944ba07388fd14af3d66965a96bd68, Windows 11 Pro, Node 22.23.4, 2026-11-06
+
+lint                         exit 0   0 errors, 133 warnings (pre-existing)
+test:runner-coverage         exit 0
+test:citation-parity         exit 0
+test:node                    exit 0   956 tests: 938 pass, 0 fail, 18 skipped
+test:ui (Playwright, full)   exit 0   253 passed
+extension host (both configurations) on stable VS Code 1.141.1 (pinned 1.122.1 cannot start
+  while the user's VS Code update holds the `vscode-updating` mutex):
+                             exit 1   default: 5,866 passing, 19 pending, 36 failing; census 567/567
+                                      architecture-index: 17 passing; census 5/5
+
+The 36 failures (ehost-stable-1.141.1-failures.txt):
+- 34 are the Windows temp-folder teardown class (EPERM from rmSync of temp git repositories, a
+  RiskStore lock-path teardown, a mermaid preview-markup check), the same set the published
+  v6.0.11 tree and the #601 head fail on this host (ehost-insiders-failures-e3792d8a-reference.txt).
+- 2 are new for this candidate: "OpenHands historical import (#477) / B231 a linked legacy lock
+  refuses import without touching external data" (counted for the suite and the test). Cause:
+  fs.symlinkSync of a file needs Developer Mode on win32 (EPERM). Fixed test-only on
+  fix/v6012-b231-windows-linked-lock-test-20261106.

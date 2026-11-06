@@ -1,0 +1,13 @@
+
+qor-logic conformance probe — can each control be made to fail?
+
+  publication_boundary_lint  FALSIFIABLE       clean exit 0; defect exit 1 carrying "absolute local path"
+  skill_size_budget_lint     FALSIFIABLE       clean exit 0; defect exit 1 carrying "EXCEEDED"
+  instruction_hygiene_lint   INCONCLUSIVE      clean fixture failed (exit 1) — suspect the fixture, not the control
+  data_api_acl_lint          INAPPLICABLE      This repository is a VS Code extension with no SQL migrations - zero .sql files exist and none is planned - so the Data-API grant and definer-view scan names a property no enforcer will ever satisfy here (ledger #602, #607). (.qorlogic/config.json permanent_skips)
+  seal_artifacts             INAPPLICABLE      expects a pytest collected-count and README count-badges; this is a TypeScript archetype (ledger #602)
+  seal_entry_check           INAPPLICABLE      requires a numeric ledger phase tag this repository does not use (ledger #601, #603)
+  qor-repo-release           INAPPLICABLE      hard-stops without a Python version backend (detect_backend() returns null) (ledger #605)
+  version_boundary           UNTESTED          installed 0.176.1, tested against 0.169.0 — this combination has not been probed; run this probe and advance TESTED_AGAINST_QOR_LOGIC_VERSION only if it passes
+
+  FALSIFIABLE: 2  ·  INCONCLUSIVE: 1  ·  INAPPLICABLE: 4  ·  UNTESTED: 1

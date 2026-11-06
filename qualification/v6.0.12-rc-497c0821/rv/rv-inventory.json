@@ -1,0 +1,559 @@
+{
+  "schema": "failsafe.release-verification/v1",
+  "kind": "inventory",
+  "version": "6.0.12",
+  "generatedAt": "2026-11-06T23:33:10.192Z",
+  "tool": {
+    "gitSha": "497c0821aa944ba07388fd14af3d66965a96bd68",
+    "node": "22.23.4",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "inputs": {
+    "artifactSource": {
+      "kind": "local-dir",
+      "ref": "C:\\dev\\mythologiq\\FailSafe-6012n\\FailSafe\\extension\\dist-vsix"
+    },
+    "approvedSums": {
+      "path": "C:\\dev\\mythologiq\\FailSafe-6012n\\FailSafe\\extension\\dist-vsix\\SHA256SUMS.txt",
+      "sha256": "f9c53219bdcd42795d964caccae37509b34299d11a251474c6d9d3f9cdb5ad40",
+      "source": {
+        "kind": "local",
+        "ref": "dist-vsix/SHA256SUMS.txt",
+        "verified": "local"
+      }
+    },
+    "vsix": null
+  },
+  "checks": [
+    {
+      "id": "approved-sums",
+      "scope": "artifact",
+      "target": null,
+      "status": "pass",
+      "detail": "local file (rehearsal only): dist-vsix/SHA256SUMS.txt",
+      "evidence": {
+        "kind": "local",
+        "ref": "dist-vsix/SHA256SUMS.txt",
+        "verified": "local"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "1b8711a282ce903626fbaaf4642e96296725b4b13942da6937f93076d8dfc6b4",
+        "file": "mythologiq-failsafe-6.0.12-alpine-arm64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching alpine-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linuxmusl-arm64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-alpine-arm64.vsix",
+      "evidence": {
+        "sha256": "1b8711a282ce903626fbaaf4642e96296725b4b13942da6937f93076d8dfc6b4",
+        "approved": "1b8711a282ce903626fbaaf4642e96296725b4b13942da6937f93076d8dfc6b4"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "54de6ce46bce8b76c394e45a0d385cf1e1e8890be803ab7ee98ffc5f58e5ef9f",
+        "file": "mythologiq-failsafe-6.0.12-alpine-x64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "one prebuild matching alpine-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linuxmusl-x64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-alpine-x64.vsix",
+      "evidence": {
+        "sha256": "54de6ce46bce8b76c394e45a0d385cf1e1e8890be803ab7ee98ffc5f58e5ef9f",
+        "approved": "54de6ce46bce8b76c394e45a0d385cf1e1e8890be803ab7ee98ffc5f58e5ef9f"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "c9a94100a21c9c63dd0422403c3fbab95ebfb1fff9c19d532e5d97500db4c3d5",
+        "file": "mythologiq-failsafe-6.0.12-darwin-arm64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching darwin-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/darwin-arm64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-darwin-arm64.vsix",
+      "evidence": {
+        "sha256": "c9a94100a21c9c63dd0422403c3fbab95ebfb1fff9c19d532e5d97500db4c3d5",
+        "approved": "c9a94100a21c9c63dd0422403c3fbab95ebfb1fff9c19d532e5d97500db4c3d5"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "ed41bf9f8a9c8ac9f7383975839310827d1adaac9c790c804cd7cc79c298f74a",
+        "file": "mythologiq-failsafe-6.0.12-darwin-x64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "one prebuild matching darwin-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/darwin-x64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-darwin-x64.vsix",
+      "evidence": {
+        "sha256": "ed41bf9f8a9c8ac9f7383975839310827d1adaac9c790c804cd7cc79c298f74a",
+        "approved": "ed41bf9f8a9c8ac9f7383975839310827d1adaac9c790c804cd7cc79c298f74a"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "88e77b67f3357df2dce40cb1f56e829ace637cfb35ac31e57d4cde00dacf4dec",
+        "file": "mythologiq-failsafe-6.0.12-linux-arm64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching linux-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linux-arm64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-linux-arm64.vsix",
+      "evidence": {
+        "sha256": "88e77b67f3357df2dce40cb1f56e829ace637cfb35ac31e57d4cde00dacf4dec",
+        "approved": "88e77b67f3357df2dce40cb1f56e829ace637cfb35ac31e57d4cde00dacf4dec"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "9a2e123a7675b614b2f93338bb334d285fa6b33b2b6d931ebb01d2eff3bed745",
+        "file": "mythologiq-failsafe-6.0.12-linux-x64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "one prebuild matching linux-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linux-x64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-linux-x64.vsix",
+      "evidence": {
+        "sha256": "9a2e123a7675b614b2f93338bb334d285fa6b33b2b6d931ebb01d2eff3bed745",
+        "approved": "9a2e123a7675b614b2f93338bb334d285fa6b33b2b6d931ebb01d2eff3bed745"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "4d4d73aef6d6b779ff4a02a751b9235b8e3c0cfa684620d29e7b70426cdc2621",
+        "file": "mythologiq-failsafe-6.0.12-win32-arm64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching win32-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/win32-arm64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-win32-arm64.vsix",
+      "evidence": {
+        "sha256": "4d4d73aef6d6b779ff4a02a751b9235b8e3c0cfa684620d29e7b70426cdc2621",
+        "approved": "4d4d73aef6d6b779ff4a02a751b9235b8e3c0cfa684620d29e7b70426cdc2621"
+      }
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "0fab7f1d7e8b468846c8c8bde228a42db62091b56473f9ab9b49608f9aa97ccc",
+        "file": "mythologiq-failsafe-6.0.12-win32-x64.vsix"
+      }
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      }
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "one prebuild matching win32-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/win32-x64.node"
+        ]
+      }
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-win32-x64.vsix",
+      "evidence": {
+        "sha256": "0fab7f1d7e8b468846c8c8bde228a42db62091b56473f9ab9b49608f9aa97ccc",
+        "approved": "0fab7f1d7e8b468846c8c8bde228a42db62091b56473f9ab9b49608f9aa97ccc"
+      }
+    },
+    {
+      "id": "target-set",
+      "scope": "artifact",
+      "target": null,
+      "status": "pass",
+      "detail": "exactly the 8 NATIVE_TARGETS",
+      "evidence": {
+        "found": [
+          "alpine-arm64",
+          "alpine-x64",
+          "darwin-arm64",
+          "darwin-x64",
+          "linux-arm64",
+          "linux-x64",
+          "win32-arm64",
+          "win32-x64"
+        ]
+      }
+    }
+  ],
+  "downloads": [],
+  "processes": null
+}

@@ -1,0 +1,44 @@
+candidate 497c0821aa944ba07388fd14af3d66965a96bd68 tree e60f8fabba37147d16315b74dc15d16cb3f96492
+META_LEDGER sha256 90beac4c689aa1b3e8bf9b547b94b58972747736f7843bffff7dcb4d8e73df1a lines 35634
+--- governance-health
+OK            docs/META_LEDGER.md  passes health checks (disclosed pre-anchor residuals tolerated; post-anchor band clean)  -> 
+OK            docs/CONCEPT.md  passes health checks  -> 
+OK            docs/ARCHITECTURE_PLAN.md  passes health checks  -> 
+OK            docs/SYSTEM_STATE.md  passes health checks  -> 
+OK            docs/SHADOW_GENOME.md  passes health checks  -> 
+OK            docs/BACKLOG.md  passes health checks  -> 
+OK            docs/FEATURE_INDEX.md  passes health checks  -> 
+OK            docs/GOVERNANCE_INDEX.md  passes health checks  -> 
+exit=0
+--- verify-ledger --post-anchor
+DISCLOSED_PRE_ANCHOR Entry #232: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR Entry #233: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR Entry #234: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR Entry #235: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR Entry #236: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR BREAK Entry #340: previous_hash a27e1fad3ec8c764 was not produced by the preceding entry (chain 70922e36198361bf); an entry may have been removed
+DISCLOSED_PRE_ANCHOR BREAK Entry #382: previous_hash bfd9f17c7d684d0b was not produced by the preceding entry (chain 24b5b3b5a43eb506); an entry may have been removed
+post-anchor clean (boundary=#382)
+exit=0
+--- check-ledger-anchor (FX946)
+check-ledger-anchor: declared anchor #382; 532 entries above it are actively verified
+check-ledger-anchor: epoch #914 holds: band at or below #382 pinned (sha256 5b2e18e2c27d1409), no low-numbered entries after it, epoch entry intact, reconciled set exact
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+ModuleNotFoundError: No module named 'qor.scripts'
+exit=1
+--- check-ledger-anchor (FX946), qor venv python on PATH: C:\Users\<user>\AppData\Local\Programs\Python\Python311\python.exe
+check-ledger-anchor: declared anchor #382; 532 entries above it are actively verified
+check-ledger-anchor: epoch #914 holds: band at or below #382 pinned (sha256 5b2e18e2c27d1409), no low-numbered entries after it, epoch entry intact, reconciled set exact
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+ModuleNotFoundError: No module named 'qor.scripts'
+exit=1
+--- check-ledger-anchor (FX946), QOR_LOGIC_PYTHON=qor-venv python (0.176.1)
+DISCLOSED_PRE_ANCHOR Entry #234: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR Entry #235: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR Entry #236: duplicate entry number tolerated (declared pre-boundary residual)
+DISCLOSED_PRE_ANCHOR BREAK Entry #340: previous_hash a27e1fad3ec8c764 was not produced by the preceding entry (chain 70922e36198361bf); an entry may have been removed
+DISCLOSED_PRE_ANCHOR BREAK Entry #382: previous_hash bfd9f17c7d684d0b was not produced by the preceding entry (chain 24b5b3b5a43eb506); an entry may have been removed
+post-anchor clean (boundary=#382)
+exit=0

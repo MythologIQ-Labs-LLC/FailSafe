@@ -1,0 +1,267 @@
+{
+  "root": "C:\\Users\\<user>\\AppData\\Local\\Temp\\fs601-accept-Ze1xpo",
+  "code": "C:/dev/mythologiq/FailSafe-rc611-qual/disposable-vscode/VSCode-1.141.1/Code.exe",
+  "vsix": "C:/dev/mythologiq/FailSafe-6012n/FailSafe/extension/dist-vsix/mythologiq-failsafe-6.0.12-win32-x64.vsix",
+  "passed": 30,
+  "failed": 0,
+  "results": [
+    {
+      "name": "fresh profile: chrome and Monitor both start on the default theme",
+      "pass": true,
+      "detail": {
+        "chrome": "mythiq",
+        "monitor": "mythiq"
+      }
+    },
+    {
+      "name": "Monitor loads the shared theme script and tokens",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "VS Code opened the Console externally with a theme key",
+      "pass": true,
+      "detail": "http://localhost:9376/?workspace=c:%5CUsers%5C<user>%5CAppData%5CLocal%5CTemp%5Cfs601-accept-Ze1xpo%5Cws&ui=console&fsThemeKey=<redacted>&theme=dark\""
+    },
+    {
+      "name": "external Console: key removed from the address bar",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "installed security: theme route refuses every hostile variant even with the real key",
+      "pass": true,
+      "detail": {
+        "foreignOrigin": 403,
+        "nullOrigin": 403,
+        "webviewOrigin": 403,
+        "textPlain": 415,
+        "rebindHost": 403,
+        "noKey": 401,
+        "wrongKey": 401,
+        "injection": 400
+      }
+    },
+    {
+      "name": "installed security: none of those requests changed the theme",
+      "pass": true,
+      "detail": "mythiq"
+    },
+    {
+      "name": "storage: the external browser cannot see the VS Code webview Monitor's storage (separate browsers)",
+      "pass": true,
+      "detail": {
+        "extSees": null
+      }
+    },
+    {
+      "name": "live: external Console -> pegasus reaches sidebar chrome, Monitor and VS Code settings",
+      "pass": true,
+      "detail": {
+        "chrome": "pegasus",
+        "monitor": "pegasus",
+        "setting": "pegasus"
+      }
+    },
+    {
+      "name": "tokens: pegasus --bg-panel identical in Console, Monitor and sidebar chrome",
+      "pass": true,
+      "detail": {
+        "chromeTokens": "#ffffff"
+      }
+    },
+    {
+      "name": "live: external Console -> midnight reaches sidebar chrome, Monitor and VS Code settings",
+      "pass": true,
+      "detail": {
+        "chrome": "midnight",
+        "monitor": "midnight",
+        "setting": "midnight"
+      }
+    },
+    {
+      "name": "tokens: midnight --bg-panel identical in Console, Monitor and sidebar chrome",
+      "pass": true,
+      "detail": {
+        "chromeTokens": "#050505"
+      }
+    },
+    {
+      "name": "live: external Console -> aurora reaches sidebar chrome, Monitor and VS Code settings",
+      "pass": true,
+      "detail": {
+        "chrome": "aurora",
+        "monitor": "aurora",
+        "setting": "aurora"
+      }
+    },
+    {
+      "name": "tokens: aurora --bg-panel identical in Console, Monitor and sidebar chrome",
+      "pass": true,
+      "detail": {
+        "chromeTokens": "#0f1219"
+      }
+    },
+    {
+      "name": "live: external Console -> crimson reaches sidebar chrome, Monitor and VS Code settings",
+      "pass": true,
+      "detail": {
+        "chrome": "crimson",
+        "monitor": "crimson",
+        "setting": "crimson"
+      }
+    },
+    {
+      "name": "tokens: crimson --bg-panel identical in Console, Monitor and sidebar chrome",
+      "pass": true,
+      "detail": {
+        "chromeTokens": "#1a0505"
+      }
+    },
+    {
+      "name": "live: external Console -> atmosphere reaches sidebar chrome, Monitor and VS Code settings",
+      "pass": true,
+      "detail": {
+        "chrome": "atmosphere",
+        "monitor": "atmosphere",
+        "setting": "atmosphere"
+      }
+    },
+    {
+      "name": "tokens: atmosphere --bg-panel identical in Console, Monitor and sidebar chrome",
+      "pass": true,
+      "detail": {
+        "chromeTokens": "#1e293b"
+      }
+    },
+    {
+      "name": "live: external Console -> mythiq reaches sidebar chrome, Monitor and VS Code settings",
+      "pass": true,
+      "detail": {
+        "chrome": "mythiq",
+        "monitor": "mythiq",
+        "setting": "mythiq"
+      }
+    },
+    {
+      "name": "tokens: mythiq --bg-panel identical in Console, Monitor and sidebar chrome",
+      "pass": true,
+      "detail": {
+        "chromeTokens": "#161b2e"
+      }
+    },
+    {
+      "name": "settings: editing failsafe.console.theme re-themes chrome, Monitor and external Console live",
+      "pass": true,
+      "detail": [
+        "crimson",
+        "crimson",
+        "crimson"
+      ]
+    },
+    {
+      "name": "forged: the embedded page cannot set the chrome theme by postMessage",
+      "pass": true,
+      "detail": "crimson"
+    },
+    {
+      "name": "forged: a wrong theme key is refused (401) and nothing changes",
+      "pass": true,
+      "detail": {
+        "forgedPost": 401
+      }
+    },
+    {
+      "name": "forged: a bare local client without the key is refused (401)",
+      "pass": true,
+      "detail": {
+        "noKey": 401
+      }
+    },
+    {
+      "name": "SRE: the SRE view opens in the shared theme",
+      "pass": true,
+      "detail": "crimson"
+    },
+    {
+      "name": "SRE: a live change reaches the SRE view",
+      "pass": true,
+      "detail": "aurora"
+    },
+    {
+      "name": "SRE -> Monitor: the Monitor comes back in the current theme",
+      "pass": true,
+      "detail": "aurora"
+    },
+    {
+      "name": "reload: chrome is rendered in the current theme and the Monitor follows",
+      "pass": true,
+      "detail": {
+        "chrome": "aurora",
+        "monitor": "aurora"
+      }
+    },
+    {
+      "name": "window reload: theme kept",
+      "pass": true,
+      "detail": {
+        "chrome": "aurora",
+        "monitor": "aurora"
+      }
+    },
+    {
+      "name": "high contrast: chrome uses VS Code contrast colors; FailSafe theme unchanged",
+      "pass": true,
+      "detail": {
+        "cls": "vscode-high-contrast",
+        "btnBorder": "rgb(111, 195, 223)",
+        "theme": "aurora"
+      }
+    },
+    {
+      "name": "restart: chrome is rendered by the host in the saved theme, Monitor follows",
+      "pass": true,
+      "detail": {
+        "chrome": "aurora",
+        "monitor": "aurora"
+      }
+    }
+  ],
+  "log": [
+    {
+      "at": "2026-11-06T23:26:57.116Z",
+      "k": "security.probe.127",
+      "v": 0
+    },
+    {
+      "at": "2026-11-06T23:26:57.188Z",
+      "k": "security.probe.localhost",
+      "v": 0
+    },
+    {
+      "at": "2026-11-06T23:27:05.774Z",
+      "k": "security.adversarial",
+      "v": 0
+    },
+    {
+      "at": "2026-11-06T23:27:05.789Z",
+      "k": "security.probe.tail",
+      "v": {
+        "127": "PASS WebSocket version 8: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden) | PASS duplicate Origin: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden) | 10/10 matched",
+        "localhost": "PASS WebSocket version 8: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden) | PASS duplicate Origin: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden) | 10/10 matched"
+      }
+    },
+    {
+      "at": "2026-11-06T23:28:30.697Z",
+      "k": "editor-tab.frames",
+      "v": [
+        "http://localhost:9376/?ui=compact"
+      ]
+    },
+    {
+      "at": "2026-11-06T23:28:30.697Z",
+      "k": "editor-tab",
+      "v": "Simple Browser Monitor frame not found"
+    }
+  ]
+}

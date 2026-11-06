@@ -1,0 +1,1461 @@
+{
+  "schema": "failsafe.release-verification.report/v1",
+  "mode": "pre-release-rehearsal",
+  "status": "rehearsal-pass",
+  "exitCode": 0,
+  "version": "6.0.12",
+  "claims": {
+    "marketplaceVerified": false
+  },
+  "approvedSums": {
+    "path": "C:\\dev\\mythologiq\\FailSafe-6012n\\FailSafe\\extension\\dist-vsix\\SHA256SUMS.txt",
+    "sha256": "f9c53219bdcd42795d964caccae37509b34299d11a251474c6d9d3f9cdb5ad40",
+    "source": {
+      "kind": "local",
+      "ref": "dist-vsix/SHA256SUMS.txt",
+      "verified": "local"
+    }
+  },
+  "approvedSumsCheck": "pass",
+  "inputs": [
+    {
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json",
+      "kind": "inventory",
+      "version": "6.0.12",
+      "sha256": "c1431cc769f789e1c32b3a568ed274da294994324e8b710de499462cffe3226e",
+      "gitSha": "497c0821aa944ba07388fd14af3d66965a96bd68"
+    },
+    {
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json",
+      "kind": "lifecycle",
+      "version": "6.0.12",
+      "sha256": "3ff1077e041f8dd9d5660d3450fe1be625f13460310965edda5e0c53ee089ac3",
+      "gitSha": "497c0821aa944ba07388fd14af3d66965a96bd68"
+    }
+  ],
+  "required": [
+    {
+      "key": "artifact/approved-sums/-",
+      "status": "pass",
+      "detail": "local file (rehearsal only): dist-vsix/SHA256SUMS.txt"
+    },
+    {
+      "key": "report/approved-sums-file/-",
+      "status": "pass",
+      "detail": "C:\\dev\\mythologiq\\FailSafe-6012n\\FailSafe\\extension\\dist-vsix\\SHA256SUMS.txt matches the recorded sha256"
+    },
+    {
+      "key": "artifact/target-set/-",
+      "status": "pass",
+      "detail": "exactly the 8 NATIVE_TARGETS"
+    },
+    {
+      "key": "artifact/archive/win32-x64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/win32-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/win32-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/win32-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/win32-x64",
+      "status": "pass",
+      "detail": "one prebuild matching win32-x64"
+    },
+    {
+      "key": "artifact/sha256/win32-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-win32-x64.vsix"
+    },
+    {
+      "key": "artifact/archive/win32-arm64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/win32-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/win32-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/win32-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/win32-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching win32-arm64"
+    },
+    {
+      "key": "artifact/sha256/win32-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-win32-arm64.vsix"
+    },
+    {
+      "key": "artifact/archive/linux-x64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/linux-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/linux-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/linux-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/linux-x64",
+      "status": "pass",
+      "detail": "one prebuild matching linux-x64"
+    },
+    {
+      "key": "artifact/sha256/linux-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-linux-x64.vsix"
+    },
+    {
+      "key": "artifact/archive/linux-arm64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/linux-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/linux-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/linux-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/linux-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching linux-arm64"
+    },
+    {
+      "key": "artifact/sha256/linux-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-linux-arm64.vsix"
+    },
+    {
+      "key": "artifact/archive/alpine-x64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/alpine-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/alpine-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/alpine-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/alpine-x64",
+      "status": "pass",
+      "detail": "one prebuild matching alpine-x64"
+    },
+    {
+      "key": "artifact/sha256/alpine-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-alpine-x64.vsix"
+    },
+    {
+      "key": "artifact/archive/alpine-arm64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/alpine-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/alpine-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/alpine-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/alpine-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching alpine-arm64"
+    },
+    {
+      "key": "artifact/sha256/alpine-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-alpine-arm64.vsix"
+    },
+    {
+      "key": "artifact/archive/darwin-x64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/darwin-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/darwin-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/darwin-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/darwin-x64",
+      "status": "pass",
+      "detail": "one prebuild matching darwin-x64"
+    },
+    {
+      "key": "artifact/sha256/darwin-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-darwin-x64.vsix"
+    },
+    {
+      "key": "artifact/archive/darwin-arm64",
+      "status": "pass",
+      "detail": "188 entries"
+    },
+    {
+      "key": "artifact/manifest/darwin-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe"
+    },
+    {
+      "key": "artifact/version/darwin-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12"
+    },
+    {
+      "key": "artifact/sqlite-declared/darwin-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared"
+    },
+    {
+      "key": "artifact/native-binary/darwin-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching darwin-arm64"
+    },
+    {
+      "key": "artifact/sha256/darwin-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-darwin-arm64.vsix"
+    },
+    {
+      "key": "artifact/to-inventory/win32-x64",
+      "status": "pass",
+      "detail": "inventory passed before install"
+    },
+    {
+      "key": "lifecycle/S1/win32-x64",
+      "status": "pass",
+      "detail": "healthy"
+    },
+    {
+      "key": "lifecycle/S2/win32-x64",
+      "status": "pass",
+      "detail": "healthy"
+    },
+    {
+      "key": "lifecycle/S3/win32-x64",
+      "status": "pass",
+      "detail": "healthy"
+    },
+    {
+      "key": "lifecycle/S4/win32-x64",
+      "status": "pass",
+      "detail": "healthy; force-killed after commit-observed"
+    },
+    {
+      "key": "lifecycle/S5/win32-x64",
+      "status": "pass",
+      "detail": "healthy"
+    },
+    {
+      "key": "lifecycle/S6/win32-x64",
+      "status": "pass",
+      "detail": "healthy"
+    },
+    {
+      "key": "lifecycle/S7/win32-x64",
+      "status": "pass",
+      "detail": "healthy"
+    },
+    {
+      "key": "lifecycle/persistence/win32-x64",
+      "status": "pass",
+      "detail": "snapshot.created S1=1 S2=2 S3=3 S4=4 S5=5 S6=6 S7=7"
+    },
+    {
+      "key": "isolation/home-registry/-",
+      "status": "pass",
+      "detail": "every healthy step registered in C:\\Users\\<user>\\AppData\\Local\\Temp\\fs6012n-life-FIsa\\home\\.failsafe\\servers.json (FailSafe's home resolved inside ROOT)"
+    },
+    {
+      "key": "report/lifecycle-binding/-",
+      "status": "pass",
+      "detail": "lifecycle ran on the inventoried win32-x64 VSIX"
+    }
+  ],
+  "missing": [],
+  "informational": [
+    {
+      "id": "operator-registry",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "informational: no ROOT entry in the operator's registry (a live FailSafe prunes and rewrites it, so absence proves little)",
+      "evidence": {
+        "before": null,
+        "after": null
+      },
+      "key": "isolation/operator-registry/-",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "residual-processes",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "none",
+      "evidence": {
+        "residual": []
+      },
+      "key": "isolation/residual-processes/-",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "win32-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/win32-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "win32-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/win32-arm64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "linux-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/linux-x64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "linux-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/linux-x64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "linux-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/linux-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "linux-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/linux-arm64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "alpine-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/alpine-x64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "alpine-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/alpine-x64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "alpine-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/alpine-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "alpine-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/alpine-arm64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "darwin-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/darwin-x64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "darwin-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/darwin-x64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "darwin-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/darwin-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "darwin-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/darwin-arm64",
+      "file": "report"
+    }
+  ],
+  "checks": [
+    {
+      "id": "approved-sums",
+      "scope": "artifact",
+      "target": null,
+      "status": "pass",
+      "detail": "local file (rehearsal only): dist-vsix/SHA256SUMS.txt",
+      "evidence": {
+        "kind": "local",
+        "ref": "dist-vsix/SHA256SUMS.txt",
+        "verified": "local"
+      },
+      "key": "artifact/approved-sums/-",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "1b8711a282ce903626fbaaf4642e96296725b4b13942da6937f93076d8dfc6b4",
+        "file": "mythologiq-failsafe-6.0.12-alpine-arm64.vsix"
+      },
+      "key": "artifact/archive/alpine-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/alpine-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/alpine-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/alpine-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching alpine-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linuxmusl-arm64.node"
+        ]
+      },
+      "key": "artifact/native-binary/alpine-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "alpine-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-alpine-arm64.vsix",
+      "evidence": {
+        "sha256": "1b8711a282ce903626fbaaf4642e96296725b4b13942da6937f93076d8dfc6b4",
+        "approved": "1b8711a282ce903626fbaaf4642e96296725b4b13942da6937f93076d8dfc6b4"
+      },
+      "key": "artifact/sha256/alpine-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "54de6ce46bce8b76c394e45a0d385cf1e1e8890be803ab7ee98ffc5f58e5ef9f",
+        "file": "mythologiq-failsafe-6.0.12-alpine-x64.vsix"
+      },
+      "key": "artifact/archive/alpine-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/alpine-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/alpine-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/alpine-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "one prebuild matching alpine-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linuxmusl-x64.node"
+        ]
+      },
+      "key": "artifact/native-binary/alpine-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "alpine-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-alpine-x64.vsix",
+      "evidence": {
+        "sha256": "54de6ce46bce8b76c394e45a0d385cf1e1e8890be803ab7ee98ffc5f58e5ef9f",
+        "approved": "54de6ce46bce8b76c394e45a0d385cf1e1e8890be803ab7ee98ffc5f58e5ef9f"
+      },
+      "key": "artifact/sha256/alpine-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "c9a94100a21c9c63dd0422403c3fbab95ebfb1fff9c19d532e5d97500db4c3d5",
+        "file": "mythologiq-failsafe-6.0.12-darwin-arm64.vsix"
+      },
+      "key": "artifact/archive/darwin-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/darwin-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/darwin-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/darwin-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching darwin-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/darwin-arm64.node"
+        ]
+      },
+      "key": "artifact/native-binary/darwin-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "darwin-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-darwin-arm64.vsix",
+      "evidence": {
+        "sha256": "c9a94100a21c9c63dd0422403c3fbab95ebfb1fff9c19d532e5d97500db4c3d5",
+        "approved": "c9a94100a21c9c63dd0422403c3fbab95ebfb1fff9c19d532e5d97500db4c3d5"
+      },
+      "key": "artifact/sha256/darwin-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "ed41bf9f8a9c8ac9f7383975839310827d1adaac9c790c804cd7cc79c298f74a",
+        "file": "mythologiq-failsafe-6.0.12-darwin-x64.vsix"
+      },
+      "key": "artifact/archive/darwin-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/darwin-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/darwin-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/darwin-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "one prebuild matching darwin-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/darwin-x64.node"
+        ]
+      },
+      "key": "artifact/native-binary/darwin-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "darwin-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-darwin-x64.vsix",
+      "evidence": {
+        "sha256": "ed41bf9f8a9c8ac9f7383975839310827d1adaac9c790c804cd7cc79c298f74a",
+        "approved": "ed41bf9f8a9c8ac9f7383975839310827d1adaac9c790c804cd7cc79c298f74a"
+      },
+      "key": "artifact/sha256/darwin-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "88e77b67f3357df2dce40cb1f56e829ace637cfb35ac31e57d4cde00dacf4dec",
+        "file": "mythologiq-failsafe-6.0.12-linux-arm64.vsix"
+      },
+      "key": "artifact/archive/linux-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/linux-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/linux-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/linux-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching linux-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linux-arm64.node"
+        ]
+      },
+      "key": "artifact/native-binary/linux-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "linux-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-linux-arm64.vsix",
+      "evidence": {
+        "sha256": "88e77b67f3357df2dce40cb1f56e829ace637cfb35ac31e57d4cde00dacf4dec",
+        "approved": "88e77b67f3357df2dce40cb1f56e829ace637cfb35ac31e57d4cde00dacf4dec"
+      },
+      "key": "artifact/sha256/linux-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "9a2e123a7675b614b2f93338bb334d285fa6b33b2b6d931ebb01d2eff3bed745",
+        "file": "mythologiq-failsafe-6.0.12-linux-x64.vsix"
+      },
+      "key": "artifact/archive/linux-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/linux-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/linux-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/linux-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "one prebuild matching linux-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/linux-x64.node"
+        ]
+      },
+      "key": "artifact/native-binary/linux-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "linux-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-linux-x64.vsix",
+      "evidence": {
+        "sha256": "9a2e123a7675b614b2f93338bb334d285fa6b33b2b6d931ebb01d2eff3bed745",
+        "approved": "9a2e123a7675b614b2f93338bb334d285fa6b33b2b6d931ebb01d2eff3bed745"
+      },
+      "key": "artifact/sha256/linux-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "4d4d73aef6d6b779ff4a02a751b9235b8e3c0cfa684620d29e7b70426cdc2621",
+        "file": "mythologiq-failsafe-6.0.12-win32-arm64.vsix"
+      },
+      "key": "artifact/archive/win32-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/win32-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/win32-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/win32-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "one prebuild matching win32-arm64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/win32-arm64.node"
+        ]
+      },
+      "key": "artifact/native-binary/win32-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "win32-arm64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-win32-arm64.vsix",
+      "evidence": {
+        "sha256": "4d4d73aef6d6b779ff4a02a751b9235b8e3c0cfa684620d29e7b70426cdc2621",
+        "approved": "4d4d73aef6d6b779ff4a02a751b9235b8e3c0cfa684620d29e7b70426cdc2621"
+      },
+      "key": "artifact/sha256/win32-arm64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "archive",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "188 entries",
+      "evidence": {
+        "sha256": "0fab7f1d7e8b468846c8c8bde228a42db62091b56473f9ab9b49608f9aa97ccc",
+        "file": "mythologiq-failsafe-6.0.12-win32-x64.vsix"
+      },
+      "key": "artifact/archive/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "manifest",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "MythologIQ.mythologiq-failsafe",
+      "evidence": null,
+      "key": "artifact/manifest/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "version",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "manifest 6.0.12, package.json 6.0.12, expected 6.0.12",
+      "evidence": {
+        "manifest": "6.0.12",
+        "packageJson": "6.0.12",
+        "expected": "6.0.12"
+      },
+      "key": "artifact/version/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sqlite-declared",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "better-sqlite3 declared",
+      "evidence": null,
+      "key": "artifact/sqlite-declared/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "native-binary",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "one prebuild matching win32-x64",
+      "evidence": {
+        "addons": [
+          "extension/node_modules/better-sqlite3/prebuilds/win32-x64.node"
+        ]
+      },
+      "key": "artifact/native-binary/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "sha256",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "equals approved line mythologiq-failsafe-6.0.12-win32-x64.vsix",
+      "evidence": {
+        "sha256": "0fab7f1d7e8b468846c8c8bde228a42db62091b56473f9ab9b49608f9aa97ccc",
+        "approved": "0fab7f1d7e8b468846c8c8bde228a42db62091b56473f9ab9b49608f9aa97ccc"
+      },
+      "key": "artifact/sha256/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "target-set",
+      "scope": "artifact",
+      "target": null,
+      "status": "pass",
+      "detail": "exactly the 8 NATIVE_TARGETS",
+      "evidence": {
+        "found": [
+          "alpine-arm64",
+          "alpine-x64",
+          "darwin-arm64",
+          "darwin-x64",
+          "linux-arm64",
+          "linux-x64",
+          "win32-arm64",
+          "win32-x64"
+        ]
+      },
+      "key": "artifact/target-set/-",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-inventory.json"
+    },
+    {
+      "id": "to-inventory",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "inventory passed before install",
+      "evidence": null,
+      "key": "artifact/to-inventory/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "S1",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null,
+      "key": "lifecycle/S1/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "S2",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null,
+      "key": "lifecycle/S2/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "S3",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null,
+      "key": "lifecycle/S3/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "S4",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy; force-killed after commit-observed",
+      "evidence": null,
+      "key": "lifecycle/S4/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "S5",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null,
+      "key": "lifecycle/S5/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "S6",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null,
+      "key": "lifecycle/S6/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "S7",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null,
+      "key": "lifecycle/S7/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "persistence",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "snapshot.created S1=1 S2=2 S3=3 S4=4 S5=5 S6=6 S7=7",
+      "evidence": {
+        "series": [
+          {
+            "step": "S1",
+            "snapshotCreated": 1
+          },
+          {
+            "step": "S2",
+            "snapshotCreated": 2
+          },
+          {
+            "step": "S3",
+            "snapshotCreated": 3
+          },
+          {
+            "step": "S4",
+            "snapshotCreated": 4
+          },
+          {
+            "step": "S5",
+            "snapshotCreated": 5
+          },
+          {
+            "step": "S6",
+            "snapshotCreated": 6
+          },
+          {
+            "step": "S7",
+            "snapshotCreated": 7
+          }
+        ]
+      },
+      "key": "lifecycle/persistence/win32-x64",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "home-registry",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "every healthy step registered in C:\\Users\\<user>\\AppData\\Local\\Temp\\fs6012n-life-FIsa\\home\\.failsafe\\servers.json (FailSafe's home resolved inside ROOT)",
+      "evidence": null,
+      "key": "isolation/home-registry/-",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "operator-registry",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "informational: no ROOT entry in the operator's registry (a live FailSafe prunes and rewrites it, so absence proves little)",
+      "evidence": {
+        "before": null,
+        "after": null
+      },
+      "key": "isolation/operator-registry/-",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "residual-processes",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "none",
+      "evidence": {
+        "residual": []
+      },
+      "key": "isolation/residual-processes/-",
+      "file": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\logs\\n\\rv-lifecycle.json"
+    },
+    {
+      "id": "approved-sums-file",
+      "scope": "report",
+      "target": null,
+      "status": "pass",
+      "detail": "C:\\dev\\mythologiq\\FailSafe-6012n\\FailSafe\\extension\\dist-vsix\\SHA256SUMS.txt matches the recorded sha256",
+      "evidence": null,
+      "key": "report/approved-sums-file/-",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle-binding",
+      "scope": "report",
+      "target": null,
+      "status": "pass",
+      "detail": "lifecycle ran on the inventoried win32-x64 VSIX",
+      "evidence": null,
+      "key": "report/lifecycle-binding/-",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "win32-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/win32-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "win32-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/win32-arm64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "linux-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/linux-x64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "linux-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/linux-x64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "linux-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/linux-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "linux-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/linux-arm64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "alpine-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/alpine-x64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "alpine-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/alpine-x64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "alpine-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/alpine-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "alpine-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/alpine-arm64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "darwin-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/darwin-x64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "darwin-x64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/darwin-x64",
+      "file": "report"
+    },
+    {
+      "id": "host-load",
+      "scope": "informational",
+      "target": "darwin-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/host-load/darwin-arm64",
+      "file": "report"
+    },
+    {
+      "id": "lifecycle",
+      "scope": "informational",
+      "target": "darwin-arm64",
+      "status": "not-run",
+      "detail": "no runner in Wave 0 (Phase 5 not approved)",
+      "evidence": null,
+      "key": "informational/lifecycle/darwin-arm64",
+      "file": "report"
+    }
+  ]
+}

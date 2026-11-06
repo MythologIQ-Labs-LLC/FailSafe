@@ -1,0 +1,223 @@
+{
+  "qor_logic": "0.176.1",
+  "python": "3.11.9",
+  "passed": 15,
+  "failed": 4,
+  "results": [
+    {
+      "name": "installed distribution is exactly 0.176.1",
+      "pass": true,
+      "detail": "0.176.1"
+    },
+    {
+      "name": "host install_map prefixes match FailSafe mirror for every mirrored host",
+      "pass": true,
+      "detail": {
+        "failsafe_hosts": [
+          "claude",
+          "codex",
+          "kilo-code",
+          "gemini"
+        ],
+        "upstream": {
+          "claude": {
+            "skills/": "skills",
+            "agents/": "agents"
+          },
+          "codex": {
+            "skills/": "skills",
+            "agents/": "agents"
+          },
+          "kilo-code": {
+            "skills/": "skills",
+            "agents/": "agents"
+          },
+          "gemini": {
+            "commands/": "commands"
+          },
+          "cursor": {
+            "skills/": "skills",
+            "agents/": "agents"
+          },
+          "cline": {
+            "workflows/": "workflows"
+          }
+        }
+      }
+    },
+    {
+      "name": "every upstream host is mirrored or declared unmirrored",
+      "pass": true,
+      "detail": {
+        "upstream": [
+          "claude",
+          "codex",
+          "kilo-code",
+          "gemini",
+          "cursor",
+          "cline"
+        ],
+        "declared_unmirrored": [
+          "cursor",
+          "cline"
+        ]
+      }
+    },
+    {
+      "name": "repo-scope base directories match (.claude/.codex/.kilo/.gemini)",
+      "pass": true,
+      "detail": {
+        "claude": ".claude",
+        "codex": ".codex",
+        "kilo-code": ".kilo",
+        "gemini": ".gemini"
+      }
+    },
+    {
+      "name": "install --dry-run --json: exit 0, JSON, no files written",
+      "pass": false,
+      "detail": {
+        "exit": 2,
+        "json": false,
+        "keys": "NoneType",
+        "stderr": "usage: qor-logic [-h] [--version] <command> ...\nqor-logic: error: unrecognized arguments: --json\n"
+      }
+    },
+    {
+      "name": "negative: unknown host is refused (non-zero)",
+      "pass": true,
+      "detail": {
+        "exit": 2,
+        "stderr": "                   [--scope {repo,global}] [--target TARGET] [--dry-run]\nqor-logic install: error: argument --host: invalid choice: 'not-a-host' (choose from 'claude', 'kilo-code', 'codex', 'gemini')\n"
+      }
+    },
+    {
+      "name": "negative: unknown scope is refused (non-zero)",
+      "pass": true,
+      "detail": {
+        "exit": 2,
+        "stderr": "code,codex,gemini}\n                         [--scope {repo,global}] [--target TARGET] [--dry-run]\nqor-logic install: error: argument --scope: invalid choice: 'nonsense' (choose from 'repo', 'global')\n"
+      }
+    },
+    {
+      "name": "install (repo scope, claude) writes skills into the disposable project only",
+      "pass": true,
+      "detail": {
+        "exit": 0,
+        "skills": 32,
+        "stderr": ""
+      }
+    },
+    {
+      "name": "uninstall removes what install wrote",
+      "pass": true,
+      "detail": {
+        "exit": 0,
+        "left": 0,
+        "stderr": ""
+      }
+    },
+    {
+      "name": "governance-health OK on an unmodified copy of the candidate docs",
+      "pass": true,
+      "detail": {
+        "exit": 0,
+        "tail": [
+          "OK            docs/META_LEDGER.md  passes health checks (disclosed pre-anchor residuals tolerated; post-anchor band clean)  -> "
+        ]
+      }
+    },
+    {
+      "name": "verify-ledger --post-anchor clean on the copy",
+      "pass": true,
+      "detail": {
+        "exit": 0,
+        "tail": [
+          "post-anchor clean (boundary=#382)"
+        ]
+      }
+    },
+    {
+      "name": "negative: flipping entry #900 **Verdict** PASS->VETO is detected by verify-ledger",
+      "pass": false,
+      "detail": {
+        "exit": 0,
+        "tail": [
+          "post-anchor clean (boundary=#382)"
+        ]
+      }
+    },
+    {
+      "name": "negative: one word changed in entry #900 **Decision** body fails verify-ledger",
+      "pass": false,
+      "detail": {
+        "exit": 0,
+        "tail": [
+          "DISCLOSED_PRE_ANCHOR BREAK Entry #382: previous_hash bfd9f17c7d684d0b was not produced by the preceding entry (chain 24b5b3b5a43eb506); an entry may have been removed",
+          "post-anchor clean (boundary=#382)"
+        ]
+      }
+    },
+    {
+      "name": "negative: governance-health flags the Decision-body edit",
+      "pass": false,
+      "detail": {
+        "exit": 0,
+        "first": [
+          "OK            docs/META_LEDGER.md  passes health checks (disclosed pre-anchor residuals tolerated; post-anchor band clean)  -> "
+        ]
+      }
+    },
+    {
+      "name": "negative: removing entry #913 chain-hash line fails verify-ledger",
+      "pass": true,
+      "detail": {
+        "exit": 1,
+        "removed": true,
+        "tail": [
+          "FAIL Entry #913: missing canonical hash markup (required at/after entry #123)",
+          "post-anchor DIRTY (boundary=#382; 1 post-boundary failures)"
+        ]
+      }
+    },
+    {
+      "name": "negative: empty ledger is not reported healthy",
+      "pass": true,
+      "detail": {
+        "exit": 2,
+        "first": [
+          "DAMAGED       docs/META_LEDGER.md  file is empty  -> /qor-remediate (must be repaired, never seeded or bootstrapped over)"
+        ]
+      }
+    },
+    {
+      "name": "offline negative: exact pin with no index and no wheel fails cleanly (no network)",
+      "pass": true,
+      "detail": {
+        "exit": 1,
+        "tail": [
+          "ERROR: No matching distribution found for qor-logic==0.176.1"
+        ]
+      }
+    },
+    {
+      "name": "offline positive: exact pin installs 0.176.1 from the verified wheel only (no dependencies fetched)",
+      "pass": true,
+      "detail": {
+        "exit": 0,
+        "version": "0.176.1",
+        "wheel_sha256": "dd6eec66ce54b3f13f19b6af2cd802b02dde1787142b2f81a27a7ba8ee5c0e31"
+      }
+    },
+    {
+      "name": "negative: a different exact version is not satisfied by the 0.176.1 wheel",
+      "pass": true,
+      "detail": {
+        "exit": 1,
+        "tail": [
+          "ERROR: No matching distribution found for qor-logic==0.176.0"
+        ]
+      }
+    }
+  ]
+}

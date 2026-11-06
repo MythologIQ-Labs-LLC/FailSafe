@@ -1,0 +1,11 @@
+PASS authorized same origin: HTTP 101 expected 101 (HTTP/1.1 101 Switching Protocols)
+PASS duplicate hostile Host: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS duplicate identical Host: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS cross-origin: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS missing Origin: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS null Origin: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS wrong-port Origin: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS host rebinding: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS WebSocket version 8: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+PASS duplicate Origin: HTTP 403 expected 403 (HTTP/1.1 403 Forbidden)
+10/10 matched

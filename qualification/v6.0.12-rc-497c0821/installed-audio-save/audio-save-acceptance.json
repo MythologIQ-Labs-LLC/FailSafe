@@ -1,0 +1,160 @@
+{
+  "code": "C:/dev/mythologiq/FailSafe-rc611-qual/disposable-vscode/VSCode-1.141.1/Code.exe",
+  "vsix": "C:/dev/mythologiq/FailSafe-6012n/FailSafe/extension/dist-vsix/mythologiq-failsafe-6.0.12-win32-x64.vsix",
+  "vsixSha256": "0fab7f1d7e8b468846c8c8bde228a42db62091b56473f9ab9b49608f9aa97ccc",
+  "passed": 16,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Console server is up in the installed host",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "#505 Enforce mode: policy denial is reported to the user",
+      "pass": true,
+      "detail": {
+        "toast": "Source: FailSafe (feat. Qor-Logic)\nCreate Intent\nView Active Intent\nShow Logs\nFailSafe policy denied editor save (write not prevented): AXIOM 1 VIOLATION: No active Intent exists. Details: No active I"
+      }
+    },
+    {
+      "name": "#505 the disk write is NOT prevented (observation only, as disclosed)",
+      "pass": true,
+      "detail": {
+        "before": "f8e7f9af5d1e",
+        "after": "d8fd2e0518d1"
+      }
+    },
+    {
+      "name": "audio: a simple text/plain POST is not accepted as audio (no CORS-free path)",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "audio: denied consent writes nothing",
+      "pass": true,
+      "detail": {
+        "dialog": true,
+        "status": 409,
+        "files": []
+      }
+    },
+    {
+      "name": "audio: approved recording is stored once with its sidecar",
+      "pass": true,
+      "detail": {
+        "status": 200,
+        "id": "a450708a3eb1",
+        "files": [
+          "a450708a3eb13bafb0b113e6743fff577012d3f1885b904c9ac4a363f092cfe0.json",
+          "a450708a3eb13bafb0b113e6743fff577012d3f1885b904c9ac4a363f092cfe0.webm"
+        ]
+      }
+    },
+    {
+      "name": "audio: the stored id is a salted 64-hex id, not the bare content hash",
+      "pass": true,
+      "detail": {
+        "id": "a450708a3eb1",
+        "contentSha": "01de2192f682"
+      }
+    },
+    {
+      "name": "audio: inventory lists the recording with its size",
+      "pass": true,
+      "detail": {
+        "recordings": [
+          {
+            "id": "a450708a3eb13bafb0b113e6743fff577012d3f1885b904c9ac4a363f092cfe0",
+            "bytes": 4100,
+            "modifiedAt": "2026-11-06T23:31:43.602Z"
+          }
+        ],
+        "limited": false
+      }
+    },
+    {
+      "name": "audio: fetch returns the exact bytes",
+      "pass": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "audio: traversal and malformed ids are refused; nothing outside the vault is served",
+      "pass": true,
+      "detail": {
+        "dotdot": 400,
+        "uppercase": 400,
+        "short": 400,
+        "backslash": 400,
+        "missing": 404,
+        "deleteDotdot": 400
+      }
+    },
+    {
+      "name": "audio: quota is enforced (507) and nothing is written over the limit",
+      "pass": true,
+      "detail": {
+        "status": 507,
+        "body": {
+          "error": "Audio storage limit reached. Delete saved recordings before saving more."
+        }
+      }
+    },
+    {
+      "name": "audio: a junction redirecting the vault outside the workspace is refused; nothing written outside",
+      "pass": true,
+      "detail": {
+        "dialog": true,
+        "status": 500,
+        "outside": []
+      }
+    },
+    {
+      "name": "audio: declining deletion leaves both files",
+      "pass": true,
+      "detail": {
+        "status": 409,
+        "files": [
+          "a450708a3eb13bafb0b113e6743fff577012d3f1885b904c9ac4a363f092cfe0.json",
+          "a450708a3eb13bafb0b113e6743fff577012d3f1885b904c9ac4a363f092cfe0.webm"
+        ]
+      }
+    },
+    {
+      "name": "audio: the recording persists across a full VS Code restart",
+      "pass": true,
+      "detail": {
+        "recordings": [
+          {
+            "id": "a450708a3eb13bafb0b113e6743fff577012d3f1885b904c9ac4a363f092cfe0",
+            "bytes": 4100,
+            "modifiedAt": "2026-11-06T23:31:43.602Z"
+          }
+        ],
+        "limited": false
+      }
+    },
+    {
+      "name": "audio: approved deletion removes audio and metadata",
+      "pass": true,
+      "detail": {
+        "status": 200,
+        "files": []
+      }
+    },
+    {
+      "name": "#505 the saved edit is still on disk after restart (no silent rollback)",
+      "pass": true,
+      "detail": null
+    }
+  ],
+  "log": [
+    {
+      "at": "2026-11-06T23:31:42.590Z",
+      "k": "editor-save.toasts",
+      "v": "Source: FailSafe (feat. Qor-Logic)\nCreate Intent\nView Active Intent\nShow Logs\nFailSafe policy denied editor save (write not prevented): AXIOM 1 VIOLATION: No active Intent exists. Details: No active Intent found. An Intent must be created before modifying any files. Offending File(s): - c:\\Users\\<user>\\AppData\\Local\\Temp\\fs6012-audio-2uMKUI\\ws\\src\\governed.txt Remediation: Create an Intent before m"
+    }
+  ]
+}

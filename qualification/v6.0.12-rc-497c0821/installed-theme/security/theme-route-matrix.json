@@ -1,0 +1,10 @@
+{
+  "foreignOrigin": 403,
+  "nullOrigin": 403,
+  "webviewOrigin": 403,
+  "textPlain": 415,
+  "rebindHost": 403,
+  "noKey": 401,
+  "wrongKey": 401,
+  "injection": 400
+}
