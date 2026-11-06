@@ -252,9 +252,14 @@ suite('OpenHands historical import: store, keys, redaction (#477)', () => {
     const sentinel = path.join(outside, 'sentinel');
     fs.mkdirSync(path.dirname(lock), { recursive: true });
     fs.writeFileSync(sentinel, 'untouched');
-    fs.symlinkSync(sentinel, lock, 'file');
+    // A file symlink needs Developer Mode or elevation on win32 (EPERM otherwise),
+    // so there the legacy lock is a directory junction to the outside folder; it
+    // needs no privilege and Node reports it as a symbolic link too.
+    if (process.platform === 'win32') fs.symlinkSync(outside, lock, 'junction');
+    else fs.symlinkSync(sentinel, lock, 'file');
     await assert.rejects(importInto(root, [SDK('linked')], keys), /OPENHANDS_IMPORT_SYMLINK/);
     assert.equal(fs.readFileSync(sentinel, 'utf8'), 'untouched');
+    assert.deepEqual(fs.readdirSync(outside), ['sentinel']);
     assert.equal(fs.lstatSync(lock).isSymbolicLink(), true);
   });
 
