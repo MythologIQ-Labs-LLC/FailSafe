@@ -47,6 +47,17 @@ export class StateStore {
     } catch { /* not embedded / cross-origin — ignore */ }
   }
 
+  /** Sync a theme chosen in another Console window on the same origin.
+   *  Browser storage events do not fire in the tab that made the change.
+   *  Ignore unknown keys and themes rather than trusting ambient storage data. */
+  syncThemeStorageEvent(event) {
+    const allowed = ['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere'];
+    if (!event || event.key !== `${this.prefix}-theme` || !allowed.includes(event.newValue)) return false;
+    document.documentElement.setAttribute('data-theme', event.newValue);
+    this.emitTheme(event.newValue);
+    return true;
+  }
+
   getLlmPriority() {
     return this.getJSON('llm-priority') || ['server', 'native', 'wasm'];
   }
