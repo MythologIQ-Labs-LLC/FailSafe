@@ -120,6 +120,12 @@ jobs:
       - name: Package and validate the target VSIX set
         run: node scripts/package-all-targets.cjs --out dist-vsix --version "${VSIX_VERSION}"
         working-directory: FailSafe/extension
+      # #616: a new release cannot start marketplace publication without the
+      # authentic, versioned PDF in the immutable asset/checksum manifest.
+      # A later generator step must add that PDF before this gate can pass.
+      - name: Verify complete release set including required PDF
+        working-directory: FailSafe/extension
+        run: node scripts/release-artifacts.cjs verify-set "dist-vsix" --version "${VSIX_VERSION}"
       - name: Assert the complete target set
         working-directory: FailSafe/extension/dist-vsix
         run: |
@@ -168,7 +174,7 @@ jobs:
         run: |
           set -euo pipefail
           sha256sum -c SHA256SUMS.txt
-          test "$(wc -l < SHA256SUMS.txt)" -eq 8
+          test "$(awk '$2 ~ /\\.vsix$/ { n++ } END { print n+0 }' SHA256SUMS.txt)" -eq 8
           for f in *.vsix; do
             case "${f}" in
               mythologiq-failsafe-"${VSIX_VERSION}"-*.vsix) ;;
@@ -181,7 +187,7 @@ jobs:
         working-directory: vsix-targets
         run: |
           set -euo pipefail
-          for f in $(awk '{print $2}' SHA256SUMS.txt); do
+          for f in $(awk '$2 ~ /\\.vsix$/ { print $2 }' SHA256SUMS.txt); do
             echo "Publishing ${f}"
             npx --yes @vscode/vsce@3.9.2 publish --skip-duplicate --packagePath "${f}"
           done
@@ -221,7 +227,7 @@ jobs:
         run: |
           set -euo pipefail
           sha256sum -c SHA256SUMS.txt
-          test "$(wc -l < SHA256SUMS.txt)" -eq 8
+          test "$(awk '$2 ~ /\\.vsix$/ { n++ } END { print n+0 }' SHA256SUMS.txt)" -eq 8
           for f in *.vsix; do
             case "${f}" in
               mythologiq-failsafe-"${VSIX_VERSION}"-*.vsix) ;;
@@ -234,7 +240,7 @@ jobs:
         working-directory: vsix-targets
         run: |
           set -euo pipefail
-          for f in $(awk '{print $2}' SHA256SUMS.txt); do
+          for f in $(awk '$2 ~ /\\.vsix$/ { print $2 }' SHA256SUMS.txt); do
             echo "Publishing ${f}"
             npx --yes ovsx@1.2.0 publish --skip-duplicate "${f}"
           done
@@ -247,11 +253,11 @@ jobs:
   # the publish jobs, which sit behind the `production` reviewer gate, so an
   # unapproved or dead tag never produces a Release.
   #
-  # FX974: the Release carries the same eight target packages and SHA256SUMS.txt
+  # FX974/#616: the Release carries the same eight target packages, required PDF and SHA256SUMS.txt
   # the marketplaces received (the one vsix-targets artifact; nothing is rebuilt
   # or re-hashed per destination). It waits until both marketplaces serve those
   # exact bytes, then attaches them to a draft, uploading only missing files and
-  # never replacing one, and publishes the draft only when all nine match. A
+  # never replacing one, and publishes the draft only when the exact set matches. A
   # re-run of this job resumes from whatever is already there.
   github-release:
     name: Create GitHub Release
