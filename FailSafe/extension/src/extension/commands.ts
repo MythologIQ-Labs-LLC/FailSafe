@@ -17,10 +17,16 @@ import * as http from "http";
 // Workspace isolation: dynamic port and workspace root
 let serverPort = 9376;
 let workspaceRoot = "";
+/** #601: authorizes the Console page VS Code opens to change the shared theme. */
+let consoleThemeKey = "";
 
 export function setServerPort(port: number, wsRoot: string): void {
   serverPort = port;
   workspaceRoot = wsRoot;
+}
+
+export function setConsoleThemeKey(key: string): void {
+  consoleThemeKey = key;
 }
 
 function getBaseUrl(): string {
@@ -65,6 +71,8 @@ async function openRoadmapExternal(view?: string, hash?: string): Promise<void> 
     targetUrl.searchParams.set("workspace", workspaceRoot);
   }
   targetUrl.searchParams.set("ui", "console");
+  // The page moves this key to its tab's session storage and removes it from the address bar.
+  if (consoleThemeKey) targetUrl.searchParams.set("fsThemeKey", consoleThemeKey);
   if (view) {
     targetUrl.searchParams.set("view", view);
   }

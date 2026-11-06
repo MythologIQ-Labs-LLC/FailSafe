@@ -136,6 +136,10 @@ export interface ConsoleServerController {
   broadcast(message: { type: string; payload?: unknown }): void;
   closeAllSockets(): void;
   close(): Promise<void>;
+  /** #601: the key the extension host gives the Console pages it opens (theme writes). */
+  themeKey: string;
+  /** #601: change the shared theme as the extension host does (sidebar, Settings UI). */
+  setTheme(theme: string): Promise<unknown>;
 }
 
 interface FakeManagers {
@@ -299,7 +303,7 @@ function buildController(
   hubRef: { current: HubFixture | null },
   /** Stops the ConsoleServer's lifecycle (closes its META_LEDGER fs.watch). */
   stopServer: () => void,
-): ConsoleServerController {
+): Omit<ConsoleServerController, "themeKey" | "setTheme"> {
   const broadcastRaw = (raw: string): void => {
     for (const ws of sockets) {
       if (ws.readyState === WebSocket.OPEN) ws.send(raw);
@@ -420,7 +424,11 @@ export async function serveConsoleServerUI(
   attachWebSocket(server, harness, sockets, fakes.hubRef, fixtures.liveHubInit === true);
 
   const url = await listenAndResolveUrl(harness);
-  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });
+  const controller = buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });
+  return Object.assign(controller, {
+    themeKey: server.getThemeKey(),
+    setTheme: (theme: string) => server.getThemeAuthority().set(theme),
+  });
 }
 
 function setupVoicePackFixture(

@@ -1,6 +1,7 @@
 // FailSafe Unified Command Center — Connection Module
 // Handles WebSocket and SSE for real-time telemetry from ConsoleServer
 import { createRestApi } from './rest-api.js';
+import { handleThemeMessage, refreshTheme } from './theme-sync.js';
 
 export class ConnectionClient {
   constructor(options = {}) {
@@ -82,6 +83,8 @@ export class ConnectionClient {
         this.useFallback = false;
         this.clearReconnectTimer();
         this.setState('connected');
+        // #601: a theme change made while disconnected was not broadcast to this page.
+        void refreshTheme();
       };
 
       this.ws.onmessage = (event) => {
@@ -110,6 +113,7 @@ export class ConnectionClient {
 
   handleServerMessage(data) {
     if (!data.type) return;
+    if (handleThemeMessage(data)) return;
 
     switch(data.type) {
       case 'init':
@@ -175,6 +179,8 @@ export class ConnectionClient {
       this.eventSource.onopen = () => {
         this.clearReconnectTimer();
         this.setState('connected');
+        // #601: a theme change made while disconnected was not broadcast to this page.
+        void refreshTheme();
       };
 
       this.eventSource.onmessage = (event) => {

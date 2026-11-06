@@ -12,9 +12,9 @@ export class SentinelMonitor {
   }
 
   metricColor(value) {
-    if (value <= 30) return '#3d7dff';
-    if (value <= 60) return '#eab308';
-    return '#ef4444';
+    if (value <= 30) return 'var(--primary)';
+    if (value <= 60) return 'var(--warn)';
+    return 'var(--bad)';
   }
 
   /** FX917: delegates to the shared actionable helper (extracted in FX920 so

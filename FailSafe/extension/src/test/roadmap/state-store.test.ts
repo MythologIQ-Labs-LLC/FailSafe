@@ -1,4 +1,4 @@
-// Functional tests for StateStore (FX189 — localStorage wrapper).
+// Functional tests for StateStore (FX189 — localStorage wrapper; #601 host-owned theme).
 // Pure-logic with localStorage stub. Sink: real Map storage assertions.
 
 import { strict as assert } from 'assert';
@@ -91,42 +91,38 @@ suite('StateStore (FX189)', () => {
     assert.equal(ss.getActiveTab(), 'skills');
   });
 
-  test('FX189 getTheme default is "mythiq"', () => {
+  // #601: the theme belongs to the extension host. StateStore reads the applied theme and asks
+  // the host to change it; it never keeps a browser-local copy.
+  test('#601 getTheme reads the applied theme and defaults to "mythiq"', () => {
     const ss = new StateStore();
+    assert.equal(ss.getTheme(), 'mythiq');
+    const docEl = (globalThis as { document: { documentElement: { setAttribute: (k: string, v: string) => void } } }).document.documentElement;
+    docEl.setAttribute('data-theme', 'aurora');
+    assert.equal(ss.getTheme(), 'aurora');
+    docEl.setAttribute('data-theme', 'not-a-theme');
     assert.equal(ss.getTheme(), 'mythiq');
   });
 
-  test('FX189 setTheme persists + applies data-theme on documentElement', () => {
-    const ss = new StateStore();
-    ss.setTheme('dark');
-    assert.equal(ss.getTheme(), 'dark');
-    const docEl = (globalThis as { document?: { documentElement: { getAttribute: (k: string) => string | undefined } } }).document!.documentElement;
-    assert.equal(docEl.getAttribute('data-theme'), 'dark');
-  });
-
-  test('setTheme emits failsafe.theme to the parent when embedded (Monitor sidebar sync)', () => {
-    const posted: unknown[] = [];
+  test('#601 setTheme without a theme key changes nothing and stores nothing locally', async () => {
     const realWin = (globalThis as { window?: unknown }).window;
-    (globalThis as { window: unknown }).window = { parent: { postMessage: (m: unknown) => posted.push(m) } };
+    const realFetch = (globalThis as { fetch?: unknown }).fetch;
+    let fetched = 0;
+    (globalThis as { fetch: unknown }).fetch = async () => { fetched += 1; return { ok: true, json: async () => ({}) }; };
+    (globalThis as { window: unknown }).window = {
+      location: { href: 'http://localhost:9376/?ui=console' },
+      history: { state: null, replaceState: () => undefined },
+      sessionStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+    };
     try {
-      new StateStore().setTheme('crimson');
-      assert.deepEqual(posted, [{ type: 'failsafe.theme', theme: 'crimson' }]);
+      const result = await new StateStore().setTheme('crimson');
+      assert.deepEqual(result, { ok: false, reason: 'theme-key' });
+      assert.equal(fetched, 0);
+      assert.equal(stubs.store.has('fs-theme'), false);
+      const docEl = (globalThis as { document: { documentElement: { getAttribute: (k: string) => string | undefined } } }).document.documentElement;
+      assert.equal(docEl.getAttribute('data-theme'), undefined);
     } finally {
       (globalThis as { window: unknown }).window = realWin;
-    }
-  });
-
-  test('setTheme does NOT emit at top level (parent === self)', () => {
-    const posted: unknown[] = [];
-    const win: { parent?: unknown; postMessage: (m: unknown) => void } = { postMessage: (m: unknown) => posted.push(m) };
-    win.parent = win; // a top-level window: its parent is itself
-    const realWin = (globalThis as { window?: unknown }).window;
-    (globalThis as { window: unknown }).window = win;
-    try {
-      new StateStore().setTheme('mythiq');
-      assert.equal(posted.length, 0);
-    } finally {
-      (globalThis as { window: unknown }).window = realWin;
+      (globalThis as { fetch: unknown }).fetch = realFetch;
     }
   });
 
