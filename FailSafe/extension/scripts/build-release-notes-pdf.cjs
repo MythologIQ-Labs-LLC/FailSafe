@@ -31,7 +31,7 @@ function requireVersion(version) {
   }
 }
 function sectionsFor(text, version) {
-  const headings = [...text.matchAll(/^## \[([^\]]+)\](?:\s+-\s+[^\n]+)?$/gm)];
+  const headings = [...text.matchAll(/^## \[([^\]]+)\](?:[ \t]+-[ \t]+[^\n]*)?$/gm)];
   const match = headings.filter((h) => h[1] === version);
   if (match.length !== 1) throw Error("Expected exactly one versioned CHANGELOG heading for "+version);
   const start = match[0].index + match[0][0].length;
