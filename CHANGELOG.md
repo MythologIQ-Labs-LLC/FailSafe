@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.12] - Unreleased (release candidate)
+
+### Fixed
+- The Monitor sidebar and the SRE view now follow the theme chosen in the Console, in all six themes, and stay in step live: a change in the browser Console, the VS Code Settings UI or another window reaches every open Console and Monitor. The theme is kept in the VS Code setting `failsafe.console.theme`, so it survives Monitor reloads, window reloads and restarts, and it is applied before the page is drawn. Before, the Monitor kept a fixed color scheme, and a theme chosen in the browser Console never reached VS Code because the two never share browser storage. A theme chosen in an earlier version in this browser is moved to the setting once (#601).
+- Monitor and SRE text that uses status or accent colors stays readable on the light Pegasus theme; status colors keep their meaning (#601).
+
+### Security
+- Only a Console page that VS Code opened can change the theme: the change needs the Console request guard (loopback, exact Origin, JSON) and a per-session key that VS Code adds to the Console link and the page removes from the address bar. Other Console pages show the theme read-only. The Monitor sidebar no longer takes its theme from the embedded page (#601).
+
+### Dependencies
+- Dependency updates merged after v6.0.11: glob 14.0.2 (#610), body-parser 2.4.0 (#611), @hono/node-server 2.1.5 (#597), qs 6.17.1, fast-uri 3.1.9 and undici 7.30.1 (#590, #595, #596, #598).
+
 ## [6.0.11] - 2026-10-29
 
 ### Security

@@ -1,6 +1,6 @@
 # FailSafe Component Help
 
-> v6.0.11: the Console WebSocket refuses duplicate `Host` headers and the install-skills progress socket follows the Console host (#587); Console server discovery is read-only (#591). Components and operator workflows are otherwise unchanged from v6.0.10.
+> v6.0.12 release candidate (not yet published): the Console, the Monitor sidebar and the SRE view share one theme, chosen in the Console and kept in the VS Code setting `failsafe.console.theme` (#601). Components and operator workflows are otherwise unchanged from v6.0.11.
 
 
 Audience: operators using the packaged VS Code extension (`v6.0.10`).
