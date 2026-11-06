@@ -65,14 +65,42 @@ function validateVsix(file) {
 
 const expectedNames = (version) => Object.keys(NATIVE_TARGETS).map((target) => ({ target, name: vsixName(version, target) }));
 
+// #616: do not rewrite the immutable artifact contract for already-published
+// versions. Every new SemVer release at or after 6.0.12 needs a branded PDF.
+const pdfRequired = (version) => {
+  const match = /^(\\d+)\\.(\\d+)\\.(\\d+)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$/.exec(version ?? "");
+  if (!match) throw new Error(`invalid release version: ${version}`);
+  const [major, minor, patch] = match.slice(1, 4).map(Number);
+  return major > 6 || (major === 6 && (minor > 0 || (minor === 0 && patch >= 12)));
+};
+const pdfName = (version) => `FailSafe-v${version}-Release-Notes.pdf`;
+
+function checkPdf(dir, version, sums) {
+  if (!pdfRequired(version)) return [];
+  const name = pdfName(version);
+  if (!sums.has(name)) return [`${SUMS} does not list the required ${name}`];
+  const file = path.join(dir, name);
+  if (!fs.existsSync(file)) return [`required release notes ${name} are missing`];
+  const bytes = fs.readFileSync(file);
+  if (sha256(bytes) !== sums.get(name)) return [`${name} does not match its ${SUMS} line`];
+  // This checks only that the asset is a plausibly complete PDF. Authentic logo
+  // identity, exact text/version and visual acceptance remain separate #616 gates.
+  if (bytes.length < 4096 || !/^%PDF-1\\.[0-9]/.test(bytes.subarray(0, 8).toString("ascii"))
+      || !/%%EOF\\s*$/.test(bytes.subarray(-128).toString("latin1"))) {
+    return [`${name} is not a complete PDF release-notes artifact`];
+  }
+  return [];
+}
+
 function checkTargetsJson(dir, version, sums) {
   const p = path.join(dir, "targets.json");
   if (!fs.existsSync(p)) return ["targets.json is missing"];
   const doc = JSON.parse(fs.readFileSync(p, "utf8"));
   const errors = doc.version === version ? [] : [`targets.json names version ${doc.version}, expected ${version}`];
   const listed = new Map((doc.targets ?? []).map((t) => [t.file, t.sha256]));
-  if (listed.size !== sums.size) errors.push(`targets.json lists ${listed.size} packages, ${SUMS} lists ${sums.size}`);
-  for (const [name, sha] of sums) if (listed.get(name) !== sha) errors.push(`targets.json disagrees with ${SUMS} for ${name}`);
+  const packages = expectedNames(version).map((e) => e.name);
+  if (listed.size !== packages.length) errors.push(`targets.json lists ${listed.size} packages, expected ${packages.length}`);
+  for (const name of packages) if (listed.get(name) !== sums.get(name)) errors.push(`targets.json disagrees with ${SUMS} for ${name}`);
   return errors;
 }
 
@@ -92,17 +120,19 @@ function checkPackages(dir, version, sums, deps) {
   return errors;
 }
 
-/** Problems with the set in `dir`; empty means exactly the eight target packages for `version`. */
+/** Problems with the immutable set: eight VSIX, plus mandatory PDF for 6.0.12+. */
 function verifySet(dir, version, deps = { readManifest, validateVsix }) {
   const sumsPath = path.join(dir, SUMS);
   if (!fs.existsSync(sumsPath)) return [`${SUMS} is missing`];
   let sums;
   try { sums = parseSums(fs.readFileSync(sumsPath, "utf8")); } catch (e) { return [e.message]; }
   const expected = new Set(expectedNames(version).map((e) => e.name));
+  if (pdfRequired(version)) expected.add(pdfName(version));
   const errors = [];
+  for (const name of expected) if (!sums.has(name)) errors.push(`${SUMS} does not list required file ${name}`);
   for (const name of sums.keys()) if (!expected.has(name)) errors.push(`${SUMS} lists unexpected file ${name}`);
-  for (const f of fs.readdirSync(dir)) if (f.endsWith(".vsix") && !expected.has(f)) errors.push(`unexpected package ${f}`);
-  return [...errors, ...checkTargetsJson(dir, version, sums), ...checkPackages(dir, version, sums, deps)];
+  for (const f of fs.readdirSync(dir)) if ((f.endsWith(".vsix") || f.endsWith(".pdf")) && !expected.has(f)) errors.push(`unexpected release asset ${f}`);
+  return [...errors, ...checkTargetsJson(dir, version, sums), ...checkPackages(dir, version, sums, deps), ...checkPdf(dir, version, sums)];
 }
 
 /** name -> sha256 for the nine files a release carries: the packages and the manifest itself. */
@@ -139,6 +169,10 @@ function checkRemoteTag({ refType, tag, sha }, lsRemote) {
 
 /** Draft first, upload only what is missing, never replace, publish only a complete set. */
 async function publishRelease({ dir, tag, notes }, client) {
+  // Protect manual recovery and direct publisher callers too: never create a
+  // draft or mutate an existing release while the immutable set is incomplete.
+  const errors = verifySet(dir, tag.replace(/^v/, ""));
+  if (errors.length) throw stop(`release artifact set rejected: ${errors.join("; ")}`);
   const expected = expectedAssets(dir);
   const matches = (await client.listReleases()).filter((r) => r.tag_name === tag);
   if (matches.length > 1) throw stop(`${matches.length} releases exist for ${tag}; resolve this by hand`);
@@ -193,7 +227,7 @@ async function main(argv) {
     const version = arg(argv, "--version");
     const errors = verifySet(path.resolve(dir), version);
     for (const e of errors) console.error(`[FAIL] ${e}`);
-    if (!errors.length) console.log(`[PASS] the eight ${version} target packages match ${SUMS} and targets.json`);
+    if (!errors.length) console.log(`[PASS] the ${version} release set matches ${SUMS} and targets.json`);
     return errors.length ? 1 : 0;
   }
   if (cmd === "check-tag") {
