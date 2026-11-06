@@ -131,6 +131,7 @@ suite('governed wrappers run isolated (#475 FX831/FX832)', function () {
     for (const [out, calls] of [[co, c.calls], [ao, a.calls]] as const) {
       assert.equal(out.status, 'BLOCKED_PRE_EXECUTION');
       assert.equal(out.spawned, false);
+      assert.equal(calls.length, 0, 'unauthorized run must not execute even --version');
       assert.equal(spawnCalls(calls).length, 0);
       assert.equal(out.receipt?.status, 'BLOCKED_PRE_EXECUTION');
     }
@@ -141,7 +142,26 @@ suite('governed wrappers run isolated (#475 FX831/FX832)', function () {
     const out = await runContinueGoverned({ prompt: 'rm', allow: ['runTerminalCommand'], cwd: root, writesAllowed: true, timeoutMs: T }, deps(run));
     assert.equal(out.status, 'BLOCKED_PRE_EXECUTION');
     assert.equal(out.riskGrade, 'L3');
+    assert.equal(calls.length, 0, 'denied shell tools must not execute --version');
     assert.equal(spawnCalls(calls).length, 0);
+  });
+
+  test('deny runs before executable resolution, preventing third-party probe side effects', async () => {
+    let resolutions = 0;
+    const resolve: ResolveAgentFn = (name) => {
+      resolutions++;
+      return path.join(os.tmpdir(), 'untrusted-bin', name);
+    };
+    for (const kind of ['aider', 'continue'] as const) {
+      const { run, calls } = makeRunner();
+      const d = { ...deps(run), resolve };
+      const out = kind === 'aider'
+        ? await runAiderGoverned({ prompt: 'x', cwd: root, writesAllowed: false, timeoutMs: T }, d)
+        : await runContinueGoverned({ prompt: 'x', allow: ['runTerminalCommand'], cwd: root, writesAllowed: true, timeoutMs: T }, d);
+      assert.equal(out.status, 'BLOCKED_PRE_EXECUTION');
+      assert.equal(calls.length, 0);
+    }
+    assert.equal(resolutions, 0, 'no resolution or third-party invocation on denied paths');
   });
 
   test('binary not found -> unavailable, no spawn', async () => {
