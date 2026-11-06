@@ -155,9 +155,32 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       let body: any;
       await handlers['/api/v1/trust']({}, { json: (value: any) => { body = value; } });
       assert.equal(body.overall, null);
-      assert.equal(body.status, 'unverified');
+      assert.equal(body.status, Object.keys(checkpoints).length === 0 ? 'no_evidence' : 'unverified');
       assert.equal(body.checkpointCount, Object.keys(checkpoints).length);
+      // Even an apparent PASS with a nonempty evidenceRefs array is not
+      // a verified policy PASS without source/recency verification.
+      assert.equal(body.passCount, 0);
     }
+  });
+
+  test('trust response never credits mixed or malformed checkpoints without verification', async () => {
+    const checkpoints = {
+      pass: { policyVerdict: 'PASS', evidenceRefs: ['unverified-ref'] },
+      veto: { policyVerdict: 'VIOLATION', evidenceRefs: ['veto-ref'] },
+      malformed: null,
+      pending: { policyVerdict: 'PENDING', evidenceRefs: ['pending-ref'] },
+    };
+    const handlers: Record<string, (_req: any, res: any) => Promise<void>> = {};
+    const { app } = makeFakeApp();
+    app.get = (path: string, handler: any) => { handlers[path] = handler; };
+    const hub = makeFakeHub();
+    hub.buildHubSnapshot = async () => ({ checkpoints });
+    new ConsoleRouteRegistrar(makeHost(app, hub)).setupAllRoutes();
+    let response: any;
+    await handlers['/api/v1/trust']({}, { json: (value: any) => { response = value; } });
+    assert.deepEqual(response, {
+      overall: null, status: 'unverified', checkpointCount: 4, passCount: 0,
+    });
   });
 
   test('setupAllRoutes — console HTML routes registered', () => {
