@@ -101,3 +101,20 @@ test("the rehearsal proves the guard's lookups on real data before any tag exist
   assert.ok(lookups && unconditional(lookups));
   assert.equal(argAfter(runOf(lookups), "--checks"), "vscode,openvsx,release");
 });
+
+test("#616 release workflow builds PDF after VSIX packaging and gates publishing on the full artifact set", () => {
+  const pack = indexOf("build", (s) => runOf(s).includes("package-all-targets.cjs"));
+  const pdf = indexOf("build", (s) => runOf(s).includes("build-release-notes-pdf.cjs"));
+  const verify = indexOf("build", (s) => runOf(s).includes("release-artifacts.cjs verify-set"));
+  const upload = indexOf("build", (s) => String(s.uses ?? "").startsWith("actions/upload-artifact@") && s.with?.name === "vsix-targets");
+  assert.ok(pack >= 0 && pack < pdf && pdf < verify && verify < upload, "release set must be fully built and checked before uploading");
+  const render = steps("build")[pdf];
+  assert.ok(unconditional(render), "mandatory PDF rendering cannot be skipped or ignored");
+  assert.match(runOf(render), /--version/);
+  for (const job of ["publish-vscode", "publish-openvsx"]) {
+    const pub = steps(job).find((s) => s.name === PUBLISH_STEP);
+    assert.ok(pub);
+    assert.ok(runOf(pub).includes("awk '$2 ~ /\\.vsix$/ { print $2 }'"), job + " must publish only VSIX lines, never PDF");
+    assert.ok(indexOf(job, (s) => runOf(s).includes("release-artifacts.cjs verify-set")) < indexOf(job, (s) => s.name === PUBLISH_STEP));
+  }
+});

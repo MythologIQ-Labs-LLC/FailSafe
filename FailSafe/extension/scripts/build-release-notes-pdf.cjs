@@ -14,8 +14,8 @@ const ROOT = path.resolve(__dirname, "../../..");
 const EXT = path.resolve(__dirname, "..");
 const BRAND = path.join(EXT, "assets/release-branding");
 const LOGOS = [
-  ["mythologiq-labs.png", "46f10ebebf134ae6a63f36c64913fc7950567e09", "Knapp-Kevin/MythologIQ:src/assets/softlogo.png"],
-  ["failsafe.png", "8401110b23f402a1bc11967e13525af73a8d2023", "Knapp-Kevin/MythologIQ:public/assets/products/failsafe-logo.png"],
+  ["mythologiq-labs.png", "46f10ebebf134ae6a63f36c64913fc7950567e09", "Knapp-Kevin/MythologIQ:src/assets/softlogo.png", "1caa9ae46873fe0cb191311195c5db0c1fd678b694bcf5a91ddbf73435aecee3"],
+  ["failsafe.png", "8401110b23f402a1bc11967e13525af73a8d2023", "Knapp-Kevin/MythologIQ:public/assets/products/failsafe-logo.png", "74d5e8c639e964db764a5f8fa1f631664d793ae2da477e849545dc1e80f53cb0"],
 ];
 const CATEGORIES = new Set(["Added","Changed","Fixed","Security","Dependencies","Compatibility","Known Limitations","Deprecated","Removed"]);
 const sha = (bytes, algorithm="sha256") => crypto.createHash(algorithm).update(bytes).digest("hex");
@@ -65,9 +65,9 @@ function sectionsFor(text, version) {
   return used;
 }
 function readLogos(dir=BRAND) {
-  return LOGOS.map(([name,sourceSha,provenance]) => {
+  return LOGOS.map(([name,sourceSha,provenance,sourceSha256]) => {
     const bytes=fs.readFileSync(path.join(dir,name));
-    if (gitSha(bytes)!==sourceSha) throw Error("Canonical logo bytes changed: "+name);
+    if (gitSha(bytes)!==sourceSha || sha(bytes)!==sourceSha256) throw Error("Canonical logo bytes changed: "+name);
     if (!bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) throw Error("Expected PNG: "+name);
     return {name,provenance,sha256:sha(bytes),data:"data:image/png;base64,"+bytes.toString("base64")};
   });
