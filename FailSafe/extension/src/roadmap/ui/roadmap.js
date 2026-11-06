@@ -6,6 +6,7 @@ import { openModal } from './modules/modal-helper.js';
 import { openConsole } from './modules/console-nav.js';
 import { makeActionable } from './modules/actionable.js';
 import { escapeSelectorValue } from './modules/escape-selector.js';
+import { handleThemeMessage, refreshTheme } from './modules/theme-sync.js';
 
 export class WebPanelClient {
   constructor() {
@@ -72,6 +73,8 @@ export class WebPanelClient {
       }
       this.setConnectionState('connected');
       this.staleness?.notifyConnected();
+      // #601: re-read the shared theme in case it changed while disconnected.
+      void refreshTheme();
     };
 
     this.ws.onmessage = (event) => {
@@ -130,6 +133,7 @@ export class WebPanelClient {
   }
 
   handleMessage(data) {
+    if (handleThemeMessage(data)) return;
     if (data.type === 'init' && data.payload) {
       this.hub = data.payload;
       this.render();
@@ -283,9 +287,9 @@ export class WebPanelClient {
   gradeColor(grade) {
     switch (grade) {
       case 'A': return 'var(--good)';
-      case 'B': return '#22d3ee';
+      case 'B': return 'var(--accent-cyan)';
       case 'C': return 'var(--warn)';
-      case 'D': return '#f97316';
+      case 'D': return 'var(--accent-orange)';
       case 'F': return 'var(--bad)';
       default: return 'var(--muted)';
     }

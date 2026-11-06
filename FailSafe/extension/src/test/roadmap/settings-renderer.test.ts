@@ -48,7 +48,8 @@ function makeStore(initial: string = 'mythiq'): MockStore {
 }
 
 function setupDom(): { cleanup: () => void } {
-  const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999' });
+  // #601: a Console page VS Code opened carries the theme key that lets it change the theme.
+  const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999/?fsThemeKey=test-key' });
   const prevWin = (global as any).window;
   const prevDoc = (global as any).document;
   (global as any).window = dom.window;
@@ -81,7 +82,7 @@ suite('SettingsRenderer (FX241 + FX230 + FX242)', () => {
     assert.equal(active.dataset.theme, 'aurora');
   });
 
-  test('FX230 — clicking a chip calls store.setTheme + toggles active class', () => {
+  test('FX230 — clicking a chip calls store.setTheme + toggles active class', async () => {
     const store = makeStore('mythiq');
     const r = new SettingsRenderer('set-root', { store });
     r.render({});
@@ -96,6 +97,8 @@ suite('SettingsRenderer (FX241 + FX230 + FX242)', () => {
     }
     const newTheme = target.dataset.theme!;
     target.click();
+    // #601: the chip activates once the extension host has confirmed the change.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(store.theme, newTheme);
     assert.ok(target.classList.contains('active'));
   });

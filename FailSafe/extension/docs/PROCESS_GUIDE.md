@@ -1,6 +1,6 @@
 # FailSafe Process Guide
 
-> v6.0.11: Console WebSocket handshake and install-progress host handling were hardened (#587), and Console server discovery no longer writes to your home folder (#591). The process in this guide is unchanged from v6.0.10.
+> v6.0.12 release candidate (not yet published): the Console theme now also applies to the Monitor and SRE view and persists in VS Code settings (#601). The process in this guide is unchanged from v6.0.11.
 
 
 Audience: operators who need fast, accurate workflows for the shipped `v6.0.10` UI and governance stack.

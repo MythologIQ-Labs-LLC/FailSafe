@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
-  "version": "6.0.11",
+  "version": "6.0.12",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -636,6 +636,28 @@
           ],
           "default": "starry-night",
           "description": "Genesis UI theme"
+        },
+        "failsafe.console.theme": {
+          "type": "string",
+          "scope": "application",
+          "enum": [
+            "pegasus",
+            "mythiq",
+            "midnight",
+            "aurora",
+            "crimson",
+            "atmosphere"
+          ],
+          "enumDescriptions": [
+            "Pegasus (light)",
+            "Mythiq (indigo dark)",
+            "Midnight (pitch dark)",
+            "Aurora (teal dark)",
+            "Crimson (red dark)",
+            "Atmosphere (sky dark)"
+          ],
+          "default": "mythiq",
+          "description": "Theme for the FailSafe Console, the Monitor sidebar and the SRE view. Choosing a theme in the Console updates this setting, and every open Console and Monitor follows it."
         },
         "failsafe.sentinel.enabled": {
           "type": "boolean",

@@ -148,7 +148,14 @@ suite('Lane E XSS: server-rendered console routes (R1-R11)', () => {
       fleet: [{ agentId: 'a1', status: DQ, circuitState: 'closed', taskCount: TAG, successRate: 1 }],
     } as unknown as AgtSreSnapshot;
     const doc = parseHtml(buildSreHtml({ connected: true, snapshot }));
-    assertInert(doc);
+    // #601: payloads render only into <body>; <head> carries exactly the two static theme
+    // scripts (before-paint theme and live theme updates) and nothing derived from the snapshot.
+    assertInert(doc.body);
+    const headScripts = Array.from(doc.head.querySelectorAll('script')).map((s) => `${s.getAttribute('type') ?? ''}|${s.getAttribute('src') ?? ''}|${s.textContent ?? ''}`);
+    assert.deepEqual(headScripts, [
+      '|/api/v1/ui/theme.js|',
+      'module||import { followThemeStandalone } from "/modules/theme-sync.js"; followThemeStandalone();',
+    ]);
     assert.ok(doc.querySelector(`[title]`), 'the fleet status dot renders');
     assert.equal(doc.querySelectorAll('[title]')[0].getAttribute('title'), DQ);
   });
