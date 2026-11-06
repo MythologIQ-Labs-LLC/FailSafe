@@ -32,6 +32,8 @@ export class ConsoleLifecycleService {
   private ledgerWatcher: fs.FSWatcher | null = null;
   private ledgerDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private ledgerWatcherDisposable: MutationDisposable | null = null;
+  private starting: Promise<void> | null = null;
+  private startGeneration = 0;
 
   constructor(private readonly deps: ConsoleLifecycleDeps) {
     this.actualPort = deps.port;
@@ -41,10 +43,21 @@ export class ConsoleLifecycleService {
   getServer(): HttpServer | null { return this.server; }
 
   async start(): Promise<void> {
-    // Repeated activation must not open another listener or register duplicate
-    // readiness for a server that is already serving this workspace.
     if (this.server?.listening) return;
+    // A second activation must join the first probe/bind, not race it.
+    if (this.starting) return this.starting;
+    const generation = ++this.startGeneration;
+    const startup = this.startBound(generation);
+    this.starting = startup;
+    try { await startup; }
+    finally { if (this.starting === startup) this.starting = null; }
+  }
+
+  private async startBound(generation: number): Promise<void> {
     this.actualPort = await this.findAvailablePort(this.deps.port);
+    if (generation !== this.startGeneration) {
+      throw new Error("Roadmap server startup cancelled");
+    }
 
     // EADDRINUSE can occur between probing and binding. Do not begin the
     // WebSocket service, ledger watcher, registry, or readiness checkpoint
@@ -68,6 +81,12 @@ export class ConsoleLifecycleService {
       candidate.once("listening", onListening);
       candidate.once("error", onError);
     });
+    // stop() may have been called while the asynchronous bind was pending.
+    // Never register a listener or claim readiness after that cancellation.
+    if (generation !== this.startGeneration) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      throw new Error("Roadmap server startup cancelled");
+    }
     this.server = server;
     const address = server.address();
     let boundHost = this.deps.host;
@@ -98,6 +117,8 @@ export class ConsoleLifecycleService {
   }
 
   stop(): void {
+    ++this.startGeneration; // invalidate an unfinished probe/listen
+    this.starting = null; // permit a fresh start without joining a cancelled attempt
     if (this.server) markDisconnected(this.actualPort);
     this.ledgerWatcher?.close();
     this.ledgerWatcher = null;
