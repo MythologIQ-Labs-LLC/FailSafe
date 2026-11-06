@@ -75,8 +75,20 @@ export function nextSentryPage(link: string | undefined, currentUrl: string, fir
     if (!match) throw new Error('Malformed Sentry pagination Link');
     const next = new URL(match[1], currentUrl);
     const first = new URL(firstUrl);
-    if (next.protocol !== 'https:' || next.origin !== first.origin || next.pathname !== first.pathname) {
+    if (next.protocol !== 'https:' || next.origin !== first.origin || next.pathname !== first.pathname ||
+        next.username || next.password || next.hash) {
       throw new Error('Untrusted Sentry pagination destination');
+    }
+    // Only pagination cursors may change. Otherwise a valid same-origin Link
+    // could silently switch the project, environment or issue query and import
+    // findings outside the scope the operator approved.
+    const scope = (url: URL): string => JSON.stringify(
+      [...url.searchParams.entries()]
+        .filter(([key]) => key !== 'cursor')
+        .sort(([ka, va], [kb, vb]) => ka.localeCompare(kb) || va.localeCompare(vb)),
+    );
+    if (scope(next) !== scope(first)) {
+      throw new Error('Sentry pagination changed the approved issue filters');
     }
     return next.toString();
   }

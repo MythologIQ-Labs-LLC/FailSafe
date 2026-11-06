@@ -31,7 +31,7 @@ Release versions come from the issue-detail endpoint `FailSafe/extension/src/int
 
 ## Privileges and scopes
 
-Credential: a Sentry auth token in VS Code Secret Storage, sent as a Bearer header `FailSafe/extension/src/integrations/sentry/sentry-client.ts:120` (`Authorization: `).
+Credential: a Sentry auth token in VS Code Secret Storage, sent as a Bearer header `FailSafe/extension/src/integrations/sentry/sentry-client.ts:132` (`Authorization: `).
 The setting text asks for an org-level or internal-integration token with project:read and event:read `FailSafe/extension/package.json:501-505` (`project:read`).
 The token and API base URL come together from the credential gate, so a user token is never sent to a workspace-chosen base `FailSafe/extension/src/integrations/sentry/sentry-settings.ts:4-6` (`token is never sent to a workspace-chosen endpoint`).
 The base must be HTTPS and every request must lie under it `FailSafe/extension/src/integrations/sentry/sentry-transport.ts:96-100` (`if (u.protocol !== 'https:'`).
@@ -58,10 +58,10 @@ An item without an id is skipped and counted `FailSafe/extension/src/integration
 ## Outbound fields and egress
 
 Repository content: no; requests carry the org, project, query, environment and issue ids only `FailSafe/extension/src/integrations/sentry/sentry-client.ts:58-64` (`params.set('project', project);`).
-Metadata: yes, the org and project slugs, the search query (default is:unresolved) and the Bearer token, gated by the enable setting and a stored token `FailSafe/extension/src/integrations/sentry/sentry-client.ts:92-94` (`token, org, and project must all be configured`).
+Metadata: yes, the org and project slugs, the search query (default is:unresolved) and the Bearer token, gated by the enable setting and a stored token `FailSafe/extension/src/integrations/sentry/sentry-client.ts:106` (`token, org, and project must all be configured`).
 Graph relationships: no (unverified beyond the absence of any write call in the owned files).
 Governance evidence: no; every request is a GET `FailSafe/extension/src/integrations/sentry/sentry-transport.ts:165` (`method: 'GET'`).
-Destination: sentry.io or the configured self-hosted HTTPS base `FailSafe/extension/src/integrations/sentry/sentry-client.ts:97-98` (`Sentry API URL must use HTTPS.`).
+Destination: sentry.io or the configured self-hosted HTTPS base `FailSafe/extension/src/integrations/sentry/sentry-client.ts:110` (`Sentry API URL must use HTTPS.`).
 
 ## Transformations
 
@@ -98,18 +98,18 @@ Status: a Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/m
 
 Advisory: an imported risk is a warn-level signal for the operator to triage; it blocks nothing `FailSafe/extension/src/integrations/sentry/sentry-to-risk.ts:6-7` (`WARN-only governance signal; the operator triages`).
 Enforced: the token is never sent outside the configured HTTPS base `FailSafe/extension/src/integrations/sentry/sentry-transport.ts:4-5` (`refuses before sending unless the URL is HTTPS and lies`).
-Enforced: an org value that is not a slug sends nothing `FailSafe/extension/src/integrations/sentry/sentry-client.ts:95` (`Sentry org must be an organization slug; nothing was requested.`).
+Enforced: an org value that is not a slug sends nothing `FailSafe/extension/src/integrations/sentry/sentry-client.ts:107` (`Sentry org must be an organization slug; nothing was requested.`).
 Enforced: triage status is never overwritten by a re-import `FailSafe/extension/src/integrations/sentry/sentry-import.ts:6-8` (`keeps its status and`).
 
 ## Failure, offline, stale and permission semantics
 
-Disabled or incomplete settings: a local-only outcome with no request `FailSafe/extension/src/integrations/sentry/sentry-client.ts:92-94` (`integration disabled`).
-401 or 403 is an auth failure and 404 means the org or project was not found `FailSafe/extension/src/integrations/sentry/sentry-client.ts:110-111` (`Sentry auth failed — check token/project scope; no risks imported.`).
+Disabled or incomplete settings: a local-only outcome with no request `FailSafe/extension/src/integrations/sentry/sentry-client.ts:104` (`integration disabled`).
+401 or 403 is an auth failure and 404 means the org or project was not found `FailSafe/extension/src/integrations/sentry/sentry-client.ts:122` (`Sentry auth failed — check token/project scope; no risks imported.`).
 429, timeouts and 5xx are retried at most three times with 1, 2 and 4 second backoff, every wait capped at 60 seconds `FailSafe/extension/src/integrations/sentry/sentry-transport.ts:52-54` (`export const MAX_RETRIES = 3;`).
 Release lookups stop at a rate limit, a cancellation or three consecutive failures `FailSafe/extension/src/integrations/sentry/sentry-releases.ts:5-7` (`stop at a rate limit, a cancellation, or three consecutive`).
-More than 10 pages of issues stops the import with nothing written; no setting raises the page cap `FailSafe/extension/src/integrations/sentry/sentry-client.ts:136-149` (`Sentry pagination limit reached; no partial risks imported.`).
+More than 10 pages of issues stops the import with nothing written; no setting raises the page cap `FailSafe/extension/src/integrations/sentry/sentry-client.ts:161` (`Sentry pagination limit reached; no partial risks imported.`).
 Stale: a risk is updated only by the next import; there is no schedule (unverified beyond the command being the only caller of `importSentryRisks` in the owned files).
-Offline: a transport error ends the listing with nothing imported `FailSafe/extension/src/integrations/sentry/sentry-client.ts:108` (`Sentry transport failed; no risks imported.`).
+Offline: a transport error ends the listing with nothing imported `FailSafe/extension/src/integrations/sentry/sentry-client.ts:120` (`Sentry transport failed; no risks imported.`).
 
 ## End-to-end scenario and measurable acceptance
 
