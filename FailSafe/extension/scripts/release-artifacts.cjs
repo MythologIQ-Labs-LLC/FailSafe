@@ -296,4 +296,4 @@ if (require.main === module) {
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (err) => { console.error(`[FAIL] ${err.message}`); process.exitCode = 1; });
 }
 
-module.exports = { parseSums, readManifest, verifySet, expectedAssets, expectedNames, planRelease, checkRemoteTag, publishRelease, alreadyPublished, main };
+module.exports = { parseSums, readManifest, verifySet, expectedAssets, expectedNames, pdfRequired, pdfName, planRelease, checkRemoteTag, publishRelease, alreadyPublished, main };

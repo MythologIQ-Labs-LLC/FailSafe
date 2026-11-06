@@ -118,3 +118,14 @@ test("#616 release workflow builds PDF after VSIX packaging and gates publishing
     assert.ok(indexOf(job, (s) => runOf(s).includes("release-artifacts.cjs verify-set")) < indexOf(job, (s) => s.name === PUBLISH_STEP));
   }
 });
+
+test("#616 native release rehearsal includes mandatory PDF before verify/rehearse for v6.0.12+", () => {
+  const pkg = steps("package-all", qual);
+  const render = pkg.findIndex((s) => runOf(s).includes("build-release-notes-pdf.cjs"));
+  const testSet = pkg.findIndex((s) => runOf(s).includes("release-artifacts.cjs verify-set"));
+  const rehearsal = pkg.findIndex((s) => runOf(s).includes("release-artifacts.cjs rehearse"));
+  assert.ok(render >= 0 && render < testSet && testSet <= rehearsal);
+  assert.ok(runOf(pkg[render]).includes("pdfRequired"));
+  assert.ok(runOf(pkg[render]).includes("playwright install"));
+  assert.ok(pkg[render].if === undefined && pkg[render]["continue-on-error"] === undefined);
+});
