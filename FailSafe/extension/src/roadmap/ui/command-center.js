@@ -227,9 +227,11 @@ document.addEventListener('DOMContentLoaded', () => {
   applyHashRoute();
   window.addEventListener('hashchange', applyHashRoute);
 
-  // Theme restore
+  // Theme restore and same-origin cross-window sync. The Monitor iframe and
+  // external Console have separate documents but share the Console origin.
   const saved = store.getTheme();
   if (saved) store.setTheme(saved);
+  window.addEventListener('storage', (event) => store.syncThemeStorageEvent(event));
 
   // Wire workspace isolation
   setWorkspaceRegistryClient(client);
