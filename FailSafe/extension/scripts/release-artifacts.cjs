@@ -68,7 +68,7 @@ const expectedNames = (version) => Object.keys(NATIVE_TARGETS).map((target) => (
 // #616: do not rewrite the immutable artifact contract for already-published
 // versions. Every new SemVer release at or after 6.0.12 needs a branded PDF.
 const pdfRequired = (version) => {
-  const match = /^(\\d+)\\.(\\d+)\\.(\\d+)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$/.exec(version ?? "");
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(version ?? "");
   if (!match) throw new Error(`invalid release version: ${version}`);
   const [major, minor, patch] = match.slice(1, 4).map(Number);
   return major > 6 || (major === 6 && (minor > 0 || (minor === 0 && patch >= 12)));
@@ -85,8 +85,8 @@ function checkPdf(dir, version, sums) {
   if (sha256(bytes) !== sums.get(name)) return [`${name} does not match its ${SUMS} line`];
   // This checks only that the asset is a plausibly complete PDF. Authentic logo
   // identity, exact text/version and visual acceptance remain separate #616 gates.
-  if (bytes.length < 4096 || !/^%PDF-1\\.[0-9]/.test(bytes.subarray(0, 8).toString("ascii"))
-      || !/%%EOF\\s*$/.test(bytes.subarray(-128).toString("latin1"))) {
+  if (bytes.length < 4096 || !/^%PDF-1\.[0-9]/.test(bytes.subarray(0, 8).toString("ascii"))
+      || !/%%EOF\s*$/.test(bytes.subarray(-128).toString("latin1"))) {
     return [`${name} is not a complete PDF release-notes artifact`];
   }
   return [];
