@@ -46,6 +46,18 @@ jobs:
       - name: Package and validate every target (release path)
         working-directory: FailSafe/extension
         run: node scripts/package-all-targets.cjs --out dist-vsix
+      # #616: rehearse the same PDF contract as release.yml for v6.0.12+.
+      # Historical 6.0.11 and earlier release sets remain eight VSIX only.
+      - name: Generate the mandatory branded PDF when applicable
+        working-directory: FailSafe/extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          if node -e "process.exit(require('./scripts/release-artifacts.cjs').pdfRequired(process.argv[1]) ? 0 : 1)" "${version}"; then
+            npx playwright install --with-deps chromium
+            node scripts/build-release-notes-pdf.cjs --version "${version}" --out dist-vsix
+          fi
       - name: Assert the complete target set
         working-directory: FailSafe/extension/dist-vsix
         run: |

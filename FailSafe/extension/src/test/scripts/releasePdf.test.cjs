@@ -1,0 +1,95 @@
+"use strict";
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const os=require("node:os");
+const {chromium}=require("@playwright/test");
+const {
+  requireVersion,sectionsFor,readLogos,htmlFor,generate
+}=require("../../../scripts/build-release-notes-pdf.cjs");
+
+const VERSION="6.0.12";
+const changes="# Changelog\n\n## [Unreleased]\n\n## [6.0.12]\n\n"+
+  "### Security\n- Refuse a request with missing governance proof.\n\n"+
+  "### Fixed\n- Keep the Monitor theme when reopened.\n\n"+
+  "### Known Limitations\n- Agent execution outside an isolated environment is not blocked.\n\n"+
+  "## [6.0.11]\n\n### Fixed\n- Older item.\n";
+
+test("#616 requires exact SemVer",()=>{
+  requireVersion(VERSION);
+  requireVersion("6.0.12-rc.1");
+  assert.throws(()=>requireVersion("6.0.x"),/semantic/);
+  assert.throws(()=>requireVersion("6.0.12-"),/semantic/);
+  assert.throws(()=>requireVersion(""),/semantic/);
+});
+test("#616 parser reads only exact version section and preserves sections in customer order",()=>{
+  const sections=sectionsFor(changes,VERSION);
+  assert.deepEqual(sections.map((x)=>x.heading),["Security","Fixed","Known Limitations"]);
+  assert.deepEqual(sections.map((x)=>x.items.length),[1,1,1]);
+  assert.ok(!sections.flatMap((x)=>x.items).some((s)=>s.includes("Older item")));
+});
+test("#616 missing, duplicate, placeholder and unclassified release copy is refused",()=>{
+  assert.throws(()=>sectionsFor(changes,"6.0.13"),/exactly one/);
+  assert.throws(()=>sectionsFor(changes+"\n## [6.0.12]\n### Fixed\n- Duplicated\n",VERSION),/exactly one/);
+  assert.throws(()=>sectionsFor(changes.replace("Refuse a request","TODO: refuse a request"),VERSION),/Placeholder/);
+  assert.throws(()=>sectionsFor(changes.replace("### Security","### Magic"),VERSION),/Unexpected release note category/);
+  assert.throws(()=>sectionsFor(changes.replace("### Security\n",""),VERSION),/Uncategorized changelog bullet/);
+  assert.throws(()=>sectionsFor("# Changelog\n\n## [6.0.12]\n",VERSION),/Missing or duplicate/);
+});
+test("#616 branding is the exact source PNG, not a drawn replacement or generated substitute",()=>{
+  const logos=readLogos();
+  assert.equal(logos.length,2);
+  assert.ok(logos[0].data.startsWith("data:image/png;base64,iVBORw0KGgo"));
+  assert.ok(logos[1].data.startsWith("data:image/png;base64,iVBORw0KGgo"));
+  assert.notEqual(logos[0].sha256,logos[1].sha256);
+});
+test("#616 substituted logo bytes fail closed",()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),"release-branding-"));
+  const original=path.resolve(__dirname,"../../../assets/release-branding");
+  try{
+    for(const name of ["mythologiq-labs.png","failsafe.png"]) fs.copyFileSync(path.join(original,name),path.join(dir,name));
+    fs.appendFileSync(path.join(dir,"failsafe.png"),Buffer.from("altered"));
+    assert.throws(()=>readLogos(dir),/Canonical logo bytes changed/);
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test("#616 PDF layout places both original PNGs above exact-version customer copy, with links",()=>{
+  const html=htmlFor(VERSION,sectionsFor(changes,VERSION),readLogos());
+  assert.match(html,/<title>FailSafe v6.0.12 \| Release Notes<\/title>/);
+  assert.match(html,/<img alt="MythologIQ Labs"/);
+  assert.match(html,/<img alt="FailSafe"/);
+  assert.ok(html.indexOf("MythologIQ Labs")<html.indexOf("Release and installers"));
+  assert.match(html,/missing governance proof/);
+  assert.match(html,/Known Limitations/);
+  assert.match(html,/releases\/tag\/v6.0.12/);
+  assert.ok(!html.includes("Older item"));
+  assert.ok(!html.includes("PROPOSED RELEASE SCOPE"));
+});
+test("#616 unaccepted release source cannot write a PDF or alter checksums",async()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"release-pdf-neg-"));
+  try{
+    fs.writeFileSync(path.join(tmp,"package.json"),JSON.stringify({version:VERSION}));
+    fs.writeFileSync(path.join(tmp,"changelog.md"),"# Changelog\n## [Unreleased]\n");
+    fs.writeFileSync(path.join(tmp,"SHA256SUMS.txt"),"canonical\n");
+    await assert.rejects(generate({version:VERSION,manifest:path.join(tmp,"package.json"),changelog:path.join(tmp,"changelog.md"),out:tmp}),/exactly one versioned/);
+    assert.equal(fs.readFileSync(path.join(tmp,"SHA256SUMS.txt"),"utf8"),"canonical\n");
+    assert.ok(!fs.readdirSync(tmp).some((x)=>x.endsWith(".pdf")));
+  }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+});
+test("#616 browser render embeds logos and appends PDF checksum without touching VSIX set",{skip: !fs.existsSync(chromium.executablePath())},async()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"release-pdf-positive-"));
+  try{
+    fs.writeFileSync(path.join(tmp,"package.json"),JSON.stringify({version:VERSION}));
+    fs.writeFileSync(path.join(tmp,"changelog.md"),changes);
+    fs.writeFileSync(path.join(tmp,"SHA256SUMS.txt"),"existing-vsix-sums\n");
+    const result=await generate({version:VERSION,manifest:path.join(tmp,"package.json"),changelog:path.join(tmp,"changelog.md"),out:tmp});
+    const bytes=fs.readFileSync(path.join(tmp,result.name));
+    assert.ok(bytes.length>4096);
+    assert.match(bytes.subarray(0,8).toString("ascii"),/^%PDF/);
+    assert.match(bytes.subarray(-128).toString("latin1"),/%%EOF\s*$/);
+    assert.ok(fs.readFileSync(path.join(tmp,"SHA256SUMS.txt"),"utf8").startsWith("existing-vsix-sums\n"));
+    assert.ok(fs.readFileSync(path.join(tmp,"SHA256SUMS.txt"),"utf8").includes(result.name));
+    assert.equal(result.logoSources.length,2);
+    await assert.rejects(generate({version:VERSION,manifest:path.join(tmp,"package.json"),changelog:path.join(tmp,"changelog.md"),out:tmp}),/Existing or unexpected PDF/);
+  }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+});
