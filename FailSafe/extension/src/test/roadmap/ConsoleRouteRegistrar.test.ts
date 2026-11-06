@@ -163,6 +163,26 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     }
   });
 
+  test('trust response never credits mixed or malformed checkpoints without verification', async () => {
+    const checkpoints = {
+      pass: { policyVerdict: 'PASS', evidenceRefs: ['unverified-ref'] },
+      veto: { policyVerdict: 'VIOLATION', evidenceRefs: ['veto-ref'] },
+      malformed: null,
+      pending: { policyVerdict: 'PENDING', evidenceRefs: ['pending-ref'] },
+    };
+    const handlers: Record<string, (_req: any, res: any) => Promise<void>> = {};
+    const { app } = makeFakeApp();
+    app.get = (path: string, handler: any) => { handlers[path] = handler; };
+    const hub = makeFakeHub();
+    hub.buildHubSnapshot = async () => ({ checkpoints });
+    new ConsoleRouteRegistrar(makeHost(app, hub)).setupAllRoutes();
+    let response: any;
+    await handlers['/api/v1/trust']({}, { json: (value: any) => { response = value; } });
+    assert.deepEqual(response, {
+      overall: null, status: 'unverified', checkpointCount: 4, passCount: 0,
+    });
+  });
+
   test('setupAllRoutes — console HTML routes registered', () => {
     const { routes } = setupRegistrar();
     const gets = pathsByMethod(routes, 'GET');
