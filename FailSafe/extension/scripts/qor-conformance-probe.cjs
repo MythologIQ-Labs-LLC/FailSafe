@@ -256,12 +256,29 @@ function runOnce(entry, build, label) {
  * FALSIFIABLE, the worst thing this probe can emit. The defect run must also
  * carry the control's own signal.
  */
+/**
+ * The qor-logic module a run could not import, or null. A control that no longer
+ * exists in the installed qor-logic fails BOTH fixtures with Python's import
+ * error; that is a missing control, not a suspect fixture (v6.0.12: qor-logic
+ * 0.169.0 and 0.176.1 ship no `qor.scripts.instruction_hygiene_lint`).
+ */
+function missingQorModule(run) {
+  const m = /No module named ['"]?(qor(?:\.[A-Za-z0-9_]+)+)/.exec((run && run.out) || '');
+  return m ? m[1] : null;
+}
+
 function classify(entry) {
   const clean = runOnce(entry, entry.buildClean, `${entry.id}-clean`);
   if (clean.unavailable) return { id: entry.id, result: UNAVAILABLE, detail: `${CLI} not on PATH` };
 
   const defect = runOnce(entry, entry.buildDefect, `${entry.id}-defect`);
   if (defect.unavailable) return { id: entry.id, result: UNAVAILABLE, detail: `${CLI} not on PATH` };
+
+  const missing = missingQorModule(clean) || missingQorModule(defect);
+  if (missing) {
+    return { id: entry.id, result: UNAVAILABLE,
+      detail: `the installed qor-logic has no module ${missing}: this control does not exist in that version` };
+  }
 
   if (clean.status !== 0) {
     return { id: entry.id, result: INCONCLUSIVE,
