@@ -152,6 +152,42 @@ suite('Sentry pagination trust (FailSafe #478)', () => {
     assert.deepEqual(r.items, []);
   });
 
+  test('Sentry Link may change cursor but not consented project/query/environment', async () => {
+    const first = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend&query=is%3Aunresolved&environment=production&sort=date&limit=100';
+    const authorized = first + '&cursor=1%3A0%3A0';
+    assert.equal(nextSentryPage(makeLink(authorized), first, first), authorized);
+    for (const override of [
+      ['project', 'other-project'],
+      ['query', ''],
+      ['environment', 'staging'],
+      ['sort', 'priority'],
+      ['limit', '500'],
+    ]) {
+      const next = new URL(authorized);
+      next.searchParams.set(override[0], override[1]);
+      assert.throws(() => nextSentryPage(makeLink(next.toString()), first, first), /approved issue filters/);
+    }
+    const extra = new URL(authorized);
+    extra.searchParams.append('project', 'other-project');
+    assert.throws(() => nextSentryPage(makeLink(extra.toString()), first, first), /approved issue filters/);
+  });
+
+  test('rejects pagination filter changes before any second bearer-token request', async () => {
+    let calls = 0;
+    const get: SentryGetFn = async (url) => {
+      calls++;
+      const escaped = new URL(url);
+      escaped.searchParams.set('project', 'another-project');
+      escaped.searchParams.set('cursor', '1:0:0');
+      return { status: 200, body: one, headers: { link: makeLink(escaped.toString()) } };
+    };
+    const r = await fetchSentryIssues(options, get, deps());
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /pagination/i);
+    assert.equal(calls, 1, 'scope-switch link never receives credentials');
+    assert.deepEqual(r.items, [], 'partially fetched issues cannot be imported');
+  });
+
   test('rejects unrelated paths and repeated cursors', async () => {
     const firstUrl = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend';
     assert.throws(() => nextSentryPage(makeLink('https://sentry.io/api/0/other/'), firstUrl, firstUrl), /Untrusted/);
