@@ -131,7 +131,7 @@ function verifySet(dir, version, deps = { readManifest, validateVsix }) {
   const errors = [];
   for (const name of expected) if (!sums.has(name)) errors.push(`${SUMS} does not list required file ${name}`);
   for (const name of sums.keys()) if (!expected.has(name)) errors.push(`${SUMS} lists unexpected file ${name}`);
-  for (const f of fs.readdirSync(dir)) if ((f.endsWith(".vsix") || f.endsWith(".pdf")) && !expected.has(f)) errors.push(`unexpected release asset ${f}`);
+  for (const f of fs.readdirSync(dir)) if ((f.endsWith(".vsix") || f.endsWith(".pdf")) && !expected.has(f)) errors.push(`${f.endsWith(".vsix") ? "unexpected package" : "unexpected release asset"} ${f}`);
   return [...errors, ...checkTargetsJson(dir, version, sums), ...checkPackages(dir, version, sums, deps), ...checkPdf(dir, version, sums)];
 }
 
@@ -171,8 +171,17 @@ function checkRemoteTag({ refType, tag, sha }, lsRemote) {
 async function publishRelease({ dir, tag, notes }, client) {
   // Protect manual recovery and direct publisher callers too: never create a
   // draft or mutate an existing release while the immutable set is incomplete.
-  const errors = verifySet(dir, tag.replace(/^v/, ""));
-  if (errors.length) throw stop(`release artifact set rejected: ${errors.join("; ")}`);
+  const version = tag.replace(/^v/, "");
+  // Direct callers also refuse a missing/mismatched PDF before any Release
+  // mutation; full VSIX validation runs in the CLI and each workflow gate.
+  const manifest = parseSums(fs.readFileSync(path.join(dir, SUMS), "utf8"));
+  const names = new Set(expectedNames(version).map((e) => e.name));
+  if (pdfRequired(version)) names.add(pdfName(version));
+  const unexpected = [...manifest.keys()].filter((name) => !names.has(name));
+  const missing = [...names].filter((name) => !manifest.has(name));
+  const issues = [...unexpected.map((name) => `unexpected release file ${name}`),
+    ...missing.map((name) => `missing release file ${name}`), ...checkPdf(dir, version, manifest)];
+  if (issues.length) throw stop(`release artifact set rejected: ${issues.join("; ")}`);
   const expected = expectedAssets(dir);
   const matches = (await client.listReleases()).filter((r) => r.tag_name === tag);
   if (matches.length > 1) throw stop(`${matches.length} releases exist for ${tag}; resolve this by hand`);
@@ -240,6 +249,8 @@ async function main(argv) {
     // --sha is the documented manual recovery (docs/RELEASE_RECOVERY.md): the
     // tag commit the operator approved, checked against the remote as in CI.
     const sha = arg(argv, "--sha") ?? process.env.GITHUB_SHA;
+    const errors = verifySet(path.resolve(dir), tag.replace(/^v/, ""));
+    if (errors.length) throw stop(`release artifact set rejected: ${errors.join("; ")}`);
     checkRemoteTag({ refType: arg(argv, "--sha") ? "tag" : process.env.GITHUB_REF_TYPE, tag, sha }, lsRemote);
     if (arg(argv, "--sha")) {
       // The manual path must not skip parity: both marketplaces have to serve
