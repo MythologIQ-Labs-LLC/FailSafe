@@ -134,6 +134,43 @@ suite('ConsoleLifecycleService listener evidence (FailSafe #471)', () => {
     });
   });
 
+  test('simultaneous starts share one bind, watcher setup and checkpoint', async () => {
+    await withTempHome(async home => {
+      const { service, observations, checkpoints } = fixture();
+      try {
+        await Promise.all([service.start(), service.start(), service.start()]);
+        assert.equal(checkpoints.length, 1, 'only one startup checkpoint');
+        assert.deepEqual(observations, ['websocket'], 'one WebSocket setup');
+        assert.equal(registryEntries(home).filter(e => e.status === 'active').length, 1);
+      } finally { service.stop(); }
+    });
+  });
+
+  test('stop during asynchronous port probe cancels startup without registration', async () => {
+    await withTempHome(async home => {
+      const { service, checkpoints, observations } = fixture();
+      let releaseProbe!: (port: number) => void;
+      const probe = new Promise<number>(resolve => { releaseProbe = resolve; });
+      (service as any).findAvailablePort = () => probe;
+      const pending = service.start();
+      service.stop();
+      releaseProbe(0);
+      await assert.rejects(pending, /startup cancelled/);
+      assert.equal(service.getServer(), null);
+      assert.deepEqual(checkpoints, []);
+      assert.ok(!observations.includes('websocket'));
+      assert.equal(registryEntries(home).length, 0);
+
+      // A cancellation must not poison the next legitimate activation.
+      (service as any).findAvailablePort = async () => 0;
+      try {
+        await service.start();
+        assert.equal(checkpoints.length, 1);
+        assert.equal(service.getServer()?.listening, true);
+      } finally { service.stop(); }
+    });
+  });
+
   test('repeated start is idempotent and stop permits restart', async () => {
     await withTempHome(async () => {
       const { service, checkpoints } = fixture();
