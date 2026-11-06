@@ -155,8 +155,9 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       let body: any;
       await handlers['/api/v1/trust']({}, { json: (value: any) => { body = value; } });
       assert.equal(body.overall, null);
-      assert.equal(body.status, 'unverified');
+      assert.equal(body.status, Object.keys(checkpoints).length === 0 ? 'no_evidence' : 'unverified');
       assert.equal(body.checkpointCount, Object.keys(checkpoints).length);
+      assert.ok(body.passCount >= 0 && body.passCount <= body.checkpointCount);
     }
   });
 
