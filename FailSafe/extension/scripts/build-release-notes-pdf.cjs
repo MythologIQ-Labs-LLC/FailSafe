@@ -14,8 +14,8 @@ const ROOT = path.resolve(__dirname, "../../..");
 const EXT = path.resolve(__dirname, "..");
 const BRAND = path.join(EXT, "assets/release-branding");
 const LOGOS = [
-  ["mythologiq-labs.png", "46f10ebebf134ae6a63f36c64913fc7950567e09", "Knapp-Kevin/MythologIQ:src/assets/softlogo.png", "1caa9ae46873fe0cb191311195c5db0c1fd678b694bcf5a91ddbf73435aecee3"],
-  ["failsafe.png", "8401110b23f402a1bc11967e13525af73a8d2023", "Knapp-Kevin/MythologIQ:public/assets/products/failsafe-logo.png", "74d5e8c639e964db764a5f8fa1f631664d793ae2da477e849545dc1e80f53cb0"],
+  ["mythologiq-labs.png", "993e786781d0c9a5f395e92ec6fa1eecc729ccb8", "Owner supplied silver MythologIQ Labs PNG in FailSafe conversation, 2026-11-06", "4749bff2a0f774d3810cea88f7fbc3415d358ec02c8d9fa6384ba591ec94bf23"],
+  ["failsafe.png", "36f2e40720b42bc3600b068ec89ebdce6c4e5a91", "Owner supplied FailSafe shield PNG in FailSafe conversation, 2026-11-06", "09df493897c907ec9440243b8edfc0725440ff22610ba10915458556868a8b33"],
 ];
 const CATEGORIES = new Set(["Added","Changed","Fixed","Security","Dependencies","Compatibility","Known Limitations","Deprecated","Removed"]);
 const sha = (bytes, algorithm="sha256") => crypto.createHash(algorithm).update(bytes).digest("hex");
