@@ -25,6 +25,8 @@ import { EventBus } from "../../../shared/EventBus";
 import type { WebSocketManager } from "../../../roadmap/services/WebSocketManager";
 import type { CheckpointDb, CheckpointRecord } from "../../../roadmap/services/CheckpointStore";
 import type { BicameralMcpClient } from "../../../integrations/bicameral";
+import type { McpInterceptor } from "../../../governance/interceptor";
+import type { ReceiptContract } from "../../../contracts";
 import type { ConfirmOperatorAction } from "../../../extension/operatorConfirmation";
 import {
   HEALTH_STATE_KEY, IntegrationHealthStore, setIntegrationHealthStore,
@@ -136,6 +138,10 @@ export interface ConsoleServerController {
   broadcast(message: { type: string; payload?: unknown }): void;
   closeAllSockets(): void;
   close(): Promise<void>;
+  /** #601: the key the extension host gives the Console pages it opens (theme writes). */
+  themeKey: string;
+  /** #601: change the shared theme as the extension host does (sidebar, Settings UI). */
+  setTheme(theme: string): Promise<unknown>;
 }
 
 interface FakeManagers {
@@ -299,7 +305,7 @@ function buildController(
   hubRef: { current: HubFixture | null },
   /** Stops the ConsoleServer's lifecycle (closes its META_LEDGER fs.watch). */
   stopServer: () => void,
-): ConsoleServerController {
+): Omit<ConsoleServerController, "themeKey" | "setTheme"> {
   const broadcastRaw = (raw: string): void => {
     for (const ws of sockets) {
       if (ws.readyState === WebSocket.OPEN) ws.send(raw);
@@ -359,7 +365,25 @@ export async function serveConsoleServerUI(
   spyOnHub(server, fixtures);
 
   if (fixtures.bicameralClient) {
-    server.setBicameralClient(fixtures.bicameralClient);
+    // B233: unlike the real extension (which wires an EnforcementEngine),
+    // this browser harness serves an explicit ALLOW stub for UI-only tests.
+    // Both accessors MUST reference the same client. Leaving the interceptor
+    // null would correctly make the real history/drift routes fail closed at
+    // HTTP 503 and prevent the canned decisions from rendering.
+    const wiredClient = fixtures.bicameralClient;
+    const allowedReceipt: ReceiptContract = {
+      receiptId: "ui-b233-fixture",
+      evaluationRequestId: "ui-b233-evaluation",
+      verdict: "ALLOW",
+      evidence: [],
+      issuedAt: "2026-10-20T12:00:00.000Z",
+      issuedBy: "did:failsafe:test:ui-mcp-interceptor",
+    };
+    server.setBicameralClient(wiredClient);
+    server.setMcpInterceptor({
+      getClient: () => wiredClient,
+      intercept: async () => allowedReceipt,
+    } as unknown as McpInterceptor);
   }
   const releaseNode = fixtures.bicameralCommand === undefined ? acquirePosixNode() : () => undefined;
   server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
@@ -420,7 +444,11 @@ export async function serveConsoleServerUI(
   attachWebSocket(server, harness, sockets, fakes.hubRef, fixtures.liveHubInit === true);
 
   const url = await listenAndResolveUrl(harness);
-  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });
+  const controller = buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });
+  return Object.assign(controller, {
+    themeKey: server.getThemeKey(),
+    setTheme: (theme: string) => server.getThemeAuthority().set(theme),
+  });
 }
 
 function setupVoicePackFixture(

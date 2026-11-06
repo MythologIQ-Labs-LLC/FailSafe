@@ -11,7 +11,7 @@
 // history/drift/ratify precedent — see the plan's F6 note.
 
 import type { Request, Response } from "express";
-import { governToolCall, type BicameralRouteDeps } from "./bicameralRouteShared";
+import { governToolCall, rejectStaleBicameralClient, type BicameralRouteDeps } from "./bicameralRouteShared";
 
 /**
  * A tool route spec. `client` resolves the typed client method's result from
@@ -84,14 +84,18 @@ export function bicameralToolRoute(
       return;
     }
     try {
+      const evaluator = spec.governed ? deps.getMcpInterceptor?.() ?? null : null;
       if (spec.governed) {
         const blocked = await governToolCall(
           deps,
           { name: spec.envelopeName ?? `bicameral.${spec.tool}`, arguments: spec.toArgs(body) },
           res,
+          client,
         );
         if (blocked) return;
       }
+      // The final client-identity check is shared by all Bicameral tool routes.
+      if (rejectStaleBicameralClient(deps, client, res, spec.governed, evaluator)) return;
       const result = await spec.invoke(client, body);
       res.json({ ok: true, result });
     } catch (e) {

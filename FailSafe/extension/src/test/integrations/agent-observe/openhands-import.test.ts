@@ -197,6 +197,78 @@ suite('OpenHands historical import: store, keys, redaction (#477)', () => {
     assert.equal(fs.existsSync(evidencePath(root)), false);
   });
 
+
+  test('B231 old legacy lock may still have a live owner; refuses until explicit recovery', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const lock = evidencePath(root) + '.lock';
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.writeFileSync(lock, 'old writer owns this file');
+    const fd = fs.openSync(lock, 'r+'); // model a legacy writer still holding its descriptor
+    try {
+      const old = new Date(Date.now() - 180000);
+      fs.utimesSync(lock, old, old);
+      await assert.rejects(importInto(root, [SDK('legacy')], keys), /OPENHANDS_IMPORT_LOCKED/);
+      assert.equal(fs.readFileSync(lock, 'utf8'), 'old writer owns this file');
+      assert.equal(fs.existsSync(evidencePath(root)), false);
+    } finally { fs.closeSync(fd); }
+    // Operator has verified the old host exited and removes its lock manually.
+    fs.unlinkSync(lock);
+    const first = await importInto(root, [SDK('legacy')], keys);
+    const second = await importInto(root, [SDK('legacy')], keys);
+    assert.deepEqual([first.imported, second.imported, second.duplicates], [1, 0, 1]);
+    assert.equal(lines(root).length, 1);
+  });
+
+  test('B231 stale shared lock directory is recovered by the common lock', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const lock = evidencePath(root) + '.lock';
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.mkdirSync(lock);
+    const old = new Date(Date.now() - 180000);
+    fs.utimesSync(lock, old, old);
+    assert.equal((await importInto(root, [SDK('stale-dir')], keys)).imported, 1);
+    assert.equal(fs.existsSync(lock), false);
+    assert.equal(lines(root).length, 1);
+  });
+
+  test('B231 fresh legacy lock refuses the import without removing owner data', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const lock = evidencePath(root) + '.lock';
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.writeFileSync(lock, 'current-owner');
+    await assert.rejects(importInto(root, [SDK('blocked')], keys), /OPENHANDS_IMPORT_LOCKED/);
+    assert.equal(fs.readFileSync(lock, 'utf8'), 'current-owner');
+    assert.equal(fs.existsSync(evidencePath(root)), false);
+  });
+
+  test('B231 a linked legacy lock refuses import without touching external data', async () => {
+    const root = workspace();
+    const outside = workspace();
+    const { keys } = autoKeys();
+    const lock = evidencePath(root) + '.lock';
+    const sentinel = path.join(outside, 'sentinel');
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.writeFileSync(sentinel, 'untouched');
+    fs.symlinkSync(sentinel, lock, 'file');
+    await assert.rejects(importInto(root, [SDK('linked')], keys), /OPENHANDS_IMPORT_SYMLINK/);
+    assert.equal(fs.readFileSync(sentinel, 'utf8'), 'untouched');
+    assert.equal(fs.lstatSync(lock).isSymbolicLink(), true);
+  });
+
+  test('B231 an active shared lock directory is not deleted by a competing writer', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const lock = evidencePath(root) + '.lock';
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.mkdirSync(lock);
+    await assert.rejects(importInto(root, [SDK('competing')], keys), /OPENHANDS_IMPORT_LOCKED/);
+    assert.equal(fs.statSync(lock).isDirectory(), true);
+    assert.equal(fs.existsSync(evidencePath(root)), false);
+  });
+
   test('O10 a torn evidence line is ignored and its event re-imported; a corrupt transparency line has no effect', async () => {
     const root = workspace();
     const { keys } = autoKeys();

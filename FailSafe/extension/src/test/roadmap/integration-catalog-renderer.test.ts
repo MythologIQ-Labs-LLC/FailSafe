@@ -116,13 +116,13 @@ suite('IntegrationCatalogRenderer evidence states (#479 H5, jsdom structural)', 
     try {
       await new IntegrationCatalogRenderer('integrations').render();
       const d = ctx.doc;
-      assert.equal(card(d, 'jira').querySelector('.cc-intcat-pill-verified')?.textContent, 'Verified');
-      assert.equal(card(d, 'sarif').querySelector('.cc-intcat-pill-verified')?.textContent, 'Last import parsed');
-      assert.equal(card(d, 'aider').querySelector('.cc-intcat-pill-connected')?.textContent, 'Started');
+      assert.equal(card(d, 'jira').querySelector('.cc-intcat-pill-observed')?.textContent, 'Last response matched expected format');
+      assert.equal(card(d, 'sarif').querySelector('.cc-intcat-pill-observed')?.textContent, 'Last import parsed');
+      assert.equal(card(d, 'aider').querySelector('.cc-intcat-pill-observed')?.textContent, 'Last process started');
       assert.equal(card(d, 'sentry').querySelector('.cc-intcat-pill-failing')?.textContent, 'Failing');
       assert.equal(card(d, 'linear').querySelector('.cc-intcat-pill-stale')?.textContent, 'Stale');
       assert.equal(card(d, 'slack').querySelector('.cc-intcat-pill-configured')?.textContent, 'Configured · unverified');
-      assert.equal(card(d, 'sentry').querySelector('.cc-intcat-pill-verified'), null, 'a failing card never shows the verified pill');
+      assert.equal(card(d, 'sentry').querySelector('.cc-intcat-pill-observed'), null, 'a failing card never shows the verified pill');
     } finally { ctx.cleanup(); }
   });
 
@@ -131,11 +131,24 @@ suite('IntegrationCatalogRenderer evidence states (#479 H5, jsdom structural)', 
     try {
       await new IntegrationCatalogRenderer('integrations').render();
       const d = ctx.doc;
-      assert.match(card(d, 'sentry').querySelector('.cc-intcat-last')?.textContent ?? '', /Last result: Failing: authentication was refused/);
+      assert.match(card(d, 'sentry').querySelector('.cc-intcat-last')?.textContent ?? '', /Observed: Failing: authentication was refused/);
       assert.match(card(d, 'linear').querySelector('.cc-intcat-last')?.textContent ?? '', /stale: older than 7 days/);
       assert.equal(card(d, 'slack').querySelector('.cc-intcat-last'), null, 'no evidence, no last-result line');
-      assert.equal(card(d, 'jira').querySelector('.cc-intcat-caps')?.textContent, 'Can: preview issues, create intent drafts');
+      assert.equal(card(d, 'jira').querySelector('.cc-intcat-caps')?.textContent, 'Implemented path (not live-qualified): preview issues, create intent drafts');
       assert.match(card(d, 'sarif').querySelector('.cc-intcat-docs')?.getAttribute('href') ?? '', /sarif\/README\.md$/);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('successful single-call evidence never claims an integration is production-ready or value-proven', async () => {
+    const ctx = setupDom(async () => ({ ok: true, json: async () => EVIDENCE }));
+    try {
+      await new IntegrationCatalogRenderer('integrations').render();
+      const body = ctx.doc.querySelector('.cc-intcat')?.textContent ?? '';
+      assert.match(body, /A recent call is not end-to-end qualification or proof of customer value/);
+      assert.match(body, /Implemented path \(not live-qualified\):/);
+      assert.match(body, /Value impact: not measured/);
+      assert.doesNotMatch(body, /3 verified by their last call/);
+      assert.doesNotMatch(card(ctx.doc, 'jira').textContent ?? '', /Operational|Live connection/);
     } finally { ctx.cleanup(); }
   });
 
@@ -143,7 +156,7 @@ suite('IntegrationCatalogRenderer evidence states (#479 H5, jsdom structural)', 
     const ctx = setupDom(async () => ({ ok: true, json: async () => EVIDENCE }));
     try {
       await new IntegrationCatalogRenderer('integrations').render();
-      assert.match(ctx.doc.querySelector('.cc-intcat-sub')?.textContent ?? '', /6 integrations — 3 verified by their last call, 1 failing, 2 configured but unverified or stale\./);
+      assert.match(ctx.doc.querySelector('.cc-intcat-sub')?.textContent ?? '', /6 integrations — 3 observed connection or format results, 1 failing, 2 configured but unverified or stale\./);
     } finally { ctx.cleanup(); }
   });
 });

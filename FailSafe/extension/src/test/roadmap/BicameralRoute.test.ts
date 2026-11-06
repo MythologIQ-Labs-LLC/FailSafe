@@ -63,12 +63,15 @@ function confirmer(result: OperatorConfirmation): {
 }
 
 function makeDeps(overrides: Partial<BicameralRouteDeps> = {}): BicameralRouteDeps {
+  // B233: the route captures one wired client; a per-call fake previously hid
+  // accidental client swaps and now (correctly) fails the identity assertion.
+  const wiredClient = fakeClient();
   return {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
     workspaceRoot: '/tmp',
     getBicameralCommand: () => 'bicameral-mcp',
-    getBicameralClient: () => fakeClient(),
+    getBicameralClient: () => wiredClient,
     getAutoConnect: () => false,
     setAutoConnect: async () => undefined,
     confirmOperatorAction: async () => 'approved',
@@ -181,11 +184,12 @@ suite('FX514 BicameralRoute — ratify ledger append (B-BIC-1)', () => {
       [undefined, 503, 'unwired'],
     ] as const) {
       const ratifyCalls: unknown[][] = [];
+      const wiredClient = fakeClient({ calls: ratifyCalls });
       const appendCalls: unknown[] = [];
       const emits: unknown[] = [];
       const { app, handlers } = makeFakeApp();
       setupBicameralRoutes(app, makeDeps({
-        getBicameralClient: () => fakeClient({ calls: ratifyCalls }),
+        getBicameralClient: () => wiredClient,
         ledgerManager: { isAvailable: () => true, appendEntry: async (e: any) => { appendCalls.push(e); } },
         eventBus: { emit: (_t: any, p: any) => { emits.push(p); } },
         confirmOperatorAction: confirm,
@@ -203,11 +207,12 @@ suite('FX514 BicameralRoute — ratify ledger append (B-BIC-1)', () => {
 
   test('#514 FX960 ratify approved → client.ratify once; the ledger rationale is exactly the sanitized, capped text shown', async () => {
     const ratifyCalls: unknown[][] = [];
+    const wiredClient = fakeClient({ calls: ratifyCalls });
     const appendCalls: Array<{ payload: any }> = [];
     const c = confirmer('approved');
     const { app, handlers } = makeFakeApp();
     setupBicameralRoutes(app, makeDeps({
-      getBicameralClient: () => fakeClient({ calls: ratifyCalls }),
+      getBicameralClient: () => wiredClient,
       ledgerManager: { isAvailable: () => true, appendEntry: async (e: any) => { appendCalls.push(e); } },
       confirmOperatorAction: c.confirm,
     }));
@@ -230,10 +235,11 @@ suite('FX514 BicameralRoute — ratify ledger append (B-BIC-1)', () => {
 
   test('#514 A3 ratify with a decisionId that sanitizing would change → 400, no dialog, nothing recorded', async () => {
     const ratifyCalls: unknown[][] = [];
+    const wiredClient = fakeClient({ calls: ratifyCalls });
     const c = confirmer('approved');
     const { app, handlers } = makeFakeApp();
     setupBicameralRoutes(app, makeDeps({
-      getBicameralClient: () => fakeClient({ calls: ratifyCalls }),
+      getBicameralClient: () => wiredClient,
       confirmOperatorAction: c.confirm,
     }));
     const h = findHandler(handlers, 'post', '/api/actions/bicameral-ratify');
