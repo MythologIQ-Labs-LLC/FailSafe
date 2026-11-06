@@ -174,7 +174,7 @@ jobs:
         run: |
           set -euo pipefail
           sha256sum -c SHA256SUMS.txt
-          test "$(awk '$2 ~ /\\.vsix$/ { n++ } END { print n+0 }' SHA256SUMS.txt)" -eq 8
+          test "$(awk '$2 ~ /\.vsix$/ { n++ } END { print n+0 }' SHA256SUMS.txt)" -eq 8
           for f in *.vsix; do
             case "${f}" in
               mythologiq-failsafe-"${VSIX_VERSION}"-*.vsix) ;;
@@ -187,7 +187,7 @@ jobs:
         working-directory: vsix-targets
         run: |
           set -euo pipefail
-          for f in $(awk '$2 ~ /\\.vsix$/ { print $2 }' SHA256SUMS.txt); do
+          for f in $(awk '$2 ~ /\.vsix$/ { print $2 }' SHA256SUMS.txt); do
             echo "Publishing ${f}"
             npx --yes @vscode/vsce@3.9.2 publish --skip-duplicate --packagePath "${f}"
           done
@@ -227,7 +227,7 @@ jobs:
         run: |
           set -euo pipefail
           sha256sum -c SHA256SUMS.txt
-          test "$(awk '$2 ~ /\\.vsix$/ { n++ } END { print n+0 }' SHA256SUMS.txt)" -eq 8
+          test "$(awk '$2 ~ /\.vsix$/ { n++ } END { print n+0 }' SHA256SUMS.txt)" -eq 8
           for f in *.vsix; do
             case "${f}" in
               mythologiq-failsafe-"${VSIX_VERSION}"-*.vsix) ;;
@@ -240,7 +240,7 @@ jobs:
         working-directory: vsix-targets
         run: |
           set -euo pipefail
-          for f in $(awk '$2 ~ /\\.vsix$/ { print $2 }' SHA256SUMS.txt); do
+          for f in $(awk '$2 ~ /\.vsix$/ { print $2 }' SHA256SUMS.txt); do
             echo "Publishing ${f}"
             npx --yes ovsx@1.2.0 publish --skip-duplicate "${f}"
           done
