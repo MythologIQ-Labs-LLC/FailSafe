@@ -82,12 +82,12 @@ if (!(Test-Path $extensionPackagePath)) {
       continue
     }
     $raw = Get-Content $path -Raw
-    $currentMatch = [regex]::Match($raw, "Current Release\\*\\*:\\s*v(\\d+\\.\\d+\\.\\d+)\\b")
+    $currentMatch = [regex]::Match($raw, "Current Release\*\*:\s*v(\d+\.\d+\.\d+)\b")
     if ($currentMatch.Success -and $currentMatch.Groups[1].Value -eq $version) { continue }
-    $candidatePattern = "Candidate Version\\*\\*:\\s*v" + $escapedVersion + "\\b"
+    $candidatePattern = "Candidate Version\*\*:\s*v" + $escapedVersion + "\b"
     $previous = $currentMatch.Success -and ([version]$currentMatch.Groups[1].Value -lt [version]$version)
     if ($candidateContext -and $previous -and $raw -match $candidatePattern) {
-      Write-Host "[PASS] $rule: unpublished RC source v$version; published release remains v$($currentMatch.Groups[1].Value)"
+      Write-Host "[PASS] ${rule}: unpublished RC source v$version; published release remains v$($currentMatch.Groups[1].Value)"
       continue
     }
     Add-Violation -Rule $rule -Detail "Expected published v$version or an explicitly labeled unpublished RC only on PR/RC refs: $path"
