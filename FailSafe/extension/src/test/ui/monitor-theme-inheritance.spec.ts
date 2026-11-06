@@ -1,18 +1,50 @@
-// FX-monitor-theme-inheritance — the Monitor sidebar chrome inherits the
-// Console theme. Proves the full loop in real Chromium: a host page that
-// faithfully mirrors FailSafeSidebarProvider.getHtml() (the shared design
-// tokens inlined in <head>, a default data-theme, a chrome element bound to a
-// token, the embedded compact Console, and the failsafe.theme postMessage
-// handler) embeds the LIVE Console; changing the Console theme must re-theme
-// the host chrome via the postMessage emit (state.js emitTheme).
+// #601 (v6.0.12 P0) — one app theme for the Console, the Monitor and the SRE view.
+//
+// Real Chromium against a REAL ConsoleServer. The Console, the Monitor and the SRE view each run
+// in their own browser context, so they share no storage at all: this is what the external
+// browser and VS Code's Electron webview look like to each other. The theme must still match,
+// because it lives in the extension host (here: the ConsoleServer's authority) and reaches every
+// page through the Console server, never through browser storage.
 
-import { test, expect } from '@playwright/test';
-import * as fs from 'fs';
-import * as path from 'path';
+import { test, expect, type Browser, type Page } from '@playwright/test';
 
 import { serveConsoleServerUI, ConsoleServerController } from './helpers/serveConsoleServerUI';
 
-test.describe('FX-monitor-theme-inheritance — sidebar chrome follows the Console theme', () => {
+const THEMES = ['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere'] as const;
+
+async function openIsolated(browser: Browser, url: string): Promise<Page> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  // Record the theme the document had when its DOM was ready (before any module ran).
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      (window as unknown as { __themeAtDcl: string | null }).__themeAtDcl = document.documentElement.getAttribute('data-theme');
+    }, { once: true });
+  });
+  await page.goto(url);
+  return page;
+}
+
+const themeOf = (page: Page) => page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+const themeAtDcl = (page: Page) => page.evaluate(() => (window as unknown as { __themeAtDcl: string | null }).__themeAtDcl);
+const token = (page: Page, name: string) =>
+  page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
+const colorOf = (page: Page, selector: string, prop: 'color' | 'backgroundColor') =>
+  page.evaluate(([sel, p]) => {
+    const el = document.querySelector(sel as string);
+    return el ? getComputedStyle(el)[p as 'color'] : null;
+  }, [selector, prop]);
+/** Resolve any CSS color to the computed rgb() string in the given page. */
+const rgb = (page: Page, color: string) => page.evaluate((c) => {
+  const probe = document.createElement('span');
+  probe.style.color = c;
+  document.body.appendChild(probe);
+  const out = getComputedStyle(probe).color;
+  probe.remove();
+  return out;
+}, color);
+
+test.describe('#601 shared app theme — Console, Monitor and SRE view', () => {
   let controller: ConsoleServerController;
 
   test.afterEach(async () => {
@@ -22,97 +54,128 @@ test.describe('FX-monitor-theme-inheritance — sidebar chrome follows the Conso
     }
   });
 
-  test('changing the Console theme re-themes the embedding sidebar chrome via postMessage', async ({ page }) => {
+  test('every theme chosen in the Console reaches the Monitor and SRE view live, with matching colors', async ({ browser }) => {
+    test.setTimeout(90_000);
     controller = await serveConsoleServerUI({});
+    const consolePage = await openIsolated(browser, `${controller.url}/?ui=console&fsThemeKey=${encodeURIComponent(controller.themeKey)}`);
+    const monitor = await openIsolated(browser, `${controller.url}/?ui=compact`);
+    const sre = await openIsolated(browser, `${controller.url}/console/sre`);
 
-    // Mirror the provider: inline the same shared tokens the real sidebar reads
-    // from disk, default data-theme=mythiq, a chrome bound to --bg-panel, the
-    // live Console in an iframe, and the failsafe.theme handler.
-    const tokens = fs.readFileSync(
-      path.resolve(__dirname, '../../../src/roadmap/ui/theme-tokens.css'),
-      'utf8',
-    );
-    const host = `<!DOCTYPE html><html lang="en" data-theme="mythiq"><head>
-      <style>${tokens}</style>
-      <style>#chrome { background: var(--bg-panel, #0a1f4a); height: 40px; }</style>
-    </head><body>
-      <div id="chrome">toolbar</div>
-      <iframe id="frame" src="${controller.url}/command-center.html" style="width:520px;height:640px;border:0"></iframe>
-      <script>
-        window.addEventListener('message', (e) => {
-          const d = e && e.data; if (!d || typeof d !== 'object') return;
-          const frame = document.getElementById('frame');
-          const supported = ['pegasus','mythiq','midnight','aurora','crimson','atmosphere'];
-          if (e.source === frame.contentWindow &&
-              d.type === 'failsafe.theme' && supported.includes(d.theme)) {
-            document.documentElement.setAttribute('data-theme', d.theme);
-          }
-        });
-      </script>
-    </body></html>`;
-    await page.setContent(host, { waitUntil: 'load' });
+    // The key left the address bar as soon as the Console loaded.
+    expect(consolePage.url()).not.toContain('fsThemeKey');
+    await consolePage.locator('.tab-btn[data-target="settings"]').click();
+    await expect(consolePage.locator('.cc-theme-select').first()).toBeEnabled();
 
-    const chromeBg = () =>
-      page.evaluate(() => getComputedStyle(document.getElementById('chrome')!).backgroundColor);
+    for (const theme of [...THEMES.filter((t) => t !== 'mythiq'), 'mythiq']) {
+      await consolePage.locator(`.cc-theme-select[data-theme="${theme}"]`).click();
+      await expect.poll(() => themeOf(consolePage)).toBe(theme);
+      await expect.poll(() => themeOf(monitor)).toBe(theme);
+      await expect.poll(() => themeOf(sre)).toBe(theme);
+      await expect(consolePage.locator(`.cc-theme-select[data-theme="${theme}"]`)).toHaveClass(/active/);
 
-    // Drive the real Console inside the iframe: open Config, pick Crimson.
-    const frame = page.frameLocator('#frame');
-    await frame.locator('.tab-btn[data-target="settings"]').click();
-    await frame.locator('[data-theme="crimson"]').first().click();
-
-    // Crimson --bg-panel is #1a0505 = rgb(26, 5, 5). The host chrome must follow
-    // the Console selection through the failsafe.theme emit.
-    await expect.poll(chromeBg, { timeout: 6000 }).toBe('rgb(26, 5, 5)');
-
-    // And the host's data-theme mirrors the Console's selection.
-    const themeAttr = await page.evaluate(() =>
-      document.documentElement.getAttribute('data-theme'),
-    );
-    expect(themeAttr).toBe('crimson');
-
-    // A forged page message must not modify the Monitor's theme.
-    await page.evaluate(() => window.postMessage({ type: 'failsafe.theme', theme: 'pegasus' }, '*'));
-    await expect.poll(() => page.evaluate(() =>
-      document.documentElement.getAttribute('data-theme'))).toBe('crimson');
-    // An unknown theme announced from any window must not apply.
-    await frame.locator('body').evaluate(() => window.parent.postMessage({
-      type: 'failsafe.theme', theme: 'unrecognized',
-    }, '*'));
-    await expect.poll(() => page.evaluate(() =>
-      document.documentElement.getAttribute('data-theme'))).toBe('crimson');
-
-    await page.screenshot({ path: 'test-results/monitor-theme-inheritance-crimson.png' });
-  });
-  test('popout theme changes reach a same-origin embedded Monitor after storage event', async ({ page, context }) => {
-    controller = await serveConsoleServerUI({});
-    const tokens = fs.readFileSync(
-      path.resolve(__dirname, '../../../src/roadmap/ui/theme-tokens.css'), 'utf8',
-    );
-    const host = `<!DOCTYPE html><html lang="en" data-theme="mythiq"><head>
-      <style>${tokens}</style><style>#chrome { background: var(--bg-panel); height:40px }</style>
-      </head><body><div id="chrome">Monitor</div>
-      <iframe id="frame" src="${controller.url}/command-center.html"></iframe>
-      <script>window.addEventListener('message', (event) => {
-        if (event.source !== document.getElementById('frame').contentWindow) return;
-        const d = event.data;
-        if (d && d.type === 'failsafe.theme' &&
-            ['pegasus','mythiq','midnight','aurora','crimson','atmosphere'].includes(d.theme)) {
-          document.documentElement.setAttribute('data-theme', d.theme);
-        }
-      });</script></body></html>`;
-    await page.setContent(host, { waitUntil: 'load' });
-    const frame = page.frameLocator('#frame');
-    await expect(frame.locator('.tab-btn[data-target="settings"]')).toBeVisible();
-    const popout = await context.newPage();
-    try {
-      await popout.goto(`${controller.url}/command-center.html`);
-      await popout.locator('.tab-btn[data-target="settings"]').click();
-      await popout.locator('[data-theme="pegasus"]').first().click();
-      await expect.poll(() => page.evaluate(() =>
-        document.documentElement.getAttribute('data-theme'))).toBe('pegasus');
-    } finally {
-      await popout.close();
+      // Same tokens on every surface, and the Monitor and SRE view actually use them.
+      const textMain = await token(consolePage, '--text-main');
+      const bgDark = await token(consolePage, '--bg-dark');
+      expect(await token(monitor, '--text-main')).toBe(textMain);
+      expect(await token(sre, '--bg-dark')).toBe(bgDark);
+      expect(await colorOf(monitor, 'body', 'color')).toBe(await rgb(monitor, textMain));
+      expect(await colorOf(monitor, '.brand-title', 'color')).toBe(await rgb(monitor, textMain));
+      expect(await colorOf(sre, 'body', 'backgroundColor')).toBe(await rgb(sre, bgDark));
+      expect(await colorOf(sre, 'body', 'color')).toBe(await rgb(sre, textMain));
     }
   });
 
+  test('the theme persists across reloads and is in place before any module runs', async ({ browser }) => {
+    controller = await serveConsoleServerUI({});
+    await controller.setTheme('pegasus');
+    for (const path of ['/?ui=compact', '/?ui=console', '/console/sre']) {
+      const page = await openIsolated(browser, `${controller.url}${path}`);
+      expect(await themeAtDcl(page), `${path} at DOMContentLoaded`).toBe('pegasus');
+      await page.reload();
+      expect(await themeAtDcl(page), `${path} after reload`).toBe('pegasus');
+    }
+  });
+
+  test('a change made by the extension host (sidebar, Settings UI) reaches open pages', async ({ browser }) => {
+    controller = await serveConsoleServerUI({});
+    const monitor = await openIsolated(browser, `${controller.url}/?ui=compact`);
+    const consolePage = await openIsolated(browser, `${controller.url}/?ui=console`);
+    await expect.poll(() => themeOf(monitor)).toBe('mythiq');
+    await controller.setTheme('crimson');
+    await expect.poll(() => themeOf(monitor)).toBe('crimson');
+    await expect.poll(() => themeOf(consolePage)).toBe('crimson');
+  });
+
+  test('a page that reconnects picks up a change it missed while disconnected', async ({ browser }) => {
+    test.setTimeout(60_000);
+    controller = await serveConsoleServerUI({});
+    const monitor = await openIsolated(browser, `${controller.url}/?ui=compact`);
+    await expect.poll(() => themeOf(monitor)).toBe('mythiq');
+    // Drop every socket, then change the theme before the Monitor is back.
+    controller.closeAllSockets();
+    await controller.setTheme('aurora');
+    await expect.poll(() => themeOf(monitor), { timeout: 30_000 }).toBe('aurora');
+  });
+
+  test('a Console that VS Code did not open shows the theme read-only and cannot change it', async ({ browser }) => {
+    controller = await serveConsoleServerUI({});
+    const page = await openIsolated(browser, `${controller.url}/?ui=console`);
+    await page.locator('.tab-btn[data-target="settings"]').click();
+    const chips = page.locator('.cc-theme-select');
+    await expect(chips).toHaveCount(6);
+    for (let i = 0; i < 6; i += 1) await expect(chips.nth(i)).toBeDisabled();
+    await expect(page.locator('.cc-theme-note')).toContainText('Open the Console from VS Code');
+
+    // Straight at the API from the page's own origin, without the key: refused, nothing changes.
+    const status = await page.evaluate(async () => (await fetch('/api/v1/ui/theme', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: 'crimson' }),
+    })).status);
+    expect(status).toBe(401);
+    const wrongKey = await page.evaluate(async () => (await fetch('/api/v1/ui/theme', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-FailSafe-Theme-Key': 'guess' }, body: JSON.stringify({ theme: 'crimson' }),
+    })).status);
+    expect(wrongKey).toBe(401);
+    expect(await themeOf(page)).toBe('mythiq');
+  });
+
+  test('forged and unsupported theme messages change nothing', async ({ browser }) => {
+    controller = await serveConsoleServerUI({});
+    const monitor = await openIsolated(browser, `${controller.url}/?ui=compact`);
+    const consolePage = await openIsolated(browser, `${controller.url}/?ui=console`);
+    await expect.poll(() => themeOf(monitor)).toBe('mythiq');
+
+    // postMessage from any window, old message shape or new: pages do not take themes from postMessage.
+    for (const page of [monitor, consolePage]) {
+      await page.evaluate(() => {
+        window.postMessage({ type: 'ui.theme', theme: 'crimson' }, '*');
+        window.postMessage({ type: 'failsafe.theme', theme: 'crimson' }, '*');
+      });
+    }
+    // Server-sent values outside the six themes, including a selector-breaking string.
+    controller.broadcast({ type: 'ui.theme', payload: 'crimson' });
+    for (const theme of ['neon', 'Crimson', 'crimson"] body{display:none} [x="', '']) {
+      controller.broadcast({ type: 'ui.theme', theme } as unknown as { type: string });
+    }
+    await monitor.waitForTimeout(500);
+    expect(await themeOf(monitor)).toBe('mythiq');
+    expect(await themeOf(consolePage)).toBe('mythiq');
+  });
+
+  test('a theme an older version kept in this browser is moved to the shared theme once', async ({ browser }) => {
+    controller = await serveConsoleServerUI({});
+    const monitor = await openIsolated(browser, `${controller.url}/?ui=compact`);
+    const context = await browser.newContext();
+    const origin = new URL(controller.url).origin;
+    await context.addInitScript((o) => {
+      if (location.origin === o && !sessionStorage.getItem('seeded')) {
+        localStorage.setItem('fs-theme', 'aurora');
+        sessionStorage.setItem('seeded', '1');
+      }
+    }, origin);
+    const page = await context.newPage();
+    await page.goto(`${controller.url}/?ui=console&fsThemeKey=${encodeURIComponent(controller.themeKey)}`);
+    await expect.poll(() => themeOf(page)).toBe('aurora');
+    await expect.poll(() => themeOf(monitor)).toBe('aurora');
+    expect(await page.evaluate(() => localStorage.getItem('fs-theme'))).toBeNull();
+  });
 });

@@ -219,7 +219,8 @@ suite('Settings Track C — governance mode + qor version surface', () => {
 
 suite('Settings B198 — duplicate-render listener hygiene', () => {
   test('chip click fires store.setTheme EXACTLY ONCE after two renders', async () => {
-    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999' });
+    // #601: a Console page VS Code opened carries the theme key that enables the chips.
+    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999/?fsThemeKey=test-key' });
     const prevWin = (global as any).window;
     const prevDoc = (global as any).document;
     (global as any).window = dom.window;
@@ -262,6 +263,30 @@ suite('Settings B198 — duplicate-render listener hygiene', () => {
       r.render({ governanceModeState: { mode: 'observe', defaulted: true } });
       r.destroy();
       assert.doesNotThrow(() => r.destroy(), 'second destroy must not throw');
+    } finally {
+      (global as any).window = prevWin;
+      (global as any).document = prevDoc;
+    }
+  });
+
+  test('#601 a Console page VS Code did not open shows the theme read-only', async () => {
+    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999/?ui=console' });
+    const prevWin = (global as any).window;
+    const prevDoc = (global as any).document;
+    (global as any).window = dom.window;
+    (global as any).document = dom.window.document;
+    try {
+      let setThemeCalls = 0;
+      const store = { ...trackCStore(), setTheme: () => { setThemeCalls++; } };
+      // @ts-expect-error untyped JS module
+      const mod = await import('../../roadmap/ui/modules/settings.js');
+      new mod.SettingsRenderer('set-root', { store }).render({ governanceModeState: { mode: 'observe', defaulted: false } });
+      const chips = Array.from(dom.window.document.querySelectorAll('.cc-theme-select')) as any[];
+      assert.equal(chips.length, 6);
+      assert.ok(chips.every((c) => c.disabled), 'every chip is disabled');
+      chips[0].click();
+      assert.equal(setThemeCalls, 0, 'a disabled chip does not ask to change the theme');
+      assert.match(dom.window.document.querySelector('.cc-theme-note')!.textContent!, /Open the Console from VS Code/);
     } finally {
       (global as any).window = prevWin;
       (global as any).document = prevDoc;
