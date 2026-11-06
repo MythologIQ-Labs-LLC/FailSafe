@@ -433,7 +433,14 @@ export class ConsoleRouteRegistrar {
         Array.isArray((c as Record<string, unknown>).evidenceRefs) &&
         ((c as Record<string, unknown>).evidenceRefs as unknown[]).length > 0
       ).length;
-      res.json({ overall: null, status: "unverified", checkpointCount: cps.length, passCount: passed });
+      res.json({
+        // A numeric score is unavailable until policy evidence can be verified
+        // for provenance, freshness and governing scope.
+        overall: null,
+        status: cps.length === 0 ? "no_evidence" : "unverified",
+        checkpointCount: cps.length,
+        passCount: passed,
+      });
     });
   }
 
