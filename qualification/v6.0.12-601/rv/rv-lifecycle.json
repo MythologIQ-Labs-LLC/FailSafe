@@ -1,0 +1,425 @@
+{
+  "schema": "failsafe.release-verification/v1",
+  "kind": "lifecycle",
+  "version": "6.0.12",
+  "generatedAt": "2026-11-06T18:32:55.758Z",
+  "tool": {
+    "gitSha": "e3792d8a232a5f98bce3eeccc4192279866482c1",
+    "node": "22.23.4",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "inputs": {
+    "artifactSource": {
+      "kind": "local-dir",
+      "ref": "C:\\dev\\mythologiq\\FailSafe-601\\FailSafe\\extension\\dist-vsix"
+    },
+    "approvedSums": null,
+    "vsix": {
+      "from": {
+        "path": "C:\\dev\\mythologiq\\FailSafe-6012-qual\\published-6011\\mythologiq-failsafe-6.0.11-win32-x64.vsix",
+        "sha256": "72f2d2310919956246346423c28d619ee2939e56232aa5e801cebb73c941b747",
+        "version": "6.0.11",
+        "targetPlatform": "win32-x64"
+      },
+      "to": {
+        "path": "C:\\dev\\mythologiq\\FailSafe-601\\FailSafe\\extension\\dist-vsix\\mythologiq-failsafe-6.0.12-win32-x64.vsix",
+        "sha256": "01fc22fbdbadc2e55b962ff927f904f36737ef7553c19c296fa8f50d602a71cc",
+        "version": "6.0.12",
+        "targetPlatform": "win32-x64"
+      }
+    }
+  },
+  "checks": [
+    {
+      "id": "to-inventory",
+      "scope": "artifact",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "inventory passed before install",
+      "evidence": null
+    },
+    {
+      "id": "S1",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null
+    },
+    {
+      "id": "S2",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null
+    },
+    {
+      "id": "S3",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null
+    },
+    {
+      "id": "S4",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy; force-killed after commit-observed",
+      "evidence": null
+    },
+    {
+      "id": "S5",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null
+    },
+    {
+      "id": "S6",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null
+    },
+    {
+      "id": "S7",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "healthy",
+      "evidence": null
+    },
+    {
+      "id": "persistence",
+      "scope": "lifecycle",
+      "target": "win32-x64",
+      "status": "pass",
+      "detail": "snapshot.created S1=1 S2=2 S3=3 S4=4 S5=5 S6=6 S7=7",
+      "evidence": {
+        "series": [
+          {
+            "step": "S1",
+            "snapshotCreated": 1
+          },
+          {
+            "step": "S2",
+            "snapshotCreated": 2
+          },
+          {
+            "step": "S3",
+            "snapshotCreated": 3
+          },
+          {
+            "step": "S4",
+            "snapshotCreated": 4
+          },
+          {
+            "step": "S5",
+            "snapshotCreated": 5
+          },
+          {
+            "step": "S6",
+            "snapshotCreated": 6
+          },
+          {
+            "step": "S7",
+            "snapshotCreated": 7
+          }
+        ]
+      }
+    },
+    {
+      "id": "home-registry",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "every healthy step registered in C:\\Users\\<user>\\AppData\\Local\\Temp\\fs6012-life-s35j\\home\\.failsafe\\servers.json (FailSafe's home resolved inside ROOT)",
+      "evidence": null
+    },
+    {
+      "id": "operator-registry",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "informational: no ROOT entry in the operator's registry (a live FailSafe prunes and rewrites it, so absence proves little)",
+      "evidence": {
+        "before": null,
+        "after": null
+      }
+    },
+    {
+      "id": "residual-processes",
+      "scope": "isolation",
+      "target": null,
+      "status": "pass",
+      "detail": "none",
+      "evidence": {
+        "residual": []
+      }
+    }
+  ],
+  "downloads": [],
+  "processes": {
+    "owned": [
+      {
+        "pid": 27488,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 42636,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 42104,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 43120,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 13492,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 44152,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 41560,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 44424,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 10108,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 41168,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 42932,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 35156,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 40316,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 17136,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 38368,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 27968,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 39384,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 37908,
+        "exe": "c:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\7baac39ec3\\resources\\app\\node_modules.asar.unpacked\\@github\\copilot-sdk-win32-x64\\prebuilds\\win32-x64\\copilot-runtime.exe"
+      },
+      {
+        "pid": 42856,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 32376,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 43992,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 39580,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 9512,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 27172,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 18476,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 43216,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 46052,
+        "exe": "c:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\7baac39ec3\\resources\\app\\node_modules.asar.unpacked\\@github\\copilot-sdk-win32-x64\\prebuilds\\win32-x64\\copilot-runtime.exe"
+      },
+      {
+        "pid": 43112,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 33212,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 35444,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 30776,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 13564,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 37344,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 43792,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 39040,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 38500,
+        "exe": "c:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\7baac39ec3\\resources\\app\\node_modules.asar.unpacked\\@github\\copilot-sdk-win32-x64\\prebuilds\\win32-x64\\copilot-runtime.exe"
+      },
+      {
+        "pid": 43148,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 38016,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 43028,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 12152,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 8188,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 45568,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 33608,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 36576,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 42840,
+        "exe": "c:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\7baac39ec3\\resources\\app\\node_modules.asar.unpacked\\@github\\copilot-sdk-win32-x64\\prebuilds\\win32-x64\\copilot-runtime.exe"
+      },
+      {
+        "pid": 37520,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 43404,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 35156,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 19580,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 38532,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 45224,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 40652,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 40460,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 44992,
+        "exe": "c:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\7baac39ec3\\resources\\app\\node_modules.asar.unpacked\\@github\\copilot-sdk-win32-x64\\prebuilds\\win32-x64\\copilot-runtime.exe"
+      },
+      {
+        "pid": 40764,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 45792,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 28228,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 45524,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 27044,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 43776,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 38748,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 8276,
+        "exe": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe"
+      },
+      {
+        "pid": 11900,
+        "exe": "c:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\7baac39ec3\\resources\\app\\node_modules.asar.unpacked\\@github\\copilot-sdk-win32-x64\\prebuilds\\win32-x64\\copilot-runtime.exe"
+      }
+    ],
+    "residual": []
+  }
+}

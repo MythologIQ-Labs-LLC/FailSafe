@@ -1,0 +1,344 @@
+{
+  "pegasus": {
+    "monitorLowest": [
+      {
+        "sel": "div.step.active",
+        "text": "Audit",
+        "ratio": 1.1
+      },
+      {
+        "sel": "div.eyebrow",
+        "text": "Recently Completed",
+        "ratio": 4.05
+      },
+      {
+        "sel": "div.flow-copy",
+        "text": "None yet",
+        "ratio": 4.05
+      },
+      {
+        "sel": "div.eyebrow",
+        "text": "Recommended Next Step",
+        "ratio": 4.05
+      },
+      {
+        "sel": "span.alert-entry",
+        "text": "#548",
+        "ratio": 4.05
+      },
+      {
+        "sel": "div.health-label",
+        "text": "Critical Blockers",
+        "ratio": 4.05
+      }
+    ],
+    "sreLowest": [
+      {
+        "sel": "span.sep",
+        "text": "·",
+        "ratio": 1.27
+      },
+      {
+        "sel": "div.sre-footer",
+        "text": "Supports the",
+        "ratio": 4.34
+      },
+      {
+        "sel": "p.",
+        "text": "This panel surfaces telemetry from the",
+        "ratio": 4.7
+      },
+      {
+        "sel": "p.",
+        "text": "via the FailSafe adapter.",
+        "ratio": 4.7
+      }
+    ],
+    "monitorTexts": 36
+  },
+  "mythiq": {
+    "monitorLowest": [
+      {
+        "sel": "button.debug-status.pending",
+        "text": "Debug",
+        "ratio": 6.66
+      },
+      {
+        "sel": "span.eyebrow",
+        "text": "Active Build Step",
+        "ratio": 7.31
+      },
+      {
+        "sel": "div.plan-title-line",
+        "text": "Tracking: Test Plan: Monitor SHIELD Visi",
+        "ratio": 7.31
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Implement",
+        "ratio": 7.31
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Substantiate",
+        "ratio": 7.31
+      },
+      {
+        "sel": "span.eyebrow",
+        "text": "Sentinel Status",
+        "ratio": 7.31
+      }
+    ],
+    "sreLowest": [
+      {
+        "sel": "span.sep",
+        "text": "·",
+        "ratio": 1.99
+      },
+      {
+        "sel": "p.",
+        "text": "This panel surfaces telemetry from the",
+        "ratio": 6.95
+      },
+      {
+        "sel": "p.",
+        "text": "via the FailSafe adapter.",
+        "ratio": 6.95
+      },
+      {
+        "sel": "p.",
+        "text": "Start the adapter to enable governance t",
+        "ratio": 6.95
+      }
+    ],
+    "monitorTexts": 36
+  },
+  "midnight": {
+    "monitorLowest": [
+      {
+        "sel": "button.debug-status.pending",
+        "text": "Debug",
+        "ratio": 4.28
+      },
+      {
+        "sel": "span.eyebrow",
+        "text": "Active Build Step",
+        "ratio": 4.41
+      },
+      {
+        "sel": "div.plan-title-line",
+        "text": "Tracking: Test Plan: Monitor SHIELD Visi",
+        "ratio": 4.41
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Implement",
+        "ratio": 4.41
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Substantiate",
+        "ratio": 4.41
+      },
+      {
+        "sel": "div.eyebrow",
+        "text": "Recently Completed",
+        "ratio": 4.41
+      }
+    ],
+    "sreLowest": [
+      {
+        "sel": "span.sep",
+        "text": "·",
+        "ratio": 1.42
+      },
+      {
+        "sel": "p.",
+        "text": "This panel surfaces telemetry from the",
+        "ratio": 4.18
+      },
+      {
+        "sel": "p.",
+        "text": "via the FailSafe adapter.",
+        "ratio": 4.18
+      },
+      {
+        "sel": "p.",
+        "text": "Start the adapter to enable governance t",
+        "ratio": 4.18
+      }
+    ],
+    "monitorTexts": 36
+  },
+  "aurora": {
+    "monitorLowest": [
+      {
+        "sel": "span.eyebrow",
+        "text": "Active Build Step",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.plan-title-line",
+        "text": "Tracking: Test Plan: Monitor SHIELD Visi",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Implement",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Substantiate",
+        "ratio": 12.02
+      },
+      {
+        "sel": "span.eyebrow",
+        "text": "Sentinel Status",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.queue-title",
+        "text": "Queue",
+        "ratio": 12.02
+      }
+    ],
+    "sreLowest": [
+      {
+        "sel": "span.sep",
+        "text": "·",
+        "ratio": 1.96
+      },
+      {
+        "sel": "div.sre-footer",
+        "text": "Supports the",
+        "ratio": 12.02
+      },
+      {
+        "sel": "p.",
+        "text": "This panel surfaces telemetry from the",
+        "ratio": 12.81
+      },
+      {
+        "sel": "p.",
+        "text": "via the FailSafe adapter.",
+        "ratio": 12.81
+      }
+    ],
+    "monitorTexts": 36
+  },
+  "crimson": {
+    "monitorLowest": [
+      {
+        "sel": "span.eyebrow",
+        "text": "Active Build Step",
+        "ratio": 9.65
+      },
+      {
+        "sel": "div.plan-title-line",
+        "text": "Tracking: Test Plan: Monitor SHIELD Visi",
+        "ratio": 9.65
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Implement",
+        "ratio": 9.65
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Substantiate",
+        "ratio": 9.65
+      },
+      {
+        "sel": "span.eyebrow",
+        "text": "Sentinel Status",
+        "ratio": 9.65
+      },
+      {
+        "sel": "div.queue-title",
+        "text": "Queue",
+        "ratio": 9.65
+      }
+    ],
+    "sreLowest": [
+      {
+        "sel": "span.sep",
+        "text": "·",
+        "ratio": 1.94
+      },
+      {
+        "sel": "div.sre-footer",
+        "text": "Supports the",
+        "ratio": 9.65
+      },
+      {
+        "sel": "p.",
+        "text": "This panel surfaces telemetry from the",
+        "ratio": 9.71
+      },
+      {
+        "sel": "p.",
+        "text": "via the FailSafe adapter.",
+        "ratio": 9.71
+      }
+    ],
+    "monitorTexts": 36
+  },
+  "atmosphere": {
+    "monitorLowest": [
+      {
+        "sel": "button.debug-status.pending",
+        "text": "Debug",
+        "ratio": 9.85
+      },
+      {
+        "sel": "span.eyebrow",
+        "text": "Active Build Step",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.plan-title-line",
+        "text": "Tracking: Test Plan: Monitor SHIELD Visi",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Implement",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.step.pending",
+        "text": "Substantiate",
+        "ratio": 12.02
+      },
+      {
+        "sel": "div.eyebrow",
+        "text": "Recently Completed",
+        "ratio": 12.02
+      }
+    ],
+    "sreLowest": [
+      {
+        "sel": "span.sep",
+        "text": "·",
+        "ratio": 2
+      },
+      {
+        "sel": "p.",
+        "text": "This panel surfaces telemetry from the",
+        "ratio": 12.02
+      },
+      {
+        "sel": "p.",
+        "text": "via the FailSafe adapter.",
+        "ratio": 12.02
+      },
+      {
+        "sel": "p.",
+        "text": "Start the adapter to enable governance t",
+        "ratio": 12.02
+      }
+    ],
+    "monitorTexts": 36
+  }
+}

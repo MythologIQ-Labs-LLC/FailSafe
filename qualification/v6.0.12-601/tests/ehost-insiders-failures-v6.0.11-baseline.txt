@@ -1,0 +1,72 @@
+"after all" hook for "dispose removes the safe-git and graft temporary directories"
+"after all" hook for "each POST route has its own rate limit: bootstrap 5, propose 10, open 30 per minute"
+"after all" hook for "every call uses the exact argv, an allowlisted subcommand and no shell"
+"after all" hook for "open runs the Console request guard: a foreign Origin is 403, text/plain is 415, nothing opens"
+"after all" hook for "real ledger: the PROPOSAL carries HEAD; an architecture L3_APPROVED blocks even behind 1200 later approvals"
+"after all" hook for "real-ledger timing row: a no-match walk over the enclosing repository ledger takes under 10 s"
+"after each" hook for "Apply writes exactly the in-memory bytes, including created and deleted files"
+"after each" hook for "Continue: spawn cwd is a disposable worktree, never the workspace; change quarantined"
+"after each" hook for "H1: a checkpoint over a temp repository records its HEAD"
+"after each" hook for "W1: a loose branch ref"
+"after each" hook for "approved: one LINKED entry naming the commit, tree, branch, via governed-commit and the action; the dialog shows them"
+"after each" hook for "arguments that carry only reworks still count as arguments, are shown "as requested", and confirm is called once"
+"after each" hook for "called with arguments: confirm is called exactly once, the values are "as requested" with the command-call footer, and an approval records the row and its mirror"
+"after each" hook for "candidates, link, unlink and assess make no network call and run git only through the runner"
+"after each" hook for "diffIdentity: equal for a cherry-pick, different for an edit, none for a merge, an empty commit and a non-UTF-8 file"
+"after each" hook for "edit + untracked create + delete stay out of the workspace and all appear in the patch"
+"after each" hook for "every route refuses a non-loopback caller"
+"after each" hook for "exit 0 is an ancestor, exit 1 is not, any other exit is unavailable; equal names need no git call"
+"after each" hook for "review N2: the tampered row names an ancestor of HEAD, so the refusal comes from the hash check alone"
+"after each" hook for "the binding comes from server state; request trees, digests and supersedes are ignored"
+#531 ArchitectureIndexRoute
+#531 slice 2 architecture authority route
+#532 B320 delivery review (plan-b320 LD12)
+#532 B320 failsafe.delivery.recordReview
+#532 B344 failsafe.delivery.recordReview with rework
+#532 DeliveryRoute
+#532 governed commit link (B286)
+(d) a link or a file at the lock path is LOCK_BLOCKED at once
+B312 architecture links route
+C1 every catalog adapter passes every claimed contract; 25 pairs are checked
+C2 Sentinel watcher (extension host, temp git workspace)
+CheckpointRoute rollback on a real repository (#532 B284)
+HubSnapshotService (Phase 60 §0)
+RiskStore (#517 FX972)
+TrackerRoute.api cadence (GH #174 Part 2)
+TrackerRoute.api cadence (GH #174 Part 2)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+a ledger committed as a symlink (mode 120000) is an error, not a file
+a missing or corrupt object is an error, never an absent file
+a partial clone (extensions.partialClone) is refused for every git read
+a promisor remote (remote.<name>.promisor) is refused for every git read
+agent-run-promotion (#475 FX952)
+delivery: no egress (#532 LD1)
+deliveryGit (#532 LD4)
+deliveryGit ancestry (#532 B320)
+deliveryGit rework reads (#532 B344)
+end to end: parent ledger unreadable -> anything but Verified (not-seal-commit is not skipped)
+every merge anchor outside the window → cadence collapses to empty, but truncation is still disclosed
+governed wrappers run isolated (#475 FX831/FX832)
+history within the window → no truncation advisory
+integration capability conformance (#474)
+isShallow is true for a depth-1 clone and false for the full repo
+isolated-run (#475 FX951)
+merge anchor exactly at the window edge resolves its real title via the +1 lookahead commit
+merge anchor older than the window is dropped; a recent one is still found
+no semver releases + merged-PR git history → cadence=pr-incremental with pr-<N> anchors
+node_modules/ never becomes the last verdict; src/ does
+semver releases present → cadence=semver (PR fallback does NOT hijack)
+the chat participant renders an imported purpose as text at all three sites
+tracker preview and chat Markdown safety (#480 T11)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source: ledger history search (#476 N1)
+workspaceHead (#532 B284)

@@ -1,0 +1,25 @@
+{"label":"authorized frame capture (expect 101 + init only)","status":"HTTP/1.1 101 Switching Protocols","end":"settled","bodyBytes":5943,"events":[{"type":"init","payloadKeys":34,"bytes":5939}]}
+{"label":"Host localhost, Origin 127.0.0.1 (mismatch)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Host [::1] over IPv4 socket","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Host 127.0.0.2 (other loopback)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Host localhost. (trailing dot)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Host decimal 2130706433","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"https Origin same host","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Origin with trailing slash","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Origin with userinfo","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Origin file://","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"Origin vscode-webview://","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"D1 duplicate Host (trusted first, hostile second)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[{"partial":true}]}
+{"label":"D1 duplicate Host (hostile first, trusted second)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[{"partial":true}]}
+{"label":"D1 duplicate Host (identical values)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[{"partial":true}]}
+{"label":"D1 duplicate Host (contradictory loopback: 127.0.0.1 then localhost)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[{"partial":true}]}
+{"label":"D1 duplicate Host (lower-case second header name)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[{"partial":true}]}
+{"label":"D1 control: single Host after the duplicate cases","status":"HTTP/1.1 101 Switching Protocols","end":"settled","bodyBytes":5943,"events":[{"type":"init","payloadKeys":34,"bytes":5939}]}
+{"label":"duplicate Origin (trusted + attacker)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"duplicate Sec-WebSocket-Version 13,13","status":"HTTP/1.1 400 Bad Request","end":"closed","bodyBytes":47,"events":[]}
+{"label":"missing Sec-WebSocket-Version","status":"HTTP/1.1 400 Bad Request","end":"closed","bodyBytes":47,"events":[]}
+{"label":"Sec-WebSocket-Origin only (no Origin)","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"non-root path /api/ws","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"X-Forwarded-For/Host loopback spoof + attacker Origin","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"no Host, HTTP/1.0","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}
+{"label":"no Host, HTTP/1.1","status":"HTTP/1.1 403 Forbidden","end":"closed","bodyBytes":9,"events":[]}

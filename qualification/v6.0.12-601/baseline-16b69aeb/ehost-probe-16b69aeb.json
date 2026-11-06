@@ -1,0 +1,157 @@
+{
+  "root": "C:\\Users\\<user>\\AppData\\Local\\Temp\\fs601-ehost-svPGTk",
+  "log": [
+    {
+      "at": "2026-11-06T17:23:10.604Z",
+      "k": "frames",
+      "v": [
+        "vscode-file://vscode-app/c:/dev/mythologiq/FailSafe-6012-qual/vscode-test/vscode-win32-x64-archive-insiders/d9cccddf6b/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
+        "vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/index.html?id=d236fa15-aa38-4464-a273-eeff4795b627&parentId=1&origin=ec5269b7-9201-4765-ae93-3e7726b55ded&swVersion=6&extensionId=MythologIQ.mythologiq-failsafe&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&mountId=999febdd-4525-4e45-b1e4-61ad3a7d17c2&purpose=webviewView",
+        "vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/fake.html?id=d236fa15-aa38-4464-a273-eeff4795b627",
+        "http://localhost:9376/?ui=compact"
+      ]
+    },
+    {
+      "at": "2026-11-06T17:23:10.618Z",
+      "k": "cdp.targets",
+      "v": [
+        "page vscode-file://vscode-app/c:/dev/mythologiq/FailSafe-6012-qual/vscode-test/vscode-win32-x64-archive-insiders/d9cccddf6b/r",
+        "iframe vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/index.html?id=d236fa15-aa38-4464-a273-eeff4795b627",
+        "iframe http://localhost:9376/?ui=compact",
+        "service_worker vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/service-worker.js?v=6&vscode-resource-base-authori",
+        "worker blob:vscode-file://vscode-app/26680f13-6ca8-471d-860e-aa61abef5d0f"
+      ]
+    },
+    {
+      "at": "2026-11-06T17:23:10.618Z",
+      "k": "frames2",
+      "v": [
+        "vscode-file://vscode-app/c:/dev/mythologiq/FailSafe-6012-qual/vscode-test/vscode-win32-x64-archive-insiders/d9cccddf6b/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
+        "vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/index.html?id=d236fa15-aa38-4464-a273-eeff4795b627&parentId=1&origin=ec5269b7-9201-4765-ae93-3e7726b55ded&swVersion=6&extensionId=MythologIQ.mythologiq-failsafe&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&mountId=999febdd-4525-4e45-b1e4-61ad3a7d17c2&purpose=webviewView",
+        "vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/fake.html?id=d236fa15-aa38-4464-a273-eeff4795b627",
+        "http://localhost:9376/?ui=compact"
+      ]
+    },
+    {
+      "at": "2026-11-06T17:23:10.625Z",
+      "k": "webview.iframes",
+      "v": [
+        {
+          "id": "active-frame",
+          "name": "",
+          "src": "vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/fake.html?id=d236fa15-aa38-4464-a273-eeff4795b627"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-06T17:23:10.628Z",
+      "k": "webview.iframes",
+      "v": [
+        {
+          "id": "main-frame",
+          "name": "",
+          "src": "http://localhost:9376/?ui=compact"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-06T17:23:10.630Z",
+      "k": "webview.iframes",
+      "v": []
+    },
+    {
+      "at": "2026-11-06T17:23:10.633Z",
+      "k": "console.http",
+      "v": 200
+    },
+    {
+      "at": "2026-11-06T17:23:13.644Z",
+      "k": "monitor.initial",
+      "v": {
+        "url": "http://localhost:9376/?ui=compact",
+        "dataTheme": null,
+        "lsTheme": null,
+        "themeTokensLinked": [
+          "roadmap.css"
+        ],
+        "bg": "rgba(0, 0, 0, 0)"
+      }
+    },
+    {
+      "at": "2026-11-06T17:23:13.644Z",
+      "k": "chrome.url",
+      "v": "vscode-webview://1q564p7f4c97l0ohhmh322fm3cnqcen68n2nh6uhtc9icrnmf85e/fake.html?id=d236fa15-aa38-4464-a273-eeff4795b627"
+    },
+    {
+      "at": "2026-11-06T17:23:13.645Z",
+      "k": "chrome.initial",
+      "v": "mythiq"
+    },
+    {
+      "at": "2026-11-06T17:23:13.647Z",
+      "k": "monitor.afterLsWrite",
+      "v": {
+        "url": "http://localhost:9376/?ui=compact",
+        "dataTheme": null,
+        "lsTheme": "crimson",
+        "themeTokensLinked": [
+          "roadmap.css"
+        ],
+        "bg": "rgba(0, 0, 0, 0)"
+      }
+    },
+    {
+      "at": "2026-11-06T17:23:31.987Z",
+      "k": "simpleBrowser.frame",
+      "v": null
+    },
+    {
+      "at": "2026-11-06T17:23:39.152Z",
+      "k": "external.initial",
+      "v": {
+        "url": "http://localhost:9376/?ui=console",
+        "dataTheme": "mythiq",
+        "lsTheme": "mythiq",
+        "themeTokensLinked": [
+          "https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap",
+          "/theme-tokens.css",
+          "/command-center.css"
+        ],
+        "bg": "rgb(15, 18, 25)"
+      }
+    },
+    {
+      "at": "2026-11-06T17:23:40.769Z",
+      "k": "external.afterAurora",
+      "v": {
+        "url": "http://localhost:9376/?ui=console",
+        "dataTheme": "aurora",
+        "lsTheme": "aurora",
+        "themeTokensLinked": [
+          "https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap",
+          "/theme-tokens.css",
+          "/command-center.css"
+        ],
+        "bg": "rgb(2, 44, 34)"
+      }
+    },
+    {
+      "at": "2026-11-06T17:23:40.770Z",
+      "k": "monitor.afterExternalAurora",
+      "v": {
+        "url": "http://localhost:9376/?ui=compact",
+        "dataTheme": null,
+        "lsTheme": "crimson",
+        "themeTokensLinked": [
+          "roadmap.css"
+        ],
+        "bg": "rgba(0, 0, 0, 0)"
+      }
+    },
+    {
+      "at": "2026-11-06T17:23:40.771Z",
+      "k": "chrome.afterExternalAurora",
+      "v": "mythiq"
+    }
+  ]
+}

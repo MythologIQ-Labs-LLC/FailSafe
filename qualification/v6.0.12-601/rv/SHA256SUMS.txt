@@ -1,0 +1,8 @@
+01fc22fbdbadc2e55b962ff927f904f36737ef7553c19c296fa8f50d602a71cc  mythologiq-failsafe-6.0.12-win32-x64.vsix
+1478283bc2628a17f4309886df45cfd751f0c1388c34c83b1eeac2767fd3d650  mythologiq-failsafe-6.0.12-win32-arm64.vsix
+1d5f58376c83539e34dc5154d323117e4908af3769f53880e4b143fd4871199f  mythologiq-failsafe-6.0.12-linux-x64.vsix
+01c31eae305d4afe53bbc236822f0c5bcc317c3b7d5304115c6f5cee9f662d81  mythologiq-failsafe-6.0.12-linux-arm64.vsix
+2defff0c9ec8a094e168346b21663891cb8e079b1e446c7030e4d967aa595ee4  mythologiq-failsafe-6.0.12-alpine-x64.vsix
+c1f0847b321eb929089da036511f6829ca74b3cdc2eb1be65df715624e17bd39  mythologiq-failsafe-6.0.12-alpine-arm64.vsix
+f943147dff50c319a2a284255d07f33f1633fa407e155ed3a9f98bb93fb86f6e  mythologiq-failsafe-6.0.12-darwin-x64.vsix
+674378f0f562fad731ffbdc758b2cd5e6c48a326725e0abf4c1f41a4c3854dfd  mythologiq-failsafe-6.0.12-darwin-arm64.vsix
