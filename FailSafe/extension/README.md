@@ -1,8 +1,8 @@
 # FailSafe: Governance for AI Coding Agents
 
-## What's New in v6.0.11
+## What's New in v6.0.12
 
-Security and reliability patch. The Console WebSocket refuses handshakes that carry duplicate `Host` headers, and the install-skills progress socket connects to the Console's actual host and port (#587). Console server discovery no longer creates `~/.failsafe` or rewrites the server registry when it only reads it (#591). The FailSafe Monitor footer no longer shows stray backslashes.
+**Release candidate, not yet published; the published release is v6.0.11.** One theme for the whole app: the theme you pick in the Console now also applies to the Monitor sidebar and the SRE view, stays the same in the browser Console and in VS Code, and is kept across reloads and restarts in the VS Code setting `failsafe.console.theme` (#601). Includes the dependency updates merged after v6.0.11.
 
 
 **Understand agent activity, check risky changes, and keep evidence of what happened.**
@@ -75,7 +75,7 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 
 ---
 
-**Current Release**: v6.0.11 (2026-10-29)
+**Candidate Version**: v6.0.12 (2026-11-06), not yet published. **Current Release**: v6.0.11 (2026-10-29), the published version.
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 

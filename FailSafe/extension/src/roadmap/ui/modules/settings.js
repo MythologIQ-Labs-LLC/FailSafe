@@ -7,6 +7,7 @@ import { escapeHtml } from './brainstorm-templates.js';
 import { renderBicameralSettingsCard } from './bicameral-settings-card.js';
 import { renderVoicePackSettingsCard } from './voice-pack-settings-card.js';
 import { renderGovernanceModeCard, bindGovernanceModeCard } from './governance-mode-card.js';
+import { canChangeTheme } from './theme-sync.js';
 
 // Sentinel attr name used across all bind paths to make listener wiring
 // idempotent: a node carrying data-cc-bound="1" already has its listener
@@ -47,6 +48,7 @@ export class SettingsRenderer {
       <div class="cc-card" style="margin-bottom:16px">
         <div style="${LBL};margin-bottom:12px">Theme</div>
         <div class="cc-theme-chips" style="display:flex;gap:10px;flex-wrap:wrap">${THEMES.map(t => this.renderChip(t, current)).join('')}</div>
+        <div class="cc-theme-note" role="status" style="margin-top:10px;font-size:0.8rem;color:var(--text-muted)">${this.themeNote()}</div>
       </div>
       <div class="cc-card">
         <div style="${LBL};margin-bottom:8px">Configuration</div>
@@ -125,9 +127,21 @@ export class SettingsRenderer {
     if (!r.ok) checkbox.checked = !enabled;
   }
 
+  /** #601: one theme for the Console, the Monitor and the SRE view, kept by VS Code. */
+  themeNote() {
+    return this.canChangeTheme()
+      ? 'Applies to the Console, the Monitor sidebar and the SRE view, and is saved in VS Code settings (failsafe.console.theme).'
+      : 'Open the Console from VS Code (FailSafe: Open Console) to change the theme. It follows the theme chosen there.';
+  }
+
+  canChangeTheme() {
+    try { return canChangeTheme(); } catch { return false; }
+  }
+
   renderChip(theme, current) {
     const active = theme.id === current ? ' active' : '';
-    return `<button class="cc-chip cc-theme-select${active}" data-theme="${theme.id}" style="display:flex;align-items:center;gap:6px;padding:6px 14px">
+    const locked = this.canChangeTheme() ? '' : ' disabled aria-disabled="true"';
+    return `<button class="cc-chip cc-theme-select${active}" data-theme="${theme.id}" aria-pressed="${theme.id === current}"${locked} style="display:flex;align-items:center;gap:6px;padding:6px 14px">
         <span style="width:12px;height:12px;border-radius:50%;background:${theme.swatch};border:2px solid var(--border-rim)"></span>
         <span>${theme.name}</span><span style="font-size:0.65rem;color:var(--text-muted)">${theme.label}</span>
       </button>`;
@@ -135,11 +149,26 @@ export class SettingsRenderer {
 
   bindChips() {
     this.container.querySelectorAll('.cc-theme-select').forEach(chip => {
-      bindOnce(chip, 'click', () => {
+      bindOnce(chip, 'click', async () => {
         if (!this.store) return;
-        this.store.setTheme(chip.dataset.theme);
-        this.container.querySelectorAll('.cc-theme-select').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
+        // The extension host confirms the change; the page (and every other Console and
+        // Monitor) then re-themes from that confirmation, not from this click.
+        const result = await this.store.setTheme(chip.dataset.theme);
+        if (result && result.ok === false) {
+          const note = this.container.querySelector('.cc-theme-note');
+          if (note) {
+            note.textContent = result.reason === 'theme-key'
+              ? 'Open the Console from VS Code (FailSafe: Open Console) to change the theme. Nothing was changed.'
+              : 'The theme could not be changed. Nothing was changed.';
+          }
+          return;
+        }
+        // The confirmation may already have re-rendered the chips, so mark them by theme name.
+        const chosen = (result && result.theme) || chip.dataset.theme;
+        this.container.querySelectorAll('.cc-theme-select').forEach(c => {
+          c.classList.toggle('active', c.dataset.theme === chosen);
+          c.setAttribute('aria-pressed', String(c.dataset.theme === chosen));
+        });
       });
     });
   }

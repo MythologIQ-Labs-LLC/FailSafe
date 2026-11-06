@@ -69,6 +69,33 @@ function assertIncludes(haystack, needle, label) {
   }
 }
 
+/**
+ * Only PRs and explicit release/v<version>-rc branches can package an
+ * unpublished candidate while retaining the truthful published release.
+ * Main and tag workflows still require the exact published version marker.
+ */
+function releaseMarkerMatches(readme, version, date, env = process.env) {
+  if (readme.includes("**Current Release**: v" + version + " (" + date + ")")) return true;
+  const candidateRef = "refs/heads/release/v" + version + "-rc";
+  const ref = String(env.GITHUB_REF || "");
+  const rcSuffix = ref.startsWith(candidateRef) ? ref.slice(candidateRef.length) : null;
+  const allowedRc = env.GITHUB_EVENT_NAME === "push" && rcSuffix !== null && /^[0-9A-Za-z._-]*$/.test(rcSuffix);
+  if (env.GITHUB_EVENT_NAME !== "pull_request" && !allowedRc) return false;
+  if (!readme.includes("**Candidate Version**: v" + version + " (" + date + "), not yet published.")) return false;
+  const current = readme.match(/\*\*Current Release\*\*: v(\d+\.\d+\.\d+) \(\d{4}-\d{2}-\d{2}\)/);
+  if (!current) return false;
+  const a = current[1].split(".").map(Number), b = version.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (a[i] < b[i]) return true;
+    if (a[i] > b[i]) return false;
+  }
+  return false;
+}
+function requireReleaseMarker(readme, version, date, label) {
+  if (!releaseMarkerMatches(readme, version, date)) {
+    fail(label + " missing: expected published v" + version + " or truthful unpublished candidate on PR/RC ref");
+  }
+}
 // @vscode/vsce 3.2.0+ renames the README/CHANGELOG archive entries to lowercase
 // (extension/readme.md, extension/changelog.md) regardless of on-disk casing;
 // vsce 2.x preserves casing. Resolve the actual entry case-insensitively so the
@@ -135,11 +162,7 @@ function main() {
     );
   }
 
-  assertIncludes(
-    sourceReadme,
-    `**Current Release**: v${sourcePkg.version} (${latestRelease.date})`,
-    "Source README release marker"
-  );
+  requireReleaseMarker(sourceReadme, sourcePkg.version, latestRelease.date, "Source README release marker");
   assertIncludes(sourceReadme, `## What's New in v${sourcePkg.version}`, "Source README release notes heading");
   // Validate all icon references in package.json resolve to real files
   const iconErrors = [];
@@ -223,11 +246,7 @@ function main() {
   assertIncludes(manifest, `DisplayName>${sourcePkg.displayName}<`, "VSIX display name");
 
   const readme = archive.read(readmeEntry);
-  assertIncludes(
-    readme,
-    `**Current Release**: v${sourcePkg.version} (${latestRelease.date})`,
-    "Packaged README release marker"
-  );
+  requireReleaseMarker(readme, sourcePkg.version, latestRelease.date, "Packaged README release marker");
   assertIncludes(readme, `## What's New in v${sourcePkg.version}`, "Packaged README release notes");
 
   const changelog = archive.read(changelogEntry);
@@ -272,7 +291,7 @@ function assertVsixUnderCeiling(vsixPath, ceilingBytes) {
   }
 }
 
-module.exports = { assertVsixUnderCeiling };
+module.exports = { assertVsixUnderCeiling, releaseMarkerMatches };
 
 if (require.main === module) {
   main();

@@ -33,7 +33,7 @@ The client speaks the Ollama HTTP API: `GET /api/tags` for availability and `POS
 ## Privileges and scopes
 
 Credential: none; requests carry only a content type `FailSafe/extension/src/sentinel/utils/llmTransport.ts:56-58` (`'Content-Type': 'application/json'`).
-Endpoint: `failsafe.sentinel.ollamaEndpoint`, default `localhost:11434` over http, machine scope (read from user settings) `FailSafe/extension/package.json:660-663` (`"failsafe.sentinel.ollamaEndpoint": {`).
+Endpoint: `failsafe.sentinel.ollamaEndpoint`, default `localhost:11434` over http, machine scope (read from user settings) `FailSafe/extension/package.json:682-685` (`"failsafe.sentinel.ollamaEndpoint": {`).
 Because the setting is machine scope, VS Code ignores a value in workspace settings (a compatibility break on main); a per-workspace override goes in `.failsafe/config/sentinel.yaml` and may name only an endpoint on this machine. ConfigManager still labels a workspace value as `workspace-setting`, as defence in depth `FailSafe/extension/src/sentinel/utils/llmDestinationPolicy.ts:88-89` (`source: 'workspace-setting'`).
 A workspace file `.failsafe/config/sentinel.yaml` still overrides the endpoint and the mode, and ConfigManager records where the endpoint came from `FailSafe/extension/src/shared/ConfigManager.ts:51` (`resolveSentinelEndpoint(sentinelYaml?.sentinel?.ollamaEndpoint`).
 Main only, not in v6.0.8: a workspace file or workspace setting may name only a host on this machine (`localhost`, 127.0.0.0/8, `::1`); any other host is allowed only from the user setting `FailSafe/extension/src/sentinel/utils/llmDestinationPolicy.ts:67` (`if (source !== 'user-setting')`).
@@ -49,15 +49,15 @@ VS Code reports remote-machine settings and Dev Container settings as user value
 | hosted-model-consent | main-unreleased | `createLlmEgressAuthorizer` `FailSafe/extension/src/sentinel/utils/llmEgressAuthorizer.ts:84` (`export function createLlmEgressAuthorizer(`) | `FailSafe/extension/src/extension/llmEgressWiring.ts:17` (`createLlmEgressAuthorizer(context.globalState, vscode.window)`) | `FailSafe/extension/src/test/sentinel/utils/llmEgressAuthorizer.test.ts` (unit) | One instance per activation, shared by Sentinel and Brainstorm. Main only, not in v6.0.8 |
 | forget-approvals | main-unreleased | `registerForgetLlmApprovalsCommand` `FailSafe/extension/src/extension/llmEgressWiring.ts:24` (`export function registerForgetLlmApprovalsCommand(`) | `FailSafe/extension/src/extension/bootstrapSentinel.ts:37` (`registerForgetLlmApprovalsCommand(context, llmAuthorizer);`) | `FailSafe/extension/src/test/extension/forget-llm-approvals.test.ts` (installed-vscode) | "FailSafe: Forget Sentinel LLM Approvals". Main only, not in v6.0.8 |
 | availability-probe | shipped-unverified | `checkAvailability` `FailSafe/extension/src/sentinel/utils/LLMClient.ts:50` (`async checkAvailability(`) | `FailSafe/extension/src/sentinel/SentinelDaemon.ts:73` (`this.status.llmAvailable = await this.arbiter.checkLLMAvailability();`) | none | Runs at every Sentinel start in every mode. Main differs (unreleased): the start probe never asks, and a destination that needs approval is offered in the background in an LLM mode `FailSafe/extension/src/sentinel/VerdictArbiter.ts:65` (`this.llmAvailable = await this.llmClient.checkAvailability(`) |
-| file-analysis-prompt | shipped-inert | `callEndpoint` `FailSafe/extension/src/sentinel/utils/LLMClient.ts:121` (`async callEndpoint(prompt: string, timeoutMs = 5000)`) | none | none | Switch: the mode defaults to heuristic `FailSafe/extension/package.json:652` (`"default": "heuristic",`), and heuristic mode never invokes the model `FailSafe/extension/src/sentinel/VerdictArbiter.ts:223-224` (`if (this.currentMode === 'heuristic') {`) |
-| brainstorm-transcript-prompt | shipped-unverified | `createBrainstormService` `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:88` (`export function createBrainstormService(`) | `FailSafe/extension/src/roadmap/ConsoleServer.ts:153` (`createBrainstormService(options.configProvider`) | none | Not gated by the Sentinel mode: in v6.0.8 any reachable valid endpoint gets the transcript. Main differs (unreleased): only a destination the policy allows, after asking `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:102` (`llm.checkAvailability(`) |
-| console-ollama-probe | shipped-unverified | `_probeOllama` `FailSafe/extension/src/roadmap/ui/modules/connection.js:336` (`async _probeOllama() {`) | `FailSafe/extension/src/roadmap/ui/command-center.js:32` (`const client = new ConnectionClient();`) | none | Fixed loopback target, no override `FailSafe/extension/src/roadmap/ui/modules/connection.js:345` (`fetch('http://localhost:11434/api/tags'`) |
+| file-analysis-prompt | shipped-inert | `callEndpoint` `FailSafe/extension/src/sentinel/utils/LLMClient.ts:121` (`async callEndpoint(prompt: string, timeoutMs = 5000)`) | none | none | Switch: the mode defaults to heuristic `FailSafe/extension/package.json:674` (`"default": "heuristic",`), and heuristic mode never invokes the model `FailSafe/extension/src/sentinel/VerdictArbiter.ts:223-224` (`if (this.currentMode === 'heuristic') {`) |
+| brainstorm-transcript-prompt | shipped-unverified | `createBrainstormService` `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:88` (`export function createBrainstormService(`) | `FailSafe/extension/src/roadmap/ConsoleServer.ts:161` (`createBrainstormService(options.configProvider`) | none | Not gated by the Sentinel mode: in v6.0.8 any reachable valid endpoint gets the transcript. Main differs (unreleased): only a destination the policy allows, after asking `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:102` (`llm.checkAvailability(`) |
+| console-ollama-probe | shipped-unverified | `_probeOllama` `FailSafe/extension/src/roadmap/ui/modules/connection.js:342` (`async _probeOllama() {`) | `FailSafe/extension/src/roadmap/ui/command-center.js:32` (`const client = new ConnectionClient();`) | none | Fixed loopback target, no override `FailSafe/extension/src/roadmap/ui/modules/connection.js:351` (`fetch('http://localhost:11434/api/tags'`) |
 
 ## Inbound fields
 
 From `/api/tags`: only whether the HTTP status is 2xx `FailSafe/extension/src/sentinel/utils/LLMClient.ts:57` (`const available = response.status >= 200 && response.status < 300;`).
 From `/api/generate`: `response` text and `total_duration` `FailSafe/extension/src/sentinel/utils/LLMClient.ts:144-152` (`total_duration?: number;`).
-The Console probe reads only whether the response is OK `FailSafe/extension/src/roadmap/ui/modules/connection.js:351-352` (`available = !!(res && res.ok);`).
+The Console probe reads only whether the response is OK `FailSafe/extension/src/roadmap/ui/modules/connection.js:357-358` (`available = !!(res && res.ok);`).
 
 ## Outbound fields and egress
 
@@ -68,7 +68,7 @@ Brainstorm falls back to a VS Code language model when the endpoint is not avail
 Metadata: the configured model name `FailSafe/extension/src/sentinel/utils/LLMClient.ts:126-133` (`const model = this.configProvider.getConfig().sentinel.localModel;`).
 Graph relationships: no `FailSafe/extension/src/sentinel/utils/LLMClient.ts:132-136` (`stream: false`).
 Governance evidence: no; the verdict stays local `FailSafe/extension/src/sentinel/VerdictArbiter.ts:250-256` (`promptUsed: prompt,`).
-Destination: the configured endpoint, http by default; on main only the target the policy allowed, with every resolved address checked at connect time `FailSafe/extension/src/sentinel/utils/llmTransport.ts:55` (`lookup: guardedLookup(request.addresses, resolve),`); the Console probe always targets localhost:11434 `FailSafe/extension/src/roadmap/ui/modules/connection.js:345` (`http://localhost:11434/api/tags`).
+Destination: the configured endpoint, http by default; on main only the target the policy allowed, with every resolved address checked at connect time `FailSafe/extension/src/sentinel/utils/llmTransport.ts:55` (`lookup: guardedLookup(request.addresses, resolve),`); the Console probe always targets localhost:11434 `FailSafe/extension/src/roadmap/ui/modules/connection.js:351` (`http://localhost:11434/api/tags`).
 
 ## Transformations
 
@@ -89,10 +89,10 @@ Proposed (not built): a verdict-to-model-evaluation provenance edge, specified i
 
 ## Customer UI and actions
 
-Settings: `failsafe.sentinel.mode`, `failsafe.sentinel.localModel` and `failsafe.sentinel.ollamaEndpoint` `FailSafe/extension/package.json:640-658` (`"failsafe.sentinel.mode": {`).
+Settings: `failsafe.sentinel.mode`, `failsafe.sentinel.localModel` and `failsafe.sentinel.ollamaEndpoint` `FailSafe/extension/package.json:662-680` (`"failsafe.sentinel.mode": {`).
 Main only: a modal dialog names the destination origin in full, flags plain http as unencrypted, says what is sent and which model, and offers Allow `FailSafe/extension/src/sentinel/utils/llmEgressAuthorizer.ts:52-58` (`export function llmEgressRequest(request: LlmEgressRequest): OperatorActionRequest {`).
 Main only: the command "FailSafe: Forget Sentinel LLM Approvals" clears stored approvals and this session's declines `FailSafe/extension/package.json:243-244` (`"title": "FailSafe: Forget Sentinel LLM Approvals"`).
-Console: an LLM status row that shows whether the local Ollama probe answered `FailSafe/extension/src/roadmap/ui/modules/connection.js:359-364` (`this.notify('webLlmStatus', this.webLlmState);`).
+Console: an LLM status row that shows whether the local Ollama probe answered `FailSafe/extension/src/roadmap/ui/modules/connection.js:365-370` (`this.notify('webLlmStatus', this.webLlmState);`).
 The Console's status text says data stays on the machine, which holds only while the endpoint is loopback `FailSafe/extension/src/roadmap/ui/modules/llm-status.js:6` (`your data stays on your machine`).
 
 ## Governance policy and enforceability limits
