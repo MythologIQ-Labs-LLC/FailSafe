@@ -1,11 +1,11 @@
 // FailSafe Command Center — Open Design MCP sub-view renderer.
 // Extracted from the former IntegrationsRenderer during B-INT-5. The Open Design
 // daemon lifecycle is operator-owned; FailSafe only consumes when reachable.
-// B-OD-8 (v1.2): the card gains a "Request create_artifact" affordance — the one
-// non-destructive write tool, admitted only through L3 approval. Submitting it
-// POSTs /api/actions/open-design-create-artifact, which enqueues an L3 item; the
-// operator approves it in the Governance L3 queue (which then auto-executes the
-// call). The 3 destructive tools remain rejected at the client gate.
+// B-OD-8's historical request affordance cannot complete: the current client
+// refuses create_artifact without verifiable L3 receipt enforcement. The input
+// and request button remain visible but disabled, accurately disclosing the
+// unavailable capability rather than inviting an unfulfillable request.
+// Destructive tools also remain blocked by the client gate.
 
 export class OpenDesignRenderer {
   constructor(containerId) {
@@ -54,18 +54,18 @@ export class OpenDesignRenderer {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Open Design MCP</div>
-            <span style="font-size:0.65rem;color:var(--text-muted)">v1.2 — read + L3-gated create_artifact</span>
+            <span style="font-size:0.65rem;color:var(--text-muted)">v1.2 — read-only; create_artifact unavailable</span>
           </div>
         </div>
         <div class="cc-od-status-block">${this._statusBlock()}</div>
         <div class="cc-open-design-create" style="margin-top:10px;display:flex;gap:6px;align-items:center">
-          <input class="cc-od-artifact-name" type="text" placeholder="artifact name (create_artifact)"
+          <input class="cc-od-artifact-name" type="text" placeholder="create_artifact unavailable" disabled aria-disabled="true"
             style="flex:1;padding:4px 8px;font-size:0.75rem;background:var(--bg-input,#1a1a1a);border:1px solid var(--border-rim,#333);border-radius:4px;color:var(--text-main)" />
-          <button class="cc-btn cc-btn--primary cc-od-create-artifact" style="padding:4px 12px;font-size:0.75rem">Request</button>
+          <button class="cc-btn cc-btn--primary cc-od-create-artifact" disabled aria-disabled="true" style="padding:4px 12px;font-size:0.75rem">Unavailable</button>
         </div>
-        <div class="cc-od-create-status" style="margin-top:4px;font-size:0.72rem;color:var(--text-muted)"></div>
+        <div class="cc-od-create-status" role="status" style="margin-top:4px;font-size:0.72rem;color:var(--text-muted)">Artifact creation is disabled: a verified L3 receipt cannot currently be enforced.</div>
         <div style="margin-top:8px;font-size:0.7rem;color:var(--text-muted)">
-          Run <code>FailSafe: Register Open Design MCP Connection</code> from the command palette to probe the daemon at <code>127.0.0.1:7456</code>, confirm the exact MCP launch command, and connect the client. <code>create_artifact</code> requires L3 approval (request above → approve in the Governance L3 queue). The destructive write tools (<code>write_file</code>, <code>delete_file</code>, <code>delete_project</code>) remain rejected at runtime; broader exposure deferred (B-OD-8).
+          Run <code>FailSafe: Register Open Design MCP Connection</code> from the command palette to probe the daemon at <code>127.0.0.1:7456</code>, confirm the exact MCP launch command, and connect the client. Connection status shows transport reachability only, not end-to-end operation proof. <code>create_artifact</code> is disabled even with L3 queue approval until its verified receipt enforcement is implemented. The destructive write tools (<code>write_file</code>, <code>delete_file</code>, <code>delete_project</code>) remain rejected at runtime; broader exposure deferred (B-OD-8).
         </div>
       </div>
     `;

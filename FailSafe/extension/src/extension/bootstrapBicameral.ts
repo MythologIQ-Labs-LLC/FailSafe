@@ -59,6 +59,8 @@ export interface ConsoleServerSurface {
   /** B151: register the universal governance interceptor that the bicameral
    *  tool routes govern through. Null when no enforcement engine is wired. */
   setMcpInterceptor?(i: McpInterceptor | null): void;
+  /** B233: read-side binding check; absent only in old test surfaces. */
+  getMcpInterceptor?(): McpInterceptor | null;
   /** B-BIC-12: register the editor-open dep so the bicameral-open-binding
    *  route can open a decision's bound source file. Optional on the surface so
    *  older test fixtures that don't expose it are tolerated. */
@@ -147,6 +149,8 @@ function wireInterceptor(
 
 /** LD16 (a): the latest rewire per server; only that one assigns a client. */
 const wireGenerations = new WeakMap<ConsoleServerSurface, number>();
+/** The latest in-flight rewire, so auto-connect cannot outrun bootstrap or a settings change. */
+const clientWireTasks = new WeakMap<ConsoleServerSurface, Promise<void>>();
 
 function logBicameral(deps: BicameralIntegrationDeps, what: string, err: unknown): void {
   if (deps.logger) deps.logger.warn(`[bicameral] ${what}`, err);
@@ -219,8 +223,12 @@ function wireBicameralClient(
 ): void {
   // LD16: every rewire logs a failure instead of leaving an unhandled rejection;
   // the install route awaits this one, so it never rejects.
-  const rewire = (): Promise<void> =>
-    wireFromConfig(consoleServer, workspaceRoot, deps).catch((err) => logBicameral(deps, "rewire failed", err));
+  const rewire = (): Promise<void> => {
+    const task = wireFromConfig(consoleServer, workspaceRoot, deps)
+      .catch((err) => logBicameral(deps, "rewire failed", err));
+    clientWireTasks.set(consoleServer, task);
+    return task;
+  };
   void rewire();
   consoleServer.setBicameralRewire?.(rewire);
   consoleServer.setBicameralOpenFileInEditor?.(openBicameralBinding);
@@ -250,42 +258,89 @@ function wireBicameralClient(
     dispose: () => {
       // LD16 (a): a rewire still awaiting is superseded, so nothing is wired after deactivate.
       wireGenerations.set(consoleServer, (wireGenerations.get(consoleServer) ?? 0) + 1);
+      clientWireTasks.delete(consoleServer);
       void consoleServer.getBicameralClient()?.disconnect().catch(() => undefined);
     },
   });
 }
 
 /**
- * Background auto-connect attempt. Called after consoleServer.start() so any
- * resulting `bicameral.connected` broadcast reaches subscribers. Failures land
- * in the supplied output channel; never thrown — activation must not break.
+ * B233: allow a startup connect only after the latest configured client is wired.
+ * A configuration change can start another rewire while this one is awaiting.
+ */
+async function awaitCurrentWiring(server: ConsoleServerSurface): Promise<boolean> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const task = clientWireTasks.get(server);
+    if (!task) return false;
+    await task;
+    if (clientWireTasks.get(server) === task) return true;
+  }
+  return false;
+}
+
+/** B233: connect the *existing* governed client. Never publish a stale connection. */
+export async function connectWiredBicameral(
+  client: BicameralMcpClient,
+  isCurrent: () => boolean,
+  onConnected: () => void,
+): Promise<boolean> {
+  if (!isCurrent() || client.isConnected()) return false;
+  await client.connect();
+  if (!client.isConnected()) throw new Error('Bicameral client connect completed without an active session');
+  if (!isCurrent()) {
+    await client.disconnect().catch(() => undefined);
+    return false;
+  }
+  onConnected();
+  return true;
+}
+
+/**
+ * Background auto-connect attempt. Called after consoleServer.start() so the
+ * broadcast reaches subscribers. Reuses the configured, interceptor-bound client
+ * instead of constructing an ungoverned replacement (B233).
  */
 export function maybeAutoConnectBicameral(
   consoleServer: ConsoleServerSurface,
   workspaceRoot: string,
   output: { appendLine: (msg: string) => void },
+  /** Internal test seam: production always uses the trusted install-state probe. */
+  inspectInstall: typeof probeInstallState = probeInstallState,
 ): void {
   void (async () => {
     try {
       const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
       if (!readAutoConnect(cfg)) return;
       const command = readCommand(cfg);
-      // B-BIC-7 (audit Finding A): thread extraCommandRoots through the probe so
-      // auto-connect honours custom roots, not just the auto-applied defaults.
-      const probe = await probeInstallState({
+      const probe = await inspectInstall({
         command,
         workspaceRoot,
         extraRoots: readBicameralExtraRoots(cfg),
       });
       if (probe.state !== "configured-not-running") return;
-      const resolvedCommand = trustedCommandPath(command, workspaceRoot);
-      const client = new BicameralMcpClient({ command: resolvedCommand, cwd: workspaceRoot });
-      await client.connect();
-      // LD16 (a): the lazy client this replaces is disconnected, not orphaned.
-      const replaced = consoleServer.getBicameralClient();
-      consoleServer.setBicameralClient(client);
-      if (replaced && replaced !== client) void replaced.disconnect().catch(() => undefined);
-      consoleServer.broadcastEvent({ type: "bicameral.connected" });
+      // The startup rewire, not a second client constructor, owns the interceptor.
+      if (!(await awaitCurrentWiring(consoleServer))) {
+        output.appendLine("[bicameral] auto-connect skipped: client wiring is unavailable or changing");
+        return;
+      }
+      const client = consoleServer.getBicameralClient();
+      if (!client) return;
+      const generation = wireGenerations.get(consoleServer);
+      const isCurrent = (): boolean => {
+        const currentCfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
+        return generation === wireGenerations.get(consoleServer)
+          && consoleServer.getBicameralClient() === client
+          && readAutoConnect(currentCfg)
+          && readCommand(currentCfg) === command
+          && (!consoleServer.getMcpInterceptor
+            || consoleServer.getMcpInterceptor()?.getClient() === client);
+      };
+      if (!isCurrent()) {
+        output.appendLine("[bicameral] auto-connect skipped: governed client binding changed");
+        return;
+      }
+      await connectWiredBicameral(client, isCurrent, () =>
+        consoleServer.broadcastEvent({ type: "bicameral.connected" }));
     } catch (err) {
       output.appendLine(`[bicameral] auto-connect failed: ${String(err)}`);
     }

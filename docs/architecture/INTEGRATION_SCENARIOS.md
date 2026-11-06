@@ -39,7 +39,7 @@ An agent's run becomes reviewable evidence, and governance decisions about it ar
 
 ## Local-first relationship graph (specification, not built)
 
-The graph is a local store in the workspace. It is never synchronized to a third party, and building it sends no repository content anywhere. In the part B slice (main only, not in v6.0.8) the `implements` and `committed-under` edges are LINKED and UNLINKED entries in the hash-chained intent history, not a separate store `FailSafe/extension/src/governance/IntentService.ts:380` (`async linkEdge(params: LinkEdgeParams): Promise<EdgeWriteResult> {`).
+The graph is a local store in the workspace. It is never synchronized to a third party, and building it sends no repository content anywhere. In the part B slice (main only, not in v6.0.8) the `implements` and `committed-under` edges are LINKED and UNLINKED entries in the hash-chained intent history, not a separate store `FailSafe/extension/src/governance/IntentService.ts:389` (`async linkEdge(params: LinkEdgeParams): Promise<EdgeWriteResult> {`).
 
 ### Nodes
 

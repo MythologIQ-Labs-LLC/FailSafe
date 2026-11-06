@@ -43,6 +43,10 @@ See the [changelog](https://github.com/MythologIQ-Labs-LLC/FailSafe/blob/main/CH
 
 FailSafe connects to the tools your AI agents use. Every integration is opt-in. Integrations that call an outside service stay off until you enable them in settings and store a credential with **FailSafe: Set Integration Credential**; the installers and the risk scorer do nothing until you run them.
 
+**A recent call is not end-to-end qualification or proof of customer value.** An integration status describes the latest observed attempt, not whether every promised action works. Configured is not connected, connected is not fully qualified, and an AI agent's unreviewed changes are not proven safe.
+
+FailSafe's internal governance MCP service currently runs on an in-process stdio transport and is **not reachable by external MCP clients**. Supported integration clients are not a universal tool interceptor. FailSafe **does not ship an Omium outcome-verification adapter**; that proposed bridge is separate from this release.
+
 Supported agent integrations can add controlled workflows and evidence:
 
 | Integration | What it does | Why it matters |

@@ -25,6 +25,8 @@ import { EventBus } from "../../../shared/EventBus";
 import type { WebSocketManager } from "../../../roadmap/services/WebSocketManager";
 import type { CheckpointDb, CheckpointRecord } from "../../../roadmap/services/CheckpointStore";
 import type { BicameralMcpClient } from "../../../integrations/bicameral";
+import type { McpInterceptor } from "../../../governance/interceptor";
+import type { ReceiptContract } from "../../../contracts";
 import type { ConfirmOperatorAction } from "../../../extension/operatorConfirmation";
 import {
   HEALTH_STATE_KEY, IntegrationHealthStore, setIntegrationHealthStore,
@@ -359,7 +361,25 @@ export async function serveConsoleServerUI(
   spyOnHub(server, fixtures);
 
   if (fixtures.bicameralClient) {
-    server.setBicameralClient(fixtures.bicameralClient);
+    // B233: unlike the real extension (which wires an EnforcementEngine),
+    // this browser harness serves an explicit ALLOW stub for UI-only tests.
+    // Both accessors MUST reference the same client. Leaving the interceptor
+    // null would correctly make the real history/drift routes fail closed at
+    // HTTP 503 and prevent the canned decisions from rendering.
+    const wiredClient = fixtures.bicameralClient;
+    const allowedReceipt: ReceiptContract = {
+      receiptId: "ui-b233-fixture",
+      evaluationRequestId: "ui-b233-evaluation",
+      verdict: "ALLOW",
+      evidence: [],
+      issuedAt: "2026-10-20T12:00:00.000Z",
+      issuedBy: "did:failsafe:test:ui-mcp-interceptor",
+    };
+    server.setBicameralClient(wiredClient);
+    server.setMcpInterceptor({
+      getClient: () => wiredClient,
+      intercept: async () => allowedReceipt,
+    } as unknown as McpInterceptor);
   }
   const releaseNode = fixtures.bicameralCommand === undefined ? acquirePosixNode() : () => undefined;
   server.setBicameralCommand(fixtures.bicameralCommand ?? "node");

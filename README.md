@@ -21,6 +21,8 @@ AI coding agents can write code faster than teams can always review their decisi
 
 FailSafe is a VS Code extension with a Monitor and a broader Console. It **does not** promise that every agent action is intercepted, that arbitrary processes are sandboxed, or that VS Code editor saves can be prevented. Controls depend on the action path and integration involved.
 
+**A recent call is not end-to-end qualification or proof of customer value.** An integration may be configured or successfully contact its service without proving the entire workflow works. Every advertised action needs independent host and provider evidence. FailSafe's internal governance MCP service uses an in-process stdio transport and is **not reachable by external MCP clients**. A supported agent workflow is not proof that every agent write is intercepted.
+
 ## What you can do with FailSafe
 
 - **See workspace activity.** Review Sentinel findings, change signals, and operational risk in the Monitor and Console.
