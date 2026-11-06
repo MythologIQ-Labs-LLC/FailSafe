@@ -427,19 +427,17 @@ export class ConsoleRouteRegistrar {
       const cps = Object.values((snap.checkpoints as Record<string, unknown>) || {});
       // A missing/unknown verdict is not affirmative trust evidence (#470).
       // Until the route can verify provenance/recency, never advertise a green trust score.
-      const passed = cps.filter((c) =>
-        typeof c === "object" && c !== null &&
-        (c as Record<string, unknown>).policyVerdict === "PASS" &&
-        Array.isArray((c as Record<string, unknown>).evidenceRefs) &&
-        ((c as Record<string, unknown>).evidenceRefs as unknown[]).length > 0
-      ).length;
+      // Candidate verdicts cannot be credited as verified PASS merely for
+      // containing nonempty references. A verified provenance and freshness
+      // contract must be introduced before reporting any passCount > 0.
+      const verifiedPassCount = 0;
       res.json({
         // A numeric score is unavailable until policy evidence can be verified
         // for provenance, freshness and governing scope.
         overall: null,
         status: cps.length === 0 ? "no_evidence" : "unverified",
         checkpointCount: cps.length,
-        passCount: passed,
+        passCount: verifiedPassCount,
       });
     });
   }
