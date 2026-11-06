@@ -27,6 +27,7 @@ import { DeliveryAssessmentRenderer } from './modules/delivery-assessment-render
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
 import { governanceSubviewForRoute, parseCommandCenterHash, tabButtonSelector } from './modules/command-center-deeplink.js';
+import { captureThemeKey, migrateLegacyTheme, onThemeChange, refreshTheme } from './modules/theme-sync.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const client = new ConnectionClient();
@@ -227,11 +228,12 @@ document.addEventListener('DOMContentLoaded', () => {
   applyHashRoute();
   window.addEventListener('hashchange', applyHashRoute);
 
-  // Theme restore and same-origin cross-window sync. The Monitor iframe and
-  // external Console have separate documents but share the Console origin.
-  const saved = store.getTheme();
-  if (saved) store.setTheme(saved);
-  window.addEventListener('storage', (event) => store.syncThemeStorageEvent(event));
+  // #601: the theme was applied before paint by /api/v1/ui/theme.js; the WebSocket keeps it
+  // current. Capture this page's theme key (if VS Code opened it), then retire any theme an
+  // older version kept in this browser's storage.
+  captureThemeKey();
+  void refreshTheme().then((state) => migrateLegacyTheme(state));
+  onThemeChange(() => renderers.settings?.render?.(client.lastHubData || {}));
 
   // Wire workspace isolation
   setWorkspaceRegistryClient(client);

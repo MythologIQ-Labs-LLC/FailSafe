@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { decideSidebarClick, sanitizeConsoleRoute } from "./sidebarInitializeLogic";
 import { resolveUiDir } from "./services/ConsoleServerSupport";
+import { DEFAULT_CONSOLE_THEME, isConsoleTheme, type ConsoleThemeAuthority } from "./services/ConsoleThemeAuthority";
 
 type SidebarMessage =
   | { command: "openPopout" }
@@ -17,7 +18,8 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private readonly baseUrl: string;
 
-  constructor(port: number = 9376) {
+  /** #601: the shared app theme; absent in tests, which then render the default theme. */
+  constructor(port: number = 9376, private readonly themeAuthority?: ConsoleThemeAuthority) {
     this.baseUrl = `http://localhost:${port}`;
   }
 
@@ -34,6 +36,17 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage((message: SidebarMessage) => {
       void this.handleMessage(message);
     });
+    // #601: the chrome follows the shared theme live. The Monitor iframe gets the same change
+    // from the Console server's WebSocket.
+    const themeSubscription = this.themeAuthority?.onDidChange((theme) => {
+      void webviewView.webview.postMessage({ type: "failsafe.theme", theme });
+    });
+    webviewView.onDidDispose(() => themeSubscription?.dispose());
+  }
+
+  private currentTheme(): string {
+    const theme = this.themeAuthority?.current().theme;
+    return isConsoleTheme(theme) ? theme : DEFAULT_CONSOLE_THEME;
   }
 
   private async handleMessage(message: SidebarMessage): Promise<void> {
@@ -114,17 +127,17 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     const compactUrl = `${this.baseUrl}/?ui=compact`;
     const themeTokens = this.readThemeTokens();
     return `<!DOCTYPE html>
-<html lang="en" data-theme="mythiq">
+<html lang="en" data-theme="${this.currentTheme()}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this.view?.webview.cspSource ?? ""} data: https:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; frame-src ${this.baseUrl};" />
   <style>${themeTokens}</style>
   <style>
-    /* Chrome inherits the Console theme: the shared design tokens are inlined
-       above (read from disk), and the embedded Console announces the active
-       data-theme via postMessage (failsafe.theme). Hardcoded values are
-       fallbacks for when the tokens cannot be read. */
+    /* #601: the chrome uses the shared design tokens inlined above (read from
+       disk). The extension host renders the current theme into data-theme and
+       posts failsafe.theme when it changes. Hardcoded values are fallbacks for
+       when the tokens cannot be read. */
     html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-dark, #071539); color: var(--text-main, #f3f7ff); font-family: var(--font-body, "Segoe UI", sans-serif); }
     .shell { display: grid; grid-template-rows: auto auto 1fr; height: 100%; }
     .toolbar { display: flex; gap: 6px; padding: 6px; border-bottom: 1px solid var(--border-rim, rgba(95, 150, 255, 0.35)); background: var(--bg-panel, #0a1f4a); align-items: center; }
@@ -138,6 +151,15 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     .sre-toggle { display:flex; gap:6px; padding:4px 8px; background:var(--bg-panel, #0a1f4a); border-bottom:1px solid var(--border-rim, rgba(95,150,255,0.35)); justify-content:flex-start; }
     .sre-toggle button { flex:0 0 auto; width:auto; padding:3px 12px; border:1px solid var(--glass-border, #3568d8); border-radius:6px; background:var(--bg-deep, #10357a); font-size:10px; font-weight:600; cursor:pointer; color:var(--text-main, #eaf1ff); line-height:1.2; }
     .sre-toggle button[aria-selected="true"] { background:var(--primary, #2c74f2); border-color:var(--primary, #2c74f2); color:#fff; }
+    /* VS Code high-contrast themes: the chrome takes VS Code's contrast colors and
+       borders; the Monitor content keeps the selected FailSafe theme. */
+    body.vscode-high-contrast, body.vscode-high-contrast-light { background: var(--vscode-sideBar-background); color: var(--vscode-foreground); }
+    body.vscode-high-contrast .toolbar, body.vscode-high-contrast .sre-toggle,
+    body.vscode-high-contrast-light .toolbar, body.vscode-high-contrast-light .sre-toggle { background: var(--vscode-sideBar-background); border-color: var(--vscode-contrastBorder); }
+    body.vscode-high-contrast .btn, body.vscode-high-contrast .sre-toggle button,
+    body.vscode-high-contrast-light .btn, body.vscode-high-contrast-light .sre-toggle button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-color: var(--vscode-contrastBorder); box-shadow: none; }
+    body.vscode-high-contrast .sre-toggle button[aria-selected="true"],
+    body.vscode-high-contrast-light .sre-toggle button[aria-selected="true"] { outline: 2px solid var(--vscode-contrastActiveBorder); }
     @media (max-width: 340px) {
       .toolbar { gap: 4px; padding: 5px; }
       .btn { font-size: 10px; padding: 4px 6px; }
@@ -164,18 +186,12 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     const initBtn = document.getElementById('init-workspace');
     const mainFrame = document.getElementById('main-frame');
 
-    // Theme tokens are inlined in <head> (read from disk by the provider); the
-    // chrome follows the data-theme the embedded Console announces via the
-    // failsafe.theme postMessage handled below.
-
-    // Persist the last known selection in the webview so the Monitor chrome
-    // does not flash the default every time its iframe reloads. The Console
-    // remains the preference authority and will announce its current theme.
+    // #601: the extension host renders the current theme into <html data-theme>
+    // and posts failsafe.theme when it changes. Only the host may set it: the
+    // embedded Monitor page is not trusted to choose the chrome's theme, and
+    // the value must be one of the supported names before it reaches a selector.
     const supportedThemes = new Set(['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere']);
     const state = vscode.getState() || { initDone: false };
-    if (supportedThemes.has(state.theme)) {
-      document.documentElement.setAttribute('data-theme', state.theme);
-    }
     if (state.initDone && initBtn) {
         initBtn.textContent = 'Organize';
         initBtn.title = 'Organize Workspace Structure';
@@ -194,11 +210,9 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
       const data = event && event.data ? event.data : null;
       if (!data || typeof data !== 'object') return;
       if (data.type === 'failsafe.theme') {
-        // Only the embedded Console may announce the active app theme.
-        // Never accept arbitrary postMessage data as a CSS selector value.
-        if (event.source !== mainFrame.contentWindow || !supportedThemes.has(data.theme)) return;
+        if (event.source === mainFrame.contentWindow || event.origin !== window.origin) return;
+        if (!supportedThemes.has(data.theme)) return;
         document.documentElement.setAttribute('data-theme', data.theme);
-        vscode.setState({ ...vscode.getState(), theme: data.theme });
         return;
       }
       if (data.type === 'failsafe.button.update' && initBtn) {

@@ -35,7 +35,7 @@ import { bootstrapAcpProxy } from "./bootstrapAcpProxy";
 import { bootstrapServers } from "./bootstrapServers";
 import { bootstrapIdeActivity } from "./bootstrapIdeActivity";
 import { registerAdvancedCommands } from "./bootstrapAdvancedCommands";
-import { registerCommands, setServerPort } from "./commands";
+import { registerCommands, setConsoleThemeKey, setServerPort } from "./commands";
 import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerWorkspaceFolderChangeGuard } from "./workspaceFolderChangeGuard";
@@ -419,6 +419,8 @@ export async function activate(
 
     // Wire dynamic port for workspace isolation
     setServerPort(servers.actualPort, core.workspaceRoot);
+    // #601: Console links opened by VS Code carry the key that lets that page change the theme.
+    setConsoleThemeKey(servers.consoleServer.getThemeKey());
 
     // 8.5. Agent Health Indicator (needs sentinelDaemon + riskManager + trustEngine)
     const agentHealthIndicator = new AgentHealthIndicator(

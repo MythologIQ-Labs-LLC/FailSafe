@@ -1,5 +1,6 @@
 // FailSafe Command Center — State Persistence Module
 // Thin localStorage wrapper with prefixed keys.
+import { currentTheme, requestTheme } from './theme-sync.js';
 
 export class StateStore {
   constructor(prefix = 'fs') {
@@ -28,35 +29,11 @@ export class StateStore {
 
   getActiveTab() { return this.get('tab') || 'overview'; }
   setActiveTab(id) { this.set('tab', id); }
-  getTheme() { return this.get('theme') || 'mythiq'; }
+  /** #601: the theme is the extension host's (see theme-sync.js); this page only shows it. */
+  getTheme() { return currentTheme(); }
 
-  setTheme(theme) {
-    this.set('theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
-    this.emitTheme(theme);
-  }
-
-  /** Notify an embedding host (the Monitor sidebar) of the selected theme so its
-   *  chrome inherits it. No-op when not embedded (top-level window). Fires on
-   *  boot (command-center.js applies the stored theme) and on every change. */
-  emitTheme(theme) {
-    try {
-      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: 'failsafe.theme', theme }, '*');
-      }
-    } catch { /* not embedded / cross-origin — ignore */ }
-  }
-
-  /** Sync a theme chosen in another Console window on the same origin.
-   *  Browser storage events do not fire in the tab that made the change.
-   *  Ignore unknown keys and themes rather than trusting ambient storage data. */
-  syncThemeStorageEvent(event) {
-    const allowed = ['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere'];
-    if (!event || event.key !== `${this.prefix}-theme` || !allowed.includes(event.newValue)) return false;
-    document.documentElement.setAttribute('data-theme', event.newValue);
-    this.emitTheme(event.newValue);
-    return true;
-  }
+  /** Ask the extension host to change the shared theme. Resolves { ok, theme | reason }. */
+  setTheme(theme) { return requestTheme(theme); }
 
   getLlmPriority() {
     return this.getJSON('llm-priority') || ['server', 'native', 'wasm'];

@@ -92,6 +92,8 @@ async function offerGovernedCommit(
 import { readEducationConfig } from "../education/educationConfig";
 import { catalogConfigKeys } from "../integrations/catalog/integration-catalog";
 import { unknownVersionStatus } from '../qorlogic/QorLogicPackageInstaller';
+import { ConsoleThemeAuthority } from "../roadmap/services/ConsoleThemeAuthority";
+import { consoleThemeSettingStore } from "./consoleThemeSetting";
 
 export interface ServerDeps {
   planManager: PlanManager;
@@ -149,6 +151,9 @@ export async function bootstrapServers(
   // The verifier is only invoked at hub-build time (post-activation), so the
   // late assignment is safe.
   let qorLogicPackageInstallerRef: QorLogicPackageInstaller | null = null;
+  // #601: one theme for the Console, the Monitor and the sidebar chrome, kept in user settings.
+  const themeAuthority = new ConsoleThemeAuthority(consoleThemeSettingStore());
+  context.subscriptions.push({ dispose: () => themeAuthority.dispose() });
   // Single unified server on port 9376
   const consoleServer = new ConsoleServer(
     deps.planManager,
@@ -175,6 +180,7 @@ export async function bootstrapServers(
       // #83A: token gate for GET /api/v1/governance/commit-check.
       validateCommitToken: (t: string) =>
         deps.commitGuard ? deps.commitGuard.validateToken(t) : false,
+      themeAuthority,
     },
   );
   // #83A: the pre-commit hook's port now tracks the real bound port.
@@ -518,7 +524,7 @@ export async function bootstrapServers(
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       FailSafeSidebarProvider.viewType,
-      new FailSafeSidebarProvider(actualPort),
+      new FailSafeSidebarProvider(actualPort, themeAuthority),
     ),
   );
 
