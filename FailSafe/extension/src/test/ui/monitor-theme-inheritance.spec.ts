@@ -41,7 +41,10 @@ test.describe('FX-monitor-theme-inheritance — sidebar chrome follows the Conso
       <script>
         window.addEventListener('message', (e) => {
           const d = e && e.data; if (!d || typeof d !== 'object') return;
-          if (d.type === 'failsafe.theme' && typeof d.theme === 'string') {
+          const frame = document.getElementById('frame');
+          const supported = ['pegasus','mythiq','midnight','aurora','crimson','atmosphere'];
+          if (e.source === frame.contentWindow &&
+              d.type === 'failsafe.theme' && supported.includes(d.theme)) {
             document.documentElement.setAttribute('data-theme', d.theme);
           }
         });
@@ -66,6 +69,17 @@ test.describe('FX-monitor-theme-inheritance — sidebar chrome follows the Conso
       document.documentElement.getAttribute('data-theme'),
     );
     expect(themeAttr).toBe('crimson');
+
+    // A forged page message must not modify the Monitor's theme.
+    await page.evaluate(() => window.postMessage({ type: 'failsafe.theme', theme: 'pegasus' }, '*'));
+    await expect.poll(() => page.evaluate(() =>
+      document.documentElement.getAttribute('data-theme'))).toBe('crimson');
+    // An unknown theme announced from any window must not apply.
+    await frame.locator('body').evaluate(() => window.parent.postMessage({
+      type: 'failsafe.theme', theme: 'unrecognized',
+    }, '*'));
+    await expect.poll(() => page.evaluate(() =>
+      document.documentElement.getAttribute('data-theme'))).toBe('crimson');
 
     await page.screenshot({ path: 'test-results/monitor-theme-inheritance-crimson.png' });
   });
