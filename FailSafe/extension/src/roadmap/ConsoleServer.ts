@@ -179,7 +179,10 @@ export class ConsoleServer {
       authority: this.themeAuthority, themeKey: this.themeKey,
       rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
     });
-    this.themeAuthority.onDidChange((theme) => this.broadcast({ type: "ui.theme", theme }));
+    this.themeAuthority.onDidChange(() => {
+      const { theme, revision, epoch } = this.themeAuthority.snapshot();
+      this.broadcast({ type: "ui.theme", theme, revision, epoch });
+    });
     this.subscribeToEvents();
   }
 

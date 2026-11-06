@@ -9,6 +9,8 @@
  * changes over its WebSocket; they never keep a competing copy.
  */
 
+import { randomBytes } from "crypto";
+
 export const CONSOLE_THEMES = ["pegasus", "mythiq", "midnight", "aurora", "crimson", "atmosphere"] as const;
 export type ConsoleTheme = (typeof CONSOLE_THEMES)[number];
 export const DEFAULT_CONSOLE_THEME: ConsoleTheme = "mythiq";
@@ -36,9 +38,15 @@ export function memoryThemeStore(initial?: ConsoleTheme): ConsoleThemeStore {
 
 export interface ConsoleThemeState { theme: ConsoleTheme; explicit: boolean }
 
+/** The state as sent to pages. `revision` grows with every change in this process and `epoch`
+ *  names the process, so a page can drop a response that is older than one it already applied. */
+export interface ConsoleThemeSnapshot extends ConsoleThemeState { revision: number; epoch: string }
+
 export class ConsoleThemeAuthority {
   private readonly listeners = new Set<(theme: ConsoleTheme) => void>();
   private last: ConsoleTheme;
+  private revision = 0;
+  private readonly epoch = randomBytes(8).toString("hex");
   private readonly external: { dispose(): void } | undefined;
 
   constructor(private readonly store: ConsoleThemeStore) {
@@ -50,6 +58,10 @@ export class ConsoleThemeAuthority {
   current(): ConsoleThemeState {
     const { value, explicit } = this.store.read();
     return isConsoleTheme(value) ? { theme: value, explicit } : { theme: DEFAULT_CONSOLE_THEME, explicit: false };
+  }
+
+  snapshot(): ConsoleThemeSnapshot {
+    return { ...this.current(), revision: this.revision, epoch: this.epoch };
   }
 
   /** Persist a supported theme and notify listeners. Returns null (and changes nothing) for anything else. */
@@ -76,6 +88,7 @@ export class ConsoleThemeAuthority {
     const theme = this.current().theme;
     if (theme === this.last) return;
     this.last = theme;
+    this.revision += 1;
     for (const listener of [...this.listeners]) {
       try { listener(theme); } catch { /* one listener must not starve the others */ }
     }

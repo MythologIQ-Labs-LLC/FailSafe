@@ -123,7 +123,10 @@ describe("#601 Console theme routes", () => {
   it("GET returns the current theme without caching", async () => {
     const r = await request(port, "GET", "/api/v1/ui/theme", { Host: host });
     assert.equal(r.status, 200);
-    assert.deepEqual(r.json, { theme: "mythiq", explicit: false });
+    assert.equal(r.json?.theme, "mythiq");
+    assert.equal(r.json?.explicit, false);
+    assert.equal(r.json?.revision, 0);
+    assert.match(String(r.json?.epoch), /^[0-9a-f]{16}$/);
   });
 
   it("theme.js applies only the stored supported theme", async () => {
@@ -139,7 +142,9 @@ describe("#601 Console theme routes", () => {
     authority.onDidChange((t) => seen.push(t));
     const r = await post(good(), { theme: "pegasus" });
     assert.equal(r.status, 200);
-    assert.deepEqual(r.json, { ok: true, theme: "pegasus" });
+    assert.equal(r.json?.ok, true);
+    assert.equal(r.json?.theme, "pegasus");
+    assert.equal(r.json?.revision, 1, "each change advances the revision");
     assert.deepEqual(authority.current(), { theme: "pegasus", explicit: true });
     assert.deepEqual(seen, ["pegasus"]);
   });

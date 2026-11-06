@@ -54,6 +54,21 @@ function fakeFetch(reply: (call: Call) => { status: number; body: unknown }) {
 }
 
 suite('#601 theme-sync (page side of the shared theme)', () => {
+  setup(() => themeSync.resetThemeRevision());
+
+  test('a re-read that left the server before a newer change does not undo it', async () => {
+    const doc = fakeDoc('mythiq');
+    // The page re-reads after reconnecting (revision 0) while a change to aurora (revision 1) is broadcast.
+    assert.equal(themeSync.handleThemeMessage({ type: 'ui.theme', theme: 'aurora', revision: 1, epoch: 'e1' }, doc), true);
+    await themeSync.refreshTheme(fakeFetch(() => ({ status: 200, body: { theme: 'mythiq', explicit: false, revision: 0, epoch: 'e1' } })).impl, doc);
+    assert.equal(doc.attrs.get('data-theme'), 'aurora');
+    assert.equal(themeSync.handleThemeMessage({ type: 'ui.theme', theme: 'midnight', revision: 0, epoch: 'e1' }, doc), false);
+    assert.equal(doc.attrs.get('data-theme'), 'aurora');
+    // A restarted extension host (new epoch) starts counting again and is accepted.
+    assert.equal(themeSync.handleThemeMessage({ type: 'ui.theme', theme: 'crimson', revision: 0, epoch: 'e2' }, doc), true);
+    assert.equal(doc.attrs.get('data-theme'), 'crimson');
+  });
+
   test('the supported themes are exactly the six Console themes', () => {
     assert.deepEqual([...themeSync.THEMES], ['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere']);
   });

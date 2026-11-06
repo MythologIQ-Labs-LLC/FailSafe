@@ -40,7 +40,7 @@ export function themeKeyMatches(presented: unknown, expected: string): boolean {
 export function registerConsoleThemeRoutes(app: express.Application, deps: ConsoleThemeRouteDeps): void {
   app.get("/api/v1/ui/theme", (_req, res) => {
     res.set("Cache-Control", "no-store");
-    res.json(deps.authority.current());
+    res.json(deps.authority.snapshot());
   });
 
   app.get("/api/v1/ui/theme.js", (_req, res) => {
@@ -65,7 +65,7 @@ export function registerConsoleThemeRoutes(app: express.Application, deps: Conso
         res.status(400).json({ ok: false, error: "unsupported-theme", message: "That theme is not supported; nothing was changed." });
         return;
       }
-      res.json({ ok: true, theme });
+      res.json({ ok: true, ...deps.authority.snapshot(), theme });
     },
   );
 }

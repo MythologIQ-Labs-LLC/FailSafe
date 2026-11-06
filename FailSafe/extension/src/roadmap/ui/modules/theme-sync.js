@@ -25,6 +25,21 @@ export function currentTheme(doc = document) {
 
 const listeners = new Set();
 
+// The newest theme state this page has applied (see ConsoleThemeSnapshot). A response that left the
+// server before a newer change (a re-read racing a broadcast) must not undo that change.
+let seen = { epoch: null, revision: -1 };
+function isCurrent(state) {
+  if (!state || typeof state.epoch !== 'string' || typeof state.revision !== 'number') return true;
+  if (state.epoch === seen.epoch && state.revision < seen.revision) return false;
+  seen = { epoch: state.epoch, revision: state.revision };
+  return true;
+}
+
+/** Test hook: forget the newest applied state. */
+export function resetThemeRevision() {
+  seen = { epoch: null, revision: -1 };
+}
+
 /** Apply a supported theme to this document. Returns false (and changes nothing) otherwise. */
 export function applyTheme(theme, doc = document) {
   if (!isTheme(theme)) return false;
@@ -42,6 +57,7 @@ export function onThemeChange(fn) {
 /** Handle a Console server WebSocket message. True when it was a theme update. */
 export function handleThemeMessage(data, doc = document) {
   if (!data || data.type !== 'ui.theme') return false;
+  if (!isTheme(data.theme) || !isCurrent(data)) return false;
   return applyTheme(data.theme, doc);
 }
 
@@ -51,7 +67,7 @@ export async function refreshTheme(fetchImpl = fetch, doc = document) {
     const res = await fetchImpl('/api/v1/ui/theme', { cache: 'no-store' });
     if (!res.ok) return null;
     const body = await res.json();
-    applyTheme(body?.theme, doc);
+    if (isTheme(body?.theme) && isCurrent(body)) applyTheme(body.theme, doc);
     return body;
   } catch {
     return null;
@@ -101,7 +117,7 @@ export async function requestTheme(theme, { win = window, fetchImpl = fetch, doc
       if (res.status === 401) { try { safeSession(win)?.removeItem(KEY_STORAGE); } catch { /* ignore */ } }
       return { ok: false, reason: body?.error || `http-${res.status}` };
     }
-    applyTheme(body.theme, doc);
+    if (isTheme(body.theme) && isCurrent(body)) applyTheme(body.theme, doc);
     return { ok: true, theme: body.theme };
   } catch {
     return { ok: false, reason: 'network' };
