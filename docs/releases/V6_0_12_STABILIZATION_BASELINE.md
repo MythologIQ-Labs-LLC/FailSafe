@@ -14,6 +14,10 @@
 
 **Maintenance and delivery fidelity, not novelty.** Finish security guarantees already advertised, prove real integration capabilities in installed hosts, resolve audit findings, and ensure documentation matches shipping behavior. No new AI inference feature in this release (#586 is parked). No broad enhancements unless required to honor an existing contract.
 
+### P0: product-wide theme consistency (release gate)
+
+- **#601**: **Owner-designated v6.0.12 P0 release gate.** Monitor and main Console must share the same persistent theme, live changes, restart/reopen behavior and full six-theme styling. Test in the actual VS Code webview as well as browser harnesses. This requirement is mandatory alongside, not instead of, security and governance gates.
+
 ### P0: security and release-claim integrity (release gates)
 
 1. **#475**: Continue/Aider containment. Either implement enforceable isolation against writes outside disposable worktree or explicitly remove/qualify any containment promise. Host-level adversarial tests required.
@@ -68,6 +72,11 @@ All nine PRs are intentionally open; each has a disposition comment. Closing val
 - Reconcile #591/#592/#564 as release-completed only upon exact evidence; preserve #467 for independent witness follow-up if still incomplete.
 - Collect the approved screenshots, captions, transcript and website handoff under #589 without claiming a scripted demo was autonomous.
 - Never manufacture install counts, trust scores, test results or marketplace statuses.
+
+## Next release planning boundary
+
+- **v6.0.12:** stabilization, existing promised functionality, security, and mandatory #601 Monitor theme consistency.
+- **v6.0.13:** **#602 Statewright AI first-class integration**, read-only workflow observability and referral attribution. Partner APIs, billing and commercial terms are external dependencies and not presumed delivered. Do not silently import #602 into v6.0.12.
 
 ## Restart sequence (after maintenance pause)
 
