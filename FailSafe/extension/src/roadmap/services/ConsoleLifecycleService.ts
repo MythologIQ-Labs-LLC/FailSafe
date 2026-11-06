@@ -118,6 +118,7 @@ export class ConsoleLifecycleService {
 
   stop(): void {
     ++this.startGeneration; // invalidate an unfinished probe/listen
+    this.starting = null; // permit a fresh start without joining a cancelled attempt
     if (this.server) markDisconnected(this.actualPort);
     this.ledgerWatcher?.close();
     this.ledgerWatcher = null;
