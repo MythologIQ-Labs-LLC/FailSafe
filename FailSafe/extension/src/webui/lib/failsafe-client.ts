@@ -32,6 +32,15 @@ export interface TrustScore {
   lastUpdated: string;
 }
 
+/** Current /api/v1/trust response. A checkpoint count is NOT a verified
+ * agent score; overall remains null until genuine policy verification exists. */
+export interface TrustOverview {
+  overall: number | null;
+  status: 'no_evidence' | 'unverified';
+  checkpointCount: number;
+  passCount: number;
+}
+
 export interface Risk {
   id: string;
   title: string;
@@ -118,7 +127,7 @@ export class FailSafeClient {
   }
 
   // Trust
-  async getTrustScores(): Promise<TrustScore[]> {
+  async getTrustScores(): Promise<TrustOverview> {
     return this.get("/api/v1/trust");
   }
   async getTrustScore(did: string): Promise<TrustScore> {
