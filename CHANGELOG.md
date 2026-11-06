@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.12] - Unreleased (release candidate)
+## [6.0.12] - 2026-11-06
 
 ### Fixed
 - The Monitor sidebar and the SRE view now follow the theme chosen in the Console, in all six themes, and stay in step live: a change in the browser Console, the VS Code Settings UI or another window reaches every open Console and Monitor. The theme is kept in the VS Code setting `failsafe.console.theme`, so it survives Monitor reloads, window reloads and restarts, and it is applied before the page is drawn. Before, the Monitor kept a fixed color scheme, and a theme chosen in the browser Console never reached VS Code because the two never share browser storage. A theme chosen in an earlier version in this browser is moved to the setting once (#601).
