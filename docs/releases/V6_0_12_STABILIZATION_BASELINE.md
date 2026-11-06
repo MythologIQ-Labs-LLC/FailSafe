@@ -1,0 +1,83 @@
+# FailSafe v6.0.11 closeout and v6.0.12 stabilization baseline
+
+**Baseline captured:** 2026-10-29. **Reconciled:** 2026-11-06. **Status:** active v6.0.12 development; not a release-candidate GO or publication authorization.
+
+## v6.0.11 release
+
+- Main and v6.0.11 tag target: `73eca5b4`; merged release PR #594.
+- Release run: [40993501172](https://github.com/MythologIQ-Labs-LLC/FailSafe/actions/runs/40993501172). SemVer, Build & Test, both marketplace publishing jobs, and GitHub Release creation all completed successfully. Public marketplace listing/version parity still requires independent verification; do not conflate workflow success with storefront evidence.
+- #467 native Qor-logic clean-epoch governance reportedly passed, with append-only ledger epoch #914; independent witness G4 remains unimplemented. Preserve this distinction in status reporting.
+- #591/#592 fixes were included in merged release work; close only after linking exact acceptance evidence. #564 installed-host acceptance requires an exact release disposition.
+- Post-publication #502 Linux/macOS installed SQLite and upgrade parity remain open.
+
+## Release principles for v6.0.12
+
+**Maintenance and delivery fidelity, not novelty.** Finish security guarantees already advertised, prove real integration capabilities in installed hosts, resolve audit findings, and ensure documentation matches shipping behavior. No new AI inference feature in this release (#586 is parked). No broad enhancements unless required to honor an existing contract.
+
+### P0: product-wide theme consistency (release gate)
+
+- **#601**: **Owner-designated v6.0.12 P0 release gate.** Monitor and main Console must share the same persistent theme, live changes, restart/reopen behavior and full six-theme styling. Test in the actual VS Code webview as well as browser harnesses. This requirement is mandatory alongside, not instead of, security and governance gates.
+
+### P0: security and release-claim integrity (release gates)
+
+1. **#475**: Continue/Aider containment. Either implement enforceable isolation against writes outside disposable worktree or explicitly remove/qualify any containment promise. Host-level adversarial tests required.
+2. **#505**: VS Code editor-save limitations. Do not advertise Enforce mode as blocking disk writes until a real enforceable mechanism is demonstrated; otherwise disclose consistently in UI, README and docs.
+3. **#468**: Marketplace setup runs before security scan. Move untrusted setup behind validated containment or prohibit it; prove no user-environment side effects.
+4. **#473 / #476**: SOA ledger HMAC integrity and GitHub SHIELD receipt-bound PASS. Ensure audit/verdict columns are protected and no PASS without authentic durable receipt.
+5. **#463 / #467**: Qor-logic pin and governance integrity; preserve native epoch evidence and qualify the still-missing independent witness G4. No ledger rewrite.
+6. **#474**: Adapter capability conformance and truthful integration status. Implement and validate actual behavior; no generic connected/complete badges without proof.
+
+### P1: deliver unfinished functionality and platform acceptance
+
+- **#464 / #465 / PR #585**: Real VS Code repository topology Mind Map and voice-to-graph journey; security of the audio vault. Qualify separately before merge.
+- **#470 / #471 / #479**: Trust API PASS evidence, Console startup readiness and installed-host integration catalog truthfulness.
+- **#477 / #478 / #481 / #472**: OpenHands event timeline, Sentry importer, Open Design MCP approval boundaries and replay nonce durability.
+- **#502 / #243**: Installed SQLite/persistence, 8-target package parity and upgrade/rollback on Windows/Linux/macOS.
+- **#528**: risk-store fairness, batching and linked-path correctness.
+- **#531**: Deliver the advertised architecture index and governed bootstrap, or reword documentation honestly.
+- **#242 / #244 / #326 / #406**: accessibility, responsiveness, performance/status and live compatibility/voice-latency acceptance.
+
+### Park or track separately
+
+- **#586** optional OpenRouter Mind Map/planning inference: P3 RFC only, outside 6.0.12.
+- **#569** Omium bridge: proposed integration, not an implied 6.0.12 commitment.
+- **#460** Claude Code Mod: separate integration initiative; do not silently expand 6.0.12.
+- **#232 / #239** remain umbrella programs; consolidate subordinate evidence under their canonical issues instead of creating duplicate tracking work.
+
+## Pull request evidence and release disposition
+
+The earlier nine-PR snapshot from October 29 is historical and must not be used as a current queue count. Dependabot security and patch updates #590, #595, #596, #597, #598, #610 and #611 were subsequently merged. Open PRs are dynamically tracked in GitHub, including #570 integration, #585 audio vault, #599 Azure, #600 documentation, #609 Monitor, #612 Zod, and the bounded #613/#614/#615 hardening lanes. Each source PR requires exact-head checks and independent native acceptance where its contract requires it. A draft is not a shipped feature.
+
+## Historical open issue inventory (snapshot, 35)
+
+- **Release/qualification:** #588 #589 #591 #592 #564 #502 #243 #467.
+- **P0 governance/security/claims:** #463 #468 #473 #474 #475 #476 #505.
+- **P1 integration/security/functionality:** #465 #470 #471 #472 #477 #478 #479 #481 #528 #531 #464.
+- **Longer-range/audits/umbrella:** #232 #239 #242 #244 #326 #406 #460 #569 #586.
+
+## Documentation and housekeeping acceptance
+
+- Update root and extension READMEs, CHANGELOG, SYSTEM_STATE, BACKLOG, integration portfolio and release evidence together **before** the next release, at the same exact candidate commit; validate all claimed capabilities against installed-host evidence.
+- Verify public v6.0.11 marketplace versions and GitHub release before marking #588 released or closing superseded draft PRs.
+- Reconcile #591/#592/#564 as release-completed only upon exact evidence; preserve #467 for independent witness follow-up if still incomplete.
+- Collect the approved screenshots, captions, transcript and website handoff under #589 without claiming a scripted demo was autonomous.
+- Never manufacture install counts, trust scores, test results or marketplace statuses.
+
+## Next release planning boundary
+
+- **v6.0.12:** stabilization, existing promised functionality, security, and mandatory #601 Monitor theme consistency.
+- **v6.0.13:** **#602 Statewright AI first-class integration**, read-only workflow observability and referral attribution. Partner APIs, billing and commercial terms are external dependencies and not presumed delivered. Do not silently import #602 into v6.0.12.
+
+## Development and release sequence
+
+1. Reconcile v6.0.11 publication receipts, current GitHub issue/PR inventory and documentation; close completed historical release tickets on evidence.
+2. Resolve P0 trust and containment promises first; build minimal adversarial acceptance matrix per affected product surface.
+3. Schedule bounded P1 integration/functionality deliveries, then full cross-platform qualification and documentation freeze for v6.0.12.
+
+This scope remains subject to native evidence and an explicit owner release authorization.
+
+## Backlog reconciliation, 2026-11-06
+
+A live audit began with **43 open issues** and closed three evidence-backed, completed v6.0.11 tasks: **#588** (release coordination), **#591** (Windows owner-profile test isolation), and **#564** (Console WebSocket handshake installed-host hardening). The remaining **40** are divided into **13 security/governance/product-truth issues**, **14 unfinished-functionality/platform/runtime-acceptance issues**, **4 deferred or independent initiatives**, **7 Statewright v6.0.13 issues**, and **2 umbrella programs**. These are workstream classifications, not blanket priority changes. The complete issue-number inventory and evidence disposition are recorded on umbrella **#239**, comment **6691206879**.
+
+Historical issues **#242, #243, #244, #467 and #592** had their headings and status notes revised to distinguish completed prior tranches from unresolved acceptance. #467 remains P0 for the independent ledger witness; #601 remains P0 for the v6.0.12 Monitor theme; #602–#608 are **v6.0.13**. No unresolved security issue was closed solely because it was old or has an unmerged PR. Refresh this snapshot before final documentation merge or release-candidate freeze.
