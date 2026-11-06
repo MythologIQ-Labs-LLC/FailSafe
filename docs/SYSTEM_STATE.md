@@ -4,7 +4,7 @@
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
-**Current Release:** v6.0.11 (published 2026-10-30; VS Code Marketplace, Open VSX and GitHub Release, tag `v6.0.11` on `73eca5b4`, release run 40993501172). v6.0.12 is a release candidate on the #601 branch, not tagged or published.
+**Current Release:** v6.0.12 (2026-11-06): release candidate prepared on the #601 branch; not tagged or published. Latest published release: v6.0.11 (2026-10-30; VS Code Marketplace, Open VSX and GitHub Release, tag `v6.0.11` on `73eca5b4`, release run 40993501172).
 **Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
@@ -13,6 +13,13 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-11-06 — v6.0.12: one app theme for the Console, Monitor and SRE view (release candidate, not published)
+
+- #601 (P0 v6.0.12 release gate): qualifying `16b69aeb` in a real VS Code extension host showed the gate unmet. The sidebar embeds `/?ui=compact` (index.html), which had no theme code and did not load the shared tokens, and the external Console runs in the system browser, which shares no storage with VS Code's webview, so the branch's `localStorage`/`storage`-event sync could never reach it.
+- The theme now lives in the extension host: the application-scoped setting `failsafe.console.theme`, owned by `ConsoleThemeAuthority`. The Console server serves it (`GET /api/v1/ui/theme`, before-paint `/api/v1/ui/theme.js`) and broadcasts `ui.theme` with a revision and process epoch; the sidebar chrome is rendered in the theme and follows host messages only. `POST /api/v1/ui/theme` needs the Console request guard and a per-session key that only VS Code's own Console links carry. The Monitor and SRE view use the shared tokens.
+- Includes the dependency updates merged to main after v6.0.11 (#590, #595-#598, #610, #611; glob 14 and @hono/node-server 2 are majors).
+- v6.0.11 is recorded as published (2026-10-30, release run 40993501172; both marketplaces and GitHub serve 6.0.11).
 
 ## 2026-10-29 — v6.0.11: Console WebSocket follow-up and #467 ledger epoch (release prepared)
 
