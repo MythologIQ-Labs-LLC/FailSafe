@@ -157,7 +157,9 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       assert.equal(body.overall, null);
       assert.equal(body.status, Object.keys(checkpoints).length === 0 ? 'no_evidence' : 'unverified');
       assert.equal(body.checkpointCount, Object.keys(checkpoints).length);
-      assert.ok(body.passCount >= 0 && body.passCount <= body.checkpointCount);
+      // Even an apparent PASS with a nonempty evidenceRefs array is not
+      // a verified policy PASS without source/recency verification.
+      assert.equal(body.passCount, 0);
     }
   });
 
