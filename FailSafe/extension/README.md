@@ -75,7 +75,7 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 
 ---
 
-**Current Release**: v6.0.12 (2026-11-06) — release candidate, not yet published. The published release is v6.0.11 (2026-10-29).
+**Candidate Version**: v6.0.12 (2026-11-06), not yet published. **Current Release**: v6.0.11 (2026-10-29), the published version.
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
