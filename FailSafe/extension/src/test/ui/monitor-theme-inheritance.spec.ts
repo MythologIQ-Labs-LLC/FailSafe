@@ -69,4 +69,36 @@ test.describe('FX-monitor-theme-inheritance — sidebar chrome follows the Conso
 
     await page.screenshot({ path: 'test-results/monitor-theme-inheritance-crimson.png' });
   });
+  test('popout theme changes reach a same-origin embedded Monitor after storage event', async ({ page, context }) => {
+    controller = await serveConsoleServerUI({});
+    const tokens = fs.readFileSync(
+      path.resolve(__dirname, '../../../src/roadmap/ui/theme-tokens.css'), 'utf8',
+    );
+    const host = `<!DOCTYPE html><html lang="en" data-theme="mythiq"><head>
+      <style>${tokens}</style><style>#chrome { background: var(--bg-panel); height:40px }</style>
+      </head><body><div id="chrome">Monitor</div>
+      <iframe id="frame" src="${controller.url}/command-center.html"></iframe>
+      <script>window.addEventListener('message', (event) => {
+        if (event.source !== document.getElementById('frame').contentWindow) return;
+        const d = event.data;
+        if (d && d.type === 'failsafe.theme' &&
+            ['pegasus','mythiq','midnight','aurora','crimson','atmosphere'].includes(d.theme)) {
+          document.documentElement.setAttribute('data-theme', d.theme);
+        }
+      });</script></body></html>`;
+    await page.setContent(host, { waitUntil: 'load' });
+    const frame = page.frameLocator('#frame');
+    await expect(frame.locator('.tab-btn[data-target="settings"]')).toBeVisible();
+    const popout = await context.newPage();
+    try {
+      await popout.goto(`${controller.url}/command-center.html`);
+      await popout.locator('.tab-btn[data-target="settings"]').click();
+      await popout.locator('[data-theme="pegasus"]').first().click();
+      await expect.poll(() => page.evaluate(() =>
+        document.documentElement.getAttribute('data-theme'))).toBe('pegasus');
+    } finally {
+      await popout.close();
+    }
+  });
+
 });
