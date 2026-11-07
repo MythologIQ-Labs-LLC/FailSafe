@@ -1,0 +1,15 @@
+8734:      AssertionError [ERR_ASSERTION]: disguised link in <span id="markdown-mermaid" aria-hidden="true" data-config="{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}"></span>
+8735-				<p data-line="0" class="code-line" dir="auto"><strong>Purpose</strong>: ![x](<a href="https://evil.example/p.png%5C" data-href="https://evil.example/p.png%5C">https://evil.example/p.png\</a>) &lt;img src=x onerror=alert(1)&gt; [link](<a href="http://evil.example" data-href="http://evil.example">http://evil.example</a>)</p>
+8736-
+8737-+ actual - expected
+8738-
+8739-+ 'https://evil.example/p.png\\'
+8740-- 'https://evil.example/p.png%5C'
+8741-                             ^
+8742-
+8743-      + expected - actual
+8744-
+8745-      -https://evil.example/p.png\
+8746-      +https://evil.example/p.png%5C
+8747-      
+8748-  	at Context.<anonymous> (c:\dev\mythologiq\FailSafe-6012rm\FailSafe\extension\out\test\integrations\tracker-import\tracker-markdown.test.js:97:33)

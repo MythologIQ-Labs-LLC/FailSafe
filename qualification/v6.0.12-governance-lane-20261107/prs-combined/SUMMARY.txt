@@ -1,0 +1,32 @@
+Local combined branch qual/v6012-pr624-625-626-combined @ ad88e268afbe954fbfa06ef7cf57725a736c36c5 = 497c0821 + #624 b9484601 + #625 07724b72 + #626 02e0843f (clean merges; not pushed)
+
+npm ci exit=0
+build exit=0
+[test-runner-coverage] PASS — 724 test files, all claimed: 92 node --test (test:node), 567 vscode-test, 5 vscode-test (architecture-index configuration), 60 playwright.
+coverage exit=0
+# tests 960
+# pass 942
+# fail 0
+# skipped 18
+test:node exit=0
+
+== VS Code 1.122.1 pinned
+  6063 passing (11m)
+  19 pending
+census[default]: executed 567/567 (missing 0)
+  17 passing (14s)
+census[architecture-index]: executed 5/5 (missing 0)
+vscode-test exit=0
+failures:
+
+== VS Code 1.145.2 current stable
+  6062 passing (10m)
+  19 pending
+  1 failing
+census[default]: executed 567/567 (missing 0)
+  17 passing (14s)
+census[architecture-index]: executed 5/5 (missing 0)
+vscode-test exit=1
+failures:
+the chat participant renders an imported purpose as text at all three sites
+tracker preview and chat Markdown safety (#480 T11)

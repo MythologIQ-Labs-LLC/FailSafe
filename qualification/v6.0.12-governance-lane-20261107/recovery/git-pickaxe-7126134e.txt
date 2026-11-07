@@ -1,0 +1,1 @@
+d2707332 qualification(v6.0.12): governance continuation, #463/#475 plans, pinned-host and teardown root cause [skip ci]

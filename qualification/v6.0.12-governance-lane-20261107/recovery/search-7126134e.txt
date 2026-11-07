@@ -1,0 +1,11 @@
+[7126134e] C:\dev\mythologiq\FailSafe-6012rcpt\qualification\v6.0.12-rc-497c0821\BLOCKERS-2026-11-07.md
+[7126134e] C:\dev\mythologiq\FailSafe-6012rcpt\.failsafe\governance\plans\plan-v6012-governance-continuation.md
+[7126134e] C:\dev\mythologiq\FailSafe-6012-qual\issues2\467.json
+[7126134e] C:\dev\mythologiq\FailSafe-6012-qual\issues2\467-comments.txt
+[7126134e] C:\dev\mythologiq\FailSafe-6012-qual\issues2\463.json
+[7126134e] C:\Users\<user>\.claude\file-history\b5cba55a-fbfb-453a-9069-0bb3c44a8e39\eb4437f85f2f647a@v2
+[7126134e] C:\Users\<user>\.claude\file-history\b5cba55a-fbfb-453a-9069-0bb3c44a8e39\3005a852169f6c12@v2
+[7126134e] C:\Users\<user>\.claude\projects\c--dev-mythologiq-failsafe\b5cba55a-fbfb-453a-9069-0bb3c44a8e39.jsonl
+[7126134e] C:\Users\<user>\.claude\projects\c--dev-mythologiq-failsafe\b5cba55a-fbfb-453a-9069-0bb3c44a8e39\tool-results\bv8yq352e.txt
+[7126134e] C:\Users\<user>\.claude\projects\c--dev-mythologiq-failsafe\b5cba55a-fbfb-453a-9069-0bb3c44a8e39\tool-results\bbli9uuto.txt
+[7126134e] C:\Users\<user>\.claude\projects\c--dev-mythologiq-failsafe\b5cba55a-fbfb-453a-9069-0bb3c44a8e39\subagents\agent-a625dee4a569a80a1.jsonl

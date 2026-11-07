@@ -1,0 +1,71 @@
+{
+  "qor_logic": "0.176.1",
+  "shadow_genome_sha256_before": "4a7df57194049119e659a44537ce1abbb26df81ed557917754fc477924d4d808",
+  "shadow_genome_sha256_after": "4a7df57194049119e659a44537ce1abbb26df81ed557917754fc477924d4d808",
+  "unaddressed_groups": [
+    [
+      "gate_override",
+      "qor-substantiate",
+      "2026-08-20T0244-4cfa93",
+      1
+    ],
+    [
+      "gate_override",
+      "qor-repo-release",
+      "2026-08-20T1440-d69349",
+      1
+    ],
+    [
+      "repeated_veto_pattern",
+      "qor-plan",
+      "2026-08-21T2030-233res",
+      1
+    ],
+    [
+      "gate_override",
+      "qor-implement",
+      "2026-09-04T0430-62ca33",
+      1
+    ],
+    [
+      "capability_shortfall",
+      "qor-enterprise-environment-adapter",
+      "2026-09-04T1810-be520e",
+      1
+    ],
+    [
+      "degradation",
+      "qor-substantiate",
+      "2026-10-14T2317-80dc4f",
+      1
+    ],
+    [
+      "degradation",
+      "qor-substantiate",
+      "2026-10-15T0038-5b1f28",
+      1
+    ]
+  ],
+  "classifications": [
+    {
+      "pattern": "repeated-veto-pattern",
+      "event_ids": [
+        "ce7c36d8382c05eb4b152499fcc0a4ba65a9c93b7a16ceda5a1047a83e764242"
+      ],
+      "skill": "qor-plan",
+      "session_id": "2026-08-21T2030-233res",
+      "event_type": "repeated_veto_pattern"
+    }
+  ],
+  "proposals": [
+    {
+      "pattern": "repeated-veto-pattern",
+      "proposal_kind": "doctrine",
+      "proposal_text": "Escalate repeated-VETO pattern flagged by qor-plan: the last 2 sealed phases each required more than one audit pass. Review plan-authoring and self-review calibration; promote to a doctrine change (new SG entry) if the pattern persists across further phases.",
+      "addressed_event_ids": [
+        "ce7c36d8382c05eb4b152499fcc0a4ba65a9c93b7a16ceda5a1047a83e764242"
+      ]
+    }
+  ],
+  "note": "Steps 1-3 only on a disposable copy; Step 4 (mark pending) and Step 5 (emit gate) not executed: the only classified event already has the committed proposal .qor/gates/2026-08-21T2030-233res/remediate.json and is already addressed_pending."
+}

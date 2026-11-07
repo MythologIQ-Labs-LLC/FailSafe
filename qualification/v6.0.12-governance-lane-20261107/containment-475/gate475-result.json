@@ -1,0 +1,152 @@
+{
+  "root": "C:\\Users\\<user>\\AppData\\Local\\Temp\\fs475g-z9rhTw",
+  "helperSha256": "6ee7a5c328ce80d3cd06ec28ab78685642929eb8fa8ea4b41756f1394b548137",
+  "results": [
+    {
+      "id": "G1 genuine helper passes the self-test",
+      "want": "verified",
+      "got": "verified",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "reason": "verified",
+        "low": true,
+        "denied": true,
+        "inOk": true,
+        "unchanged": true
+      }
+    },
+    {
+      "id": "G2 substituted helper is refused",
+      "want": "helper-hash-mismatch",
+      "got": "helper-hash-mismatch",
+      "pass": true
+    },
+    {
+      "id": "G3 missing helper is refused",
+      "want": "helper-missing",
+      "got": "helper-missing",
+      "pass": true
+    },
+    {
+      "id": "G4 a non-lowering launcher fails the self-test (identity and canary both catch it)",
+      "want": "refused",
+      "got": "refused",
+      "pass": true,
+      "detail": {
+        "low": false,
+        "canaryWritten": true,
+        "ok": false
+      }
+    },
+    {
+      "id": "T1 write to a Medium file outside",
+      "want": "DENIED",
+      "got": "DENIED",
+      "pass": true
+    },
+    {
+      "id": "T2 write to a Low-labeled file outside the run folder",
+      "want": "OK (documented gap)",
+      "got": "OK",
+      "pass": true,
+      "detail": "Low-labeled objects anywhere stay writable"
+    },
+    {
+      "id": "T3 overwrite a synthetic Medium credential file",
+      "want": "DENIED",
+      "got": "DENIED",
+      "pass": true
+    },
+    {
+      "id": "T4 read a synthetic Medium secret",
+      "want": "READABLE (not a confidentiality boundary)",
+      "got": "READABLE",
+      "pass": true
+    },
+    {
+      "id": "T5 exfiltrate the secret to a controlled local endpoint",
+      "want": "SENT (network not restricted)",
+      "got": "SENT",
+      "pass": true,
+      "detail": {
+        "out": ""
+      }
+    },
+    {
+      "id": "T6 write into the source repo object store (alternate target)",
+      "want": "DENIED",
+      "got": "DENIED",
+      "pass": true
+    },
+    {
+      "id": "T7 rewrite the clone's alternates file (contained to the clone)",
+      "want": "allowed in run folder; source unaffected",
+      "got": "rewritten",
+      "pass": true,
+      "detail": {
+        "srcUnchanged": true
+      }
+    },
+    {
+      "id": "T8 git commit inside the Low clone",
+      "want": "OK",
+      "got": "OK",
+      "pass": true
+    },
+    {
+      "id": "T9 grandchild process runs at Low",
+      "want": "Low",
+      "got": "Low",
+      "pass": true,
+      "detail": {
+        "out": "Mandatory Label\\Low Mandatory Level                           Label            S"
+      }
+    },
+    {
+      "id": "T10 create a scheduled task (broker); Medium baseline succeeds",
+      "want": "Low DENIED, Medium created",
+      "got": "low denied, medium created",
+      "pass": true
+    },
+    {
+      "id": "T11 WMI Win32_Process.Create",
+      "want": "DENIED / no outside write",
+      "got": "no write",
+      "pass": true,
+      "detail": {
+        "out": "DENIED"
+      }
+    },
+    {
+      "id": "T12 junction to outside, then write through it",
+      "want": "not created or DENIED",
+      "got": "not created",
+      "pass": true
+    },
+    {
+      "id": "T13 hard link to an outside file",
+      "want": "not created",
+      "got": "not created",
+      "pass": true
+    },
+    {
+      "id": "P1 source repository unchanged",
+      "want": "unchanged",
+      "got": "unchanged",
+      "pass": true
+    },
+    {
+      "id": "P2 synthetic profile/credentials unchanged",
+      "want": "unchanged",
+      "got": "unchanged",
+      "pass": true
+    },
+    {
+      "id": "P3 synthetic secret file intact",
+      "want": "intact",
+      "got": "intact",
+      "pass": true
+    }
+  ]
+}
