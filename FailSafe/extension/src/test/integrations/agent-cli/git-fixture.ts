@@ -10,6 +10,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { collectChild, type AgentRunFn, type AgentRunOptions } from '../../../integrations/agent-cli/agent-cli-core';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
 
 export const gitEnv = { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
 
@@ -32,7 +34,7 @@ export function makeRepo(files: Record<string, string> = {}): string {
 }
 
 export function removeRepo(root: string): void {
-  fs.rmSync(root, { recursive: true, force: true, maxRetries: 3 });
+  removeTempTree(root);
 }
 
 /** Worktrees registered on the repo besides the main one. */

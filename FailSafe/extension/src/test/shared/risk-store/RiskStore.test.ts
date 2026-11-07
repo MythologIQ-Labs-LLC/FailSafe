@@ -431,7 +431,8 @@ suite('RiskStore (#517 FX972)', () => {
         assert.ok(Date.now() - t0 < FAST_PATH_MS, `took ${Date.now() - t0} ms`);
         assert.equal(fs.readFileSync(risksFile(), 'utf8'), before);
         assert.ok(fs.lstatSync(lockDir()), 'the planted entry is left in place');
-        fs.rmSync(lockDir(), { force: true, recursive: false });
+        // Node 24.21+ refuses rmSync(recursive: false) on a dangling junction ("Path is a directory").
+        if (fs.lstatSync(lockDir()).isSymbolicLink()) fs.unlinkSync(lockDir()); else fs.rmSync(lockDir(), { force: true, recursive: false });
       }
     });
 

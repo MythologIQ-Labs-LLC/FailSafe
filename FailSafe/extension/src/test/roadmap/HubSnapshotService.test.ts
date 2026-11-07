@@ -9,6 +9,8 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { HubSnapshotService } from '../../roadmap/services/HubSnapshotService';
 import { readWorkspaceHead } from '../../roadmap/services/workspaceHead';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
 
 interface CallLog { name: string; t: number; }
 
@@ -117,7 +119,7 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
       const ids = (snap.nodeStatus as Array<{ id: string }>).map((n) => n.id);
       assert.deepEqual(ids, ['workspace-core', 'verification-queue', 'trust-engine']);
     } finally {
-      fs.rmSync(tmp, { recursive: true, force: true });
+      removeTempTree(tmp);
     }
   });
 
@@ -361,7 +363,7 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
   // whatever the extension process's working directory is.
   suite('workspace HEAD (#532 B284)', () => {
     const temps: string[] = [];
-    teardown(() => { for (const d of temps.splice(0)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 3 }); });
+    teardown(() => { for (const d of temps.splice(0)) removeTempTree(d); });
     function tempRepo(prefix: string): { root: string; head: string } {
       const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
       temps.push(root);
