@@ -11,6 +11,8 @@ import { execFileSync } from 'child_process';
 import { Request, Response } from 'express';
 import { TrackerRoute } from '../../../roadmap/routes/TrackerRoute';
 import { GIT_LOG_MAX_COMMITS } from '../../../roadmap/tracker/git-log-window';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
 
 interface CapturedRes {
   status: number;
@@ -96,7 +98,7 @@ suite('TrackerRoute.api cadence (GH #174 Part 2)', () => {
       assert.ok(rcs.every((r) => /^pr-\d+$/.test(r.id)), 'every anchor is a pr-<N>');
       // oldest-first: pr-1 before pr-3
       assert.ok(rcs.findIndex((r) => r.id === 'pr-1') < rcs.findIndex((r) => r.id === 'pr-3'), 'ascending order preserved');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   test('semver releases present → cadence=semver (PR fallback does NOT hijack)', () => {
@@ -110,7 +112,7 @@ suite('TrackerRoute.api cadence (GH #174 Part 2)', () => {
       const rcs = captured.body!.rcs as Array<{ id: string }>;
       assert.ok(rcs.some((r) => r.id === 'v1.2.0'), 'semver releases on the axis');
       assert.ok(!rcs.some((r) => /^pr-/.test(r.id)), 'no PR anchors when semver releases exist');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   test('empty repo (no releases, no PRs) → cadence=empty, no crash', () => {
@@ -121,7 +123,7 @@ suite('TrackerRoute.api cadence (GH #174 Part 2)', () => {
       assert.equal(captured.status, 200);
       assert.equal(captured.body!.cadence, 'empty');
       assert.deepEqual(captured.body!.rcs, []);
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 });
 
@@ -186,7 +188,7 @@ suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
       assert.ok(truncated, 'truncated-window advisory present when history exceeds the bound');
       assert.equal(truncated!.severity, 'warn', 'truncation advisory is non-blocking');
       assert.ok(truncated!.detail.includes(String(GIT_LOG_MAX_COMMITS)), 'advisory names the window size');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   // The regression a reviewer caught on PR #394: when EVERY merge anchor falls
@@ -209,7 +211,7 @@ suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
       const truncated = lint.find((f) => f.code === 'git-log-truncated');
       assert.ok(truncated, 'truncation is disclosed even though cadence is NOT pr-incremental');
       assert.equal(truncated!.severity, 'warn');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   // A second regression the same reviewer caught: bounding readGitLog moves
@@ -246,7 +248,7 @@ suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
         anchor!.summary, 'feat: unique boundary feature xyz123',
         'resolves the TRUE next-commit title, not a humanized-branch-name fallback ("boundary feat") or "Merge #7"',
       );
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   test('history within the window → no truncation advisory', () => {
@@ -263,7 +265,7 @@ suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
       assert.equal(captured.body!.cadence, 'pr-incremental');
       const lint = captured.body!.lint as Array<{ code: string }>;
       assert.ok(!lint.some((f) => f.code === 'git-log-truncated'), 'no truncation advisory below the window size');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 });
 
@@ -303,7 +305,7 @@ suite('TrackerRoute.api governance projection (A.2b #202)', () => {
       assert.ok(lint.some((f) => f.code === 'manifest-projected'), 'projected advisory present');
       assert.ok(lint.some((f) => f.code === 'phase-unanchored'), 'unversioned/never-shipped plans → unanchored warn');
       assert.ok(!lint.some((f) => f.severity === 'abort'), 'no aborts');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   test('operator programs.yaml present → projection NOT used (operator authoritative)', () => {
@@ -315,7 +317,7 @@ suite('TrackerRoute.api governance projection (A.2b #202)', () => {
       TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
       assert.equal(captured.body!.manifestPresent, true);
       assert.equal(captured.body!.manifestSource, 'operator');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 });
 
@@ -343,7 +345,7 @@ suite('TrackerRoute.api governance projection — malformed ledger (#233)', () =
       assert.ok(advisory, 'malformed-ledger advisory present');
       assert.equal(advisory!.severity, 'warn', 'advisory is non-blocking');
       assert.ok(!lint.some((f) => f.code === 'manifest-projected'), 'no false projected-success advisory');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   test('no docs/ directory at all (ledger unavailable) → plain manifest-absent advisory, not malformed', () => {
@@ -356,7 +358,7 @@ suite('TrackerRoute.api governance projection — malformed ledger (#233)', () =
       const lint = captured.body!.lint as Array<{ code: string }>;
       assert.ok(lint.some((f) => f.code === 'manifest-absent'), 'plain absent advisory for a missing ledger');
       assert.ok(!lint.some((f) => f.code.startsWith('manifest-projection-')), 'unavailable is not reported as malformed/unsupported');
-    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    } finally { removeTempTree(ws); }
   });
 
   // Regression pin (review finding on PR #405): the adapter's classifyFile only
@@ -385,7 +387,7 @@ suite('TrackerRoute.api governance projection — malformed ledger (#233)', () =
         assert.deepEqual(captured.body!.verticals, [], 'no fixed-vertical fallback from zero entries');
         const lint = captured.body!.lint as Array<{ code: string }>;
         assert.ok(lint.some((f) => f.code === 'manifest-absent'), 'reported the same as a missing ledger');
-      } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+      } finally { removeTempTree(ws); }
     }
   });
 });

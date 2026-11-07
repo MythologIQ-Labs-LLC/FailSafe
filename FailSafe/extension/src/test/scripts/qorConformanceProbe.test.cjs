@@ -24,7 +24,7 @@ const path = require('path');
 const probeMod = require('../../../scripts/qor-conformance-probe.cjs');
 const {
   classify, probe, render, versionBoundary,
-  FALSIFIABLE, NOT_FALSIFIABLE, INCONCLUSIVE, INAPPLICABLE,
+  FALSIFIABLE, NOT_FALSIFIABLE, INCONCLUSIVE, INAPPLICABLE, UNAVAILABLE,
   MATCH, UNTESTED,
 } = probeMod;
 
@@ -79,6 +79,18 @@ describe('FX942 conformance probe classification', () => {
     }));
     assert.equal(r.result, INCONCLUSIVE, r.detail);
     assert.match(r.detail, /clean fixture failed/);
+  });
+
+  it('classifies a control missing from the installed qor-logic as UNAVAILABLE, not a fixture fault', () => {
+    // v6.0.12 qualification: qor-logic 0.169.0 and 0.176.1 ship no
+    // qor.scripts.instruction_hygiene_lint, so both fixtures fail with Python's
+    // import error. That is a missing control and must be named as one.
+    const err = 'python.exe: No module named qor.scripts.instruction_hygiene_lint';
+    const r = classify(stubEntry({
+      id: 'gone', cleanExit: 1, defectExit: 1, defectOut: err, signal: 'instruction-hygiene finding',
+    }));
+    assert.equal(r.result, UNAVAILABLE, r.detail);
+    assert.match(r.detail, /no module qor\.scripts\.instruction_hygiene_lint/);
   });
 
   it('classifies a defect failure WITHOUT the control signal as INCONCLUSIVE', () => {

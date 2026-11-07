@@ -13,6 +13,8 @@ import { DEFAULT_SHIELD_POLICY } from '../../../integrations/shield-receipts/shi
 import {
   BASE_LEDGER, NOW, QOR_KEY, RECEIPT_KEY, SESSION, baseScenario, chainOf, keysOf, putReceipt, receiptBody, sealBlock,
 } from './fixtures';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
 
 const CLEAN_ENV: NodeJS.ProcessEnv = { ...process.env };
 for (const k of Object.keys(CLEAN_ENV)) if (k.startsWith('GIT_')) delete CLEAN_ENV[k];
@@ -78,7 +80,7 @@ suite('workspace-evidence-source (#476)', function () {
     merge = git(repo, 'rev-parse', 'HEAD');
   });
 
-  suiteTeardown(() => { fs.rmSync(repo, { recursive: true, force: true }); });
+  suiteTeardown(() => { removeTempTree(repo); });
 
   test('headSha, parents (root, single, merge)', async () => {
     const { source, dispose } = createWorkspaceEvidenceSource(repo);
@@ -130,7 +132,7 @@ suite('workspace-evidence-source (#476)', function () {
         assert.equal(await shallow.source.isShallow(), true);
         assert.equal(await full.source.isShallow(), false);
       } finally { shallow.dispose(); full.dispose(); }
-    } finally { fs.rmSync(shallowDir, { recursive: true, force: true }); }
+    } finally { removeTempTree(shallowDir); }
   });
 
   test('showAtCommit reads the committed blob, not the working copy', async () => {
@@ -177,7 +179,7 @@ suite('workspace-evidence-source (#476)', function () {
       assert.equal(await source.readReceipt(merge), '{"x":1}\n');
       assert.ok(fs.existsSync(path.join(repo, '.failsafe', 'shield-receipts', `${merge}.json`)));
       assert.deepEqual(fs.readdirSync(path.join(repo, '.failsafe', 'shield-receipts')), [`${merge}.json`], 'no temp file left');
-    } finally { dispose(); fs.rmSync(path.join(repo, '.failsafe'), { recursive: true, force: true }); }
+    } finally { dispose(); removeTempTree(path.join(repo, '.failsafe')); }
   });
 
   test('a missing or corrupt object is an error, never an absent file', async () => {
@@ -190,7 +192,7 @@ suite('workspace-evidence-source (#476)', function () {
         await assert.rejects(source.showAtCommit(c1, 'docs/META_LEDGER.md'));
         assert.equal(await source.showAtCommit(c1, 'docs/NOPE.md'), undefined, 'a path absent from the tree is still undefined');
       } finally { dispose(); }
-    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+    } finally { removeTempTree(r); }
   });
 
   test('end to end: parent ledger unreadable -> anything but Verified (not-seal-commit is not skipped)', async () => {
@@ -218,7 +220,7 @@ suite('workspace-evidence-source (#476)', function () {
       assert.equal(await verify(), 'rejected:not-seal-commit', 'intact parent ledger: the code commit is not the Seal commit');
       deleteLooseObject(r, git(r, 'rev-parse', `${sealSha}:docs/META_LEDGER.md`));
       assert.equal(await verify(), 'neutral:evidence-source-error');
-    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+    } finally { removeTempTree(r); }
   });
 
   test('a ledger committed as a symlink (mode 120000) is an error, not a file', async () => {
@@ -233,7 +235,7 @@ suite('workspace-evidence-source (#476)', function () {
       try {
         await assert.rejects(source.showAtCommit(head, 'docs/META_LEDGER.md'));
       } finally { dispose(); }
-    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+    } finally { removeTempTree(r); }
   });
 
   test('a partial clone (extensions.partialClone) is refused for every git read', async () => {
@@ -247,7 +249,7 @@ suite('workspace-evidence-source (#476)', function () {
         await assert.rejects(source.showAtCommit(c1, 'docs/META_LEDGER.md'));
         await assert.rejects(source.parents(c1));
       } finally { dispose(); }
-    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+    } finally { removeTempTree(r); }
   });
 
   test('a promisor remote (remote.<name>.promisor) is refused for every git read', async () => {
@@ -263,7 +265,7 @@ suite('workspace-evidence-source (#476)', function () {
         const v = await verifyShieldReceipt(source, keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
         assert.equal(v.kind === 'verified' ? 'verified' : `${v.kind}:${v.reason}`, 'neutral:evidence-source-error');
       } finally { dispose(); }
-    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+    } finally { removeTempTree(r); }
   });
 
   test('gitTimeoutMs: null is refused at creation, not silently defaulted', () => {
@@ -272,7 +274,7 @@ suite('workspace-evidence-source (#476)', function () {
       assert.throws(() => createWorkspaceEvidenceSource(r, { gitTimeoutMs: null as unknown as number }));
       const ok = createWorkspaceEvidenceSource(r, {});
       ok.dispose();
-    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+    } finally { removeTempTree(r); }
   });
 
   test('git older than 2.44 (GIT_NO_LAZY_FETCH ignored) is unsupported', () => {
@@ -304,8 +306,8 @@ suite('workspace-evidence-source (#476)', function () {
         assert.equal(fs.readFileSync(path.join(outside, `${sha}.json`), 'utf8'), '{"planted":true}', 'nothing written outside');
       } finally { dispose(); }
     } finally {
-      fs.rmSync(r, { recursive: true, force: true });
-      fs.rmSync(outside, { recursive: true, force: true });
+      removeTempTree(r);
+      removeTempTree(outside);
     }
   });
 
@@ -319,7 +321,7 @@ suite('workspace-evidence-source (#476)', function () {
         assert.deepEqual(fs.readdirSync(path.join(r, '.failsafe', 'shield-receipts')), [`${sha}.json`]);
         assert.match((await source.readReceipt(sha)) ?? '', /^\{"n":[12]\}\n$/);
       } finally { dispose(); }
-    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+    } finally { removeTempTree(r); }
   });
 
   test('a transient rename failure (EPERM/EBUSY) is retried; a persistent one leaves no temp file', async () => {
@@ -347,7 +349,7 @@ suite('workspace-evidence-source (#476)', function () {
     } finally {
       (fs.promises as { rename: unknown }).rename = realRename;
       dispose();
-      fs.rmSync(r, { recursive: true, force: true });
+      removeTempTree(r);
     }
   });
 
@@ -365,7 +367,7 @@ suite('workspace-evidence-source (#476)', function () {
       (fs.promises as { rename: unknown }).rename = realRename;
       (fs.promises as { rm: unknown }).rm = realRm;
       dispose();
-      fs.rmSync(r, { recursive: true, force: true });
+      removeTempTree(r);
     }
   });
 
@@ -384,7 +386,7 @@ suite('workspace-evidence-source (#476)', function () {
     } finally {
       (fs.promises as { writeFile: unknown }).writeFile = realWrite;
       dispose();
-      fs.rmSync(r, { recursive: true, force: true });
+      removeTempTree(r);
     }
   });
 
@@ -407,7 +409,7 @@ suite('workspace-evidence-source: ledger history search (#476 N1)', function () 
   const V = 'ab'.repeat(32);
   const repos: string[] = [];
   const mk = (prefix: string): string => { const r = newRepo(prefix); repos.push(r); return r; };
-  suiteTeardown(() => { for (const r of repos) fs.rmSync(r, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); });
+  suiteTeardown(() => { for (const r of repos) removeTempTree(r); });
 
   async function contains(repo: string, sha: string, v = V): Promise<boolean> {
     const { source, dispose } = createWorkspaceEvidenceSource(repo);
