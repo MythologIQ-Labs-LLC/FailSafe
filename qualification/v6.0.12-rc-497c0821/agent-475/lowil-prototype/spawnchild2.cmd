@@ -1,0 +1,1 @@
+@start "" /b "C:\dev\mythologiq\FailSafe-6012-qual\agent-standin\bin\probe-write.exe" "C:\Users\<user>\AppData\Local\Temp\fs475lowil-XBEL\outside\child.txt" "C:\Users\<user>\AppData\Local\Temp\fs475lowil-XBEL\worktree\child.txt"

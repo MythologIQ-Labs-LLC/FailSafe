@@ -1,0 +1,46 @@
+"after all" hook for "dispose removes the safe-git and graft temporary directories"
+"after all" hook for "real-ledger timing row: a no-match walk over the enclosing repository ledger takes under 10 s"
+"after each" hook for "Apply writes exactly the in-memory bytes, including created and deleted files"
+"after each" hook for "Continue: spawn cwd is a disposable worktree, never the workspace; change quarantined"
+"after each" hook for "H1: a checkpoint over a temp repository records its HEAD"
+"after each" hook for "edit + untracked create + delete stay out of the workspace and all appear in the patch"
+"after each" hook for "review N2: the tampered row names an ancestor of HEAD, so the refusal comes from the hash check alone"
+(d) a link or a file at the lock path is LOCK_BLOCKED at once
+B231 a linked legacy lock refuses import without touching external data
+C1 every catalog adapter passes every claimed contract; 25 pairs are checked
+CheckpointRoute rollback on a real repository (#532 B284)
+HubSnapshotService (Phase 60 §0)
+OpenHands historical import: store, keys, redaction (#477)
+RiskStore (#517 FX972)
+TrackerRoute.api cadence (GH #174 Part 2)
+TrackerRoute.api cadence (GH #174 Part 2)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+TrackerRoute.api git-log window (FailSafe#244 large-repo audit)
+a ledger committed as a symlink (mode 120000) is an error, not a file
+a missing or corrupt object is an error, never an absent file
+a partial clone (extensions.partialClone) is refused for every git read
+a promisor remote (remote.<name>.promisor) is refused for every git read
+agent-run-promotion (#475 FX952)
+end to end: parent ledger unreadable -> anything but Verified (not-seal-commit is not skipped)
+every merge anchor outside the window → cadence collapses to empty, but truncation is still disclosed
+governed wrappers run isolated (#475 FX831/FX832)
+history within the window → no truncation advisory
+integration capability conformance (#474)
+isShallow is true for a depth-1 clone and false for the full repo
+isolated-run (#475 FX951)
+merge anchor exactly at the window edge resolves its real title via the +1 lookahead commit
+merge anchor older than the window is dropped; a recent one is still found
+no semver releases + merged-PR git history → cadence=pr-incremental with pr-<N> anchors
+semver releases present → cadence=semver (PR fallback does NOT hijack)
+the chat participant renders an imported purpose as text at all three sites
+tracker preview and chat Markdown safety (#480 T11)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source (#476)
+workspace-evidence-source: ledger history search (#476 N1)

@@ -1,0 +1,2 @@
+B231 a linked legacy lock refuses import without touching external data
+OpenHands historical import: store, keys, redaction (#477)

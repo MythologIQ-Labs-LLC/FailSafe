@@ -1,0 +1,16 @@
+    ✔ missing META_LEDGER.md → shieldPhase IDLE, derivedShieldPhases all pending
+    ✔ idle daemon, no verdict — state=pending, label=Idle, orb class pending
+    ✔ 4. ws.onclose — transitions to disconnected + schedules reconnect + repaints pending
+    ✔ IDLE → all 4 phases pending
+    ✔ PLAN with no verdict → plan active, others pending
+    ✔ IMPLEMENT → plan/audit completed, implement active, substantiate pending
+    ✔ GATE phase → Plan done, Audit active, Implement+Substantiate pending
+    ✔ store throwing -> failed, setting untouched, nothing offered for removal, plaintext still pending
+    ✔ a review VETO makes review failing and the delivery failing
+    ✔ every gap is named in step order; a VETO still makes it failing
+  6063 passing (10m)
+  19 pending
+census[default]: executed 567/567 (missing 0)
+  17 passing (14s)
+census[architecture-index]: executed 5/5 (missing 0)
+vscode-test exit=0

@@ -1,0 +1,4 @@
+B231 a linked legacy lock refuses import without touching external data
+OpenHands historical import: store, keys, redaction (#477)
+the chat participant renders an imported purpose as text at all three sites
+tracker preview and chat Markdown safety (#480 T11)
