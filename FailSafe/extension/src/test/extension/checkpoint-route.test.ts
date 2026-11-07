@@ -16,6 +16,8 @@ import { GitResetService, type CommandRunner } from '../../governance/revert/Git
 import {
   buildCheckpointRecord, persistCheckpoint, verifyCheckpointRecord, type CheckpointRecord,
 } from '../../roadmap/services/CheckpointStore';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
 
 /** #514: a fake confirmer recording each dialog request and answering `result`. */
 function confirmer(result: OperatorConfirmation): {
@@ -375,7 +377,7 @@ suite('CheckpointRoute rollback on a real repository (#532 B284)', () => {
   teardown(async () => {
     if (harness) await harness.stop();
     harness = null;
-    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3 });
+    removeTempTree(root);
   });
 
   interface Rig {
