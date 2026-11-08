@@ -20,6 +20,24 @@ Request explicit authorization to **propose** a forward-only recovery doctrine f
 
 The owner must separately select: signing-key custody, independent witness provider, on-seal cadence, expiry/offline rules, rotation/revocation/recovery and reviewer independence. A local timestamp or repository issue comment is not an independent witness.
 
+## Native compatibility and five explicit decisions (2026-11-08 independent review)
+
+The native 0.176.1 support review is preserved at `qualification/v6.0.12-pr629-markdown-627-review-20261108-no-ci@1a3afa37` in `governance-627/REVIEW-627-36ef4d99.md`. The native tool **does not** currently implement a signed quorum recovery decision, external checkpoint covering entry prose, or a verifier of text edits (steps 3–5 below). Its `reconcile` function is only for genuine duplicate-`previous_hash` residuals. The `governance-state-loss` event applies to a real snapshot restore; none exists for these missing local artifacts. Neither may be repurposed as evidence recovery.
+
+The native repeated-VETO escalator is per-session and advisory; #467's prohibition is an **owner policy**, not an automatic native lock. New sessions must never be used secretly to evade that prohibition. A narrowly scoped owner rule change can prospectively permit unrelated plans, without closing or rerunning the missing October VETOs.
+
+The following are **recommended choices for owner ratification, not adopted rules**:
+
+| ID | Recommended choice | Effect and limitations |
+|---|---|---|
+| D1 | Add an explicit *unrecoverable evidence* clause, preserving #610–#612 and `7126134e` as permanently `UNKNOWN/UNRESOLVED` unless authentic artifacts surface | Enables an honest gap statement; **never** grants closure, PASS or retroactive remediation |
+| D2 | Interpret “no fourth ordinary audit” as barring another attempt to approve the same October VETOed work via a newly numbered session. Permit **new, genuinely distinct prospective** #463, #475, G4 and governance-amendment plan audits with independent review, actual timestamps and their own source/plan identities | Unblocks future plan review only. #467 itself and all release-seal requirements remain P0 |
+| D3 | Propose a FailSafe-local authority rule, independent of frozen Qor-logic: recovery decisions require affirmative **owner approval plus a non-author independent reviewer**, with 2-of-2 positive approvals. Require hardware-backed or comparably nonexportable owner signing custody and a genuinely independent third-party timestamp/transparency witness that checkpoints **full ledger bytes** including prose | Specific trust provider, key operations, expiry, recovery and revocation must be selected and tested; cannot claim native support today |
+| D4 | Review the actual governance amendment through a **new** plan and independent `/qor-audit` PASS, under the *existing* governance decision process, before changing `GOVERNANCE.md`, `AGENTS.md` or local governance code | `GOVERNANCE.md` currently calls significant governance votes for a **minimum one week** and a simple majority. Do not pretend a discussion comment starts or completes that vote |
+| D5 | Preserve existing draft #623 and earlier unaudited changes as reference/evidence, **rebuild affected implementation prospectively** from the accepted base under audited plans and new commits, with new native qualification and a new seal | Strongest literal reading of “Never implement without a PASS.” Do not call retrospective review a prior PASS or silently merge the old draft |
+
+Important sequencing: the **owner must ratify** D1 and D2, and existing `GOVERNANCE.md` amendment process must govern D3/D4. D2 can enable an honest new-scope audit *without* implying D1 is a completed G4 recovery. The new FailSafe-local G4 verifier would itself be production governance functionality and requires an independent audit before implementation. A witness chosen later cannot reconstruct the historical October files.
+
 ## Compensating-controls plan, subject to an independent audit
 
 1. **Freeze immutable evidence.** Bind the current v6.0.11 ledger bytes/hash, last entry #914, G4's historical #341–#382 coverage disclosure, reference commits, installed Qor wheel/RECORD, the exhaustive local recovery manifest, and every authentic surviving event/artifact SHA. Keep the original branch and local files unchanged.
