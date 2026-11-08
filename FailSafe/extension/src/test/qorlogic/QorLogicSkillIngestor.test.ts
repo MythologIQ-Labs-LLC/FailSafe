@@ -98,6 +98,29 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
   setup(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingestor-')); });
   teardown(() => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* */ } });
 
+  test('#463: explicit subset and [] refuse direct installHost with zero interpreter or CLI calls', async () => {
+    const resolver = fixedResolver();
+    let resolverCalls = 0;
+    (resolver as unknown as { resolve: () => Promise<never> }).resolve = async () => {
+      resolverCalls++;
+      throw Error('Python must not be resolved for unsupported selection');
+    };
+    const { run, calls } = makeRun(() => ok());
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), resolver, withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    for (const selection of [['qor-audit'], []]) {
+      const result = await ingestor.installHost('claude', 'repo', selection);
+      assert.equal(result.ok, false);
+      if (!result.ok) {
+        assert.match(result.error, /selective-skill-install-unsupported/);
+        assert.equal(result.command, '');
+      }
+    }
+    assert.equal(resolverCalls, 0);
+    assert.equal(calls.length, 0, 'neither version probes nor installs may run');
+  });
+
   test('invokes python -m qor.cli install --host claude --scope repo', async () => {
     const installer = new FakeInstaller();
     const resolver = fixedResolver('/opt/py/python');
