@@ -76,14 +76,32 @@ suite('agent-cli-core (Group B)', () => {
   });
 });
 
-suite('governed wrappers run isolated (#475 FX831/FX832)', function () {
+suite('mock-contained worktree regression and production fail-closed (#475)', function () {
   this.timeout(120000);
   let root = '';
   let cfg: ReturnType<typeof useGitConfig>;
   setup(() => { cfg = useGitConfig(); root = makeRepo({ 'README.md': 'readme\n' }); });
   teardown(() => { removeRepo(root); cfg.restore(); });
 
-  const deps = (run: AgentRunFn) => ({ run, classify, issuedAt: 'T', resolve: fixtureExe });
+  // Legacy worktree tests supply a simulated contained runner. Production supplies none.
+  const deps = (run: AgentRunFn) => ({ run, runInSandbox: run, classify, issuedAt: 'T', resolve: fixtureExe });
+
+  test('#475 production contract: authorized runs without OS containment refuse before ANY probe or resolver', async () => {
+    let resolves = 0;
+    const mock = makeRunner();
+    const noBoundary = { run: mock.run, classify, issuedAt: 'T', resolve: (_: string) => { resolves++; return '/mock/agent'; } };
+    const a = await runAiderGoverned({ prompt: 'x', cwd: root, writesAllowed: true, timeoutMs: T }, noBoundary);
+    const c = await runContinueGoverned({ prompt: 'x', allow: [], cwd: root, writesAllowed: true, timeoutMs: T }, noBoundary);
+    for (const outcome of [a, c]) {
+      assert.equal(outcome.status, 'BLOCKED_PRE_EXECUTION');
+      assert.equal(outcome.spawned, false);
+      assert.equal(outcome.receipt?.exitCode, null);
+      assert.match(outcome.reason ?? '', /OS-enforced agent containment is unavailable/);
+    }
+    assert.equal(mock.calls.length, 0, 'version probe and agent process must never be run');
+    assert.equal(resolves, 0, 'binary resolution must not precede OS containment');
+    assert.equal(read(root, 'README.md'), 'readme\\n');
+  });
 
   test('Continue: spawn cwd is a disposable worktree, never the workspace; change quarantined', async () => {
     const { run, calls } = makeRunner();
