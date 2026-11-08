@@ -151,6 +151,18 @@ export function createScaffoldWithWebOptions(
     // the final report carry it.
     const cb = withOperationId(callbacks, context?.operationId);
     const invs: QorLogicInstallInvocation[] = [];
+    // #463: selection keys, including explicit [], cannot be represented by
+    // the frozen 0.176.1 CLI. Refuse BEFORE any Python or pip side effects.
+    if (skillFilter && Object.keys(skillFilter).length > 0) {
+      const host = hosts.find((h) => Object.prototype.hasOwnProperty.call(skillFilter, h));
+      const at = new Date().toISOString();
+      invs.push(emit({
+        phase: 'qorlogic-install', status: 'error', startedAt: at, completedAt: at,
+        ...(host ? { host, scope } : {}),
+        error: 'Selected-skill installation is unavailable with frozen qor-logic 0.176.1; no Python process or install was started.',
+      }, cb.onProgress));
+      return finalize(invs, cb);
+    }
     const probe = await runProbeStep(ingestor, cb.onProgress);
     invs.push(probe);
     if (probe.status === 'error') return finalize(invs, cb);
@@ -177,9 +189,9 @@ function withOperationId(callbacks: InstallCallbacks, operationId: string | unde
 
 /**
  * Phase 3: skill-filter-aware variant returned alongside the web-options factory.
- * Callers that need per-host skill selection use this signature, which threads
- * `--include` flags into each `runHostInstallStep`. Hosts absent from `skillFilter`
- * (or with empty arrays) install every skill (existing behavior preserved).
+ * A non-empty skillFilter map is rejected before probing Python or installing
+ * a package. The frozen 0.176.1 CLI has no selective-install flag; refusing
+ * explicit empty selections also avoids silently installing every skill.
  */
 export function createScaffoldWithSkillFilter(
   ingestor: QorLogicSkillIngestor,
