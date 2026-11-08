@@ -213,7 +213,7 @@ suite('health from real adapter outcomes (#479 H4)', () => {
     const resolve = (name: string) => path.join(os.tmpdir(), 'fixture-bin', name);
     const run = (versionCode: number): AgentRunFn => async (_cmd, args) => ({ stdout: args[0] === '--version' ? 'cn 1.0.0' : '', stderr: '', code: args[0] === '--version' ? versionCode : 0 });
     const base = { prompt: 'p', allow: [], cwd, timeoutMs: 1000 };
-    const missing = await runContinueGoverned({ ...base, writesAllowed: true }, { run: run(127), classify: () => 'L1', issuedAt: 't', resolve });
+    const missing = await runContinueGoverned({ ...base, writesAllowed: true }, { run: run(127), runInSandbox: run(127), classify: () => 'L1', issuedAt: 't', resolve });
     assert.deepEqual(healthFromAgentRun(missing), ['failing', 'not_installed']);
     const blocked = await runContinueGoverned({ ...base, writesAllowed: false }, { run: run(0), classify: () => 'L1', issuedAt: 't', resolve });
     assert.equal(blocked.status, 'BLOCKED_PRE_EXECUTION');
