@@ -1,0 +1,44 @@
+{
+  "vscode": "1.122.1",
+  "sites": [
+    {
+      "md": "**Purpose**: \\!\\[x\\]\\(https://evil.example/p.png\\)&nbsp;<img&nbsp;src=x&nbsp;onerror=alert\\(1\\)\\>&nbsp;\\[link\\]\\(http://evil.example\\)\n\n",
+      "html": "<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><strong>Purpose</strong>: ![x](<a href=\"https://evil.example/p.png\" data-href=\"https://evil.example/p.png\">https://evil.example/p.png</a>) &lt;img src=x onerror=alert(1)&gt; [link](<a href=\"http://evil.example\" data-href=\"http://evil.example\">http://evil.example</a>)</p>",
+      "helper": "accepted",
+      "anyImgTag": false,
+      "anyScriptTag": false,
+      "rawOnerrorTag": false,
+      "linkToEvilWithTextLink": false,
+      "anchors": [
+        "<a href=\"https://evil.example/p.png\" data-href=\"https://evil.example/p.png\">https://evil.example/p.png</a>",
+        "<a href=\"http://evil.example\" data-href=\"http://evil.example\">http://evil.example</a>"
+      ]
+    },
+    {
+      "md": "- **Active Intent**: \\!\\[x\\]\\(https://evil.example/p.png\\)&nbsp;<img&nbsp;src=x&nbsp;onerror=alert\\(1\\)\\>&nbsp;\\[link\\]\\(http://evil.example\\)\n",
+      "html": "<ul data-line=\"0\" class=\"code-line\" dir=\"auto\">\n<li data-line=\"0\" class=\"code-line\" dir=\"auto\"><strong>Active Intent</strong>: ![x](<a href=\"https://evil.example/p.png\" data-href=\"https://evil.example/p.png\">https://evil.example/p.png</a>) &lt;img src=x onerror=alert(1)&gt; [link](<a href=\"http://evil.example\" data-href=\"http://evil.example\">http://evil.example</a>)</li>\n</ul>",
+      "helper": "accepted",
+      "anyImgTag": false,
+      "anyScriptTag": false,
+      "rawOnerrorTag": false,
+      "linkToEvilWithTextLink": false,
+      "anchors": [
+        "<a href=\"https://evil.example/p.png\" data-href=\"https://evil.example/p.png\">https://evil.example/p.png</a>",
+        "<a href=\"http://evil.example\" data-href=\"http://evil.example\">http://evil.example</a>"
+      ]
+    },
+    {
+      "md": "Sealing \"\\!\\[x\\]\\(https://evil.example/p.png\\)&nbsp;<img&nbsp;src=x&nbsp;onerror=alert\\(1\\)\\>&nbsp;\\[link\\]\\(http://evil.example\\)\" needs your confirmation in VS Code. Current status: `PASS`; only an approved (`PASS`) intent can be sealed.\n\n",
+      "html": "<p data-line=\"0\" class=\"code-line\" dir=\"auto\">Sealing &quot;![x](<a href=\"https://evil.example/p.png\" data-href=\"https://evil.example/p.png\">https://evil.example/p.png</a>) &lt;img src=x onerror=alert(1)&gt; [link](<a href=\"http://evil.example\" data-href=\"http://evil.example\">http://evil.example</a>)&quot; needs your confirmation in VS Code. Current status: <code>PASS</code>; only an approved (<code>PASS</code>) intent can be sealed.</p>",
+      "helper": "accepted",
+      "anyImgTag": false,
+      "anyScriptTag": false,
+      "rawOnerrorTag": false,
+      "linkToEvilWithTextLink": false,
+      "anchors": [
+        "<a href=\"https://evil.example/p.png\" data-href=\"https://evil.example/p.png\">https://evil.example/p.png</a>",
+        "<a href=\"http://evil.example\" data-href=\"http://evil.example\">http://evil.example</a>"
+      ]
+    }
+  ]
+}

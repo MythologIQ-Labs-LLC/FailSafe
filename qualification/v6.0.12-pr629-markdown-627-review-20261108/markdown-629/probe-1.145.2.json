@@ -1,0 +1,124 @@
+{
+  "vscode": "1.145.2",
+  "electron": "43.8.3",
+  "node": "24.22.1",
+  "cases": [
+    {
+      "id": "bare-url-trailing-backslash",
+      "md": "https://evil.example/p.png\\",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><a href=\"https://evil.example/p.png%5C\" data-href=\"https://evil.example/p.png%5C\">https://evil.example/p.png\\</a></p>",
+      "helper": "accepted",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "escaped-image-syntax",
+      "md": "!\\[x\\]\\(https://evil.example/p.png\\)",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\">![x](<a href=\"https://evil.example/p.png%5C\" data-href=\"https://evil.example/p.png%5C\">https://evil.example/p.png\\</a>)</p>",
+      "helper": "accepted",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "bare-url-same-text",
+      "md": "see https://evil.example/path ok",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\">see <a href=\"https://evil.example/path\" data-href=\"https://evil.example/path\">https://evil.example/path</a> ok</p>",
+      "helper": "accepted",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "md-link-disguised-label",
+      "md": "[Trusted link](https://evil.example)",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><a href=\"https://evil.example\" data-href=\"https://evil.example\">Trusted link</a></p>",
+      "helper": "REJECTED",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "md-link-url-lookalike",
+      "md": "[http://trusted.example](http://evil.example)",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><a href=\"http://evil.example\" data-href=\"http://evil.example\">http://trusted.example</a></p>",
+      "helper": "REJECTED",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "md-link-backslash-text-other-host",
+      "md": "[https://evil.example/p.png\\\\](https://other.example/p.png%5C)",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><a href=\"https://other.example/p.png%5C\" data-href=\"https://other.example/p.png%5C\">https://evil.example/p.png\\</a></p>",
+      "helper": "REJECTED",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "md-link-nested-markup-label",
+      "md": "[**Trusted**](https://evil.example)",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><a href=\"https://evil.example\" data-href=\"https://evil.example\"><strong>Trusted</strong></a></p>",
+      "helper": "accepted",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "md-image-in-link",
+      "md": "[![x](https://evil.example/i.png)](https://evil.example)",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><a href=\"https://evil.example\" data-href=\"https://evil.example\"><img src=\"https://evil.example/i.png\" alt=\"x\" data-src=\"https://evil.example/i.png\"></a></p>",
+      "helper": "accepted",
+      "anchors": 1,
+      "img": true,
+      "script": false
+    },
+    {
+      "id": "md-image",
+      "md": "![x](https://evil.example/p.png)",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><img src=\"https://evil.example/p.png\" alt=\"x\" data-src=\"https://evil.example/p.png\"></p>",
+      "helper": "accepted",
+      "anchors": 0,
+      "img": true,
+      "script": false
+    },
+    {
+      "id": "raw-html-anchor",
+      "md": "<a href=\"https://evil.example\">Trusted</a>",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\"><a href=\"https://evil.example\">Trusted</a></p>",
+      "helper": "REJECTED",
+      "anchors": 1,
+      "img": false,
+      "script": false
+    },
+    {
+      "id": "raw-html-img",
+      "md": "<img src=x onerror=alert(1)>",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<div  data-line=\"0\" class=\"code-line\" dir=\"auto\" ></div>\n<img src=x onerror=alert(1)>",
+      "helper": "accepted",
+      "anchors": 0,
+      "img": true,
+      "script": false
+    },
+    {
+      "id": "raw-html-script",
+      "md": "<script>alert(1)</script>",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<div  data-line=\"0\" class=\"code-line\" dir=\"auto\" ></div>\n<script>alert(1)</script>",
+      "helper": "accepted",
+      "anchors": 0,
+      "img": false,
+      "script": true
+    },
+    {
+      "id": "javascript-link",
+      "md": "[x](javascript:alert(1))",
+      "html": "<span id=\"markdown-mermaid\" aria-hidden=\"true\" data-config=\"{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}\"></span>\n\t\t\t\t<p data-line=\"0\" class=\"code-line\" dir=\"auto\">[x](javascript:alert(1))</p>",
+      "helper": "accepted",
+      "anchors": 0,
+      "img": false,
+      "script": false
+    }
+  ]
+}
