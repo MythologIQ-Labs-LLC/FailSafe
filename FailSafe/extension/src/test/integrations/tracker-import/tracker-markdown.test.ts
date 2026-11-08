@@ -16,7 +16,7 @@ async function render(md: string): Promise<string> {
   return String(await vscode.commands.executeCommand('markdown.api.render', md));
 }
 
-const HOSTILE_TITLE = '![x](https://evil.example/p.png) <img src=x onerror=alert(1)> [link](http://evil.example)';
+const HOSTILE_TITLE = '![x](https://evil.example/p.png) <img src=x onerror=alert(1)> <script>alert(1)</script> [link](http://evil.example)';
 
 /**
  * Newer VS Code markdown renderers percent-encode a literal backslash in
@@ -25,10 +25,19 @@ const HOSTILE_TITLE = '![x](https://evil.example/p.png) <img src=x onerror=alert
  * slashes, @, percent signs or arbitrary disguises are NOT normalized.
  */
 function assertNoDisguisedAutoLinks(html: string): void {
-  const anchors = Array.from(html.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g));
-  for (const [, href, text] of anchors) {
+  // Reject every anchor with markup or a non-canonical href, including
+  // attributes before href and nested formatted labels (previously skipped).
+  const anchors = Array.from(html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi));
+  const openings = (html.match(/<a\b/gi) ?? []).length;
+  const closings = (html.match(/<\/a\s*>/gi) ?? []).length;
+  assert.equal(anchors.length, openings, `unrecognized opening anchor in ${html}`);
+  assert.equal(anchors.length, closings, `unmatched closing anchor in ${html}`);
+  for (const [, attrs, content] of anchors) {
+    const href = /(?:^|\s)href\s*=\s*"([^"]*)"/i.exec(attrs)?.[1];
+    assert.ok(href, `anchor without quoted href in ${html}`);
+    assert.ok(!/<[^>]*>/.test(content), `nested markup in anchor in ${html}`);
     const displayedTarget = href.replace(/%5c/gi, '\\');
-    assert.equal(text, displayedTarget, `disguised link in ${html}`);
+    assert.equal(content, displayedTarget, `disguised link in ${html}`);
   }
 }
 
@@ -49,6 +58,21 @@ suite('tracker preview and chat Markdown safety (#480 T11)', () => {
     }
   });
 
+
+  test('formatted labels, attribute reordering and unquoted links cannot evade the link disclosure check', () => {
+    assert.doesNotThrow(() =>
+      assertNoDisguisedAutoLinks('<a class="safe" href="https://evil.example">https://evil.example</a>'));
+    for (const html of [
+      '<a href="https://evil.example"><strong>Trusted</strong></a>',
+      '<a class="x" href="https://evil.example">Trusted</a>',
+      '<a href="https://evil.example"><span>https://evil.example</span></a>',
+      "<a href='https://evil.example'>Trusted</a>",
+      '<a href=https://evil.example>Trusted</a>',
+      '<a href="https://evil.example">https://evil.example</a><a href="https://evil.example">Trusted</a>',
+    ]) {
+      assert.throws(() => assertNoDisguisedAutoLinks(html), /anchor|disguised|markup/i);
+    }
+  });
 
   test('control: the render probe turns a real image and link into tags', async () => {
     const html = await render(HOSTILE_TITLE);
@@ -91,6 +115,7 @@ suite('tracker preview and chat Markdown safety (#480 T11)', () => {
     for (const v of withPurpose) {
       const html = await render(v);
       assert.ok(!/<img/.test(html), html);
+      assert.ok(!/<script\b/i.test(html), html);
       // Auto-links may encode literal \\ as %5C in href on newer VS Code,
       // but a visible label hiding a different target must still fail.
       assertNoDisguisedAutoLinks(html);
