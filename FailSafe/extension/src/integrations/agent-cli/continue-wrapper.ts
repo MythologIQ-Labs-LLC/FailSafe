@@ -82,11 +82,18 @@ export async function runContinueGoverned(opts: ContinueRunOptions, deps: Contin
     return blockedOutcome('continue', argv, 'the allowlist grants shell/exec tools, which can write outside the isolated worktree; FailSafe does not run them', 'L3', deps.issuedAt);
   }
 
-  const det = await detectContinue(deps.run, opts.cwd, deps.resolve);
+  // #475: a worktree is NOT an OS process sandbox. Never resolve or execute
+  // even --version unless the host supplied an OS-enforced runner.
+  // Production supplies none until native containment is independently qualified.
+  const sandboxRun = deps.runInSandbox;
+  if (!sandboxRun) {
+    return blockedOutcome('continue', argv, 'OS-enforced agent containment is unavailable; external CLI execution is disabled', 'L3', deps.issuedAt);
+  }
+  const det = await detectContinue(sandboxRun, opts.cwd, deps.resolve);
   if (!det.available) return { available: false, spawned: false, error: '`cn` (Continue CLI) not found on PATH outside the workspace, or `cn --version` failed' };
 
   // API key in the child ENV only (never argv/receipt).
   const env = { ...(opts.baseEnv ?? {}), ...(opts.apiKey ? { CONTINUE_API_KEY: opts.apiKey } : {}) };
-  const r = await runIsolated(opts.cwd, { cmd: 'cn', args: argv, env }, { ...deps, timeoutMs: opts.timeoutMs });
+  const r = await runIsolated(opts.cwd, { cmd: 'cn', args: argv, env }, { ...deps, run: sandboxRun, timeoutMs: opts.timeoutMs });
   return isolatedOutcome('continue', argv, r, { ...deps, riskFloor: allowlistRisk });
 }
