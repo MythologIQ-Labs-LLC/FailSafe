@@ -158,6 +158,7 @@ export function createScaffoldWithWebOptions(
       const at = new Date().toISOString();
       invs.push(emit({
         phase: 'qorlogic-install', status: 'error', startedAt: at, completedAt: at,
+        ...(context?.operationId ? { operationId: context.operationId } : {}),
         ...(host ? { host, scope } : {}),
         error: 'Selected-skill installation is unavailable with frozen qor-logic 0.176.1; no Python process or install was started.',
       }, cb.onProgress));
