@@ -13,7 +13,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { RiskGrade } from '../shared/types/risk';
-import { defaultAgentRun, type AgentRunOutcome } from '../integrations/agent-cli/agent-cli-core';
+import { AGENT_OS_CONTAINMENT_AVAILABLE, defaultAgentRun, type AgentRunOutcome } from '../integrations/agent-cli/agent-cli-core';
 import { runContinueGoverned } from '../integrations/agent-cli/continue-wrapper';
 import { runAiderGoverned } from '../integrations/agent-cli/aider-wrapper';
 import type { IntegrationCredentials } from '../integrations/credentials/IntegrationCredentials';
@@ -145,6 +145,10 @@ export function registerAgentCliCommands(context: vscode.ExtensionContext, deps:
 
     vscode.commands.registerCommand('failsafe.continue.run', async () => {
       const cfg = settings();
+      if (!AGENT_OS_CONTAINMENT_AVAILABLE) {
+        vscode.window.showWarningMessage('Agent execution unavailable: FailSafe cannot prove OS-level containment for this CLI. No process was started.');
+        return;
+      }
       if (!cfg.get<boolean>('integrations.continue.enabled', false)) { vscode.window.showWarningMessage('Continue integration is disabled. Enable `failsafe.integrations.continue.enabled`.'); return; }
       // No key at all is fine (Continue may use its own login); a key still
       // in plain-text settings, or unreadable Secure Storage, is not.
@@ -166,6 +170,10 @@ export function registerAgentCliCommands(context: vscode.ExtensionContext, deps:
 
     vscode.commands.registerCommand('failsafe.aider.run', async () => {
       const cfg = settings();
+      if (!AGENT_OS_CONTAINMENT_AVAILABLE) {
+        vscode.window.showWarningMessage('Agent execution unavailable: FailSafe cannot prove OS-level containment for this CLI. No process was started.');
+        return;
+      }
       if (!cfg.get<boolean>('integrations.aider.enabled', false)) { vscode.window.showWarningMessage('Aider integration is disabled. Enable `failsafe.integrations.aider.enabled`.'); return; }
       const prompt = await vscode.window.showInputBox({ title: 'Run Aider (governed)', prompt: 'Message for Aider (one-shot)', ignoreFocusOut: true });
       if (!prompt) return;
