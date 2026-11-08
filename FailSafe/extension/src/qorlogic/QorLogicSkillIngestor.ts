@@ -131,6 +131,12 @@ export class QorLogicSkillIngestor {
    * sequencing; this method assumes both have already succeeded.
    */
   async installHost(host: QorLogicHost, scope: QorLogicScope, skillFilter?: ReadonlyArray<string>): Promise<HostInstallResult> {
+    // #463: frozen qor-logic 0.176.1 has no --include. Even an empty, explicitly
+    // supplied filter is an ambiguous selection request; never install all.
+    if (skillFilter !== undefined) {
+      return { ok: false, host, scope, command: '',
+        error: 'selective-skill-install-unsupported-by-frozen-qor-logic-0.176.1' };
+    }
     const py = await this.resolver.resolve();
     if (!py.ok) {
       return { ok: false, host, scope, error: 'no-python-found', command: '' };
@@ -141,7 +147,6 @@ export class QorLogicSkillIngestor {
       '-P', '-m', 'qor.cli', 'install',
       '--host', host,
       '--scope', scope,
-      ...((skillFilter || []).flatMap((s) => ['--include', s])),
     ];
     const command = `${py.command} ${args.join(' ')}`;
     this.output.appendLine(`[qor-logic] ${command}`);
