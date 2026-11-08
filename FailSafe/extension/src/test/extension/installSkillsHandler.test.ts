@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert';
 import * as vscode from 'vscode';
-import { createInstallSkillsHandler, DEFAULT_OPTIONS } from '../../extension/installSkillsHandler';
+import { createInstallSkillsHandler, createScaffoldWithWebOptions, DEFAULT_OPTIONS } from '../../extension/installSkillsHandler';
 import type {
   QorLogicSkillIngestor,
   QorLogicHost,
@@ -59,6 +59,31 @@ function fakeContext(): vscode.ExtensionContext {
 }
 
 suite('createInstallSkillsHandler', () => {
+  test('#463: Console selected-skill requests (including []) fail before Python and pip', async () => {
+    for (const filter of [{ claude: ['qor-audit'] }, { claude: [] }]) {
+      const fake = new FakeIngestor();
+      let pythonCalls = 0;
+      let pipCalls = 0;
+      fake.probePython = async () => { pythonCalls++; throw Error('unexpected Python probe'); };
+      fake.ensurePackageInstalled = async () => { pipCalls++; throw Error('unexpected pip install'); };
+      const events: QorLogicInstallInvocation[] = [];
+      const handler = createScaffoldWithWebOptions(
+        asIngestor(fake), { onProgress: (event) => events.push(event) },
+      );
+      const report = await handler(['claude'], 'repo', filter, { operationId: 'test-op-463' });
+      assert.equal(report.ok, false);
+      assert.deepEqual(report.invocations.map((e) => e.phase), ['qorlogic-install']);
+      assert.equal(report.invocations[0].status, 'error');
+      assert.equal(report.invocations[0].host, 'claude');
+      assert.match(report.invocations[0].error ?? '', /Selected-skill installation is unavailable/);
+      assert.equal(report.invocations[0].operationId, 'test-op-463');
+      assert.equal(pythonCalls, 0);
+      assert.equal(pipCalls, 0);
+      assert.equal(fake.installCalls.length, 0);
+      assert.equal(events.length, 1);
+    }
+  });
+
   test('full success: 5+N invocations in declared order with correct phases', async () => {
     const fake = new FakeIngestor();
     const handler = createInstallSkillsHandler(fakeContext(), asIngestor(fake), {}, 'defaults');
