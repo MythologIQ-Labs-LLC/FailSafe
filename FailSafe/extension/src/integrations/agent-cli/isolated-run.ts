@@ -52,6 +52,8 @@ export interface AgentInvocation { cmd: string; args: string[]; env?: Record<str
 
 export interface IsolatedRunDeps {
   run: AgentRunFn;
+  /** OS-enforced runner for agent *and version probe*. Absent in production until audited. */
+  runInSandbox?: AgentRunFn;
   timeoutMs: number;
   /** `marker` is the FAILSAFE_ISOLATED_RUN value placed in the agent's environment. */
   startTracker?: (sinceMs: number, marker: string) => Promise<TreeTracker>;
