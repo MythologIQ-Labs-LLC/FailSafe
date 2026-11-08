@@ -4,20 +4,34 @@
 
 ## Applicable existing authority
 
-- `GOVERNANCE.md` currently requires maintainers' simple majority and a **minimum one-week voting period** for significant changes, and identifies maintainer consensus as the amendment mechanism.
+- `GOVERNANCE.md` contains a **generic multi-maintainer voting rule** (simple majority and one week) despite FailSafe being **owner-maintained by a single developer**. The owner has explicitly rejected applying that committee rule to a solo-maintainer project. This draft proposes correcting the published governance text through the proper plan/audit pathway, rather than pretending that text was never there.
 - `AGENTS.md` requires a pre-implementation `/qor-audit` PASS and a pre-release `/qor-substantiate` session seal.
 - Frozen qor-logic 0.176.1 supports native plan/audit on **new distinct future work** but does **not** implement independent recovery approvals, external full-ledger-text checkpoints, or G4 verification. Do not patch frozen Qor-logic or invent native gate output.
 - The missing October #610–#612 local VETO artifacts and event `7126134e` remain **UNKNOWN/UNRESOLVED** after exhaustive documented search at `qualification/v6.0.12-governance-lane-20261107-no-ci@a723b366`.
 
 This plan proposes **text** to review, not edits to `GOVERNANCE.md` or `AGENTS.md`.
 
-## Proposed owner decisions, each independently ratified
+## Proposed owner decisions and independently verified technical gates
 
 1. **D1, historical evidence:** maintain the actual prior VETO status as permanently unresolved unless hash-verifiable originals reappear. A documented recovery statement can describe uncertainty and permit a prospective path only after new independent authority; it may never be called a VETO closure, amendment of historical ledger, or audit PASS.
 2. **D2, scope of no-fourth-audit restriction:** do not retry the original October VETOed plans under renamed/new sessions. New, genuinely distinct scoped plans (#463, #475, #467 amendment/G4, and #505/#476) may enter honest **prospective** /qor-plan -> independent /qor-audit with real dates. Every new audit must disclose the unresolved old VETOs and verify it does not cover the same underlying scope; disagreement means BLOCKED. This is owner-policy clarification, not the native per-session repeat-VETO escalator bypass.
-3. **D3, future recovery authority:** no fewer than two distinct approvals: the project owner (decision and risk acceptance) **and** one independent non-author reviewer with verified identity and no write control over the candidate evidence. The owner may not double as the independent reviewer. Maintain a public decision receipt and its witness proof; a self-authored issue comment does not count.
-4. **D4, procedure:** submit this proposed amendment to the existing `GOVERNANCE.md` process with at least one week of voting and the recorded eligible maintainer quorum and votes, **plus** a separate L3 plan and independently produced `/qor-audit` PASS before applying code or policy edits. Changes become effective only prospectively, after both gates pass.
+3. **D3, future recovery authority:** the **sole project owner is the only governance decision-maker**. An independent non-author reviewer provides an adversarial, evidence-based **PASS/VETO assessment** of the proposed recovery mechanism, not a second governance vote or owner-level approval. A VETO/missing assessment blocks the technical gate, but the reviewer has no delegated right to change scope, waive controls, hold signing keys or approve release. Record the owner's decision and the independent assessment separately; externally witness the resulting proof when G4 is implemented.
+4. **D4, procedure:** use a **single explicit, dated owner decision**, recorded in the issue/plan and bound to its exact text and source SHA. **No voting period, quorum, poll, or one-week wait applies to a sole maintainer.** Because the published `GOVERNANCE.md` currently says otherwise, the correction itself must be reviewed and implemented prospectively via a scoped L3 plan and authentic independent `/qor-audit` PASS; do not silently treat the old wording as already amended. For a future organization with multiple maintainers, define a separate process before delegating decision authority.
 5. **D5, existing ungoverned drafts:** classify #623 and related changes as **reference implementation not eligible for direct release merge**. After genuine new-scope plan PASS, reproduce approved changes in fresh commits on a new clean baseline, with tests and a source-bound release seal. This does not assert the original unaudited implementation was compliant.
+
+## Proposed replacement for the obsolete multi-maintainer decision rule
+
+Replace the existing `GOVERNANCE.md` **Decision Making**, **Voting** and **Amendments** wording, *after* the required independent plan/audit PASS, with the following owner-governance contract:
+
+> **Sole maintainer:** While FailSafe has one designated owner/maintainer, that owner alone makes and records product, security-scope, governance and release decisions. Decisions are effective when the owner explicitly accepts the exact proposal and its applicable technical gates pass. No maintainer vote, quorum or elapsed voting window is necessary.
+>
+> **Independent assurance:** Security-critical and L3 changes still require a source- and plan-bound independent SHIELD audit PASS, negative tests and the required release seal. An auditor evaluates evidence and can issue VETO; that technical verdict is not a second vote or delegated ownership. An owner decision cannot convert a VETO, missing proof or absent external witness into PASS.
+>
+> **Future maintainers:** If the owner delegates governance authority to multiple maintainers, first adopt an explicit, separately reviewed multi-maintainer decision protocol. Adding repository contributors or read-only collaborators does not automatically give them governance votes.
+>
+> **Traceability:** Record the owner's decision date, exact plan/commit identifiers, scope, rationale, residual risks and technical acceptance receipts. Preserve disagreement and VETO history without rewriting it.
+
+This passage is a **proposal inside the draft plan**, not a direct edit to active governance policy and not authorization to bypass `AGENTS.md`.
 
 ## Proposed G4 trust contract (not implemented)
 
@@ -30,17 +44,17 @@ This plan proposes **text** to review, not edits to `GOVERNANCE.md` or `AGENTS.m
 - **Falsifiers:** flip an entry Verdict, edit Decision text, rewrite/delete/reorder records, change candidate SHA, forge or replay witness inclusion, revoke key, change key ID, expire timestamp, remove a historical-gap statement, or make the witness unavailable. Every case must reject and preserve a machine-readable reason.
 - **OS security boundary:** G4 only strengthens evidence authenticity; it does **not** solve #475 agent file/read/network isolation, #505 save interception, #463 CLI mismatch or #476 production publisher wiring.
 
-## Independent review / voting evidence required
+## Owner decision and independent technical-review evidence required
 
 - Exact plan digest, candidate baseline and prior governance text hash.
-- Eligible maintainers, identities and independent reviewer's conflict-of-interest declaration.
-- Start/end of the minimum one-week vote and result; abstentions must not silently become approvals.
+- Evidence that the maintainer/owner retains sole decision authority, and the independent technical reviewer's identity and conflict-of-interest declaration.
+- Explicit, dated **owner approval or rejection** of the exact proposed governance amendment. Do not synthesize a maintainer poll, invented voters, or a vote-window timestamp.
 - Independent /qor-audit verdict with actual session ID, reasoned negatives and stable artifact SHA.
 - Explicit owner approval for the chosen key and independent witness infrastructure. D3 is not ratified by selecting this draft.
 - No local/private VETO contents fabricated as part of the proposal.
 
 ## Safety and stop conditions
 
-If eligibility/quorum is unknown, reviewer independence cannot be proved, required voting time has not elapsed, the native audit is VETO/unavailable, or externally witnessed G4 proofs cannot be obtained, the amendment remains **NOT ADOPTED**. No code changes, historical ledger rewrites, retrospective PASS, new release seal or v6.0.12 publication.
+If owner authorization is absent, reviewer independence cannot be proved, the native audit is VETO/unavailable, or required external G4 witness proofs cannot be obtained, the amendment remains **NOT ADOPTED**. No code changes, historical ledger rewrites, retrospective PASS, new release seal or v6.0.12 publication.
 
 This plan does not delegate release approval, policy-override power, or custody of signing keys to an agent. All resulting decisions remain owner-controlled and falsifiable.
