@@ -120,19 +120,19 @@ suite("installDryRun: previewInstall", function () {
     assert.match(warnings[0], /2/);
   });
 
-  test("skillFilter emits --include flags per entry", async () => {
-    const capture: { args?: ReadonlyArray<string> } = {};
-    const deps = makeDeps(
-      { stdout: JSON.stringify({ would_write: [] }), stderr: "", code: 0 },
-      [],
-      capture,
-    );
-    await previewInstall(stubIngestor(), "claude", "repo", ["qor-audit", "qor-plan"], deps);
-    const includes = (capture.args ?? []).reduce<string[]>((acc, a, i, arr) => {
-      if (a === "--include" && i + 1 < arr.length) acc.push(arr[i + 1]);
-      return acc;
-    }, []);
-    assert.deepEqual(includes, ["qor-audit", "qor-plan"]);
+  test("selected skills and explicit [] refuse preview before invoking frozen CLI", async () => {
+    for (const selection of [["qor-audit", "qor-plan"], []]) {
+      let calls = 0;
+      const deps: InstallDryRunDeps = {
+        runQorlogicCommand: async () => { calls++; throw Error("untrusted CLI invoked"); },
+        warn: () => undefined,
+      };
+      const result = await previewInstall(stubIngestor(), "claude", "repo", selection, deps);
+      assert.deepEqual(result.wouldWrite, []);
+      assert.equal(result.degraded, true);
+      assert.equal(result.reason, "selective-skill-preview-unavailable");
+      assert.equal(calls, 0);
+    }
   });
 
   test("default scope is 'repo' when omitted", async () => {
