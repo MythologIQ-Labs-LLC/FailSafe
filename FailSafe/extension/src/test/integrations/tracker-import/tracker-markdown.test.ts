@@ -18,7 +18,38 @@ async function render(md: string): Promise<string> {
 
 const HOSTILE_TITLE = '![x](https://evil.example/p.png) <img src=x onerror=alert(1)> [link](http://evil.example)';
 
+/**
+ * Newer VS Code markdown renderers percent-encode a literal backslash in
+ * auto-linked URL hrefs while keeping the visible URL text unencoded.
+ * Only this one verified representation difference is accepted. Encoded
+ * slashes, @, percent signs or arbitrary disguises are NOT normalized.
+ */
+function assertNoDisguisedAutoLinks(html: string): void {
+  const anchors = Array.from(html.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g));
+  for (const [, href, text] of anchors) {
+    const displayedTarget = href.replace(/%5c/gi, '\\');
+    assert.equal(text, displayedTarget, `disguised link in ${html}`);
+  }
+}
+
 suite('tracker preview and chat Markdown safety (#480 T11)', () => {
+  test('renderer URL encoding remains narrow: a disguised destination still fails', () => {
+    assert.doesNotThrow(() =>
+      assertNoDisguisedAutoLinks('<a href="https://evil.example/p.png%5C">https://evil.example/p.png\\</a>'));
+    assert.doesNotThrow(() =>
+      assertNoDisguisedAutoLinks('<a href="https://evil.example/p.png%5c">https://evil.example/p.png\\</a>'));
+    for (const [href, text] of [
+      ['https://evil.example', 'Trusted link'],
+      ['https://evil.example/%2Fadmin', 'https://evil.example//admin'],
+      ['https://evil.example/%40trusted', 'https://evil.example/@trusted'],
+      ['https://evil.example/%255C', 'https://evil.example/%5C'],
+      ['http://evil.example', 'http://trusted.example'],
+    ]) {
+      assert.throws(() => assertNoDisguisedAutoLinks(`<a href="${href}">${text}</a>`), /disguised link/);
+    }
+  });
+
+
   test('control: the render probe turns a real image and link into tags', async () => {
     const html = await render(HOSTILE_TITLE);
     assert.match(html, /<img/);
@@ -60,11 +91,9 @@ suite('tracker preview and chat Markdown safety (#480 T11)', () => {
     for (const v of withPurpose) {
       const html = await render(v);
       assert.ok(!/<img/.test(html), html);
-      // Chat Markdown still auto-links a bare URL (disclosed limitation); what
-      // must not happen is a link whose text hides its target, which is what
-      // the [link](...) syntax in the purpose would produce if not escaped.
-      const anchors = Array.from(html.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g));
-      for (const [, href, text] of anchors) assert.equal(text, href, `disguised link in ${html}`);
+      // Auto-links may encode literal \\ as %5C in href on newer VS Code,
+      // but a visible label hiding a different target must still fail.
+      assertNoDisguisedAutoLinks(html);
     }
   });
 
