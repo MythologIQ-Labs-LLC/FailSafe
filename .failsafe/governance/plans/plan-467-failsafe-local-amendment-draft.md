@@ -19,19 +19,45 @@ This plan proposes **text** to review, not edits to `GOVERNANCE.md` or `AGENTS.m
 4. **D4, procedure:** use a **single explicit, dated owner decision**, recorded in the issue/plan and bound to its exact text and source SHA. **No voting period, quorum, poll, or one-week wait applies to a sole maintainer.** Because the published `GOVERNANCE.md` currently says otherwise, the correction itself must be reviewed and implemented prospectively via a scoped L3 plan and authentic independent `/qor-audit` PASS; do not silently treat the old wording as already amended. For a future organization with multiple maintainers, define a separate process before delegating decision authority.
 5. **D5, existing ungoverned drafts:** classify #623 and related changes as **reference implementation not eligible for direct release merge**. After genuine new-scope plan PASS, reproduce approved changes in fresh commits on a new clean baseline, with tests and a source-bound release seal. This does not assert the original unaudited implementation was compliant.
 
-## Proposed replacement for the obsolete multi-maintainer decision rule
+## Proposed exact replacement for the obsolete multi-maintainer rule
 
-Replace the existing `GOVERNANCE.md` **Decision Making**, **Voting** and **Amendments** wording, *after* the required independent plan/audit PASS, with the following owner-governance contract:
+**Target (not edited):** root `GOVERNANCE.md` as found on `main@e5b0aee9195d9e045b0c1f47fde239e9c8a49e0e`, Git blob `f2f353646fd92e50fcf0c996e246ddb448a9ebff`. A changed target must be re-reviewed. This is not permission to edit active policy before a valid independent, source-bound L3 `/qor-audit` PASS and dated owner acceptance.
 
-> **Sole maintainer:** While FailSafe has one designated owner/maintainer, that owner alone makes and records product, security-scope, governance and release decisions. Decisions are effective when the owner explicitly accepts the exact proposal and its applicable technical gates pass. No maintainer vote, quorum or elapsed voting window is necessary.
->
-> **Independent assurance:** Security-critical and L3 changes still require a source- and plan-bound independent SHIELD audit PASS, negative tests and the required release seal. An auditor evaluates evidence and can issue VETO; that technical verdict is not a second vote or delegated ownership. An owner decision cannot convert a VETO, missing proof or absent external witness into PASS.
->
-> **Future maintainers:** If the owner delegates governance authority to multiple maintainers, first adopt an explicit, separately reviewed multi-maintainer decision protocol. Adding repository contributors or read-only collaborators does not automatically give them governance votes.
->
-> **Traceability:** Record the owner's decision date, exact plan/commit identifiers, scope, rationale, residual risks and technical acceptance receipts. Preserve disagreement and VETO history without rewriting it.
+After those gates, **replace only** the current `## Decision Making` section (up to `## Contributions`), the `- Maintainers approve releases` line under `## Releases`, and `## Amendments` (up to the horizontal rule), with the following exact proposed text:
 
-This passage is a **proposal inside the draft plan**, not a direct edit to active governance policy and not authorization to bypass `AGENTS.md`.
+```markdown
+## Decision Making
+
+### Single accountable owner
+
+While FailSafe has one designated project owner, that owner alone makes product, governance, security-scope, risk-acceptance and release decisions. Community discussion and contributor feedback may inform decisions but do not create a vote, quorum, consensus requirement or waiting period.
+
+Record consequential decisions with their date, owner identity, exact plan and source identifiers, rationale, residual risks and supporting evidence. A decision does not count as a technical audit PASS or release seal.
+
+### Independent technical assurance
+
+Security-critical (L3) changes require an independently evidenced, plan- and source-bound SHIELD audit PASS before implementation. A VETO, unavailable audit, missing negative control or unverified receipt blocks the applicable technical gate. The auditor assesses evidence; the auditor is not an additional governance voter and cannot independently approve or waive a release.
+
+### Future governance delegation
+
+If the owner later delegates decision authority to multiple maintainers, adopt and review a specific multi-maintainer protocol before it takes effect. Write access or contribution alone does not confer a governance vote.
+```
+
+Proposed `## Releases` line replacement:
+
+```markdown
+- The project owner authorizes a release only after applicable tests, independent technical assurance, and the required source-bound /qor-substantiate session seal pass.
+```
+
+Proposed `## Amendments` replacement:
+
+```markdown
+## Amendments
+
+The project owner may accept a precisely scoped governance amendment through an explicit, dated, traceable decision. L3 governance amendments require a prospective independent /qor-audit PASS before implementation. No one-person ballot or minimum voting period is required. Neither an owner's approval nor a reviewer recommendation can replace a missing technical PASS, overturn a VETO or rewrite historical evidence.
+```
+
+**Boundary:** This is proposed policy text in a planning branch only, not an edit to root `GOVERNANCE.md` or `AGENTS.md`. Do not mark the existing rule amended until a separate authorized PR actually changes the protected branch after the required audit.
 
 ## Proposed G4 trust contract (not implemented)
 
@@ -39,7 +65,7 @@ This passage is a **proposal inside the draft plan**, not a direct edit to activ
 - **Witness:** a genuinely independent append-only transparency log or trusted timestamp service, separate from normal repository maintainers and CI release permissions. Receipt must prove inclusion, not merely a request or a GitHub comment.
 - **Checkpoint contents:** cryptographically bind the exact SHA-256 and size of complete ledger bytes (including Verdict/Decision prose), prior witnessed digest, ordered event count, last entry, repository and full commit SHA, unresolved historical boundary and gap statement hash, signing key ID and UTC instant. A static hash list with no witness is insufficient.
 - **Cadence:** externally witness each accepted governance seal and every release-candidate promotion. Missing/offline/expired witnesses are BLOCKED, not neutral PASS.
-- **Revocation:** a revocation or rotation notice must itself be owner- and independent-reviewer-approved and externally witnessed with an unambiguous effective time. A revoked key cannot authenticate new checkpoints; previously witnessed evidence remains inspectable with its original trust state and key validity window.
+- **Revocation:** a revocation or rotation notice must be explicitly owner-authorized, receive a separate mandatory independent technical PASS/VETO assessment, and be externally witnessed with an unambiguous effective time. A revoked key cannot authenticate new checkpoints; previously witnessed evidence remains inspectable with its original trust state and key validity window.
 - **Recovery:** require a documented independent owner identity recovery process and public key-transition linkage. Never silently fall back to an alternate key or copy secrets into CI to recover a broken run.
 - **Falsifiers:** flip an entry Verdict, edit Decision text, rewrite/delete/reorder records, change candidate SHA, forge or replay witness inclusion, revoke key, change key ID, expire timestamp, remove a historical-gap statement, or make the witness unavailable. Every case must reject and preserve a machine-readable reason.
 - **OS security boundary:** G4 only strengthens evidence authenticity; it does **not** solve #475 agent file/read/network isolation, #505 save interception, #463 CLI mismatch or #476 production publisher wiring.
