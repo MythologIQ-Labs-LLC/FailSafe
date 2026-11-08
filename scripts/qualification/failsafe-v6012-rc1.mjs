@@ -2,7 +2,7 @@
 /**
  * FailSafe v6.0.12 RC1 non-publishing, source-pinned qualifier.
  * Does not issue a SHIELD audit PASS, seal a session, merge, tag or publish.
- * Usage: node failsafe_v6012_rc1_qualify_v2.mjs --repo <checkout> [--full] [--package]
+ * Usage: node failsafe-v6012-rc1.mjs --repo <checkout> [--full] [--package]
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -136,7 +136,7 @@ function artifacts(dist) {
 async function main(){
   let opts;
   try{opts=parseOptions(process.argv.slice(2));}catch(e){abort(e.message);return;}
-  if(opts.help){console.log('node failsafe_v6012_rc1_qualify_v2.mjs --repo <clean checkout> [--full] [--package]');return;}
+  if(opts.help){console.log('node failsafe-v6012-rc1.mjs --repo <clean checkout> [--full] [--package]');return;}
   let original;
   try{
     if(Number(process.versions.node.split('.')[0])<22)throw Error('Node 22+ required');
