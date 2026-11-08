@@ -36,8 +36,7 @@ export interface AgentRunOptions {
 }
 export type AgentRunFn = (cmd: string, args: ReadonlyArray<string>, opts?: AgentRunOptions) => Promise<AgentRunResult>;
 
-/** #475: production must not spawn until an audited OS-enforced runner is wired. */
-export const AGENT_OS_CONTAINMENT_AVAILABLE = false;
+export { AGENT_OS_CONTAINMENT_AVAILABLE } from './agent-containment';
 
 const RISK_ORDER: Record<RiskGrade, number> = { L1: 1, L2: 2, L3: 3 };
 
