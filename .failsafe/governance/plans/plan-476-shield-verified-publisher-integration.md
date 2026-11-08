@@ -24,7 +24,7 @@
 8. Treat POST outcome as three states: not sent; confirmed and consistent; confirmed but suspect. A 201 with mismatched echo is **confirmed sent but never verified successful**; record the check run ID, show an error and quarantine the claim. A failed local recording after 201 must not silently retry an already created check.
 9. Keep source identity current. This planned candidate inherits unaudited #623 reference changes; rebuild any accepted implementation prospectively from an owner-approved baseline under PASSed plans. No retrospective PASS is permitted.
 
-## Planned affected surfaces (subject to the independent audit)
+## Planned affected surfaces (relative to `FailSafe/extension/`, subject to independent audit)
 
 - MODIFY `src/extension/github-checks-command.ts` to expose a separate verified flow while retaining neutral manual advisory.
 - REUSE `src/integrations/github-checks/shield-check-publish.ts`, `check-run-transport.ts`, `github-host-affinity.ts`, and `shield-receipts/workspace-evidence-source.ts`; do not introduce another network posting path.
@@ -46,7 +46,7 @@
 | 401, 403, 422, timeout, malformed 201 | Explicit not-confirmed outcome; never evidence of success. |
 | 201 with wrong echo or persistence failure | Preserve publication ID, flag suspect/missing local record, no duplicate retry or release PASS. |
 | Disabled integration or absent token | Zero credential/evidence-dependent external requests. |
-| Valid, fresh, independent PASS and sealed, witnessed exact candidate | Exactly one `FailSafe SHIELD: success` check for the bound repository and HEAD, with source/digest references and GitHub confirmation. |
+| Valid, fresh, independent PASS and sealed, witnessed exact candidate | Exactly one `FailSafe SHIELD` check with GitHub conclusion `success` for the bound repository and HEAD, with source/digest references and GitHub confirmation. |
 
 ## Qualification requirements
 
