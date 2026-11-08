@@ -51,8 +51,15 @@ export async function runAiderGoverned(opts: AiderRunOptions, deps: AiderDeps): 
   if (!opts.writesAllowed) {
     return blockedOutcome('aider', argv, 'running Aider requires `failsafe.integrations.aider.allowWrites`', 'L2', deps.issuedAt);
   }
-  const det = await detectAider(deps.run, opts.cwd, deps.resolve);
+  // #475: a worktree is NOT an OS process sandbox. Never resolve or execute
+  // even --version unless the host supplied an OS-enforced runner.
+  // Production supplies none until native containment is independently qualified.
+  const sandboxRun = deps.runInSandbox;
+  if (!sandboxRun) {
+    return blockedOutcome('aider', argv, 'OS-enforced agent containment is unavailable; external CLI execution is disabled', 'L3', deps.issuedAt);
+  }
+  const det = await detectAider(sandboxRun, opts.cwd, deps.resolve);
   if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH outside the workspace, or `aider --version` failed' };
-  const r = await runIsolated(opts.cwd, { cmd: 'aider', args: argv }, { ...deps, timeoutMs: opts.timeoutMs });
+  const r = await runIsolated(opts.cwd, { cmd: 'aider', args: argv }, { ...deps, run: sandboxRun, timeoutMs: opts.timeoutMs });
   return isolatedOutcome('aider', argv, r, deps);
 }
