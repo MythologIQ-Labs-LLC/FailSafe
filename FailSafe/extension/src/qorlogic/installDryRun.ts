@@ -51,14 +51,9 @@ function pickEntries(list: unknown, warn: (msg: string) => void): DryRunFileEntr
   return valid;
 }
 
-function buildArgs(host: string, scope: "repo" | "global", skillFilter?: string[]): string[] {
-  const args = ["install", "--host", host, "--scope", scope, "--dry-run", "--json"];
-  if (Array.isArray(skillFilter)) {
-    for (const name of skillFilter) {
-      if (typeof name === "string" && name.length > 0) args.push("--include", name);
-    }
-  }
-  return args;
+function buildArgs(host: string, scope: "repo" | "global"): string[] {
+  // The frozen 0.176.1 CLI has no --include. Even preview must not imply it does.
+  return ["install", "--host", host, "--scope", scope, "--dry-run", "--json"];
 }
 
 function parseJsonPayload(stdout: string): Record<string, unknown> | null {
@@ -85,8 +80,14 @@ export async function previewInstall(
   skillFilter?: string[],
   deps: InstallDryRunDeps = defaultDeps(),
 ): Promise<DryRunResult> {
+  // #463: do not invoke an unsupported selected-skill preview, including [].
+  // An empty preview is explicitly degraded, never operator approval to
+  // install a different/full set of skills.
+  if (skillFilter !== undefined) {
+    return { wouldWrite: [], degraded: true, reason: "selective-skill-preview-unavailable" };
+  }
   const effectiveScope: "repo" | "global" = scope === "global" ? "global" : "repo";
-  const args = buildArgs(host, effectiveScope, skillFilter);
+  const args = buildArgs(host, effectiveScope);
   const result = await deps.runQorlogicCommand(ingestor, args);
   if (result.code !== 0) {
     if (UNRECOGNIZED_RE.test(result.stderr || "")) {
