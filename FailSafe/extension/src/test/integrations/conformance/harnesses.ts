@@ -271,8 +271,8 @@ async function inRepo<T>(work: (root: string) => Promise<T>): Promise<T> {
 }
 
 type AgentRun = (root: string, run: AgentRunFn) => Promise<AgentRunOutcome>;
-const continueRun: AgentRun = (root, run) => runContinueGoverned({ prompt: 'p', allow: [], cwd: root, writesAllowed: true, timeoutMs: 60000 }, { run, classify: () => 'L1', issuedAt: 'T', resolve: fixtureExe });
-const aiderRun: AgentRun = (root, run) => runAiderGoverned({ prompt: 'p', cwd: root, writesAllowed: true, timeoutMs: 60000 }, { run, classify: () => 'L1', issuedAt: 'T', resolve: fixtureExe });
+const continueRun: AgentRun = (root, run) => runContinueGoverned({ prompt: 'p', allow: [], cwd: root, writesAllowed: true, timeoutMs: 60000 }, { run, classify: () => 'L1', issuedAt: 'T', resolve: fixtureExe, runInSandbox: run });
+const aiderRun: AgentRun = (root, run) => runAiderGoverned({ prompt: 'p', cwd: root, writesAllowed: true, timeoutMs: 60000 }, { run, classify: () => 'L1', issuedAt: 'T', resolve: fixtureExe, runInSandbox: run });
 
 function isolated(runAgent: AgentRun) {
   return () => inRepo(async (root) => {
