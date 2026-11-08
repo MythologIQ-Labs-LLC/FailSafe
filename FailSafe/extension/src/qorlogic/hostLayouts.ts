@@ -69,6 +69,9 @@ export const QOR_LOGIC_HOSTS: QorLogicHost[] = ["claude", "codex", "kilo-code", 
  */
 export const MIN_QOR_LOGIC_VERSION = "0.31.1";
 
+/** Intended frozen upstream release. NOT a conformance PASS. */
+export const FROZEN_QOR_LOGIC_VERSION = "0.176.1";
+
 /**
  * The qor-logic version the FX942 conformance probe last passed against
  * (#233 Scope A).
