@@ -10,6 +10,7 @@ const read = (file) => fs.readFileSync(path.join(src, file), 'utf8');
 const aider = read('integrations/agent-cli/aider-wrapper.ts');
 const cont = read('integrations/agent-cli/continue-wrapper.ts');
 const core = read('integrations/agent-cli/agent-cli-core.ts');
+const contract = read('integrations/agent-cli/agent-containment.ts');
 const command = read('extension/agent-cli-command.ts');
 const catalog = read('integrations/catalog/integration-catalog.ts');
 
@@ -32,7 +33,8 @@ for (const [label, text, detector, binary] of [
 }
 
 test('#475 production containment cannot be toggled by workspace configuration', () => {
-  assert.match(core, /export const AGENT_OS_CONTAINMENT_AVAILABLE = false;/);
+  assert.match(contract, /export const AGENT_OS_CONTAINMENT_AVAILABLE = false;/);
+  assert.match(core, /export \{ AGENT_OS_CONTAINMENT_AVAILABLE \} from '\.\/agent-containment';/);
   assert.equal((command.match(/if \(!AGENT_OS_CONTAINMENT_AVAILABLE\)/g) || []).length, 2);
   const continueStart = command.indexOf("registerCommand('failsafe.continue.run'");
   const aiderStart = command.indexOf("registerCommand('failsafe.aider.run'");
