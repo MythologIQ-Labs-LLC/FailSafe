@@ -100,7 +100,7 @@ suite('mock-contained worktree regression and production fail-closed (#475)', fu
     }
     assert.equal(mock.calls.length, 0, 'version probe and agent process must never be run');
     assert.equal(resolves, 0, 'binary resolution must not precede OS containment');
-    assert.equal(read(root, 'README.md'), 'readme\\n');
+    assert.equal(read(root, 'README.md'), 'readme\n');
   });
 
   test('Continue: spawn cwd is a disposable worktree, never the workspace; change quarantined', async () => {
