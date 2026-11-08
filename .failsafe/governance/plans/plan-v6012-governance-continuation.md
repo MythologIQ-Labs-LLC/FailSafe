@@ -1,5 +1,7 @@
 # Plan: v6.0.12 governance continuation (#467 remediation path, G4, release seal)
 
+**2026-11-08 applicability correction:** This is the original 2026-11-06 conditional plan, preserved for traceability. Subsequent exhaustive recovery found neither the October operator-local #610–#612 VETO artifacts nor event `7126134e`. Accordingly, Steps 2–4 below cannot be assumed executable for #467; in particular, reviewing the unrelated August `remediate.json` would not close October #467. The newer, **unadopted** forward-only proposal is `plan-467-unrecoverable-veto-forward-recovery.md`. It keeps those events UNKNOWN/UNRESOLVED, requires distinct prospective technical audit and dated sole-owner authorization (not a second vote), and rejects any retroactive pre-implementation PASS. D4's solo-maintainer correction is explicit owner direction; active `GOVERNANCE.md` has not yet been amended. No release gate is waived.
+
 **Issues:** #467 (P0), #463 (P0), #475 (P0); AGENTS.md SHIELD lifecycle.
 
 **Plan author:** native qualification session, 2026-11-06.
