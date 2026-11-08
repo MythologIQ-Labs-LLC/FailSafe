@@ -49,12 +49,11 @@ suite('integrations/catalog integration-catalog', () => {
   });
 
   test('FX479 does not advertise pre-write enforcement or completed observer persistence', () => {
-    // #475: worktree isolation with operator Apply, never claimed as a sandbox.
+    // #475: uncontained process execution is explicitly unavailable.
     for (const id of ['aider', 'continue']) {
-      assert.match(byId(id).summary, /disposable git worktree/);
-      assert.match(byId(id).summary, /only when you apply them/);
-      assert.match(byId(id).summary, /Not a process sandbox/);
-      assert.match(byId(id).summary, /writes outside it are not detected/);
+      assert.match(byId(id).summary, /execution is unavailable/);
+      assert.match(byId(id).summary, /No agent subprocess is started/);
+      assert.match(byId(id).summary, /git worktree alone cannot enforce isolation/);
     }
     // #477: the import now persists, so the summary says what it is: an
     // approved historical import, not live interception.
@@ -104,10 +103,17 @@ suite('integrations/catalog integration-catalog', () => {
     assert.deepEqual(s.missingKeys, []);
   });
 
-  test('zero-required-key integration is configured but unverified when enabled', () => {
-    const s = buildIntegrationStatus(byId('aider'), { 'failsafe.integrations.aider.enabled': true });
-    assert.equal(s.state, 'configured-unverified');
-    assert.equal(s.configured, true);
+  test('#475: Aider/Continue remain unavailable despite enabled flags or previously healthy receipts', () => {
+    for (const id of ['aider', 'continue']) {
+      const flag = `failsafe.integrations.${id}.enabled`;
+      const status = buildIntegrationStatus(byId(id), { [flag]: true }, {
+        [id]: { result: 'connected', checkedAt: new Date().toISOString() },
+      });
+      assert.equal(status.enabled, false);
+      assert.equal(status.configured, false);
+      assert.equal(status.state, 'disabled');
+      assert.equal(status.lastResult, undefined, 'stale success cannot override containment refusal');
+    }
   });
 
   test('buildIntegrationCatalog returns one status per descriptor', () => {
@@ -151,7 +157,7 @@ suite('integration catalog route evidence (#479 H3)', () => {
     const { integrations } = routeJson();
     assert.equal(integrations.length, INTEGRATION_CATALOG.length);
     for (const s of integrations) {
-      assert.equal(s.state, 'configured-unverified', String(s.id));
+      assert.equal(s.state, ['aider', 'continue'].includes(String(s.id)) ? 'disabled' : 'configured-unverified', String(s.id));
       assert.equal(s.lastResult, undefined);
       assert.ok(Array.isArray(s.capabilities) && (s.capabilities as unknown[]).length > 0, String(s.id));
       assert.ok(['service', 'file', 'process'].includes(String(s.evidenceKind)), String(s.id));
