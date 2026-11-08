@@ -17,6 +17,7 @@
 // evidence (integration-health.ts); only that evidence can make it `connected`,
 // `contract-verified`, `failing` or `stale`.
 
+import { AGENT_OS_CONTAINMENT_AVAILABLE } from '../agent-cli/agent-containment';
 import { HEALTH_STALE_MS, sanitizeEvidence, type HealthEvidence } from './integration-health';
 
 export type IntegrationCategory =
@@ -268,10 +269,13 @@ export function buildIntegrationStatus(
   health: Readonly<Record<string, unknown>> = {},
   now: number = Date.now(),
 ): IntegrationStatus {
-  const enabled = snapshot[descriptor.enabledKey] === true;
+  // #475: a legacy successful CLI receipt must not resurrect an integration
+  // whose OS boundary is absent, even when its settings still say enabled.
+  const containmentBlocked = !AGENT_OS_CONTAINMENT_AVAILABLE && (descriptor.id === 'aider' || descriptor.id === 'continue');
+  const enabled = !containmentBlocked && snapshot[descriptor.enabledKey] === true;
   const missingKeys = descriptor.requiredKeys.filter((k) => snapshot[k] !== true);
   const configured = enabled && missingKeys.length === 0;
-  const lastResult = sanitizeEvidence(health[descriptor.id]);
+  const lastResult = containmentBlocked ? undefined : sanitizeEvidence(health[descriptor.id]);
   const state: IntegrationConfigState = !enabled
     ? 'disabled'
     : !configured
