@@ -21,6 +21,7 @@ const HOSTILE_TITLE = '![x](https://evil.example/p.png) <img src=x onerror=alert
 /**
  * Newer VS Code markdown renderers percent-encode a literal backslash in
  * auto-linked URL hrefs while keeping the visible URL text unencoded.
+ * Normalize %5C only at the *end* of the href, matching the observed case.
  * Only this one verified representation difference is accepted. Encoded
  * slashes, @, percent signs or arbitrary disguises are NOT normalized.
  */
@@ -36,7 +37,7 @@ function assertNoDisguisedAutoLinks(html: string): void {
     const href = /(?:^|\s)href\s*=\s*"([^"]*)"/i.exec(attrs)?.[1];
     assert.ok(href, `anchor without quoted href in ${html}`);
     assert.ok(!/<[^>]*>/.test(content), `nested markup in anchor in ${html}`);
-    const displayedTarget = href.replace(/%5c/gi, '\\');
+    const displayedTarget = href.replace(/%5c$/i, '\\');
     assert.equal(content, displayedTarget, `disguised link in ${html}`);
   }
 }
@@ -52,6 +53,7 @@ suite('tracker preview and chat Markdown safety (#480 T11)', () => {
       ['https://evil.example/%2Fadmin', 'https://evil.example//admin'],
       ['https://evil.example/%40trusted', 'https://evil.example/@trusted'],
       ['https://evil.example/%255C', 'https://evil.example/%5C'],
+      ['https://evil.example/%5Cpath', 'https://evil.example/\\path'],
       ['http://evil.example', 'http://trusted.example'],
     ]) {
       assert.throws(() => assertNoDisguisedAutoLinks(`<a href="${href}">${text}</a>`), /disguised link/);
