@@ -15,9 +15,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Only a Console page that VS Code opened can change the theme: the change needs the Console request guard (loopback, exact Origin, JSON) and a per-session key that VS Code adds to the Console link and the page removes from the address bar. Other Console pages show the theme read-only. The Monitor sidebar no longer takes its theme from the embedded page (#601).
+- Continue and Aider no longer start from FailSafe. FailSafe cannot yet run them inside an operating-system boundary, and a git worktree is not a sandbox, so **FailSafe: Run Continue (governed)** and **FailSafe: Run Aider (governed)** now refuse before reading settings or credentials, prompting, or probing the executable (`--version`); no process starts. The Integrations catalog shows both as disabled, and neither an enabled setting nor an earlier successful run can re-enable them (#475).
+- Qor-logic is installed only from a local copy of the frozen `qor_logic-0.176.1-py3-none-any.whl` that you select and confirm. FailSafe checks its pinned SHA-256 on a private copy, checks offline that its dependencies are already installed, installs it offline with no network or dependency download, and then requires `pip show` to report exactly 0.176.1 and `pip check` to pass. It no longer runs `pip install --upgrade` from PyPI, and it never replaces a different installed version (#463).
+- A Qor-logic skill install is reported as successful only when the CLI confirms it for that host and the confirmed file count matches the host's install receipt, with every listed file inside the host folder and matching its SHA-256. An unchanged earlier receipt, a forged or edited receipt, or a count mismatch is reported as a failure (#463).
+
+### Changed
+- Qor-logic options that the frozen 0.176.1 CLI does not support are no longer offered and are refused before Python runs: installing selected skills, global (user-level) installs, the install preview and the skill list (#463).
 
 ### Dependencies
 - Dependency updates merged after v6.0.11: glob 14.0.2 (#610), body-parser 2.4.0 (#611), @hono/node-server 2.1.5 (#597), qs 6.17.1, fast-uri 3.1.9 and undici 7.30.1 (#590, #595, #596, #598).
+
+### Known limitations
+Temporary feature restrictions in this release (by design):
+- Running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
+- Selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).
+- FailSafe does not install Qor-logic's Python dependencies (`jsonschema`, `PyYAML`); on a clean interpreter the install stops before changing anything until you install them (#463).
+
+Defects and gaps scheduled for later remediation:
+- An editor save that enforcement denies is reported, not prevented (#505).
+- No command publishes a verified SHIELD check on GitHub; the manual advisory is neutral (#476).
+- The native ledger check does not cover the text of ledger entries, and Qor-logic 0.176.1 passes 15 of FailSafe's 19 consumer-conformance checks (no JSON install preview; three entry-text tamper checks). FailSafe's tested-against Qor-logic version therefore stays 0.169.0 (#463, #467).
+- If the offline Qor-logic install itself fails after its dependency check passed, pip changes are not rolled back automatically (#463).
 
 ## [6.0.11] - 2026-10-29
 

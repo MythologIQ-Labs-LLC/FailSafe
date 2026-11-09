@@ -4,6 +4,9 @@
 
 **Release candidate, not yet published; the published release is v6.0.11.** One theme for the whole app: the theme you pick in the Console now also applies to the Monitor sidebar and the SRE view, stays the same in the browser Console and in VS Code, and is kept across reloads and restarts in the VS Code setting `failsafe.console.theme` (#601). Includes the dependency updates merged after v6.0.11.
 
+- **Continue and Aider no longer start from FailSafe.** FailSafe cannot yet contain them at the operating-system level, and a git worktree is not a sandbox, so both commands refuse before any process, prompt or credential read, and the catalog shows them disabled (#475). This is a temporary restriction.
+- **Qor-logic is pinned to the frozen 0.176.1 release.** FailSafe installs it only from the verified local wheel you select, offline, with no PyPI upgrade, and reports a skill install as successful only when the CLI's file count matches a hash-verified install receipt. Selected-skill and global installs, the install preview and the skill list are unavailable with this release (#463). See the changelog for known limitations.
+
 
 **Understand agent activity, check risky changes, and keep evidence of what happened.**
 
