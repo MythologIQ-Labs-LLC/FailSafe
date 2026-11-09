@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-09T1958-754dfc",
-  "ts": "2026-11-09T19:58:05Z",
+  "ts": "2026-11-09T22:30:23Z",
   "plan_path": ".failsafe/governance/plans/plan-v6012-release-governance.md",
-  "iteration": 1,
+  "iteration": 2,
   "change_class": "governance",
   "doc_tier": "standard",
   "pr_target": "release/v6.0.12-rc1-candidate-20261108-no-ci",
@@ -18,7 +18,7 @@
   "phases": [
     "Phase 1 - retrospective review of the RC1 delta (v6.0.11..3d722d02) by group",
     "Phase 2 - retrospective review of #619 release-PDF gate and byte-pinned brand sources",
-    "Phase 3 - G4 TPM-backed ledger-byte checkpoint with RFC 3161 witness (design; owner acceptance before implementation)",
+    "Phase 3 - G4: corrected design (V3); release disposition = recommended deferral to v6.0.13, PENDING owner decision + checklist item 81 amendment + Judge acceptance",
     "Phase 4 - release commit, seal and final packaging gates"
   ],
   "boundaries": {
@@ -34,7 +34,8 @@
     ],
     "exclusions": [
       "No merge to main, tag or publish under this plan",
-      "No G4 key creation before owner acceptance"
+      "No G4 key creation before owner acceptance",
+      "No TPM key, TSA enrollment or G4 implementation under this iteration"
     ]
   },
   "ci_commands": [
@@ -53,13 +54,18 @@
     "node scripts/build-release-notes-pdf.cjs --version 6.0.12 --out dist-vsix",
     "node scripts/release-artifacts.cjs verify-set dist-vsix --version 6.0.12"
   ],
-  "open_questions": [],
+  "open_questions": [
+    "G4 deferral requires an owner decision (not delegable)"
+  ],
+  "plan_content_hash": "e220651df84e798125527d3b43f89c2f3a94c0079507680d585004ff6746e486",
+  "remediates": "VETO #917 (V1-V5, N9)",
+  "candidate": "c8419fc9 + this plan commit",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
-    "model_family": "claude-opus-5",
+    "model_family": "unknown",
     "human_oversight": "absent",
-    "ts": "2026-11-09T19:58:05Z"
+    "ts": "2026-11-09T22:30:23Z"
   }
 }
