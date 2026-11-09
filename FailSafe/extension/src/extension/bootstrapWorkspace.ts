@@ -90,8 +90,13 @@ async function stepQorLogicPackage(
 ): Promise<BootstrapStep> {
   const status = await deps.installer.verifyInstalledVersion();
   if (status.installed === FROZEN_QOR_LOGIC_VERSION) {
+    const health = await deps.installer.verifyInstalledDependencies();
+    if (!health.ok) {
+      return { name: "qor-logic-package", status: "deferred",
+        detail: `Frozen wheel present but dependencies unhealthy: ${health.error}; skill installation withheld` };
+    }
     return { name: "qor-logic-package", status: "ok",
-      detail: `frozen version ${FROZEN_QOR_LOGIC_VERSION} present; conformance separate` };
+      detail: `frozen version ${FROZEN_QOR_LOGIC_VERSION} and dependencies present; conformance separate` };
   }
   if (status.installed !== null) {
     return { name: "qor-logic-package", status: "deferred",
@@ -117,6 +122,11 @@ async function stepQorLogicPackage(
   const recheck = await deps.installer.verifyInstalledVersion();
   if (recheck.installed !== FROZEN_QOR_LOGIC_VERSION) {
     return { name: "qor-logic-package", status: "failed", detail: "post-install version mismatch" };
+  }
+  const health = await deps.installer.verifyInstalledDependencies();
+  if (!health.ok) {
+    return { name: "qor-logic-package", status: "failed",
+      detail: `post-install dependencies unhealthy: ${health.error}` };
   }
   return { name: "qor-logic-package", status: "performed", detail: "exact verified wheel installed; conformance pending" };
 }
