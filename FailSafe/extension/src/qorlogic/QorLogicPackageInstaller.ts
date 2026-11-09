@@ -43,7 +43,9 @@ export type InstallError =
   | 'package-state-unknown'
   | 'version-divergence'
   | 'post-install-mismatch'
-  | 'dependencies-unsatisfied';
+  | 'dependencies-unsatisfied'
+  | 'dependency-preflight-failed'
+  | 'dependency-preflight-unknown';
 
 export interface QorLogicInstallResult {
   ok: boolean;
