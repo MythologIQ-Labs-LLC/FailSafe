@@ -100,15 +100,15 @@ The release-candidate rehearsal (`native-vsix-qualification.yml`) also runs thes
 
 ## Mandatory branded release notes (v6.0.12 and later)
 
-Every SemVer release, including pre-releases, needs a PDF named `FailSafe-v<version>-Release-Notes.pdf`. The generation script lives at `FailSafe/extension/scripts/build-release-notes-pdf.cjs` and uses **only** the original PNG files in `FailSafe/extension/assets/release-branding/`, the extension manifest version, and the exact `## [version]` section of root `CHANGELOG.md`.
+Every SemVer release, including pre-releases, needs a PDF named `FailSafe-v<version>-Release-Notes.pdf`. The generation script lives at `FailSafe/extension/scripts/build-release-notes-pdf.cjs` and uses **only** the exact, content-pinned studio branding files in `FailSafe/extension/assets/release-branding/`, the extension manifest version, and the exact `## [version]` section of root `CHANGELOG.md`.
 
 The image bytes were copied without redrawing from `Knapp-Kevin/MythologIQ`:
 
-- `mythologiq-labs.png` source `src/assets/softlogo.png`: SHA256 `1caa9ae46873fe0cb191311195c5db0c1fd678b694bcf5a91ddbf73435aecee3`.
-- `failsafe.png` source `public/assets/products/failsafe-logo.png`: SHA256 `74d5e8c639e964db764a5f8fa1f631664d793ae2da477e849545dc1e80f53cb0`.
+- `source-mythologiq-studio.webp`: current MythologIQ.studio silver logo, source `Knapp-Kevin/MythologIQ/public/assets/studio-20261030-v76/mythologiq-silver-concept.webp`, Git blob `b2b7181bdd25779a3848e8dd4f002040a33a11c4`, SHA256 `c0141a60b03cc6b96750cb17ac3b8ca77b5d650539787cdf8fb83ef7ce9694b2`.
+- `source-failsafe-studio.png`: source `Knapp-Kevin/MythologIQ/public/assets/products/failsafe-logo.png`, Git blob `8401110b23f402a1bc11967e13525af73a8d2023`, SHA256 `74d5e8c639e964db764a5f8fa1f631664d793ae2da477e849545dc1e80f53cb0`.
 
-The generator also checks the original Git blob identities. No synthetic/traced logos or substitute assets are permitted.
+The generator checks both source Git blob and SHA-256 identities and validates the WebP/PNG magic. No generated substitutes or silent fallback assets are permitted. The first image is WebP as currently displayed on the studio site; the PDF renderer handles WebP directly.
 
-**Before tagging:** accept the customer-facing changelog content, confirm that its `## [version]` heading matches the extension package version exactly, render and visually review the complete PDF with its actual logos and content, check for overlap/overflow, review known limitations, and preserve an exact candidate SHA256 and change approval in release evidence. Do not use an unreleased proposal list in the PDF. The release workflow will refuse publication when the source changelog section, pinned PNGs, generated PDF or checksums are missing or inconsistent.
+**Before tagging:** accept the customer-facing changelog content, confirm that its `## [version]` heading matches the extension package version exactly, render and visually review the complete PDF with its actual logos and content, check for overlap/overflow, review known limitations, and preserve an exact candidate SHA256 and change approval in release evidence. Do not use an unreleased proposal list in the PDF. The release workflow will refuse publication when the source changelog section, pinned studio images, generated PDF or checksums are missing or inconsistent.
 
 **For manual recovery:** use only the exact existing `vsix-targets` artifact from the original release attempt. It now contains the PDF for releases from v6.0.12 onward. Never generate a new PDF or overwrite one after any marketplace publish has started. Re-run `verify-set` before attaching and ensure the GitHub Release contains exactly ten files, including the PDF and checksum manifest. Historical released versions retain their original nine-file contract.
