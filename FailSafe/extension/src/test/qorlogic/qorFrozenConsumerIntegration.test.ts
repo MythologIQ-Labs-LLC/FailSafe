@@ -32,12 +32,19 @@ suite('#463 frozen Qor-logic integrated consumer assurance', () => {
   }
 
   function resultFor(host: 'claude' | 'codex', proofHost: 'claude' | 'codex', count = 1) {
+    // Derive the final report's provenance from actual verified disk bytes,
+    // not from a fabricated positive count in the test fixture.
+    const verified = verifyHostInstallReceipt(root, proofHost);
+    const verifiedHosts = verified.ok
+      ? [{ host: proofHost, fileCount: verified.status.fileCount }] : [];
     const invocations: QorLogicInstallInvocation[] = [
       { phase: 'qorlogic-install', host, scope: 'repo', status: 'success',
         installedCount: count, startedAt: start() },
       { phase: 'provenance', status: 'success', startedAt: start(), summary: {
-        hostsVerified: 1, totalFiles: 1, destinations: [],
-        verifiedHosts: [{ host: proofHost, fileCount: 1 }],
+        hostsVerified: verifiedHosts.length,
+        totalFiles: verified.ok ? verified.status.fileCount : 0,
+        destinations: verified.ok ? verified.status.destinations : [],
+        verifiedHosts,
       } },
     ];
     return aggregateReport(invocations);
@@ -79,6 +86,8 @@ suite('#463 frozen Qor-logic integrated consumer assurance', () => {
     fs.writeFileSync(codexFile, 'tampered after install');
     assert.equal(hasVerifiedBootstrapHosts(root), false);
     assert.equal(verifyHostInstallReceipt(root, 'codex').ok, false);
+    assert.equal(resultFor('codex', 'codex').ok, false,
+      'a subsequently tampered host cannot be represented as a verified completed install');
   });
 
   test('partial bootstrap is failed, not performed', () => {
