@@ -2,7 +2,7 @@
 "use strict";
 /**
  * #616: Build release notes from the exact extension manifest, matching
- * versioned CHANGELOG section and original checked-in PNG logos.
+ * versioned CHANGELOG section and byte-pinned studio branding assets.
  * This produces no content from inference or unapproved fallback sources.
  */
 const fs = require("node:fs");
@@ -14,8 +14,9 @@ const ROOT = path.resolve(__dirname, "../../..");
 const EXT = path.resolve(__dirname, "..");
 const BRAND = path.join(EXT, "assets/release-branding");
 const LOGOS = [
-  ["mythologiq-labs.png", "993e786781d0c9a5f395e92ec6fa1eecc729ccb8", "Owner supplied silver MythologIQ Labs PNG in FailSafe conversation, 2026-11-06", "4749bff2a0f774d3810cea88f7fbc3415d358ec02c8d9fa6384ba591ec94bf23"],
-  ["failsafe.png", "36f2e40720b42bc3600b068ec89ebdce6c4e5a91", "Owner supplied FailSafe shield PNG in FailSafe conversation, 2026-11-06", "09df493897c907ec9440243b8edfc0725440ff22610ba10915458556868a8b33"],
+  // Studio-owned canonical visual sources, transferred byte-for-byte with git blob parity.
+  ["source-mythologiq-studio.webp", "b2b7181bdd25779a3848e8dd4f002040a33a11c4", "Knapp-Kevin/MythologIQ main public/assets/studio-20261030-v76/mythologiq-silver-concept.webp", "c0141a60b03cc6b96750cb17ac3b8ca77b5d650539787cdf8fb83ef7ce9694b2", "image/webp"],
+  ["source-failsafe-studio.png", "8401110b23f402a1bc11967e13525af73a8d2023", "Knapp-Kevin/MythologIQ main public/assets/products/failsafe-logo.png", "74d5e8c639e964db764a5f8fa1f631664d793ae2da477e849545dc1e80f53cb0", "image/png"],
 ];
 const CATEGORIES = new Set(["Added","Changed","Fixed","Security","Dependencies","Compatibility","Known Limitations","Deprecated","Removed"]);
 const sha = (bytes, algorithm="sha256") => crypto.createHash(algorithm).update(bytes).digest("hex");
@@ -65,11 +66,15 @@ function sectionsFor(text, version) {
   return used;
 }
 function readLogos(dir=BRAND) {
-  return LOGOS.map(([name,sourceSha,provenance,sourceSha256]) => {
+  return LOGOS.map(([name,sourceSha,provenance,sourceSha256,mime]) => {
     const bytes=fs.readFileSync(path.join(dir,name));
     if (gitSha(bytes)!==sourceSha || sha(bytes)!==sourceSha256) throw Error("Canonical logo bytes changed: "+name);
-    if (!bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) throw Error("Expected PNG: "+name);
-    return {name,provenance,sha256:sha(bytes),data:"data:image/png;base64,"+bytes.toString("base64")};
+    const png=bytes.length>=8 && bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+    const webp=bytes.length>=12 && bytes.toString("ascii",0,4)==="RIFF" && bytes.toString("ascii",8,12)==="WEBP";
+    if ((mime==="image/png" && !png) || (mime==="image/webp" && !webp) || (!png && !webp)) {
+      throw Error("Unexpected logo image format: "+name);
+    }
+    return {name,provenance,sha256:sha(bytes),data:"data:"+mime+";base64,"+bytes.toString("base64")};
   });
 }
 function htmlFor(version, groups, logos) {
