@@ -176,7 +176,7 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
 
   test('#463: direct host confirmed file count must match hashed receipt', async () => {
     fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md']);
-    const { run, calls } = makeRun(() => ok('Installed 2 files to claude\\n'));
+    const { run, calls } = makeRun(() => ok('Installed 2 files to claude\n'));
     const ingestor = new QorLogicSkillIngestor(
       new FakeInstaller(), fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
     );
