@@ -11,7 +11,10 @@ export async function checkFrozenQorPackage(
   installer: IQorLogicPackageInstaller,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const status = await installer.verifyInstalledVersion();
-  if (status.installed === FROZEN_QOR_LOGIC_VERSION) return { ok: true };
+  if (status.installed === FROZEN_QOR_LOGIC_VERSION) {
+    const health = await installer.verifyInstalledDependencies();
+    return health.ok ? { ok: true } : { ok: false, error: health.error };
+  }
   if (status.installed !== null) return { ok: false, error: `version-divergence: ${status.installed}` };
   return { ok: false, error: 'verified-wheel-required' };
 }
@@ -23,6 +26,8 @@ export async function ensureFrozenQorPackage(
 ): Promise<EnsureResult> {
   const status = await installer.verifyInstalledVersion();
   if (status.installed === FROZEN_QOR_LOGIC_VERSION) {
+    const health = await installer.verifyInstalledDependencies();
+    if (!health.ok) return { ok: false, error: health.error, stderrTail: health.details };
     return { ok: true, command: `qor-logic ${status.installed} already installed (conformance not attested)` };
   }
   if (status.installed !== null) {
@@ -33,5 +38,7 @@ export async function ensureFrozenQorPackage(
   if (!installed.ok) return { ok: false, error: installed.error ?? 'install-failed', stderrTail: installed.stderr };
   const verified = await installer.verifyInstalledVersion();
   if (verified.installed !== FROZEN_QOR_LOGIC_VERSION) return { ok: false, error: 'post-install-mismatch' };
+  const health = await installer.verifyInstalledDependencies();
+  if (!health.ok) return { ok: false, error: health.error, stderrTail: health.details };
   return { ok: true, command: installed.command };
 }
