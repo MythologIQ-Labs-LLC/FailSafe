@@ -123,7 +123,8 @@ suite('QorLogicPackageInstaller: verified offline install', () => {
       .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
     assert.equal(result.ok, true);
     assert.equal(result.version, FROZEN_QOR_LOGIC_VERSION);
-    assert.equal(calls.length, 1, 'read-only pip show only');
+    assert.equal(calls.length, 2, 'read-only pip show and pip check, no installer mutation');
+    assert.deepEqual(calls[1].args, ['-P', '-m', 'pip', '--isolated', 'check']);
   });
 
   test('missing and ambiguous pip metadata do not trigger an install', async () => {
