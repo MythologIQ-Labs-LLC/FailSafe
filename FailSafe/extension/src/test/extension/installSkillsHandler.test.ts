@@ -1,6 +1,10 @@
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { createHash } from 'crypto';
 import * as vscode from 'vscode';
-import { createInstallSkillsHandler, createScaffoldWithWebOptions, DEFAULT_OPTIONS } from '../../extension/installSkillsHandler';
+import { createInstallSkillsHandler, createScaffoldWithWebOptions, runProvenanceStep, DEFAULT_OPTIONS } from '../../extension/installSkillsHandler';
 import type {
   QorLogicSkillIngestor,
   QorLogicHost,
@@ -202,5 +206,33 @@ suite('createInstallSkillsHandler', () => {
 
   test('DEFAULT_OPTIONS is [claude, codex] at repo scope', () => {
     assert.deepEqual(DEFAULT_OPTIONS, { hosts: ['claude', 'codex'], scope: 'repo' });
+  });
+});
+
+suite('#463 Console provenance uses verified disk receipts', () => {
+  test('tampered receipt bytes cannot count as installed skills', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-provenance-'));
+    try {
+      const base = path.join(root, '.claude');
+      const file = path.join(base, 'skills', 'qor-audit', 'SKILL.md');
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      const bytes = Buffer.from('# valid skill');
+      fs.writeFileSync(file, bytes);
+      const record = path.join(base, '.qorlogic-installed.json');
+      fs.writeFileSync(record, JSON.stringify({ files: [{
+        path: file, sha256: createHash('sha256').update(bytes).digest('hex'),
+      }] }));
+      const valid = await runProvenanceStep(root);
+      assert.equal(valid.status, 'success');
+      assert.equal(valid.summary?.hostsVerified, 1);
+      assert.equal(valid.summary?.totalFiles, 1);
+      fs.writeFileSync(file, 'tampered');
+      const tampered = await runProvenanceStep(root);
+      assert.equal(tampered.summary?.hostsVerified, 0);
+      assert.equal(tampered.summary?.totalFiles, 0);
+      assert.deepEqual(tampered.summary?.destinations, []);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });
