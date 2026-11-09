@@ -9,22 +9,19 @@ function esc(value) {
   return escapeHtml(value ?? '');
 }
 
-/**
- * B197 surfacing: render a version-floor warning block when the resolved
- * `verifyInstalledVersion()` returned meetsFloor=false. Returns an empty
- * string when the verifier wasn't wired, the floor isn't violated, or no
- * `installedVersion` could be probed (e.g., pip absent on first run).
- */
+/** #463: compare with the frozen release, never treat an above-floor version as aligned. */
 function renderVersionFloorWarning(hubData) {
   const status = hubData?.bootstrapState?.qorLogicInstall;
-  if (!status || status.meetsFloor !== false || !status.installedVersion) {
-    return '';
-  }
+  if (!status?.frozenTarget || status.matchesFrozen === true) return '';
+  const installed = status.installedVersion
+    ? `v${esc(status.installedVersion)}`
+    : 'unknown or missing';
   return `
     <div class="cc-qorlogic-floor-warning"
       style="margin:8px 0;padding:8px 10px;background:rgba(245,158,11,0.12);border-left:3px solid var(--accent-gold);border-radius:4px;font-size:0.82rem;color:var(--text-main)">
-      ⚠ qor-logic v${esc(status.installedVersion)} is below the required minimum v${esc(status.minimumVersion || '?')}.
-      Re-run install (button below) to upgrade to the floor or newer.
+      Qor-logic: installed ${installed}; frozen target v${esc(status.frozenTarget)}.
+      Existing versions are never silently upgraded or replaced.
+      An approved local wheel with the expected SHA-256 is required when missing.
     </div>
   `;
 }
@@ -43,9 +40,7 @@ export function renderInstallSkillsCard(state, hubData) {
   const showOutputBtn = report || invocations.length > 0;
   const hosts = hubData?.bootstrapState?.qorLogicInstall?.hosts || [];
   const anyInstalled = hubData?.bootstrapState?.qorLogicInstall?.anyInstalled || false;
-  // B197 surfacing: when the resolved verifier reports below-floor install,
-  // surface a warning above the host grid. The same "Install / Refresh
-  // Skills" button below triggers an upgrade via the existing pip path.
+  // #463: frozen version mismatch warning. No implicit upgrade path.
   const versionFloorWarning = renderVersionFloorWarning(hubData);
 
   return `
@@ -53,13 +48,13 @@ export function renderInstallSkillsCard(state, hubData) {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
           letter-spacing:0.08em">QorLogic Skills</div>
-        ${anyInstalled ? '<span class="cc-badge" style="background:var(--accent-green);color:#fff">Active</span>' : ''}
+        ${anyInstalled ? '<span class="cc-badge">Host files found</span>' : ''}
       </div>
       ${versionFloorWarning}
       <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">
-        Install or refresh governance skills from the
-        <code style="padding:1px 4px;background:var(--bg-dark);border-radius:3px">qor-logic</code>
-        PyPI package into detected agent hosts. Idempotent — safe to run multiple times.
+        Install governance skills only with the frozen Qor-logic v0.176.1 package.
+        If the package is missing, choose the SHA-256-verified wheel and approve
+        the local offline install. Existing divergent versions are not replaced.
       </p>
       ${renderHostGrid(hosts, running)}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
