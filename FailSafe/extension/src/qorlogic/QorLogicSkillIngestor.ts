@@ -2,14 +2,13 @@ import type { PythonInterpreterResolver, ResolvedInterpreter } from './PythonInt
 import type {
   IQorLogicPackageInstaller,
   InstallerRun,
-  InstallerRunResult,
   OutputChannelLike,
 } from './QorLogicPackageInstaller';
 import { frozenHostSelectionError, type QorLogicHost } from './hostLayouts';
 import { checkFrozenQorPackage, ensureFrozenQorPackage } from './qorPackageEnsure';
 import { type HostInstallStatus } from './qorLogicInstallRecord';
 import { verifyHostInstallReceipt } from './qorHostReceiptVerify';
-import { parseQorHostInstallCount } from './qorHostInstallOutput';
+import { qualifyQorHostExit } from './qorHostInstallOutput';
 
 export type { QorLogicHost } from './hostLayouts';
 export type QorLogicScope = 'repo' | 'global';
@@ -147,7 +146,7 @@ export class QorLogicSkillIngestor {
       cwd: this.workspaceRoot,
       env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
     });
-    const mapped = mapHostResult(result, this.output, host);
+    const mapped = qualifyQorHostExit(result, host, this.output);
     if (!mapped.ok) {
       return {
         ok: false, host, scope, command,
@@ -234,22 +233,7 @@ export class QorLogicSkillIngestor {
       cwd: this.workspaceRoot,
       env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
     });
-    return mapHostResult(result, this.output, host);
+    return qualifyQorHostExit(result, host, this.output);
   }
 }
 
-function mapHostResult(
-  result: InstallerRunResult,
-  output: OutputChannelLike,
-  host: QorLogicHost,
-): { ok: true; installedCount: number } | { ok: false; error: string } {
-  if (result.timedOut) return { ok: false, error: 'timeout' };
-  if (result.spawnError) return { ok: false, error: `spawn-failed: ${result.spawnError}` };
-  if (result.code !== 0) {
-    if (result.stderr) output.appendLine(result.stderr);
-    return { ok: false, error: result.stderr.trim() || `exit-code-${result.code}` };
-  }
-  const installedCount = parseQorHostInstallCount(result.stdout, host);
-  if (installedCount === null) return { ok: false, error: 'install-confirmation-missing-or-invalid' };
-  return { ok: true, installedCount };
-}
