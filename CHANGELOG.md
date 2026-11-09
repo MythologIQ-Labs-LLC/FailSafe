@@ -25,18 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 - Dependency updates merged after v6.0.11: glob 14.0.2 (#610), body-parser 2.4.0 (#611), @hono/node-server 2.1.5 (#597), qs 6.17.1, fast-uri 3.1.9 and undici 7.30.1 (#590, #595, #596, #598).
 
-### Known limitations
-Temporary feature restrictions in this release (by design):
-- Running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
-- Selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).
-- FailSafe does not install Qor-logic's Python dependencies (`jsonschema`, `PyYAML`); on a clean interpreter the install stops before changing anything until you install them (#463).
-- On Windows without long-path support, installing Qor-logic into an interpreter in a deeply nested folder can exceed the 260-character path limit; pip then fails and FailSafe reports the install as failed (#463).
+### Known Limitations
+- Temporary restriction (by design): running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
+- Temporary restriction (by design): selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).
+- Temporary restriction (by design): FailSafe does not install Qor-logic's Python dependencies (`jsonschema`, `PyYAML`); on a clean interpreter the install stops before changing anything until you install them (#463).
+- Environment limitation: on Windows without long-path support, installing Qor-logic into an interpreter in a deeply nested folder can exceed the 260-character path limit; pip then fails and FailSafe reports the install as failed (#463).
 
-Defects and gaps scheduled for later remediation:
-- An editor save that enforcement denies is reported, not prevented (#505).
-- No command publishes a verified SHIELD check on GitHub; the manual advisory is neutral (#476).
-- The native ledger check does not cover the text of ledger entries, and Qor-logic 0.176.1 passes 15 of FailSafe's 19 consumer-conformance checks (no JSON install preview; three entry-text tamper checks). FailSafe's tested-against Qor-logic version therefore stays 0.169.0 (#463, #467).
-- If the offline Qor-logic install itself fails after its dependency check passed, pip changes are not rolled back automatically (#463).
+- Scheduled for later remediation: an editor save that enforcement denies is reported, not prevented (#505).
+- Scheduled for later remediation: no command publishes a verified SHIELD check on GitHub; the manual advisory is neutral (#476).
+- Scheduled for later remediation: the native ledger check does not cover the text of ledger entries, and Qor-logic 0.176.1 passes 15 of FailSafe's 19 consumer-conformance checks (no JSON install preview; three entry-text tamper checks). FailSafe's tested-against Qor-logic version therefore stays 0.169.0 (#463, #467).
+- Scheduled for later remediation: if the offline Qor-logic install itself fails after its dependency check passed, pip changes are not rolled back automatically (#463).
 
 ## [6.0.11] - 2026-10-29
 

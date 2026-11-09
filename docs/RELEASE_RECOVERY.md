@@ -1,6 +1,6 @@
 # Recovering an interrupted release
 
-The release workflow (`.github/workflows/release.yml`) builds the eight platform packages once per tag. It publishes that one set to the VS Code Marketplace and Open VSX, then attaches the same files and `SHA256SUMS.txt` to the GitHub Release. A second build produces different bytes, so a release must always finish from the set it started with.
+The release workflow (`.github/workflows/release.yml`) builds the eight platform packages once per tag. For v6.0.12 and later, it additionally builds one authentic-logo, version-specific PDF from that exact tagged tree and adds its hash to the same `SHA256SUMS.txt`. It publishes the eight VSIX packages to the VS Code Marketplace and Open VSX, then attaches the same VSIX files, the PDF (new releases), and `SHA256SUMS.txt` to the GitHub Release. A second build produces different bytes, so a release must always finish from the set it started with.
 
 Only the operator runs these steps, and only with explicit approval. They publish outside the `production` environment gate, so an agent never runs them.
 
@@ -9,7 +9,7 @@ Only the operator runs these steps, and only with explicit approval. They publis
 If a publish job or the GitHub Release job fails, open the failed run and choose **Re-run failed jobs**. The re-run reuses the run's `vsix-targets` artifact, which is kept for 90 days:
 
 - The publish jobs skip every package a marketplace already has (`--skip-duplicate`) and publish the rest.
-- The GitHub Release job waits until both marketplaces serve exactly those bytes. It then uploads only the files the release is missing, never replaces one, and publishes the draft once all nine files match.
+- The GitHub Release job waits until both marketplaces serve exactly those bytes. It then uploads only the files the release is missing, never replaces one, and publishes the draft once all expected files match (nine for v6.0.11 and earlier; ten for v6.0.12 and later).
 
 The `production` environment approval is asked for again on a re-run; approve it in GitHub as usual.
 
@@ -76,7 +76,7 @@ GitHub only re-runs the latest attempt, so after this stop **Re-run failed jobs*
 
    - `--sha` must be the commit the tag points to; the command checks it against the remote tag.
    - It runs the marketplace check again and attaches nothing unless both marketplaces pass.
-   - It keeps every protection the workflow has: draft first, missing files only, no replacement, and published only when all nine files match.
+   - It keeps every protection the workflow has: draft first, missing files only, no replacement, and published only when the exact version-specific asset count and hashes match.
 
 The artifact is kept for 90 days. After that, an interrupted release can only be finished from a local copy of the same files.
 
@@ -95,3 +95,20 @@ Every check reports pass, fail or inconclusive. The exit code is:
 - `3`: nothing failed, but something could not be confirmed yet.
 
 The release-candidate rehearsal (`native-vsix-qualification.yml`) also runs these lookups for its own version and requires nothing to be published yet. It fails by design once that version has shipped.
+
+
+
+## Mandatory branded release notes (v6.0.12 and later)
+
+Every SemVer release, including pre-releases, needs a PDF named `FailSafe-v<version>-Release-Notes.pdf`. The generation script lives at `FailSafe/extension/scripts/build-release-notes-pdf.cjs` and uses **only** the exact, content-pinned studio branding files in `FailSafe/extension/assets/release-branding/`, the extension manifest version, and the exact `## [version]` section of root `CHANGELOG.md`.
+
+The image bytes were copied without redrawing from `Knapp-Kevin/MythologIQ`:
+
+- `source-mythologiq-studio.webp`: current MythologIQ.studio silver logo, source `Knapp-Kevin/MythologIQ/public/assets/studio-20261030-v76/mythologiq-silver-concept.webp`, Git blob `b2b7181bdd25779a3848e8dd4f002040a33a11c4`, SHA256 `c0141a60b03cc6b96750cb17ac3b8ca77b5d650539787cdf8fb83ef7ce9694b2`.
+- `source-failsafe-studio.png`: source `Knapp-Kevin/MythologIQ/public/assets/products/failsafe-logo.png`, Git blob `8401110b23f402a1bc11967e13525af73a8d2023`, SHA256 `74d5e8c639e964db764a5f8fa1f631664d793ae2da477e849545dc1e80f53cb0`.
+
+The generator checks both source Git blob and SHA-256 identities and validates the WebP/PNG magic. No generated substitutes or silent fallback assets are permitted. The first image is WebP as currently displayed on the studio site; the PDF renderer handles WebP directly.
+
+**Before tagging:** accept the customer-facing changelog content, confirm that its `## [version]` heading matches the extension package version exactly, render and visually review the complete PDF with its actual logos and content, check for overlap/overflow, review known limitations, and preserve an exact candidate SHA256 and change approval in release evidence. Do not use an unreleased proposal list in the PDF. The release workflow will refuse publication when the source changelog section, pinned studio images, generated PDF or checksums are missing or inconsistent.
+
+**For manual recovery:** use only the exact existing `vsix-targets` artifact from the original release attempt. It now contains the PDF for releases from v6.0.12 onward. Never generate a new PDF or overwrite one after any marketplace publish has started. Re-run `verify-set` before attaching and ensure the GitHub Release contains exactly ten files, including the PDF and checksum manifest. Historical released versions retain their original nine-file contract.
