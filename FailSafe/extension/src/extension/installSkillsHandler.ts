@@ -100,7 +100,7 @@ export async function runProvenanceStep(
     const status = getQorLogicInstallStatus(workspaceRoot);
     // Presence of .qorlogic-installed.json is not evidence of file integrity.
     const receipts = status.hosts
-      .filter((h) => QOR_LOGIC_HOSTS.includes(h.host as QorLogicHost))
+      .filter((h) => h.installed && QOR_LOGIC_HOSTS.includes(h.host as QorLogicHost))
       .map((h) => verifyHostInstallReceipt(workspaceRoot, h.host as QorLogicHost))
       .filter((v) => v.ok);
     return {
