@@ -9,7 +9,6 @@ export interface InstallSkillsOptions {
 
 export const STATE_KEY = 'failsafe.installSkills.lastOptions';
 const DEFAULT_HOSTS: QorLogicHost[] = ['claude', 'codex'];
-const DEFAULT_SCOPE: QorLogicScope = 'repo';
 
 interface HostQuickPickItem extends vscode.QuickPickItem {
   host: QorLogicHost;
@@ -24,7 +23,6 @@ export async function resolveInstallSkillsOptions(
 ): Promise<InstallSkillsOptions | undefined> {
   const prior = context.workspaceState.get<InstallSkillsOptions>(STATE_KEY);
   const priorHosts = prior?.hosts ?? DEFAULT_HOSTS;
-  const priorScope = prior?.scope ?? DEFAULT_SCOPE;
 
   const hostItems: HostQuickPickItem[] = QOR_LOGIC_HOSTS.map((host) => ({
     label: host,
@@ -40,8 +38,8 @@ export async function resolveInstallSkillsOptions(
   if (!hostSelection || hostSelection.length === 0) return undefined;
 
   const scopeItems: ScopeQuickPickItem[] = [
-    { label: 'repo', description: 'Workspace-local install (.claude/, .codex/, ...)', scope: 'repo', picked: priorScope === 'repo' },
-    { label: 'global', description: 'User-level install (~/.claude/, ...)', scope: 'global', picked: priorScope === 'global' },
+    // #463: only repository-scoped receipts can be independently verified.
+    { label: 'repo', description: 'Workspace-local install (.claude/, .codex/, ...)', scope: 'repo', picked: true },
   ];
 
   const scopeSelection = await vscode.window.showQuickPick(scopeItems, {
