@@ -238,13 +238,14 @@ const LBL = 'font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;l
 
 function renderQorVersionWarning(hub) {
   const status = hub?.qorLogic?.versionStatus;
-  if (!status || status.meetsFloor !== false) return '';
-  const installed = status.installed ? escapeHtml(String(status.installed)) : 'not installed';
-  const minimum = escapeHtml(String(status.minimum || ''));
-  return `<div class="cc-card" id="cc-qor-version-warning" data-state="below-floor" style="margin-top:16px;border-left:3px solid var(--accent-gold,#f5a524)">
-      <div style="${LBL};color:var(--accent-gold,#f5a524);margin-bottom:6px">qor-logic Version Warning</div>
-      <div style="font-size:0.9rem;margin-bottom:6px">qor-logic Python package version below minimum</div>
-      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Installed: <strong>${installed}</strong> &mdash; minimum required: <strong>${minimum}</strong></div>
-      <div style="font-size:0.8rem;color:var(--text-muted)">Reinstall via Settings &rarr; Install qor-logic.</div>
+  const frozen = hub?.bootstrapState?.qorLogicInstall?.frozenTarget;
+  if (!status || !frozen || status.installed === frozen) return '';
+  const installed = status.installed ? escapeHtml(String(status.installed)) : 'missing or unverified';
+  const target = escapeHtml(String(frozen));
+  return `<div class="cc-card" id="cc-qor-version-warning" data-state="frozen-mismatch" style="margin-top:16px;border-left:3px solid var(--accent-gold,#f5a524)">
+      <div style="${LBL};color:var(--accent-gold,#f5a524);margin-bottom:6px">Qor-logic Frozen Version Warning</div>
+      <div style="font-size:0.9rem;margin-bottom:6px">Expected the frozen Qor-logic package, not simply a version above the old floor.</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Installed: <strong>${installed}</strong> &mdash; frozen target: <strong>${target}</strong></div>
+      <div style="font-size:0.8rem;color:var(--text-muted)">No automatic upgrade, downgrade or network install. Select an approved local wheel, confirm installation and verify conformance.</div>
     </div>`;
 }
