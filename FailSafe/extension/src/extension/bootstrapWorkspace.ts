@@ -4,6 +4,7 @@ import * as path from "path";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import type { IQorLogicPackageInstaller } from "../qorlogic/QorLogicPackageInstaller";
 import type { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
+import { FROZEN_QOR_LOGIC_VERSION } from "../qorlogic/hostLayouts";
 import { assembleReport, type BootstrapStep, type BootstrapReport } from "./bootstrapAssembleReport";
 export { assembleReport, type BootstrapStep, type BootstrapReport };
 
@@ -87,31 +88,37 @@ async function stepQorLogicPackage(
   deps: BootstrapDeps,
   mode: BootstrapMode,
 ): Promise<BootstrapStep> {
-  const installed = await deps.installer.isInstalled().catch(() => false);
-  if (installed) return { name: "qor-logic-package", status: "ok" };
-  if (mode === "silent") {
-    return { name: "qor-logic-package", status: "deferred", detail: "silent mode; not installed" };
+  const status = await deps.installer.verifyInstalledVersion();
+  if (status.installed === FROZEN_QOR_LOGIC_VERSION) {
+    return { name: "qor-logic-package", status: "ok",
+      detail: `frozen version ${FROZEN_QOR_LOGIC_VERSION} present; conformance separate` };
   }
-  if (mode === "interactive") {
-    const choice = await vscode.window.showInformationMessage(
-      "FailSafe needs the qor-logic Python package to ingest governance skills. Install now?",
-      "Install",
-      "Later",
-    );
-    if (choice !== "Install") {
-      return { name: "qor-logic-package", status: "deferred", detail: "user deferred" };
-    }
+  if (status.installed !== null) {
+    return { name: "qor-logic-package", status: "deferred",
+      detail: `Installed ${status.installed}; expected frozen ${FROZEN_QOR_LOGIC_VERSION}. No automatic upgrade/downgrade.` };
   }
-  deps.output.appendLine("[bootstrap] installing qor-logic via pip");
-  const result = await deps.installer.install();
-  if (!result.ok) {
-    return {
-      name: "qor-logic-package",
-      status: "failed",
-      detail: result.error ?? result.stderr ?? "install failed",
-    };
+  if (mode !== "interactive") {
+    return { name: "qor-logic-package", status: "deferred",
+      detail: "Missing or unverified qor-logic; select the verified 0.176.1 wheel interactively. No automatic network installation." };
   }
-  return { name: "qor-logic-package", status: "performed" };
+  const selected = await vscode.window.showOpenDialog({
+    canSelectFiles: true, canSelectFolders: false, canSelectMany: false,
+    filters: { "Python wheel": ["whl"] },
+    openLabel: "Select frozen Qor-logic wheel",
+  });
+  if (!selected?.length) return { name: "qor-logic-package", status: "deferred", detail: "operator declined wheel selection" };
+  const choice = await vscode.window.showWarningMessage(
+    `Install Qor-logic ${FROZEN_QOR_LOGIC_VERSION} from selected local wheel? FailSafe checks its pinned SHA-256, uses no network or dependency downloads, and will not replace an installed version.`,
+    { modal: true }, "Install verified wheel",
+  );
+  if (choice !== "Install verified wheel") return { name: "qor-logic-package", status: "deferred", detail: "operator declined install" };
+  const result = await deps.installer.install(selected[0].fsPath);
+  if (!result.ok) return { name: "qor-logic-package", status: "failed", detail: result.error ?? "install failed" };
+  const recheck = await deps.installer.verifyInstalledVersion();
+  if (recheck.installed !== FROZEN_QOR_LOGIC_VERSION) {
+    return { name: "qor-logic-package", status: "failed", detail: "post-install version mismatch" };
+  }
+  return { name: "qor-logic-package", status: "performed", detail: "exact verified wheel installed; conformance pending" };
 }
 
 async function stepSkillIngestion(
@@ -121,9 +128,14 @@ async function stepSkillIngestion(
   if (skillsAlreadyIngested(deps.workspaceRoot)) {
     return { name: "skill-ingestion", status: "ok", detail: "qor-* skills present with provenance" };
   }
-  if (mode === "silent") {
-    return { name: "skill-ingestion", status: "deferred", detail: "silent mode" };
+  if (mode !== "interactive") {
+    return { name: "skill-ingestion", status: "deferred", detail: "requires explicit operator approval; auto installs disabled" };
   }
+  const approve = await vscode.window.showWarningMessage(
+    "Install Qor-logic skills to the Claude and Codex workspace directories? This writes to agent configuration directories.",
+    { modal: true }, "Install skills",
+  );
+  if (approve !== "Install skills") return { name: "skill-ingestion", status: "deferred", detail: "operator declined" };
   deps.output.appendLine("[bootstrap] running qorlogic install for claude+codex");
   const result = await deps.ingestor.ingest({ hosts: ["claude", "codex"], scope: "repo" });
   if (!result.ok && result.installedHosts.length === 0) {
