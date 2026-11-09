@@ -128,6 +128,35 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
     assert.equal(calls.length, 0, 'neither version probes nor installs may run');
   });
 
+  test('#463: direct single-host zero exit without a receipt is a failure', async () => {
+    const { run, calls } = makeRun(() => ok());
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    const outcome = await ingestor.installHost('claude', 'repo');
+    assert.equal(outcome.ok, false);
+    if (!outcome.ok) assert.equal(outcome.error, 'install-receipt-missing');
+    assert.equal(calls.length, 1, 'CLI ran once but did not create a receipt');
+  });
+
+  test('#463: direct global-scope request cannot run the CLI or inspect credentials', async () => {
+    let resolves = 0;
+    const resolver = fixedResolver();
+    (resolver as unknown as { resolve: () => Promise<never> }).resolve = async () => {
+      resolves++;
+      throw Error('global scope should not probe Python');
+    };
+    const { run, calls } = makeRun(() => ok());
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), resolver, withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    const outcome = await ingestor.installHost('claude', 'global');
+    assert.equal(outcome.ok, false);
+    if (!outcome.ok) assert.equal(outcome.error, 'global-scope-receipt-unverified');
+    assert.equal(resolves, 0);
+    assert.equal(calls.length, 0);
+  });
+
   test('invokes python -m qor.cli install --host claude --scope repo', async () => {
     const installer = new FakeInstaller();
     const resolver = fixedResolver('/opt/py/python');
