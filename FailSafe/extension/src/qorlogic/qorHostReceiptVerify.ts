@@ -52,12 +52,15 @@ export function verifyHostInstallReceipt(
     if (!within(workspace, base) || !within(base, fs.realpathSync(recordPath))) {
       throw Error('record escaped host');
     }
-    // Open once with no-follow. Validate and parse using that same descriptor;
-    // do not reopen an attacker-replaceable pathname after checking it.
+    // O_NOFOLLOW is not portable to every Windows host. Reject linked
+    // records explicitly and bind the opened descriptor to the lstat identity.
+    const before = fs.lstatSync(recordPath);
+    if (!before.isFile() || before.isSymbolicLink()) throw Error('linked record');
     const fd = fs.openSync(recordPath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
     try {
       const info = fs.fstatSync(fd);
-      if (!info.isFile() || info.size > 1024 * 1024) throw Error('record invalid');
+      if (!info.isFile() || info.size > 1024 * 1024
+        || info.dev !== before.dev || info.ino !== before.ino) throw Error('record invalid');
       recordMtime = info.mtime.toISOString();
       const parsed: unknown = JSON.parse(fs.readFileSync(fd, 'utf8'));
       record = parsed && typeof parsed === 'object'
@@ -84,14 +87,16 @@ export function verifyHostInstallReceipt(
         || typeof item.sha256 !== 'string' || !SHA256.test(item.sha256)) {
         throw Error('invalid entry');
       }
-      if (fs.lstatSync(item.path).isSymbolicLink()) throw Error('linked file');
+      const beforeFile = fs.lstatSync(item.path);
+      if (!beforeFile.isFile() || beforeFile.isSymbolicLink()) throw Error('linked file');
       const actual = fs.realpathSync(item.path);
       if (!within(base, actual) || seen.has(actual)) throw Error('invalid location');
       seen.add(actual);
       const fd = fs.openSync(item.path, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
       try {
         const info = fs.fstatSync(fd);
-        if (!info.isFile() || info.size > MAX_FILE_BYTES) throw Error('invalid file');
+        if (!info.isFile() || info.size > MAX_FILE_BYTES
+          || info.dev !== beforeFile.dev || info.ino !== beforeFile.ino) throw Error('invalid file');
         total += info.size;
         if (total > MAX_TOTAL_BYTES || sha256OfFd(fd) !== item.sha256) {
           throw Error('digest mismatch or budget exceeded');
