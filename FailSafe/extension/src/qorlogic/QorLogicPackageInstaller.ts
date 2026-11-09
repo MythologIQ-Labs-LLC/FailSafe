@@ -7,6 +7,7 @@ import {
 } from './PythonInterpreterResolver';
 import { MIN_QOR_LOGIC_VERSION, TESTED_AGAINST_QOR_LOGIC_VERSION } from './hostLayouts';
 import { installFrozenWheel } from './frozenWheelInstall';
+import { checkInstalledDependencies, type InstalledDependencyHealth } from './qorDependencyPreflight';
 
 export interface InstallerRunResult {
   stdout: string;
@@ -45,6 +46,7 @@ export type InstallError =
   | 'version-divergence'
   | 'post-install-mismatch'
   | 'dependencies-unsatisfied'
+  | 'dependency-check-unavailable'
   | 'dependency-preflight-failed'
   | 'dependency-preflight-unknown';
 
@@ -77,6 +79,8 @@ export interface IQorLogicPackageInstaller {
   install(approvedWheelPath?: string): Promise<QorLogicInstallResult>;
   version(): Promise<string | null>;
   verifyInstalledVersion(): Promise<QorLogicVersionStatus>;
+  /** Read-only pip check. Exact metadata version alone never establishes readiness. */
+  verifyInstalledDependencies(): Promise<InstalledDependencyHealth>;
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -131,6 +135,12 @@ export class QorLogicPackageInstaller implements IQorLogicPackageInstaller {
       testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION,
       matchesTested: installed === TESTED_AGAINST_QOR_LOGIC_VERSION,
     };
+  }
+
+  async verifyInstalledDependencies(): Promise<InstalledDependencyHealth> {
+    const py = await this.resolver.resolve();
+    if (!py.ok) return { ok: false, error: 'dependency-check-unavailable' };
+    return checkInstalledDependencies(py, this.run, PIP_SHOW_TIMEOUT_MS);
   }
 
   private async runSafely(fn: () => Promise<InstallerRunResult>): Promise<InstallerRunResult | null> {
