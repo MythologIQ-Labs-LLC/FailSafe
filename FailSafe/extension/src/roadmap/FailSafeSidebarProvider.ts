@@ -3,7 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { decideSidebarClick, sanitizeConsoleRoute } from "./sidebarInitializeLogic";
 import { resolveUiDir } from "./services/ConsoleServerSupport";
-import { DEFAULT_CONSOLE_THEME, isConsoleTheme, type ConsoleThemeAuthority } from "./services/ConsoleThemeAuthority";
+import { CONSOLE_THEMES, DEFAULT_CONSOLE_THEME, isConsoleTheme, type ConsoleThemeAuthority } from "./services/ConsoleThemeAuthority";
+import { SIDEBAR_CHROME_CSS, sidebarNonce } from "./sidebarChrome";
 
 type SidebarMessage =
   | { command: "openPopout" }
@@ -63,31 +64,35 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
       case "openConsole":
         await this.openConsoleFromSidebar(message.route);
         break;
-      case "sidebar.click": {
-        const allCmds = new Set(await vscode.commands.getCommands(true));
-        const decision = decideSidebarClick(message.currentLabel, allCmds);
-        switch (decision.kind) {
-          case "run-organize":
-            if (allCmds.has("failsafe.organize")) {
-              await vscode.commands.executeCommand("failsafe.organize");
-            } else {
-              vscode.window.showWarningMessage(
-                "Organize command is not yet registered. The extension may still be activating — try again in a moment.",
-              );
-            }
-            break;
-          case "run-bootstrap":
-            await vscode.commands.executeCommand("failsafe.bootstrap");
-            this.view?.webview.postMessage(decision.postUpdate);
-            break;
-          case "bootstrap-not-ready":
-            vscode.window.showWarningMessage(
-              "Bootstrap command is not yet registered. The extension may still be activating — try again in a moment.",
-            );
-            break;
+      case "sidebar.click":
+        await this.runSidebarClick(message.currentLabel);
+        break;
+    }
+  }
+
+  /** The Initialize/Organize button: the host decides, then posts any label change back. */
+  private async runSidebarClick(currentLabel: string): Promise<void> {
+    const allCmds = new Set(await vscode.commands.getCommands(true));
+    const decision = decideSidebarClick(currentLabel, allCmds);
+    switch (decision.kind) {
+      case "run-organize":
+        if (allCmds.has("failsafe.organize")) {
+          await vscode.commands.executeCommand("failsafe.organize");
+        } else {
+          vscode.window.showWarningMessage(
+            "Organize command is not yet registered. The extension may still be activating — try again in a moment.",
+          );
         }
         break;
-      }
+      case "run-bootstrap":
+        await vscode.commands.executeCommand("failsafe.bootstrap");
+        this.view?.webview.postMessage(decision.postUpdate);
+        break;
+      case "bootstrap-not-ready":
+        vscode.window.showWarningMessage(
+          "Bootstrap command is not yet registered. The extension may still be activating — try again in a moment.",
+        );
+        break;
     }
   }
 
@@ -123,7 +128,7 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private getHtml(): string {
-    const nonce = getNonce();
+    const nonce = sidebarNonce();
     const compactUrl = `${this.baseUrl}/?ui=compact`;
     const themeTokens = this.readThemeTokens();
     return `<!DOCTYPE html>
@@ -133,38 +138,7 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this.view?.webview.cspSource ?? ""} data: https:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; frame-src ${this.baseUrl};" />
   <style>${themeTokens}</style>
-  <style>
-    /* #601: the chrome uses the shared design tokens inlined above (read from
-       disk). The extension host renders the current theme into data-theme and
-       posts failsafe.theme when it changes. Hardcoded values are fallbacks for
-       when the tokens cannot be read. */
-    html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-dark, #071539); color: var(--text-main, #f3f7ff); font-family: var(--font-body, "Segoe UI", sans-serif); }
-    .shell { display: grid; grid-template-rows: auto auto 1fr; height: 100%; }
-    .toolbar { display: flex; gap: 6px; padding: 6px; border-bottom: 1px solid var(--border-rim, rgba(95, 150, 255, 0.35)); background: var(--bg-panel, #0a1f4a); align-items: center; }
-    .btn { border: 1px solid var(--glass-border, #3568d8); color: var(--text-main, #eaf1ff); background: var(--bg-deep, #1f4ea8); padding: 5px 8px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1.15; }
-    .btn:hover { border-color: var(--primary, #3568d8); }
-    .btn.secondary { background: var(--bg-deep, #10357a); border-color: var(--border-rim, #2c5bb9); }
-    .btn.init { margin-left: auto; background: var(--primary, #ffffff); color: #ffffff; border-color: var(--primary, #ffffff); box-shadow: 0 0 8px var(--primary-glow, rgba(0,0,0,0.25)); }
-    .btn.init:hover { box-shadow: 0 0 12px var(--primary-glow, rgba(0,0,0,0.35)); filter: brightness(1.08); }
-    .frame-wrap { position: relative; min-height: 0; }
-    iframe { border: 0; width: 100%; height: 100%; display: block; background: var(--bg-dark, #071539); }
-    .sre-toggle { display:flex; gap:6px; padding:4px 8px; background:var(--bg-panel, #0a1f4a); border-bottom:1px solid var(--border-rim, rgba(95,150,255,0.35)); justify-content:flex-start; }
-    .sre-toggle button { flex:0 0 auto; width:auto; padding:3px 12px; border:1px solid var(--glass-border, #3568d8); border-radius:6px; background:var(--bg-deep, #10357a); font-size:10px; font-weight:600; cursor:pointer; color:var(--text-main, #eaf1ff); line-height:1.2; }
-    .sre-toggle button[aria-selected="true"] { background:var(--primary, #2c74f2); border-color:var(--primary, #2c74f2); color:#fff; }
-    /* VS Code high-contrast themes: the chrome takes VS Code's contrast colors and
-       borders; the Monitor content keeps the selected FailSafe theme. */
-    body.vscode-high-contrast, body.vscode-high-contrast-light { background: var(--vscode-sideBar-background); color: var(--vscode-foreground); }
-    body.vscode-high-contrast .toolbar, body.vscode-high-contrast .sre-toggle,
-    body.vscode-high-contrast-light .toolbar, body.vscode-high-contrast-light .sre-toggle { background: var(--vscode-sideBar-background); border-color: var(--vscode-contrastBorder); }
-    body.vscode-high-contrast .btn, body.vscode-high-contrast .sre-toggle button,
-    body.vscode-high-contrast-light .btn, body.vscode-high-contrast-light .sre-toggle button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-color: var(--vscode-contrastBorder); box-shadow: none; }
-    body.vscode-high-contrast .sre-toggle button[aria-selected="true"],
-    body.vscode-high-contrast-light .sre-toggle button[aria-selected="true"] { outline: 2px solid var(--vscode-contrastActiveBorder); }
-    @media (max-width: 340px) {
-      .toolbar { gap: 4px; padding: 5px; }
-      .btn { font-size: 10px; padding: 4px 6px; }
-    }
-  </style>
+  <style>${SIDEBAR_CHROME_CSS}</style>
 </head>
 <body>
   <div class="shell">
@@ -182,7 +156,18 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     </div>
   </div>
   <script nonce="${nonce}">
-    const vscode = acquireVsCodeApi();
+${chromeSetupScript()}
+${messageRelayScript()}
+${viewToggleScript(this.baseUrl, compactUrl)}
+  </script>
+</body>
+</html>`;
+  }
+}
+
+/** Webview prelude. The theme names come from the one registry (#601, V2 of #917). */
+function chromeSetupScript(): string {
+  return `    const vscode = acquireVsCodeApi();
     const initBtn = document.getElementById('init-workspace');
     const mainFrame = document.getElementById('main-frame');
 
@@ -190,7 +175,7 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     // and posts failsafe.theme when it changes. Only the host may set it: the
     // embedded Monitor page is not trusted to choose the chrome's theme, and
     // the value must be one of the supported names before it reaches a selector.
-    const supportedThemes = new Set(['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere']);
+    const supportedThemes = new Set(${JSON.stringify(CONSOLE_THEMES)});
     const state = vscode.getState() || { initDone: false };
     if (state.initDone && initBtn) {
         initBtn.textContent = 'Organize';
@@ -205,8 +190,12 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
         // posts back a button.update message when DOM should mutate.
         vscode.postMessage({ command: 'sidebar.click', currentLabel: initBtn.textContent });
     });
+`;
+}
 
-    window.addEventListener('message', (event) => {
+/** Host-to-chrome messages and the FX916 deep-link relay from the Monitor iframe. */
+function messageRelayScript(): string {
+  return `    window.addEventListener('message', (event) => {
       const data = event && event.data ? event.data : null;
       if (!data || typeof data !== 'object') return;
       if (data.type === 'failsafe.theme') {
@@ -233,8 +222,11 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ command: 'openConsole', route: data.route });
       }
     });
+`;
+}
 
-    const sreUrl = '${this.baseUrl}/console/sre';
+function viewToggleScript(baseUrl: string, compactUrl: string): string {
+  return `    const sreUrl = '${baseUrl}/console/sre';
     const compactUrl = '${compactUrl}';
     const btnMonitor = document.getElementById('btn-monitor');
     const btnSre = document.getElementById('btn-sre');
@@ -248,19 +240,5 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
 
     btnMonitor.addEventListener('click', () => switchView(false));
     btnSre.addEventListener('click', () => switchView(true));
-    if (state.sreMode) { switchView(true); }
-  </script>
-</body>
-</html>`;
-  }
-}
-
-function getNonce(): string {
-  const possible =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let text = "";
-  for (let i = 0; i < 32; i += 1) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+    if (state.sreMode) { switchView(true); }`;
 }

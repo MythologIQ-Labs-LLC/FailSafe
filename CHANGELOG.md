@@ -27,16 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Continue and Aider no longer start from FailSafe. FailSafe cannot yet run them inside an operating-system boundary, and a git worktree is not a sandbox, so **FailSafe: Run Continue (governed)** and **FailSafe: Run Aider (governed)** now refuse before reading settings or credentials, prompting, or probing the executable (`--version`); no process starts. The Integrations catalog shows both as disabled, and neither an enabled setting nor an earlier successful run can re-enable them (#475).
 - Qor-logic is installed only from a local copy of the frozen `qor_logic-0.176.1-py3-none-any.whl` that you select and confirm. FailSafe checks its pinned SHA-256 on a private copy, checks offline that its dependencies are already installed, installs it offline with no network or dependency download, and then requires `pip show` to report exactly 0.176.1 and `pip check` to pass. It no longer runs `pip install --upgrade` from PyPI, and it never replaces a different installed version (#463).
 - A Qor-logic skill install is reported as successful only when the CLI confirms it for that host and the confirmed file count matches the host's install receipt, with every listed file inside the host folder and matching its SHA-256. An unchanged earlier receipt, a forged or edited receipt, or a count mismatch is reported as a failure (#463).
+- zod is updated from 3.25.76 to 4.6.7, which fixes GHSA-mrhx-c7xc-m3w5 (HIGH). With 3.25.76, an oversized list sent to a size-limited field (for example the `reworks` list of a delivery review request) was checked one element at a time before the size limit, and a single large request from a local process, MCP server or ACP agent could exhaust the extension host's memory. The size limit is now checked first. FailSafe's schemas and both bundled protocol SDKs (MCP, ACP) work unchanged on zod 4.
 
 ### Changed
 - Integration catalog descriptions distinguish currently enforced capabilities from disabled or observational integrations. They no longer imply that an adapter prevents writes when it only observes them (#474).
 - Qor-logic options that the frozen 0.176.1 CLI does not support are no longer offered and are refused before Python runs: installing selected skills, global (user-level) installs, the install preview and the skill list (#463).
 
 ### Dependencies
+- zod 4.6.7 (security fix above).
 - Dependency updates merged after v6.0.11: glob 14.0.2 (#610), body-parser 2.4.0 (#611), @hono/node-server 2.1.5 (#597), qs 6.17.1, fast-uri 3.1.9 and undici 7.30.1 (#590, #595, #596, #598).
 
 ### Known Limitations
-- Security advisory under release qualification: the bundled production dependency zod 3.25.76 is affected by GHSA-mrhx-c7xc-m3w5 (HIGH). Its reachability and mitigations are being assessed; this entry is disclosure, not a completed risk acceptance or claim of safety. Release remains blocked until a documented remediation or authorized, evidence-backed risk decision is independently accepted.
 - Independent complete-ledger checkpoint witnessing with a TPM-backed signing key and RFC 3161 timestamp remains a proposed G4 design, not an implemented or verified release protection (#467). Any deferral needs an explicit recorded checklist decision and audit acceptance.
 - Temporary restriction (by design): running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
 - Temporary restriction (by design): selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).

@@ -6,14 +6,23 @@
 // because it lives in the extension host (here: the ConsoleServer's authority) and reaches every
 // page through the Console server, never through browser storage.
 
-import { test, expect, type Browser, type Page } from '@playwright/test';
+import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 import { serveConsoleServerUI, ConsoleServerController } from './helpers/serveConsoleServerUI';
 
 const THEMES = ['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere'] as const;
 
-async function openIsolated(browser: Browser, url: string): Promise<Page> {
+// Every context a test opens is closed after it. A context left open keeps its pages and their
+// Console reconnect loops alive in the worker's shared browser for the rest of the run.
+const openContexts: BrowserContext[] = [];
+async function isolatedContext(browser: Browser): Promise<BrowserContext> {
   const context = await browser.newContext();
+  openContexts.push(context);
+  return context;
+}
+
+async function openIsolated(browser: Browser, url: string): Promise<Page> {
+  const context = await isolatedContext(browser);
   const page = await context.newPage();
   // Record the theme the document had when its DOM was ready (before any module ran).
   await page.addInitScript(() => {
@@ -48,6 +57,8 @@ test.describe('#601 shared app theme — Console, Monitor and SRE view', () => {
   let controller: ConsoleServerController;
 
   test.afterEach(async () => {
+    // Close the pages before their server, so no page is left reconnecting to a closed port.
+    await Promise.all(openContexts.splice(0).map((c) => c.close().catch(() => undefined)));
     if (controller) {
       await controller.close();
       await new Promise((r) => setTimeout(r, 50));
@@ -164,7 +175,7 @@ test.describe('#601 shared app theme — Console, Monitor and SRE view', () => {
   test('a theme an older version kept in this browser is moved to the shared theme once', async ({ browser }) => {
     controller = await serveConsoleServerUI({});
     const monitor = await openIsolated(browser, `${controller.url}/?ui=compact`);
-    const context = await browser.newContext();
+    const context = await isolatedContext(browser);
     const origin = new URL(controller.url).origin;
     await context.addInitScript((o) => {
       if (location.origin === o && !sessionStorage.getItem('seeded')) {

@@ -17,7 +17,8 @@ import type express from "express";
 import type { Request, Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import { consoleRequestGuard } from "./consoleRequestGuard";
-import type { ConsoleThemeAuthority } from "../services/ConsoleThemeAuthority";
+import { randomBytes } from "crypto";
+import { ConsoleThemeAuthority, memoryThemeStore } from "../services/ConsoleThemeAuthority";
 
 export const THEME_KEY_HEADER = "x-failsafe-theme-key";
 
@@ -68,4 +69,25 @@ export function registerConsoleThemeRoutes(app: express.Application, deps: Conso
       res.json({ ok: true, ...deps.authority.snapshot(), theme });
     },
   );
+}
+
+/**
+ * ConsoleServer's #601 wiring: the shared authority (in-memory when none is given, as in tests),
+ * a per-process key that authorizes theme writes, the routes, and a `ui.theme` broadcast for
+ * every change, including those made in the sidebar or the Settings UI.
+ */
+export function wireConsoleTheme(
+  app: express.Application,
+  given: ConsoleThemeAuthority | undefined,
+  rejectIfRemote: (req: Request, res: Response) => boolean,
+  broadcast: (data: Record<string, unknown>) => void,
+): { authority: ConsoleThemeAuthority; themeKey: string } {
+  const authority = given ?? new ConsoleThemeAuthority(memoryThemeStore());
+  const themeKey = randomBytes(32).toString("base64url");
+  registerConsoleThemeRoutes(app, { authority, themeKey, rejectIfRemote });
+  authority.onDidChange(() => {
+    const { theme, revision, epoch } = authority.snapshot();
+    broadcast({ type: "ui.theme", theme, revision, epoch });
+  });
+  return { authority, themeKey };
 }

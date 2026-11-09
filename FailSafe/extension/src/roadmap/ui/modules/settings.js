@@ -7,7 +7,7 @@ import { escapeHtml } from './brainstorm-templates.js';
 import { renderBicameralSettingsCard } from './bicameral-settings-card.js';
 import { renderVoicePackSettingsCard } from './voice-pack-settings-card.js';
 import { renderGovernanceModeCard, bindGovernanceModeCard } from './governance-mode-card.js';
-import { canChangeTheme } from './theme-sync.js';
+import { THEMES, canChangeTheme } from './theme-sync.js';
 
 // Sentinel attr name used across all bind paths to make listener wiring
 // idempotent: a node carrying data-cc-bound="1" already has its listener
@@ -19,14 +19,17 @@ function bindOnce(node, evt, handler) {
   node.setAttribute?.(BOUND_ATTR, '1');
 }
 
-const THEMES = [
-  { id: 'pegasus', name: 'Pegasus', label: 'Light', swatch: '#3b82f6' },
-  { id: 'mythiq', name: 'Mythiq', label: 'Dark', swatch: '#6366f1' },
-  { id: 'midnight', name: 'Midnight', label: 'Pitch', swatch: '#475569' },
-  { id: 'aurora', name: 'Aurora', label: 'Teal', swatch: '#2dd4bf' },
-  { id: 'crimson', name: 'Crimson', label: 'Red', swatch: '#ef4444' },
-  { id: 'atmosphere', name: 'Atmosphere', label: 'Sky', swatch: '#38bdf8' },
-];
+// #601: which themes exist and their order come from theme-sync.js (THEMES); this table only
+// names and colors them. A theme without an entry here is a drift the parity test refuses.
+const THEME_META = {
+  pegasus: { id: 'pegasus', name: 'Pegasus', label: 'Light', swatch: '#3b82f6' },
+  mythiq: { id: 'mythiq', name: 'Mythiq', label: 'Dark', swatch: '#6366f1' },
+  midnight: { id: 'midnight', name: 'Midnight', label: 'Pitch', swatch: '#475569' },
+  aurora: { id: 'aurora', name: 'Aurora', label: 'Teal', swatch: '#2dd4bf' },
+  crimson: { id: 'crimson', name: 'Crimson', label: 'Red', swatch: '#ef4444' },
+  atmosphere: { id: 'atmosphere', name: 'Atmosphere', label: 'Sky', swatch: '#38bdf8' },
+};
+const THEME_CHOICES = THEMES.map((id) => THEME_META[id]).filter(Boolean);
 export class SettingsRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);
@@ -45,7 +48,7 @@ export class SettingsRenderer {
     this.container.innerHTML = `
       <div class="cc-card" style="margin-bottom:16px">
         <div style="${LBL};margin-bottom:12px">Theme</div>
-        <div class="cc-theme-chips" style="display:flex;gap:10px;flex-wrap:wrap">${THEMES.map(t => this.renderChip(t, current)).join('')}</div>
+        <div class="cc-theme-chips" style="display:flex;gap:10px;flex-wrap:wrap">${THEME_CHOICES.map(t => this.renderChip(t, current)).join('')}</div>
         <div class="cc-theme-note" role="status" style="margin-top:10px;font-size:0.8rem;color:var(--text-muted)">${this.themeNote()}</div>
       </div>
       <div class="cc-card">

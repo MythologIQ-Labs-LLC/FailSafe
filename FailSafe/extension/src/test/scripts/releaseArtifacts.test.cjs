@@ -511,3 +511,19 @@ test("#616: ten-asset PDF set may be resumed with byte identity, not replaced", 
   assert.equal(result.action, "published");
   assert.deepEqual(writes(client), ["createDraft", ...Array(10).fill("uploadAsset"), "publish"]);
 });
+
+test("the CLI dispatches each command with the module's own exports (razor split, #917 V1)", () => {
+  const { spawnSync } = require("child_process");
+  const cli = path.join(SCRIPTS, "release-artifacts.cjs");
+  const empty = fs.mkdtempSync(path.join(require("os").tmpdir(), "relart-cli-"));
+  try {
+    const verify = spawnSync(process.execPath, [cli, "verify-set", empty, "--version", "6.0.12"], { encoding: "utf8" });
+    assert.equal(verify.status, 1);
+    assert.match(verify.stderr, /\[FAIL\] SHA256SUMS\.txt is missing/);
+    const unknown = spawnSync(process.execPath, [cli, "no-such-command"], { encoding: "utf8" });
+    assert.equal(unknown.status, 1);
+    assert.match(unknown.stderr, /unknown command no-such-command/);
+  } finally {
+    fs.rmSync(empty, { recursive: true, force: true });
+  }
+});

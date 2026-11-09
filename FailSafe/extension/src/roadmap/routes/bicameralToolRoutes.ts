@@ -62,46 +62,58 @@ export function bicameralToolRoute(
   deps: BicameralRouteDeps,
   spec: BicameralToolSpec,
 ): void {
-  app.post(`/api/actions/bicameral-${spec.tool}`, async (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) return;
-    const client = deps.getBicameralClient() as unknown as BicameralToolClient | null;
-    if (!client) {
-      res.status(503).json({ ok: false, error: "Bicameral client not wired" });
-      return;
+  app.post(`/api/actions/bicameral-${spec.tool}`, (req: Request, res: Response) =>
+    runBicameralTool(deps, spec, req, res));
+}
+
+/** 503 when no client is wired, 409 when it is not connected; otherwise the client. */
+function readyToolClient(deps: BicameralRouteDeps, res: Response): BicameralToolClient | null {
+  const client = deps.getBicameralClient() as unknown as BicameralToolClient | null;
+  if (!client) {
+    res.status(503).json({ ok: false, error: "Bicameral client not wired" });
+    return null;
+  }
+  if (!client.isConnected()) {
+    res.status(409).json({
+      ok: false,
+      error: "Bicameral not connected — POST /bicameral-connect first",
+    });
+    return null;
+  }
+  return client;
+}
+
+async function runBicameralTool(
+  deps: BicameralRouteDeps, spec: BicameralToolSpec, req: Request, res: Response,
+): Promise<void> {
+  if (deps.rejectIfRemote(req, res)) return;
+  const client = readyToolClient(deps, res);
+  if (!client) return;
+  const body: Record<string, unknown> =
+    req.body && typeof req.body === "object" ? req.body : {};
+  const parseError = spec.parse(body);
+  if (parseError) {
+    res.status(400).json({ ok: false, error: parseError });
+    return;
+  }
+  try {
+    const evaluator = spec.governed ? deps.getMcpInterceptor?.() ?? null : null;
+    if (spec.governed) {
+      const blocked = await governToolCall(
+        deps,
+        { name: spec.envelopeName ?? `bicameral.${spec.tool}`, arguments: spec.toArgs(body) },
+        res,
+        client,
+      );
+      if (blocked) return;
     }
-    if (!client.isConnected()) {
-      res.status(409).json({
-        ok: false,
-        error: "Bicameral not connected — POST /bicameral-connect first",
-      });
-      return;
-    }
-    const body: Record<string, unknown> =
-      req.body && typeof req.body === "object" ? req.body : {};
-    const parseError = spec.parse(body);
-    if (parseError) {
-      res.status(400).json({ ok: false, error: parseError });
-      return;
-    }
-    try {
-      const evaluator = spec.governed ? deps.getMcpInterceptor?.() ?? null : null;
-      if (spec.governed) {
-        const blocked = await governToolCall(
-          deps,
-          { name: spec.envelopeName ?? `bicameral.${spec.tool}`, arguments: spec.toArgs(body) },
-          res,
-          client,
-        );
-        if (blocked) return;
-      }
-      // The final client-identity check is shared by all Bicameral tool routes.
-      if (rejectStaleBicameralClient(deps, client, res, spec.governed, evaluator)) return;
-      const result = await spec.invoke(client, body);
-      res.json({ ok: true, result });
-    } catch (e) {
-      res.status(500).json({ ok: false, error: String(e) });
-    }
-  });
+    // The final client-identity check is shared by all Bicameral tool routes.
+    if (rejectStaleBicameralClient(deps, client, res, spec.governed, evaluator)) return;
+    const result = await spec.invoke(client, body);
+    res.json({ ok: true, result });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
 }
 
 /** The 11 tool specs — 5 governed mutations + 6 direct query tools. */

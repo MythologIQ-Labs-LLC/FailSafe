@@ -45,8 +45,17 @@ export function applyTheme(theme, doc = document) {
   if (!isTheme(theme)) return false;
   const changed = doc.documentElement.getAttribute('data-theme') !== theme;
   doc.documentElement.setAttribute('data-theme', theme);
-  if (changed) for (const fn of [...listeners]) { try { fn(theme); } catch { /* keep notifying */ } }
+  if (changed) notifyListeners(theme);
   return true;
+}
+
+function notifyListeners(theme) {
+  for (const fn of [...listeners]) callQuietly(() => fn(theme));
+}
+
+/** Run a best-effort step; a failure must not stop the caller (storage, history, listeners). */
+function callQuietly(step) {
+  try { return step(); } catch { return undefined; }
 }
 
 export function onThemeChange(fn) {
@@ -81,16 +90,16 @@ function safeSession(win) {
 /** Move a theme key from this page's address into session storage. Returns the key or ''. */
 export function captureThemeKey(win = window) {
   const session = safeSession(win);
-  let url;
-  try { url = new URL(win.location.href); } catch { return ''; }
+  const url = callQuietly(() => new URL(win.location.href));
+  if (!url) return '';
   const fromUrl = url.searchParams.get(KEY_PARAM);
   if (fromUrl !== null) {
     url.searchParams.delete(KEY_PARAM);
-    try { win.history.replaceState(win.history.state, '', url.pathname + url.search + url.hash); } catch { /* keep going */ }
-    if (fromUrl && session) { try { session.setItem(KEY_STORAGE, fromUrl); } catch { /* not persisted */ } }
+    callQuietly(() => win.history.replaceState(win.history.state, '', url.pathname + url.search + url.hash));
+    if (fromUrl && session) callQuietly(() => session.setItem(KEY_STORAGE, fromUrl));
     if (fromUrl) return fromUrl;
   }
-  try { return session?.getItem(KEY_STORAGE) || ''; } catch { return ''; }
+  return callQuietly(() => session?.getItem(KEY_STORAGE)) || '';
 }
 
 export function canChangeTheme(win = window) {
@@ -113,15 +122,18 @@ export async function requestTheme(theme, { win = window, fetchImpl = fetch, doc
       body: JSON.stringify({ theme }),
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok || !body?.ok) {
-      if (res.status === 401) { try { safeSession(win)?.removeItem(KEY_STORAGE); } catch { /* ignore */ } }
-      return { ok: false, reason: body?.error || `http-${res.status}` };
-    }
+    if (!res.ok || !body?.ok) return refusedTheme(res, body, win);
     if (isTheme(body.theme) && isCurrent(body)) applyTheme(body.theme, doc);
     return { ok: true, theme: body.theme };
   } catch {
     return { ok: false, reason: 'network' };
   }
+}
+
+/** A refused change. A 401 means the key is stale: forget it so the page shows read-only. */
+function refusedTheme(res, body, win) {
+  if (res.status === 401) callQuietly(() => safeSession(win)?.removeItem(KEY_STORAGE));
+  return { ok: false, reason: body?.error || `http-${res.status}` };
 }
 
 /**

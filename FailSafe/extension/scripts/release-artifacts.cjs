@@ -20,11 +20,11 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { execFileSync, spawnSync } = require("child_process");
+const { spawnSync } = require("child_process");
 const { NATIVE_TARGETS } = require("./native-targets.cjs");
 const { vsixName } = require("./package-all-targets.cjs");
 const { extractPrefix } = require("./smoke-packaged-sqlite.cjs");
-const { ghClient, liveLookups, rehearseRelease } = require("./release-github.cjs");
+const { commands } = require("./release-artifacts-cli.cjs");
 
 const SUMS = "SHA256SUMS.txt";
 const SUMS_LINE = /^([0-9a-f]{64}) {2}([A-Za-z0-9._-]+)$/;
@@ -167,13 +167,13 @@ function checkRemoteTag({ refType, tag, sha }, lsRemote) {
   if (commit !== sha) throw stop(`tag ${tag} points at ${commit} on the remote, but these packages were built from ${sha}`);
 }
 
-/** Draft first, upload only what is missing, never replace, publish only a complete set. */
-async function publishRelease({ dir, tag, notes }, client) {
-  // Protect manual recovery and direct publisher callers too: never create a
-  // draft or mutate an existing release while the immutable set is incomplete.
-  const version = tag.replace(/^v/, "");
-  // Direct callers also refuse a missing/mismatched PDF before any Release
-  // mutation; full VSIX validation runs in the CLI and each workflow gate.
+/**
+ * Protect manual recovery and direct publisher callers too: never create a draft or mutate an
+ * existing release while the immutable set is incomplete. Direct callers also refuse a
+ * missing/mismatched PDF before any Release mutation; full VSIX validation runs in the CLI and
+ * each workflow gate.
+ */
+function assertReleaseManifest(dir, version) {
   const manifest = parseSums(fs.readFileSync(path.join(dir, SUMS), "utf8"));
   const names = new Set(expectedNames(version).map((e) => e.name));
   if (pdfRequired(version)) names.add(pdfName(version));
@@ -182,18 +182,26 @@ async function publishRelease({ dir, tag, notes }, client) {
   const issues = [...unexpected.map((name) => `unexpected release file ${name}`),
     ...missing.map((name) => `missing release file ${name}`), ...checkPdf(dir, version, manifest)];
   if (issues.length) throw stop(`release artifact set rejected: ${issues.join("; ")}`);
+}
+
+/** A published release is never changed: it must already carry exactly the verified set. */
+async function confirmPublished(release, tag, expected, client, hashOf) {
+  const assets = await client.listAssets(release.id);
+  if (assets.some((x) => x.state !== "uploaded")) throw stop(`published release ${tag} has an incomplete upload; nothing was changed`);
+  const plan = await planRelease(expected, assets, hashOf);
+  if (!plan.complete) throw stop(`published release ${tag} does not carry exactly the verified set (${JSON.stringify(plan)}); nothing was changed`);
+  return { action: "unchanged", plan };
+}
+
+/** Draft first, upload only what is missing, never replace, publish only a complete set. */
+async function publishRelease({ dir, tag, notes }, client) {
+  assertReleaseManifest(dir, tag.replace(/^v/, ""));
   const expected = expectedAssets(dir);
   const matches = (await client.listReleases()).filter((r) => r.tag_name === tag);
   if (matches.length > 1) throw stop(`${matches.length} releases exist for ${tag}; resolve this by hand`);
   let release = matches[0];
   const hashOf = async (asset) => sha256(await client.downloadAsset(asset));
-  if (release && !release.draft) {
-    const assets = await client.listAssets(release.id);
-    if (assets.some((x) => x.state !== "uploaded")) throw stop(`published release ${tag} has an incomplete upload; nothing was changed`);
-    const plan = await planRelease(expected, assets, hashOf);
-    if (!plan.complete) throw stop(`published release ${tag} does not carry exactly the verified set (${JSON.stringify(plan)}); nothing was changed`);
-    return { action: "unchanged", plan };
-  }
+  if (release && !release.draft) return confirmPublished(release, tag, expected, client, hashOf);
   if (!release) release = await client.createDraft(tag, notes);
   for (const a of await client.listAssets(release.id)) if (a.state !== "uploaded") await client.deleteAsset(a.id);
   let plan = await planRelease(expected, await client.listAssets(release.id), hashOf);
@@ -226,74 +234,16 @@ async function alreadyPublished({ version, tag }, lookups) {
   return { published: found.length > 0, found };
 }
 
-const lsRemote = (t) => execFileSync("git", ["ls-remote", "origin", `refs/tags/${t}`, `refs/tags/${t}^{}`], { encoding: "utf8" });
-
-const arg = (argv, name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
-
+/** The CLI commands live in release-artifacts-cli.cjs; it dispatches on the first argument. */
 async function main(argv) {
-  const [cmd, dir] = argv;
-  if (cmd === "verify-set") {
-    const version = arg(argv, "--version");
-    const errors = verifySet(path.resolve(dir), version);
-    for (const e of errors) console.error(`[FAIL] ${e}`);
-    if (!errors.length) console.log(`[PASS] the ${version} release set matches ${SUMS} and targets.json`);
-    return errors.length ? 1 : 0;
-  }
-  if (cmd === "check-tag") {
-    checkRemoteTag({ refType: process.env.GITHUB_REF_TYPE, tag: arg(argv, "--tag"), sha: process.env.GITHUB_SHA }, lsRemote);
-    console.log(`[PASS] ${arg(argv, "--tag")} still points at ${process.env.GITHUB_SHA} on the remote`);
-    return 0;
-  }
-  if (cmd === "publish-release") {
-    const repo = arg(argv, "--repo"), tag = arg(argv, "--tag");
-    // --sha is the documented manual recovery (docs/RELEASE_RECOVERY.md): the
-    // tag commit the operator approved, checked against the remote as in CI.
-    const sha = arg(argv, "--sha") ?? process.env.GITHUB_SHA;
-    const errors = verifySet(path.resolve(dir), tag.replace(/^v/, ""));
-    if (errors.length) throw stop(`release artifact set rejected: ${errors.join("; ")}`);
-    checkRemoteTag({ refType: arg(argv, "--sha") ? "tag" : process.env.GITHUB_REF_TYPE, tag, sha }, lsRemote);
-    if (arg(argv, "--sha")) {
-      // The manual path must not skip parity: both marketplaces have to serve
-      // these exact bytes before the GitHub Release does.
-      const { run } = require("./verify-release-provenance.cjs");
-      const parity = await run(["--version", tag.replace(/^v/, ""), "--sums", path.join(path.resolve(dir), SUMS), "--vscode", "--openvsx"]);
-      if (parity.code !== 0) throw stop(`both marketplaces must serve these exact packages first (provenance exit ${parity.code}); nothing was attached`);
-    }
-    const result = await publishRelease({ dir: path.resolve(dir), tag, notes: arg(argv, "--notes") }, ghClient(repo));
-    console.log(`[PASS] release ${tag}: ${result.action}; ${result.plan.present.length} files verified`);
-    return 0;
-  }
-  if (cmd === "already-published") {
-    const version = arg(argv, "--version"), tag = arg(argv, "--tag");
-    const all = liveLookups({ repo: arg(argv, "--repo"), runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT, selfStep: arg(argv, "--self-step") });
-    // --checks: the rehearsal has no release.yml run of its own, so it skips history.
-    const names = (arg(argv, "--checks") ?? "history,vscode,openvsx,release").split(",");
-    const r = await alreadyPublished({ version, tag }, Object.fromEntries(names.map((n) => [n, all[n]])));
-    if (r.published) {
-      console.error(`[FAIL] not building ${version}: ${r.found.join("; ")}. A second build would produce different bytes. Re-run only the failed jobs of the attempt that published, or follow docs/RELEASE_RECOVERY.md.`);
-      return 1;
-    }
-    console.log(`[PASS] nothing for ${version} has been published or started publishing; building is safe`);
-    return 0;
-  }
-  if (cmd === "history-check") {
-    // Read-only: proves this job's token can read Actions history (rehearsal).
-    // The release guard's lookup and self-presence rule, on this workflow's own runs.
-    const lookups = liveLookups({ repo: arg(argv, "--repo"), runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT, workflow: arg(argv, "--workflow"), selfStep: arg(argv, "--self-step") });
-    const reason = await lookups.history(undefined, arg(argv, "--ref"));
-    console.log(`[PASS] ${arg(argv, "--workflow")} history for ${arg(argv, "--ref")} includes this run: ${reason ?? "no publish step started"}`);
-    return 0;
-  }
-  if (cmd === "rehearse") {
-    const calls = await rehearseRelease(path.resolve(dir), arg(argv, "--tag"), { publishRelease, expectedAssets });
-    console.log(JSON.stringify(calls));
-    return 0;
-  }
-  throw new Error(`unknown command ${cmd}`);
+  const handler = commands(module.exports)[argv[0]];
+  if (!handler) throw new Error(`unknown command ${argv[0]}`);
+  return handler(argv);
 }
 
+module.exports = { SUMS, stop, parseSums, readManifest, verifySet, expectedAssets, expectedNames, pdfRequired, pdfName, planRelease, checkRemoteTag, publishRelease, alreadyPublished, main };
+
+// After module.exports: main() hands those exports to the CLI commands.
 if (require.main === module) {
   main(process.argv.slice(2)).then((code) => { process.exitCode = code; }, (err) => { console.error(`[FAIL] ${err.message}`); process.exitCode = 1; });
 }
-
-module.exports = { parseSums, readManifest, verifySet, expectedAssets, expectedNames, pdfRequired, pdfName, planRelease, checkRemoteTag, publishRelease, alreadyPublished, main };

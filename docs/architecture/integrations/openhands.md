@@ -19,7 +19,7 @@ A team that ran an OpenHands agent wants the run's actions in the same timeline 
 
 ## Measurable value
 
-Metric: the share of imported events that are signed for this install and folder and deduplicated on re-import; on main every saved line is signed and keyed `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:304-309` (`record.sig = signRecord(key, folder, record);`).
+Metric: the share of imported events that are signed for this install and folder and deduplicated on re-import; on main every saved line is signed and keyed `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:171-176` (`record.sig = signRecord(key, folder, record);`).
 Baseline: no usage data is collected, so import counts and review time saved are unverified.
 
 ## Why not simply ask an agent
@@ -73,15 +73,15 @@ Each record is signed with HMAC-SHA256 over the folder's real path and the recor
 ## Persisted artifacts
 
 `.failsafe/logs/openhands-imports.jsonl` in the workspace, one signed record per event, written only after the operator confirms `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:87-88` (`return path.join(workspaceRoot, '.failsafe', 'logs', EVIDENCE_FILE);`).
-Each write is fsynced before the import is reported as saved `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:228-230` (`fs.fsyncSync(fd);`).
-One summary line per import in `.failsafe/logs/transparency.jsonl` `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:319-324` (`type: 'agent.import.summary'`).
-A shared lock directory `openhands-imports.jsonl.lock` while an import runs `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:265` (`const lockPath = `).
+Each write is fsynced before the import is reported as saved `FailSafe/extension/src/integrations/agent-observe/openhands-evidence-file.ts:119-121` (`fs.fsyncSync(fd);`).
+One summary line per import in `.failsafe/logs/transparency.jsonl` `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:221-226` (`type: 'agent.import.summary'`).
+A shared lock directory `openhands-imports.jsonl.lock` while an import runs `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:182` (`const lockPath = `).
 The signing key in VS Code Secret Storage under `failsafe.openhandsEvidenceKey.v1` `FailSafe/extension/src/integrations/agent-observe/openhands-signing.ts:27` (`export const EVIDENCE_KEY_ID = 'failsafe.openhandsEvidenceKey.v1';`).
 Health evidence of the last import in VS Code workspace state `FailSafe/extension/src/integrations/catalog/integration-health.ts:51` (`export const HEALTH_STATE_KEY = 'failsafe.integrationHealth.v1';`).
 
 ## Graph links
 
-Implemented: each record carries the export's sha256 and, when known, the run id and source event id `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:300` (`importKey, sourceSha256`).
+Implemented: each record carries the export's sha256 and, when known, the run id and source event id `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:167` (`importKey, sourceSha256`).
 Proposed (not built): run-to-evidence-to-governance edges in the relationship graph of `docs/architecture/INTEGRATION_SCENARIOS.md` scenario 3 (unverified: no code exists).
 
 ## Customer UI and actions
@@ -97,7 +97,7 @@ Status: the Console Integrations catalog card `FailSafe/extension/src/roadmap/ui
 Enforced: nothing is written without the modal confirmation `FailSafe/extension/src/extension/openhands-import-command.ts:134` (`if (!ok) return finish({ kind: 'dismissed' }`).
 Enforced: an export over 20 MB or 10000 events is refused `FailSafe/extension/src/extension/openhands-import-command.ts:18-19` (`export const MAX_EXPORT_EVENTS = 10_000;`).
 Enforced: an unsupported version maps nothing `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:162-163` (`observing disabled.`).
-Enforced: links under `.failsafe` and hard-linked targets are refused, so the import cannot append to a file outside the workspace `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:135-136` (`refusing a hard-linked`).
+Enforced: links under `.failsafe` and hard-linked targets are refused, so the import cannot append to a file outside the workspace `FailSafe/extension/src/integrations/agent-observe/openhands-evidence-file.ts:24-25` (`refusing a hard-linked`).
 Observed: the record is of a past run; it is not enforcement `FailSafe/extension/src/extension/openhands-import-command.ts:131` (`it is not live enforcement`).
 Advisory: whoever can read the Secret Storage entry can sign forged records `FailSafe/extension/src/integrations/agent-observe/openhands-signing.ts:11-12` (`whoever can read the Secret Storage entry can`).
 

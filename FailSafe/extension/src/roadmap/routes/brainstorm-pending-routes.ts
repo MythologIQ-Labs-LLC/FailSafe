@@ -4,19 +4,41 @@ import type { ApiRouteDeps } from "./types";
 import { confirmBoundOperation, withFooter } from "../../extension/operatorConfirmation";
 import { isCanonicalAudioId } from "../services/AudioVaultService";
 
+/**
+ * The raw-body parser must provide a Buffer. Never let an array, string or object supplied
+ * as request data influence the capture description or file. The copy owns these bytes
+ * across the asynchronous operator modal, while another middleware could mutate the body.
+ */
+function readCaptureBody(req: Request, res: Response): Buffer | undefined {
+  const incoming: unknown = req.body;
+  if (!Buffer.isBuffer(incoming)) {
+    res.status(415).json({ error: "Expected binary audio/webm" }); return undefined;
+  }
+  if (incoming.length === 0) { res.status(400).json({ error: "Empty body" }); return undefined; }
+  return Buffer.from(incoming);
+}
+
+function capturePrompt(displaySize: number, displayDigest: string, operationId: string) {
+  return {
+    title: "Save this Mind Map audio recording to disk?",
+    approveLabel: "Save recording",
+    detail: withFooter([
+      `Capture: ${displaySize} bytes; SHA-256 ${displayDigest}…`,
+      `Request: ${operationId}`,
+      "Destination: this workspace's .failsafe/audio directory.",
+      "The original recording is kept even if transcription fails.",
+      "No automatic deletion or retention deadline is currently configured.",
+      "Saved audio and metadata share a 256 MiB local storage limit.",
+      "Nothing is saved unless you explicitly choose Save recording.",
+    ]),
+  };
+}
+
 async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
   if (deps.rejectIfRemote(req, res)) return;
   try {
-    // The raw-body parser must provide a Buffer. Never let an array, string or
-    // object supplied as request data influence the capture description or file.
-    const incoming: unknown = req.body;
-    if (!Buffer.isBuffer(incoming)) {
-      res.status(415).json({ error: "Expected binary audio/webm" }); return;
-    }
-    if (incoming.length === 0) { res.status(400).json({ error: "Empty body" }); return; }
-    // Own these bytes across the asynchronous operator modal. The request body
-    // may be mutated by another middleware while the operator is deciding.
-    const buffer = Buffer.from(incoming);
+    const buffer = readCaptureBody(req, res);
+    if (!buffer) return;
     const digest = crypto.createHash("sha256").update(buffer).digest("hex");
     const displaySize = buffer.byteLength;
     const displayDigest = digest.slice(0, 16);
@@ -25,19 +47,7 @@ async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
     const approved = await confirmBoundOperation(
       deps.confirmOperatorAction,
       { bytes: buffer.length, digest },
-      (_capture, operationId) => ({
-        title: "Save this Mind Map audio recording to disk?",
-        approveLabel: "Save recording",
-        detail: withFooter([
-          `Capture: ${displaySize} bytes; SHA-256 ${displayDigest}…`,
-          `Request: ${operationId}`,
-          "Destination: this workspace's .failsafe/audio directory.",
-          "The original recording is kept even if transcription fails.",
-          "No automatic deletion or retention deadline is currently configured.",
-          "Saved audio and metadata share a 256 MiB local storage limit.",
-          "Nothing is saved unless you explicitly choose Save recording.",
-        ]),
-      }),
+      (_capture, operationId) => capturePrompt(displaySize, displayDigest, operationId),
       res,
     );
     if (!approved) return;
@@ -46,8 +56,7 @@ async function storeAudio(req: Request, res: Response, deps: ApiRouteDeps) {
       res.status(409).json({ error: "Audio changed while awaiting approval" });
       return;
     }
-    const hash = await deps.audioVaultService.storeAudio(buffer);
-    res.json({ audioHash: hash });
+    res.json({ audioHash: await deps.audioVaultService.storeAudio(buffer) });
   } catch (error) {
     if (error instanceof Error && error.message === "AUDIO_VAULT_QUOTA_EXCEEDED") {
       res.status(507).json({ error: "Audio storage limit reached. Delete saved recordings before saving more." });

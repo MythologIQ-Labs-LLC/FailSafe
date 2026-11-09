@@ -62,25 +62,7 @@ export class ConsoleLifecycleService {
     // EADDRINUSE can occur between probing and binding. Do not begin the
     // WebSocket service, ledger watcher, registry, or readiness checkpoint
     // until the HTTP server has emitted the actual listening event (#471).
-    const server = await new Promise<HttpServer>((resolve, reject) => {
-      let candidate: HttpServer;
-      try {
-        candidate = this.deps.app.listen(this.actualPort, this.deps.host);
-      } catch (error) {
-        reject(error);
-        return;
-      }
-      const onListening = () => {
-        candidate.removeListener("error", onError);
-        resolve(candidate);
-      };
-      const onError = (error: Error) => {
-        candidate.removeListener("listening", onListening);
-        reject(error);
-      };
-      candidate.once("listening", onListening);
-      candidate.once("error", onError);
-    });
+    const server = await listenOnce(this.deps.app, this.actualPort, this.deps.host);
     // stop() may have been called while the asynchronous bind was pending.
     // Never register a listener or claim readiness after that cancellation.
     if (generation !== this.startGeneration) {
@@ -95,7 +77,11 @@ export class ConsoleLifecycleService {
       boundHost = address.address;
     }
     console.log(`Roadmap server: http://localhost:${this.actualPort}`);
+    this.announceListening(boundHost);
+  }
 
+  /** Start the services that need a bound listener, then record transport readiness. */
+  private announceListening(boundHost: string): void {
     this.setupWebSocket();
     this.watchMetaLedger();
     registerServer({
@@ -195,4 +181,27 @@ export class ConsoleLifecycleService {
       server.listen(port, this.deps.host);
     });
   }
+}
+
+/** Resolve with the server only once it emits "listening"; reject on a bind error. */
+function listenOnce(app: express.Application, port: number, host: string): Promise<HttpServer> {
+  return new Promise<HttpServer>((resolve, reject) => {
+    let candidate: HttpServer;
+    try {
+      candidate = app.listen(port, host);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    const onListening = () => {
+      candidate.removeListener("error", onError);
+      resolve(candidate);
+    };
+    const onError = (error: Error) => {
+      candidate.removeListener("listening", onListening);
+      reject(error);
+    };
+    candidate.once("listening", onListening);
+    candidate.once("error", onError);
+  });
 }

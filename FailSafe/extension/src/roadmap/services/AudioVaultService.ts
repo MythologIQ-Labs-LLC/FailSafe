@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import { openCaptureLock, rollbackCapture } from "./audioVaultIo";
 
 const AUDIO_ID = /^[0-9a-f]{64}$/;
 const MAX_CAPTURE_BYTES = 50 * 1024 * 1024;
@@ -98,26 +99,22 @@ export class AudioVaultService {
     let release!: () => void;
     this.writeTail = new Promise<void>(resolve => { release = resolve; });
     await previous;
-    const lockPath = path.join(root, VAULT_WRITE_LOCK);
-    let lock: fs.promises.FileHandle | undefined;
+    try {
+      return await this.withCaptureLock(path.join(root, VAULT_WRITE_LOCK), operation);
+    } finally {
+      release();
+    }
+  }
+
+  /** Run one operation while holding the lock inode this writer created. */
+  private async withCaptureLock<T>(lockPath: string, operation: () => Promise<T>): Promise<T> {
+    const lock = await openCaptureLock(lockPath);
     let owned: fs.Stats | undefined;
     try {
-      try {
-        lock = await fs.promises.open(lockPath, "wx", 0o600);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-          throw new Error("AUDIO_VAULT_WRITE_BUSY");
-        }
-        throw error;
-      }
       owned = await lock.stat();
       return await operation();
     } finally {
-      try {
-        if (lock) await this.releaseCaptureLock(lockPath, lock, owned);
-      } finally {
-        release();
-      }
+      await this.releaseCaptureLock(lockPath, lock, owned);
     }
   }
 
@@ -155,13 +152,8 @@ export class AudioVaultService {
       await file.close();
       file = undefined;
     } catch (failure) {
-      const errors: unknown[] = [failure];
-      if (file) try { await file.close(); } catch (e) { errors.push(e); }
       // Never unlink a pre-existing sidecar on EEXIST; we did not create it.
-      if (created) try { await fs.promises.unlink(sidecar); } catch (e) { errors.push(e); }
-      try { await fs.promises.unlink(audio); } catch (e) { errors.push(e); }
-      if (errors.length > 1) throw new AggregateError(errors, "AUDIO_VAULT_ROLLBACK_INCOMPLETE");
-      throw failure;
+      await rollbackCapture(failure, file, created ? sidecar : undefined, audio);
     }
   }
 

@@ -98,3 +98,13 @@ test("#616 browser render embeds logos and appends PDF checksum without touching
     await assert.rejects(generate({version:VERSION,manifest:path.join(tmp,"package.json"),changelog:path.join(tmp,"changelog.md"),out:tmp}),/Existing or unexpected PDF/);
   }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 });
+
+test("the footer prints in each page's bottom margin, never as a fixed element over the body (#917 PDF layout)", () => {
+  const gen = require(path.join(__dirname, "..", "..", "..", "scripts", "build-release-notes-pdf.cjs"));
+  const html = gen.htmlFor("6.0.12", [{ heading: "Fixed", items: ["one (#1)"] }], gen.readLogos(path.join(__dirname, "..", "..", "..", "assets", "release-branding")));
+  assert.doesNotMatch(html, /<footer|position:\s*fixed/);
+  assert.match(gen.footerFor("6.0.12"), /MythologIQ Labs \| FailSafe v6\.0\.12/);
+  assert.match(gen.footerFor("6.<b>"), /6\.&lt;b&gt;/);
+  const src = require("fs").readFileSync(path.join(__dirname, "..", "..", "..", "scripts", "build-release-notes-pdf.cjs"), "utf8");
+  assert.match(src, /displayHeaderFooter:true,headerTemplate:"<span><\/span>",footerTemplate:footerFor\(version\)/);
+});

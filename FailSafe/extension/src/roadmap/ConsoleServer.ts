@@ -4,7 +4,6 @@
  *  ConsoleLifecycleService,ConsoleServerSupport}.ts hold all behavior. */
 import * as path from "path";
 import * as fs from "fs";
-import { randomBytes } from "crypto";
 import express, { Request, Response } from "express";
 import { WebSocketManager } from "./services/WebSocketManager";
 import { TransparencyLogger } from "./services/TransparencyLogger";
@@ -21,7 +20,6 @@ import type { EnforcementEngine } from "../governance/EnforcementEngine";
 import { BrainstormService } from "./services/BrainstormService";
 import { AudioVaultService } from "./services/AudioVaultService";
 import type { IConfigProvider } from "../core/interfaces/IConfigProvider";
-import { type InstalledSkill } from "./services/SkillParser";
 import { discoverAllSkills } from "./services/SkillDiscovery";
 import { MarketplaceCatalog } from "./services/MarketplaceCatalog";
 import { MarketplaceInstaller } from "./services/MarketplaceInstaller";
@@ -39,10 +37,11 @@ import {
   resolveUiDir,
   CHECKPOINT_TYPE_REGISTRY,
   MAX_PHASE_RENDER as MAX_PHASE_RENDER_IMPL,
+  consoleUiEntryFile,
 } from "./services/ConsoleServerSupport";
 import type { WorkspaceArtifactSnapshot } from "./services/WorkspaceArtifactBuilder";
-import { ConsoleThemeAuthority, memoryThemeStore } from "./services/ConsoleThemeAuthority";
-import { registerConsoleThemeRoutes } from "./routes/ConsoleThemeRoute";
+import type { ConsoleThemeAuthority } from "./services/ConsoleThemeAuthority";
+import { wireConsoleTheme } from "./routes/ConsoleThemeRoute";
 
 const PORT = 9376;
 const HOST = "127.0.0.1";
@@ -135,8 +134,7 @@ export class ConsoleServer {
   private riskRegisterManager: RiskRegisterManager;
   private hub: HubSnapshotService;
   /** #601: shared theme authority and the per-process key that authorizes theme writes. */
-  private themeAuthority: ConsoleThemeAuthority;
-  private readonly themeKey = randomBytes(32).toString("base64url");
+  private theme!: { authority: ConsoleThemeAuthority; themeKey: string };
   private lifecycle: ConsoleLifecycleService;
   private registrar: ConsoleRouteRegistrar;
   /** Shared so legacy fixtures that reassign priv.checkpointMemory/Db keep working. */
@@ -174,15 +172,8 @@ export class ConsoleServer {
     });
     this.registrar = new ConsoleRouteRegistrar(this.buildRouteHost());
     this.registrar.setupAllRoutes();
-    this.themeAuthority = options.themeAuthority ?? new ConsoleThemeAuthority(memoryThemeStore());
-    registerConsoleThemeRoutes(this.app, {
-      authority: this.themeAuthority, themeKey: this.themeKey,
-      rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
-    });
-    this.themeAuthority.onDidChange(() => {
-      const { theme, revision, epoch } = this.themeAuthority.snapshot();
-      this.broadcast({ type: "ui.theme", theme, revision, epoch });
-    });
+    this.theme = wireConsoleTheme(this.app, options.themeAuthority,
+      (req, res) => this.rejectIfRemote(req, res), (d) => this.broadcast(d));
     this.subscribeToEvents();
   }
 
@@ -215,8 +206,8 @@ export class ConsoleServer {
   getPort(): number { return this.lifecycle.getPort(); }
   /** #601: the key a Console page needs to change the theme. Only the extension host's own
    *  Console links carry it; it changes every time the extension host starts. */
-  getThemeKey(): string { return this.themeKey; }
-  getThemeAuthority(): ConsoleThemeAuthority { return this.themeAuthority; }
+  getThemeKey(): string { return this.theme.themeKey; }
+  getThemeAuthority(): ConsoleThemeAuthority { return this.theme.authority; }
   broadcastEvent(data: Record<string, unknown>): void { this.broadcast(data); }
   /** @internal — preserved for legacy test reach-ins; routes use HubSnapshotService directly. */
   getTransparencyEvents(limit: number): Array<Record<string, unknown>> { return this.hub.getTransparencyEvents(limit); }
@@ -308,19 +299,6 @@ export class ConsoleServer {
     return true;
   }
 
-  private getUiEntryFile(req: Request): "command-center.html" | "index.html" {
-    const ui = String(req.query.ui || "").toLowerCase();
-    const compact = String(req.query.compact || "").toLowerCase();
-    if (ui === "compact") return "index.html";
-    if (ui === "console" || ui === "extended" || ui === "popout") return "command-center.html";
-    if (compact === "1" || compact === "true" || compact === "yes") return "index.html";
-    return "command-center.html";
-  }
-
-  private getInstalledSkills(): InstalledSkill[] {
-    return discoverAllSkills(this.workspaceRoot, __dirname);
-  }
-
   private buildHubService(
     mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus,
     modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory,
@@ -355,8 +333,8 @@ export class ConsoleServer {
       workspaceDirname: __dirname, hub: this.hub,
       rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
       broadcast: (d) => this.broadcast(d),
-      getUiEntryFile: (req) => this.getUiEntryFile(req),
-      getInstalledSkills: () => this.getInstalledSkills() as any,
+      getUiEntryFile: (req) => consoleUiEntryFile(req.query),
+      getInstalledSkills: () => discoverAllSkills(this.workspaceRoot, __dirname) as any,
       // #83A: token gate for the commit-check route; late-read so bootstrap
       // wiring order does not matter.
       validateCommitToken: (tok: string) => this.validateCommitToken?.(tok) ?? false,

@@ -1,6 +1,6 @@
 # Plan: v6.0.12 consolidated release governance — RC1 delta, #619 release PDF, #467 G4
 
-**iteration**: 2 (working draft after binding VETO #917; not yet audited)
+**iteration**: 2 (remediation of binding VETO #917; submitted for independent audit iteration 2)
 **change_class**: governance
 **risk_grade (proposed)**: L3 (security, supply chain and governance integrity)
 **pr_target**: `release/v6.0.12-rc1-candidate-20261108-no-ci` (PR #631), then `main` only after a seal and owner release authorization.
@@ -10,7 +10,7 @@
 ## Ordering inversion and historical record (declared; nothing backdated)
 
 1. **The RC1 delta (`v6.0.11..3d722d02`) was implemented without any `/qor-plan` or `/qor-audit`.**
-   - It covers 44 non-test files: the #601 theme (#620), the #465 audio vault (#621), #474 governed integrations and ledger (#622), #470, #471, #478, the dependency updates (#590, #595–#598, #610, #611) and #480 test hardening.
+   - It covers 49 non-test, non-doc files (`git diff --name-only v6.0.11 3d722d02`, excluding `src/test/`, `docs/`, `.qor/`, `.agent/`, `.failsafe/` and `*.md`; corrected from 44, #917 N9): the #601 theme (#620), the #465 audio vault (#621), #474 governed integrations and ledger (#622), #470, #471, #478, the dependency updates (#590, #595–#598, #610, #611) and #480 test hardening.
    - The ledger has no entry for any of it; the last entry before this work is #914.
    - This plan subjects that delta to a **retrospective, post-implementation, pre-release** independent audit. It is not a pre-implementation PASS and must never be described as one.
 2. **#619** (7 files: release-PDF generator, byte-pinned brand sources, release workflow and artifact checks) was also implemented before audit. It is reviewed here on the same retrospective basis.
@@ -103,6 +103,73 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
   - it does **not** re-verify history at or below #914, and does not resolve the October VETOs.
 
 **Release choice still open:** either (a) qualify G4 implementation for v6.0.12, or (b) obtain explicit owner approval for a time-bound deferral to v6.0.13, amend RC1 checklist item 81 with date, owner, reason and compensating controls, and disclose the lack of independent witnessing in release notes. Neither is deemed accepted by this document. An independent Judge must review the exact resulting disposition.
+
+## Iteration 2: remediation of VETO #917 (V1–V5) and the non-blocking notes
+
+VETO #917 stays in the ledger unchanged. Iteration 2 changes code, tests, release notes and this plan, so the candidate is a new commit (named in the audit request), not `e99c4e1e`. Qualification evidence from `e99c4e1e` does not carry over to it; the gates are re-run on the new candidate (results in the audit request).
+
+**V1 (razor).** Each item the #917 auditor named is fixed by an extraction that keeps behavior, refusal order and error text:
+
+| Item named by #917 | Before | After |
+|---|---|---|
+| `FailSafeSidebarProvider.ts` file / `getHtml` / `handleMessage` | 266 / 131 / 41 | 244 / 36 / 19; static CSS and nonce moved to `sidebarChrome.ts`; the click decision to `runSidebarClick`. The rendered HTML is byte-identical except the theme list literal, now generated from `CONSOLE_THEMES` |
+| `theme-sync.js` `requestTheme` / `applyTheme` / `captureThemeKey` depth | 5 / 4 / 4 | 2 / 1 / 2, through `callQuietly` and `refusedTheme` |
+| `ConsoleServer.ts` file | 418 | 397, its v6.0.11 size: theme wiring moved to `wireConsoleTheme` (`ConsoleThemeRoute.ts`), UI-entry selection to `consoleUiEntryFile` (`ConsoleServerSupport.ts`). `buildRouteHost` (51) is unchanged since v6.0.11 |
+| `storeAudio` route | 52, depth 3 | 31, depth 3; `readCaptureBody`, `capturePrompt` |
+| `wireSavedAudioManager` / inner `reload` | 64 / 43 | 27 / 12; `recordingRow`, `deleteRecording`, `renderRecordings` |
+| `captureExclusive` depth; `writeSidecarOrRollback` depth | 4; 5 | 1; 2; `withCaptureLock`, and `openCaptureLock`/`rollbackCapture` in `audioVaultIo.ts` |
+| `bootstrapBicameral.ts` file; `wireBicameralClient`; `maybeAutoConnectBicameral` | 348; 48; 46 | 223; 25; 30. Types in `bootstrapBicameralTypes.ts`, settings readers and wiring state in `bootstrapBicameralSettings.ts` (both re-exported, so imports are unchanged) |
+| `openhands-import.ts` file; `persistOpenHandsObservations` | 326; 67 | 230; 36. File primitives in `openhands-evidence-file.ts`; `prepareEvidenceFolder`, `newRecordLines`, `writeImportSummary` |
+| `bicameralToolRoute`; ratify handler; `registerBicameralDecisionRoutes` | 46; 85 depth 4; 190 | 8; 23 depth 2; 9. Shared `connectedClient` and `governedProceed` keep the 503 → 409 → govern → stale-client order |
+| `startBound` | 62 | 26; `listenOnce`, `announceListening` |
+| `release-artifacts.cjs` file; `publishRelease`; `main` | 299; 41; 61 | 249; 23; 5. CLI commands in `release-artifacts-cli.cjs`; a new spawn test proves dispatch works when run as a script |
+
+Doc citations that moved were relocated (FX1003 91/91, including the v6.0.8 tag check of 339 shipped claims).
+
+**Pre-existing razor debt outside the #917 inventory (disclosed, not release-blocking, not refactored).** These files were over the limit at v6.0.11. RC1 issue wiring grew them slightly. Refactoring them would be an unrelated architectural rewrite in a release-stabilization cycle. Before/after: `bootstrapServers.ts` 555→561 (`bootstrapServers` 394→398); `commands.ts` 702→710; `main.ts` 506→508 (`activate` 383→385); `IntentService.ts` 509→518; `ConsoleRouteRegistrar.ts` 583→588; `connection.js` 402→408; `roadmap.js` 507→511; `brainstorm.js` 301→303; `brainstorm-templates.js` `renderRightPanel` 71→77; `command-center.js` IIFE 209→212. `qor-conformance-probe.cjs` and `validate-vsix.cjs` are #633 files under PASS #916. They are tracked as v6.0.13 debt.
+
+**V2 (theme list).** The registry is `CONSOLE_THEMES` (`ConsoleThemeAuthority.ts`). The sidebar chrome renders it directly. `settings.js` builds its chips from `theme-sync.js`'s `THEMES` and only names and colors them. `theme-sync.js` (a browser module), `package.json` (static manifest) and `theme-tokens.css` must hold static copies. The new `themeRegistryParity.test.cjs` checks each copy, in order, against the registry and the default theme. Three drift mutations, run by hand, were each refused: reordering `theme-sync.js`, adding a seventh registry theme, and dropping one `settings.js` entry.
+
+**V3 (G4 specification).** Corrected in the G4 section above (owner remediation commit `d15cb4af`):
+- append-only byte-prefix continuity from every previous committed ledger version, refused even when re-signed;
+- the revocation-registry digest, version and monotonic history bound into the manifest, with rollback refused;
+- exact persisted manifest bytes in place of reserialized JSON;
+- length framing and domain separation;
+- disclosure that coordinated deletion of the newest tail needs an independently retained trusted head.
+
+**G4 release disposition.** Recommended: defer the TPM/RFC 3161 witness to v6.0.13. That is a recommendation, not an accepted decision. The exact authorization procedure is:
+1. The owner records a dated decision accepting the deferral. It names the residual risk ("no independent witness of the complete ledger bytes; tamper evidence for ledger text rests on Git history and the native chain only") and the compensating controls (the native post-anchor chain check, the clean epoch #914, the release-notes disclosure). It expires at the v6.0.13 release.
+2. RC1 checklist item 81 (PR #631 body) is amended to cite that decision. Only the owner can authorize that PR edit.
+3. The independent auditor accepts the recorded disposition. Until steps 1–3 exist, the release is NO-GO even with a PASS here.
+
+No TPM key, TSA choice or G4 implementation is claimed or authorized. The release notes already disclose G4 as not implemented.
+
+**V4 (zod GHSA-mrhx-c7xc-m3w5).** Resolved by upgrade, not by risk acceptance.
+- **Reachability** (scratch reproduction, Node 24):
+  - the only network-reachable bounded collection is the delivery review `reworks` array, `.max(20)` on `POST /api/actions/delivery/review`. The route is loopback-only and behind the request guard (Host/Origin/JSON). A local non-browser process can still reach it, and the body limit is 12 MB;
+  - MCP stdio peers (10 MB per message) and ACP peers are local child processes.
+  - On zod 3.25.76, 6 million elements (11.4 MB) used about 2.6 GB of heap, and the SDKs' `zod/v4` subpath ran out of memory.
+- **Fix:** zod `^4.6.7` (4.6.7 locked). Both SDKs declare `^3.25 || ^4` and dedupe to it, and their smoke tests (tool listing, schema generation, valid and invalid calls, ACP initialize/newSession) behave the same as before. `tsc` is clean, and production `npm audit` reports 0 vulnerabilities.
+- **Regression:** `zodBoundedCollections.test.cjs` checks that the installed zod is at least 4.6.6, that 200,000 elements against `.max(20)` give one `too_big` issue (3.25.76 gives 400,001), and that the review route refuses an oversized `reworks` list.
+- **Residual, not release-blocking:** unbounded arrays (no `.max`) still collect one issue per bad element in every zod version, with memory linear in input. Defence in depth, scheduled for v6.0.13: tighter body limits on delivery routes, `.max()` on `relatedArtifacts` and overlay arrays, and an ACP line-length cap.
+
+**V5 (release notes).** Both changelogs now carry the RC1 user-visible changes (#465, #470, #471, #474 Bicameral refusals, strict release-gate intent read, OpenHands legacy-lock refusal, catalog relabeling, #478), and each claim was checked against source. The zod fix appears under Security and Dependencies. The `[6.0.12]` sections of the root and extension changelogs are identical.
+
+**Non-blocking notes from #917:**
+- **PDF footer overlap (fixed, confirmed defect).** A rendered PDF showed the fixed-position footer at the top of pages 2–4, over the section heading rule, and missing from page 1. The footer is now Chromium's margin footer (`displayHeaderFooter`). Measured in the rendered PDF, it sits at y = 754 pt on every page, below the body area (ends at 744.5 pt), right-aligned with the body. A regression test is added.
+- **Audio POST/DELETE without `consoleRequestGuard`.** They keep `rejectIfRemote` plus a per-operation VS Code modal bound to the exact bytes or inode snapshot. Not changed in this release (no new requirement); scheduled for v6.0.13.
+- **Stale `.capture-write.lock`.** Fails closed (busy). Manual removal is the documented recovery; scheduled for v6.0.13.
+- **Brand images in every VSIX (852 KB).** Accepted as is for v6.0.12.
+- **N5** (auditor shell T13(g)) is environment-dependent; this host's run is listed in the audit request.
+- **N9** counts are corrected above and in the regenerated inventory.
+
+**Intermittent Playwright failure (`monitor-theme-inheritance.spec.ts:109`).**
+- **Symptom:** `page.goto` returned `net::ERR_CONNECTION_FAILED` 155 ms after the harness returned its URL, in one full-suite run (257 tests, 8 workers), before any product assertion. The harness binds port 0 itself, so there is no port-probe race.
+- **Not reproduced:** 175/175 passed with `--repeat-each=25` in isolation.
+- **Defect found and fixed in the spec:** `openIsolated` opened a new browser context per page and never closed it. Every test left Monitor/Console pages running reconnect loops against closed ports in the worker's shared browser for the rest of the run. Contexts are now closed in `afterEach` before the server.
+- **Root cause of the single connection failure:** not proven. The fix removes the only resource leak found on that path. Acceptance evidence: three consecutive full-suite runs after the fix on the refactored source, each 253 passed, 4 skipped, 0 failed. These are repeated full runs, not retries of the single spec.
+
+**Inventory.** Regenerated against the new candidate. Every file lists all issues from every commit that touched it. `package.json`, `package-lock.json`, `validate-vsix.cjs` and `validate-docs-coherence.ps1` are no longer attributed to #601 alone.
 
 ## Sequence after this audit
 

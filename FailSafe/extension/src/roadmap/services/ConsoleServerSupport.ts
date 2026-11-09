@@ -120,3 +120,13 @@ export function createBrainstormService(
     throw new Error("No LLM available — start Ollama or enable a VS Code language model");
   });
 }
+
+/** Which Console page a request gets: the compact Monitor or the full Console (the default). */
+export function consoleUiEntryFile(query: Record<string, unknown>): "command-center.html" | "index.html" {
+  const ui = String(query.ui || "").toLowerCase();
+  const compact = String(query.compact || "").toLowerCase();
+  if (ui === "compact") return "index.html";
+  if (ui === "console" || ui === "extended" || ui === "popout") return "command-center.html";
+  if (compact === "1" || compact === "true" || compact === "yes") return "index.html";
+  return "command-center.html";
+}

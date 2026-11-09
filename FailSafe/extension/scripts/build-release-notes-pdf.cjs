@@ -77,6 +77,11 @@ function readLogos(dir=BRAND) {
     return {name,provenance,sha256:sha(bytes),data:"data:"+mime+";base64,"+bytes.toString("base64")};
   });
 }
+/** The page footer, printed by Chromium in every page's bottom margin (never over the body). */
+function footerFor(version) {
+  return '<div style="width:100%;margin:0 0.72in 0.2in;text-align:right;font:8pt Arial,Helvetica,sans-serif;color:#738095">'+
+    'MythologIQ Labs | FailSafe v'+esc(version)+'</div>';
+}
 function htmlFor(version, groups, logos) {
   const notes=groups.map((g)=>'<section><h2>'+esc(g.heading)+'</h2><ul>'+
     g.items.map((item)=>'<li>'+esc(plain(item))+'</li>').join("")+'</ul></section>').join("");
@@ -94,7 +99,7 @@ function htmlFor(version, groups, logos) {
     'section{break-inside:avoid;margin:0 0 17px}h2{font-size:14pt;color:#18345d;margin:0 0 8px;border-bottom:1px solid #dfe6f0;padding-bottom:4px}'+
     'ul{margin:0;padding-left:20px}li{padding-left:3px;padding-bottom:6px;overflow-wrap:anywhere}'+
     '.links{border-top:1px solid #e2e6ef;margin-top:15px;padding-top:11px;font-size:9pt;overflow-wrap:anywhere}'+
-    'a{color:#24518b}footer{position:fixed;right:0;bottom:-.40in;color:#738095;font-size:8pt}'+
+    'a{color:#24518b}'+
     '</style></head><body><header><div class="logos">'+
     '<img alt="MythologIQ Labs" src="'+logos[0].data+'"><img alt="FailSafe" src="'+logos[1].data+'"></div>'+
     '<div><div class="brand">MythologIQ Labs | Product release</div><h1>FailSafe</h1>'+
@@ -103,7 +108,7 @@ function htmlFor(version, groups, logos) {
     notes+'<div class="links"><b>Release and installers</b><br><a href="'+link+'">'+esc(link)+'</a><br>'+
     '<a href="https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe">VS Code Marketplace</a> | '+
     '<a href="https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe">Open VSX</a></div>'+
-    '<footer>MythologIQ Labs | FailSafe v'+esc(version)+'</footer></body></html>';
+    '</body></html>';
 }
 async function generate({version, changelog, out, logosDir=BRAND, manifest=path.join(EXT,"package.json")}) {
   requireVersion(version);
@@ -124,7 +129,8 @@ async function generate({version, changelog, out, logosDir=BRAND, manifest=path.
     const page=await browser.newPage();
     await page.setContent(htmlFor(version,groups,logos),{waitUntil:"load"});
     await page.evaluate(()=>document.fonts.ready);
-    bytes=await page.pdf({format:"Letter",printBackground:true,preferCSSPageSize:true,tagged:true});
+    bytes=await page.pdf({format:"Letter",printBackground:true,preferCSSPageSize:true,tagged:true,
+      displayHeaderFooter:true,headerTemplate:"<span></span>",footerTemplate:footerFor(version)});
   } finally { await browser.close(); }
   if(bytes.length<4096||!bytes.subarray(0,8).toString("ascii").startsWith("%PDF-")||!/%%EOF\s*$/.test(bytes.subarray(-128).toString("latin1"))) {
     throw Error("Invalid generated PDF");
@@ -140,4 +146,4 @@ async function main(args) {
   return generate({version,out:path.resolve(out),changelog:path.resolve(argvValue(args,"--changelog")||path.join(ROOT,"CHANGELOG.md"))});
 }
 if(require.main===module) main(process.argv.slice(2)).then((v)=>console.log(JSON.stringify(v)),(e)=>{console.error("[FAIL] "+e.message);process.exitCode=1;});
-module.exports={LOGOS,requireVersion,sectionsFor,readLogos,htmlFor,generate,main};
+module.exports={LOGOS,requireVersion,sectionsFor,readLogos,htmlFor,footerFor,generate,main};
