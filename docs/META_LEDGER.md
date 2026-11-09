@@ -35712,3 +35712,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6012-release-governance.md iteration 2 (plan sha256 e220651df84e798125527d3b43f89c2f3a94c0079507680d585004ff6746e486; candidate 689f2682; remediation c8419fc9). Independent Option B fresh-context audit, solo mode. Retrospective, post-implementation, pre-release review under the declared ordering inversion; not a pre-implementation verdict and nothing backdated. Entry #917 findings: V1 every named item now within razor and behavior-preserving (auditor mutations: stale-client check, sidecar rollback, lock EEXIST mapping each caught); V2 closed (four drift mutations caught); V3 closed; V4 closed (zod 4.6.7, production npm audit 0, SDKs accept zod 4); V5 closed; PDF footer closed. Blocking B1 (razor-overage): the V2 change took settings.js from 249 to 252 lines, past the 250 cap, undisclosed. Disclosed pre-existing razor debt ruled acceptable only for files already over the cap at v6.0.11. G4 deferral procedure ruled sound and PENDING (owner decision, RC1 checklist item 81 amendment, Judge acceptance); release stays NO-GO until it exists. Non-blocking N1-N9 recorded in the report (stale open-questions text, omitted debt functions, #465 changelog context, inventory attribution, zod uuid strictness wording, G4 bullet wording, lock-recovery doc, unbounded arrays deferred, ArchitectureLinks lag flake under load). VETO #917 and all prior history unchanged. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED. Next: /qor-refactor settings.js, audit iteration 3. No merge, tag or publication.
 
 ---
+
+### Entry #919: GATE TRIBUNAL - plan-v6012-release-governance (iteration 3) - PASS
+
+**Timestamp**: 2026-11-09T23:00:20Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-09T1958-754dfc`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6012-release-governance.md` (iteration 3)
+**Report**: `.agent/staging/AUDIT_REPORT.md` (Content Hash = SHA256 of the report, LF-normalized)
+**Gate**: `.qor/gates/2026-11-09T1958-754dfc/audit.json`
+
+**Content Hash**: `fdc812e0f5313a7f459612ff8616cb4d64dbb0e69ee274ec562ff40493d80af1`
+**Previous Hash**: `e071892d7015db2b19649ee6f9f337aed1ddc053a329bffe52fbc862d391bc94`
+**Chain Hash (Merkle seal)**: `bef24531f3af7d1e40dee826b79d7b872c5dd619809aa758d3e39dc24b91ccd5`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6012-release-governance.md iteration 3 (plan sha256 13539396f256c9972dd4f8b85fbd0acf828c57afe4398caecd9e9152f8385475; candidate 3dc230ce; remediation 5a7b55ff). Independent Option B fresh-context audit, solo mode. RETROSPECTIVE, post-implementation, pre-release PASS under the declared ordering inversion; not a pre-implementation verdict and nothing backdated. #918 B1 closed (settings.js 241 lines, no theme literal; parity test refuses four drift mutations). #917 V1-V5 and #918 N1-N7 closed; no file or function first crosses a razor limit inside the delta; disclosed v6.0.11 razor debt accepted as non-blocking for this release. G4 disposition procedure ruled sound and complete; the disposition itself remains PENDING (committed owner decision file with cited SHA-256, owner-set expiry, item 81 amendment, Judge review of the recorded text) and is a separate release gate: v6.0.12 stays NO-GO until it exists and is reviewed. Still owed before release: README marker flip and date, validate.ps1, 8-target package, PDF, verify-set, installed-VSIX run and host suites on the exact release commit. Non-blocking: stale iteration-2 V2 paragraph, RFC 4122 vs 9562 wording, v6.0.13 deferrals, test:node flakiness on a shared machine. VETOs #917 and #918 and all prior history unchanged. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED. No merge, tag or publication.
+
+---
