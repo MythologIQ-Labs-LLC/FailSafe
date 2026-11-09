@@ -105,6 +105,29 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
   setup(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingestor-')); });
   teardown(() => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* */ } });
 
+  test('#463: empty or unknown host input refuses before Python or installer writes', async () => {
+    const resolver = fixedResolver();
+    let resolves = 0;
+    (resolver as unknown as { resolve: () => Promise<never> }).resolve = async () => {
+      resolves++;
+      throw Error('must not resolve Python');
+    };
+    const { run, calls } = makeRun(() => ok());
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), resolver, withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    for (const hosts of [[], ['__proto__'], ['claude', 'claude']] as QorLogicHost[][]) {
+      const result = await ingestor.ingest({ hosts, scope: 'repo' });
+      assert.equal(result.ok, false);
+      assert.deepEqual(result.installedHosts, []);
+    }
+    const direct = await ingestor.installHost('__proto__' as QorLogicHost, 'repo');
+    assert.equal(direct.ok, false);
+    if (!direct.ok) assert.equal(direct.error, 'host-selection-unsupported');
+    assert.equal(resolves, 0);
+    assert.equal(calls.length, 0);
+  });
+
   test('#463: explicit subset and [] refuse direct installHost with zero interpreter or CLI calls', async () => {
     const resolver = fixedResolver();
     let resolverCalls = 0;
