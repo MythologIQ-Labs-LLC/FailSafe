@@ -27,3 +27,28 @@ export async function preflightFrozenDependencies(
   }
   return { ok: true };
 }
+
+/** Read-only health probe. An installed version is NOT ready if its deps are broken. */
+export type InstalledDependencyHealth =
+  | { ok: true }
+  | { ok: false; error: 'dependencies-unsatisfied' | 'dependency-check-unavailable'; details?: string };
+
+export async function checkInstalledDependencies(
+  py: ResolvedInterpreter, run: InstallerRun, timeoutMs: number,
+): Promise<InstalledDependencyHealth> {
+  let result: InstallerRunResult;
+  try {
+    result = await run(py.command, [...py.args, '-P', '-m', 'pip', '--isolated', 'check'],
+      { timeoutMs });
+  } catch {
+    return { ok: false, error: 'dependency-check-unavailable' };
+  }
+  if (result.timedOut || result.spawnError || result.code === null) {
+    return { ok: false, error: 'dependency-check-unavailable' };
+  }
+  if (result.code !== 0) {
+    return { ok: false, error: 'dependencies-unsatisfied',
+      details: (result.stderr || result.stdout).slice(-1000) };
+  }
+  return { ok: true };
+}
