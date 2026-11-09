@@ -4,7 +4,7 @@ import * as path from "path";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import type { IQorLogicPackageInstaller } from "../qorlogic/QorLogicPackageInstaller";
 import type { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
-import { verifyHostInstallReceipt } from "../qorlogic/qorHostReceiptVerify";
+import { hasVerifiedBootstrapHosts, summarizeBootstrapIngestion } from "./bootstrapSkillOutcome";
 import { FROZEN_QOR_LOGIC_VERSION } from "../qorlogic/hostLayouts";
 import { assembleReport, type BootstrapStep, type BootstrapReport } from "./bootstrapAssembleReport";
 export { assembleReport, type BootstrapStep, type BootstrapReport };
@@ -143,7 +143,7 @@ async function stepSkillIngestion(
   deps: BootstrapDeps,
   mode: BootstrapMode,
 ): Promise<BootstrapStep> {
-  if (skillsAlreadyIngested(deps.workspaceRoot)) {
+  if (hasVerifiedBootstrapHosts(deps.workspaceRoot)) {
     return { name: "skill-ingestion", status: "ok", detail: "qor-* skills present with provenance" };
   }
   if (mode !== "interactive") {
@@ -156,30 +156,6 @@ async function stepSkillIngestion(
   if (approve !== "Install skills") return { name: "skill-ingestion", status: "deferred", detail: "operator declined" };
   deps.output.appendLine("[bootstrap] running qorlogic install for claude+codex");
   const result = await deps.ingestor.ingest({ hosts: ["claude", "codex"], scope: "repo" });
-  const missingHosts = (["claude", "codex"] as const)
-    .filter((host) => !result.installedHosts.includes(host));
-  if (!result.ok || missingHosts.length > 0) {
-    return {
-      name: "skill-ingestion",
-      status: "failed",
-      detail: [
-        `Verified ${result.installedHosts.length}/2 requested hosts`,
-        ...missingHosts.map((host) => `${host}: not installed`),
-        ...result.failures.map((f) => `${f.host}: ${f.error}`),
-      ].join("; "),
-    };
-  }
-  return {
-    name: "skill-ingestion",
-    status: "performed",
-    detail: `${result.skillCount} skill(s); hosts: ${result.installedHosts.join(", ")}`,
-  };
+  return summarizeBootstrapIngestion(result);
 }
 
-function skillsAlreadyIngested(workspaceRoot: string): boolean {
-  // #463: SOURCE.yml may be stale, user-created or present for only one host.
-  // Idempotence requires *both* hosts to have current on-disk files whose
-  // bytes match the checked, size-bounded Qor-logic installation receipts.
-  return (["claude", "codex"] as const)
-    .every((host) => verifyHostInstallReceipt(workspaceRoot, host).ok);
-}
