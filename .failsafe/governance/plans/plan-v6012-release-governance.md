@@ -1,6 +1,6 @@
 # Plan: v6.0.12 consolidated release governance — RC1 delta, #619 release PDF, #467 G4
 
-**iteration**: 1
+**iteration**: 2 (working draft after binding VETO #917; not yet audited)
 **change_class**: governance
 **risk_grade (proposed)**: L3 (security, supply chain and governance integrity)
 **pr_target**: `release/v6.0.12-rc1-candidate-20261108-no-ci` (PR #631), then `main` only after a seal and owner release authorization.
@@ -47,7 +47,7 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
 
 ## G4: complete-ledger-byte witness (recommended owner disposition, pending explicit acceptance)
 
-**Recommendation.** Implement G4 for v6.0.12 as release-governance tooling under `tools/g4/` and `scripts/`. It is not part of the packaged extension, so it changes no VSIX bytes. Take the first, genesis checkpoint at the v6.0.12 seal. **Owner acceptance of the key and TSA choices below is required before implementation, and before the seal.**
+**Design proposal, not an owner authorization.** Independent G4 witness infrastructure is proposed for v6.0.13 to avoid adding unqualified signing tooling to the v6.0.12 candidate. A deferral remains **PENDING** until the owner expressly authorizes a dated amendment of RC1 checklist item 81 and the independent Judge accepts the release governance disposition. Otherwise v6.0.12 stays NO-GO. If G4 is brought into v6.0.12, implement under `tools/g4/` and `scripts/`, qualify falsification tests, and create a genesis checkpoint at its seal. **No TPM key or TSA enrollment is authorized by this draft.**
 
 **Design:**
 - **Signing key:**
@@ -59,7 +59,9 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
   - ledger path;
   - **SHA-256 and byte length of the complete committed ledger blob, including all Verdict/Decision prose**;
   - entry count and last entry number;
-  - SHA-256 of the previous checkpoint, or the explicit genesis marker "after clean epoch #914";
+  - cryptographic identifier and SHA-256 of the previous checkpoint, or explicit genesis marker "after clean epoch #914";
+  - for every non-genesis checkpoint, the exact previous ledger byte length and SHA-256, plus evidence that the new committed ledger's first N bytes are byte-for-byte identical to the entire prior ledger at its previous commit (N = prior ledger byte length). Any rewriting, removal or reordering of earlier bytes is a hard refusal even when the new checkpoint is re-signed;
+  - SHA-256 and canonical version identifier of the revocation registry, with authorized registry change history verified; unavailability, rollback, removal or unverifiable changes are hard refusal;
   - SHA-256 of the historical-gap statement (the October VETOs UNKNOWN/UNRESOLVED; the pre-anchor break at #382);
   - key fingerprint and UTC instant.
 - **Signature:** over SHA-256(manifest), by the TPM key, through .NET `ECDsaCng` with the provider key opened by name (PowerShell `tools/g4/sign-checkpoint.ps1`).
@@ -67,12 +69,14 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
 - **Verifier** (`scripts/g4-verify-checkpoint.cjs` plus `openssl ts -verify`). It recomputes the ledger blob digest at the named commit and checks:
   - the signature against the committed public certificate;
   - that the TSA token is valid, its imprint matches, and its time lies inside the key's validity window;
-  - the previous-checkpoint chain;
-  - non-revocation.
+  - previous-checkpoint chain plus byte-for-byte append-only continuity from each previous committed ledger version; a later owner signature cannot legitimize historical-byte edits;
+  - the committed revocation registry hash and independently anchored, monotonic revocation history (a signature over a registry alone cannot detect its wholesale rollback to an older state); non-revocation as of checkpoint creation and verification under the effective revocation policy.
 - **Falsification tests** (disposable copies; no live ledger mutation). The verifier **must refuse** each of:
   - an edited Verdict or Decision text;
-  - removed or reordered entries;
+  - removed or reordered entries, including deletion of earlier entries followed by a newly signed checkpoint;
   - an edited manifest;
+  - a modified earlier ledger prefix even if a valid key signs the later checkpoint;
+  - a revocation-list deletion, edit, or rollback, even if accompanied by a new valid checkpoint signature;
   - a wrong, unknown or revoked key;
   - a changed commit;
   - a missing token;
@@ -92,18 +96,19 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
 - **Operating limitations (disclosed):**
   - the key is bound to one workstation;
   - it is owner-held, so it gives tamper evidence and time ordering, **not non-forgeability against the owner**;
-  - RFC 3161 proves existence at a time, not inclusion in a public append-only log;
+  - RFC 3161 proves existence at a time, not inclusion in a public append-only log; the verifier cannot detect coordinated deletion of the newest ledger tail and newest checkpoints without an independently retained trusted head (external checkpoint record/public transparency log), which is required for any strong no-truncation claim;
   - the design trusts the TSA and depends on its availability;
   - signing is Windows-only;
+  - verification uses the exact persisted UTF-8 manifest bytes rather than implementation-dependent JSON reserialization, and timestamp imprint uses unambiguous length framing/domain separation over manifest and signature bytes;
   - it does **not** re-verify history at or below #914, and does not resolve the October VETOs.
 
-**Alternative.** The owner may instead defer G4 to v6.0.13, with this exact disclosure in the release notes, as an explicitly accepted residual risk. In that case RC1 checklist item 81 must be amended by a dated owner decision. Either way, the decision is the owner's alone. The independent audit assesses only the technical soundness of the design.
+**Release choice still open:** either (a) qualify G4 implementation for v6.0.12, or (b) obtain explicit owner approval for a time-bound deferral to v6.0.13, amend RC1 checklist item 81 with date, owner, reason and compensating controls, and disclose the lack of independent witnessing in release notes. Neither is deemed accepted by this document. An independent Judge must review the exact resulting disposition.
 
 ## Sequence after this audit
 
-1. Independent `/qor-audit` of this plan, iteration 1.
-2. If PASS, the owner accepts or defers G4 (key provider, TSA, cadence).
-3. If accepted, implement G4 under `/qor-implement`, run its falsification tests and create the genesis checkpoint.
+1. Address VETO #917: V1 refactoring, V2 theme source/parity, V3 G4 continuity and revocation requirements (above), V4 production zod HIGH exposure/remediation or authorized bounded risk acceptance, V5 complete customer changelog. Independently audit iteration 2 against the exact revised code candidate and this plan, without changing VETO evidence.
+2. If PASS, record the authorized G4 choice or remain NO-GO. For deferral, amend checklist item 81 with dated owner authorization and Judge acceptance; for adoption, record key provider, TSA, and cadence.
+3. Only if approved for v6.0.12, implement G4 under `/qor-implement`, run falsification tests and create the genesis checkpoint. If deferred, do not pretend any independent witness exists.
 4. `/qor-implement` gate for the release session, followed by **`/qor-substantiate`** on the exact candidate. The seal's scope must name `v6.0.11..<candidate>` and reference #916 and this plan's PASS.
 5. **Release commit.** Flip the README markers from the unpublished-candidate label to `**Current Release**: v6.0.12 (<release date>)`, with the same date in both CHANGELOG headings. The repository docs-coherence gate (`scripts/validate.ps1`) requires this on `main`/tag refs, and it fails on `e99c4e1e` by design. This changes the packaged README, so on that exact commit, once each, re-run: `validate.ps1`, `validate-vsix --source-only`, `release:preflight`, the 8-target package, the PDF, `verify-set` and the installed-VSIX run. Code-level gates from `e99c4e1e` are reused, because no source changes.
 6. RC1 promotion, then owner release authorization.
@@ -135,6 +140,9 @@ node scripts/build-release-notes-pdf.cjs --version 6.0.12 --out dist-vsix;
 node scripts/release-artifacts.cjs verify-set dist-vsix --version 6.0.12; installed-VSIX #475 adversarial run (both hosts)
 ```
 
-## Open questions
+## Open questions / unresolved mandatory dispositions
 
-None for the audit. The G4 acceptance, the key provider and the TSA are owner decisions that come **after** this audit and before implementation. The audit assesses the design.
+- G4: explicit owner authorization for implementation or deferral plus dated checklist item 81 amendment and Judge acceptance is pending.
+- Zod 3.25.76 (GHSA-mrhx-c7xc-m3w5): production `npm audit` reports one HIGH, not zero. Verify affected call paths, input-size bounds and mitigation tests. Either qualify an upgrade or secure explicit version-scoped, expiring owner risk acceptance backed by negative evidence. Disclosure alone does not pass.
+- Playwright `monitor-theme-inheritance.spec.ts:109` intermittently failed: reproduce/isolate race and prove deterministic acceptance rather than treating retries as success.
+- The previous independent audit remains VETO #917 (L3); this draft is not a PASS.
