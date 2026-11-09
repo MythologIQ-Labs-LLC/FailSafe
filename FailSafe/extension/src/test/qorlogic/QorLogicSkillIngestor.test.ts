@@ -15,7 +15,7 @@ import {
   type QorLogicInstallResult,
   type QorLogicVersionStatus,
 } from '../../qorlogic/QorLogicPackageInstaller';
-import { MIN_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
+import { MIN_QOR_LOGIC_VERSION, FROZEN_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
 import {
   QorLogicSkillIngestor,
   type QorLogicHost,
@@ -24,7 +24,7 @@ import {
 class FakeInstaller implements IQorLogicPackageInstaller {
   public installed = true;
   /** Version reported by verifyInstalledVersion() while `installed` is true. */
-  public installedVersion = '0.31.1';
+  public installedVersion = FROZEN_QOR_LOGIC_VERSION;
   public meetsFloor = true;
   public installResult: QorLogicInstallResult = { ok: true, command: 'python -m pip install qor-logic' };
   public installCalls = 0;
@@ -319,52 +319,71 @@ suite('QorLogicSkillIngestor: rescan + prerequisites', function () {
     assert.equal(rescanCount, 1);
   });
 
-  test('auto-installs qor-logic when not yet present', async () => {
+  test('missing package never auto-installs or writes skills', async () => {
     const installer = new FakeInstaller();
     installer.installed = false;
-    const resolver = fixedResolver();
-    const { run } = makeRun(() => ok());
+    const { run, calls } = makeRun(() => ok());
     const ingestor = new QorLogicSkillIngestor(
-      installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
+      installer, fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
     );
-
-    await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
-
-    assert.equal(installer.installCalls, 1);
-  });
-
-  test('skips install when qor-logic already installed and meets the version floor', async () => {
-    const installer = new FakeInstaller();
-    installer.installed = true;
-    installer.meetsFloor = true;
-    const resolver = fixedResolver();
-    const { run } = makeRun(() => ok());
-    const ingestor = new QorLogicSkillIngestor(
-      installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
-    );
-
-    await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
-
+    const outcome = await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+    assert.equal(outcome.ok, false);
+    assert.equal(outcome.failures[0].error, 'verified-wheel-required');
     assert.equal(installer.installCalls, 0);
+    assert.equal(calls.length, 0);
   });
 
-  test('upgrades when qor-logic is present but below the version floor (#243 Tranche D)', async () => {
-    // Regression for a defect where a present-but-stale install was treated as
-    // "already installed" and never upgraded, even though the UI promises
-    // clicking Install/Refresh Skills upgrades to the floor or newer.
+  test('exact frozen package skips install but does not claim conformance', async () => {
     const installer = new FakeInstaller();
-    installer.installed = true;
-    installer.installedVersion = '0.20.0';
-    installer.meetsFloor = false;
-    const resolver = fixedResolver();
+    const { run, calls } = makeRun(() => ok());
+    const ingestor = new QorLogicSkillIngestor(
+      installer, fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    const status = await ingestor.ensurePackageInstalled();
+    assert.equal(status.ok, true);
+    if (status.ok) assert.match(status.command, /conformance not attested/);
+    assert.equal(installer.installCalls, 0);
+    await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+    assert.equal(calls.length, 1);
+  });
+
+  test('existing older and future package versions refuse without implicit replacement', async () => {
+    for (const installedVersion of ['0.20.0', '0.169.0', '0.177.0']) {
+      const installer = new FakeInstaller();
+      installer.installedVersion = installedVersion;
+      const { run, calls } = makeRun(() => ok());
+      const ingestor = new QorLogicSkillIngestor(
+        installer, fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
+      );
+      const status = await ingestor.ensurePackageInstalled();
+      assert.equal(status.ok, false);
+      if (!status.ok) assert.match(status.error, /version-divergence/);
+      const outcome = await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+      assert.equal(outcome.ok, false);
+      assert.match(outcome.failures[0].error, /version-divergence/);
+      assert.equal(installer.installCalls, 0);
+      assert.equal(calls.length, 0);
+    }
+  });
+
+  test('approved wheel path is forwarded only when no package is present', async () => {
+    const installer = new FakeInstaller();
+    installer.installed = false;
+    let chosen: string | undefined;
+    installer.install = async (file?: string) => {
+      chosen = file;
+      installer.installed = true;
+      installer.installCalls++;
+      return { ok: true, command: 'offline pinned wheel' };
+    };
     const { run } = makeRun(() => ok());
     const ingestor = new QorLogicSkillIngestor(
-      installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
+      installer, fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
     );
-
-    await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
-
-    assert.equal(installer.installCalls, 1, 'a stale-but-present install must trigger an upgrade');
+    const result = await ingestor.ensurePackageInstalled('C:/approved/qor_logic-0.176.1-py3-none-any.whl');
+    assert.equal(result.ok, true);
+    assert.equal(chosen, 'C:/approved/qor_logic-0.176.1-py3-none-any.whl');
+    assert.equal(installer.installCalls, 1);
   });
 
   test('aborts with no-python-found when resolver yields nothing', async () => {
