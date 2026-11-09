@@ -3,7 +3,7 @@ import type { PythonInterpreterResolver, ResolvedInterpreter } from './PythonInt
 import type { InstallerRun, InstallerRunResult, OutputChannelLike, QorLogicInstallResult } from './QorLogicPackageInstaller';
 import { FROZEN_QOR_LOGIC_VERSION } from './hostLayouts';
 import { withVerifiedQorWheel, WheelVerificationError } from './frozenWheel';
-import { preflightFrozenDependencies } from './qorDependencyPreflight';
+import { preflightFrozenDependencies, checkInstalledDependencies } from './qorDependencyPreflight';
 
 const PIP_SHOW_TIMEOUT_MS = 30_000;
 const formatCommand = (cmd: string, args: ReadonlyArray<string>): string => [cmd, ...args].join(' ');
@@ -52,13 +52,8 @@ async function postInstallCheck(
     || parseVersionLine(after.stdout) !== FROZEN_QOR_LOGIC_VERSION) {
     return { ok: false, command, error: 'post-install-mismatch' };
   }
-  const dep = await runSafely(() => run(py.command,
-    [...py.args, '-P', '-m', 'pip', '--isolated', 'check'],
-    { timeoutMs: PIP_SHOW_TIMEOUT_MS }));
-  if (!dep || dep.code !== 0 || dep.timedOut || dep.spawnError) {
-    return { ok: false, command, error: 'dependencies-unsatisfied',
-      stderr: dep?.stderr || dep?.stdout };
-  }
+  const dep = await checkInstalledDependencies(py, run, PIP_SHOW_TIMEOUT_MS);
+  if (!dep.ok) return { ok: false, command, error: dep.error, stderr: dep.details };
   return null;
 }
 
@@ -93,7 +88,17 @@ export async function installFrozenWheel(ctx: InstallContext): Promise<QorLogicI
   if (!py.ok) return { ok: false, command: '', error: 'no-python-found' };
   const before = await runSafely(() => runPipShow(py, run));
   const state = stateBeforeInstall(before);
-  if (state) return state;
+  if (state && !state.ok) return state;
+  if (state) {
+    // Already installed by an earlier attempt is NOT enough to claim success:
+    // a previous partial installation may have left dependencies broken.
+    const health = await checkInstalledDependencies(py, run, PIP_SHOW_TIMEOUT_MS);
+    if (!health.ok) {
+      return { ok: false, command: 'already-installed', version: state.version,
+        error: health.error, stderr: health.details };
+    }
+    return state;
+  }
   try {
     return await withVerifiedQorWheel(approvedWheelPath,
       (wheel) => installStagedWheel(py, run, output, timeoutMs, wheel));
