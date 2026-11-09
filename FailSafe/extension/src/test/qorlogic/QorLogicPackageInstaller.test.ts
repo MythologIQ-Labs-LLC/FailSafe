@@ -106,7 +106,7 @@ suite('QorLogicPackageInstaller: verified offline install', () => {
 
   test('existing future/older version refuses replacement, with no pip install', async () => {
     for (const version of ['0.177.0', '0.169.0', '0.31.1']) {
-      const { run, calls } = makeInstallerRun(() => ok(`Name: qor-logic\\nVersion: ${version}\\n`));
+      const { run, calls } = makeInstallerRun(() => ok(`Name: qor-logic\nVersion: ${version}\n`));
       const result = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run)
         .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
       assert.equal(result.ok, false);
@@ -118,7 +118,7 @@ suite('QorLogicPackageInstaller: verified offline install', () => {
   });
 
   test('already-installed frozen exact version causes no mutation', async () => {
-    const { run, calls } = makeInstallerRun(() => ok(`Name: qor-logic\\nVersion: ${FROZEN_QOR_LOGIC_VERSION}\\n`));
+    const { run, calls } = makeInstallerRun(() => ok(`Name: qor-logic\nVersion: ${FROZEN_QOR_LOGIC_VERSION}\n`));
     const result = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run)
       .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
     assert.equal(result.ok, true);
@@ -127,7 +127,7 @@ suite('QorLogicPackageInstaller: verified offline install', () => {
   });
 
   test('missing and ambiguous pip metadata do not trigger an install', async () => {
-    for (const result of [fail(2, 'failed'), ok('Version: 0.176.1\\n'), fail(1, 'failed')]) {
+    for (const result of [fail(2, 'failed'), ok('Version: 0.176.1\n'), fail(1, 'failed')]) {
       const { run, calls } = makeInstallerRun(() => result);
       const out = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run)
         .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
