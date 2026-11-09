@@ -1,108 +1,18 @@
-// Phase 3 (plan-qor-install-skills-ux-expansion.md): per-host collapsible
-// skill picker inside the install modal. Collapsed by default so power-users
-// opt in without affecting the default install-all flow.
-//
-// Exports:
-//   renderPickerSection(hosts, running) → HTML string
-//   bindPickerEvents(container, options)
-//   collectSkillFilter(modalEl) → { [host]: string[] }
-
-import { escapeHtml } from './brainstorm-templates.js';
-
-const skillCache = new Map();
-const esc = (value) => escapeHtml(value ?? '');
-
+// #463: Qor-logic 0.176.1 does not support selective installs or JSON
+// enumeration. Preserve the host/scope installation UI, but do not offer
+// an advanced picker that could silently reinterpret an empty selection.
 export function renderPickerSection(_hosts, _running) {
-  // #463: the frozen 0.176.1 engine has no selective install contract.
-  // Do not expose a picker that can misrepresent "select none" as "install all".
   return '<div class="cc-picker-unavailable" role="status">' +
     'Per-skill selection is unavailable for frozen Qor-logic 0.176.1. ' +
     'The Install action installs all available skills for the selected hosts.' +
     '</div>';
 }
 
-function getCheckedHosts(modalEl) {
-  // Read modal's actual selectors (install-skills-modal.js:66, 71): host
-  // checkboxes use class="cc-modal-host" with the host name in value=; no
-  // data-host attribute. Scope radios use name="cc-modal-scope".
-  const inputs = modalEl.querySelectorAll('input.cc-modal-host');
-  const out = [];
-  inputs.forEach((el) => { if (el.checked) out.push(el.value); });
-  return out;
+export function bindPickerEvents(_container, _options) {
+  // No unsupported enumeration endpoint or Python subprocess.
 }
 
-function getScope(modalEl) {
-  const scopeEl = modalEl.querySelector('input[name="cc-modal-scope"]:checked');
-  const v = scopeEl ? scopeEl.value : 'repo';
-  return v === 'global' ? 'global' : 'repo';
-}
-
-function renderHostBlock(host, payload) {
-  if (payload && payload.degraded) {
-    return `<div class="cc-picker-host" data-host="${esc(host)}"><h4>${esc(host)}</h4>` +
-      `<p class="cc-picker-degraded">All skills will be installed (this version of qor-logic doesn't support per-skill selection).</p></div>`;
-  }
-  const skills = (payload && payload.skills) || [];
-  const items = skills.map((s) => {
-    const name = String(s.name || '');
-    return `<label class="cc-picker-skill"><input type="checkbox" data-skill-host="${esc(host)}" value="${esc(name)}" checked> ${esc(name)}</label>`;
-  }).join('');
-  return `<div class="cc-picker-host" data-host="${esc(host)}"><h4>${esc(host)}</h4><div class="cc-picker-grid">${items || '<em>no skills</em>'}</div></div>`;
-}
-
-async function fetchHostSkills(host, scope, fetchImpl) {
-  const key = `${host}::${scope}`;
-  if (skillCache.has(key)) return skillCache.get(key);
-  const url = `/api/qorlogic/list-skills?host=${encodeURIComponent(host)}&scope=${encodeURIComponent(scope)}`;
-  const res = await fetchImpl(url);
-  const json = await res.json();
-  skillCache.set(key, json);
-  return json;
-}
-
-async function populatePicker(body, hosts, scope, fetchImpl) {
-  body.setAttribute('data-state', 'loading');
-  const blocks = [];
-  for (const host of hosts) {
-    try {
-      const payload = await fetchHostSkills(host, scope, fetchImpl);
-      blocks.push(renderHostBlock(host, payload));
-    } catch (_err) {
-      blocks.push(`<div class="cc-picker-host" data-host="${esc(host)}"><h4>${esc(host)}</h4><p class="cc-picker-error">Failed to load skills.</p></div>`);
-    }
-  }
-  body.innerHTML = blocks.join('\n');
-  body.setAttribute('data-state', 'expanded');
-}
-
-export function bindPickerEvents(container, options) {
-  const root = container.querySelector('[data-cc-picker="root"]');
-  if (!root) return;
-  const body = container.querySelector('[data-cc-picker-body]');
-  if (!body) return;
-  const fetchImpl = (options && options.fetch) || ((url) => fetch(url));
-  root.addEventListener('toggle', async () => {
-    if (!root.open) return;
-    const hosts = getCheckedHosts(container);
-    const scope = getScope(container);
-    await populatePicker(body, hosts, scope, fetchImpl);
-  });
-}
-
-export function collectSkillFilter(modalEl) {
-  const root = modalEl.querySelector('[data-cc-picker="root"]');
-  if (!root || !root.open) return {};
-  const out = {};
-  const blocks = modalEl.querySelectorAll('.cc-picker-host');
-  blocks.forEach((block) => {
-    const host = block.getAttribute('data-host');
-    if (!host) return;
-    if (block.querySelector('.cc-picker-degraded')) return;
-    const selected = [];
-    block.querySelectorAll('input[type="checkbox"][data-skill-host]').forEach((el) => {
-      if (el.checked) selected.push(el.value);
-    });
-    out[host] = selected;
-  });
-  return out;
+export function collectSkillFilter(_modalEl) {
+  // Unfiltered is an explicit install-all action, not a selection result.
+  return {};
 }
