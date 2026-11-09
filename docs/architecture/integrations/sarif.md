@@ -53,7 +53,7 @@ A result without a ruleId is skipped with a parse warning `FailSafe/extension/sr
 ## Outbound fields and egress
 
 Repository content: no; nothing leaves the machine `FailSafe/extension/src/integrations/sarif/sarif-parser.ts:5-6` (`no network`).
-Metadata: no `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:192` (`Fully offline.`).
+Metadata: no `FailSafe/extension/src/integrations/catalog/integration-catalog-data.ts:110` (`Fully offline.`).
 Graph relationships: no (unverified beyond the absence of any network call in the owned files).
 Governance evidence: no; findings are only written to the local register `FailSafe/extension/src/extension/sarif-command.ts:44-47` (`const sink = new RiskRegisterManager(workspaceRoot).importSink();`).
 

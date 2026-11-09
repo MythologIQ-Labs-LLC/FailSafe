@@ -2,6 +2,7 @@ import type { PythonInterpreterResolver, ResolvedInterpreter } from './PythonInt
 import type {
   IQorLogicPackageInstaller,
   InstallerRun,
+  InstallerRunResult,
   OutputChannelLike,
 } from './QorLogicPackageInstaller';
 import { frozenHostSelectionError, type QorLogicHost } from './hostLayouts';
@@ -115,37 +116,9 @@ export class QorLogicSkillIngestor {
 
   /** Single-host install for the Console; requires verified package and receipt. */
   async installHost(host: QorLogicHost, scope: QorLogicScope, skillFilter?: ReadonlyArray<string>): Promise<HostInstallResult> {
-    const hostError = frozenHostSelectionError([host]);
-    if (hostError) return { ok: false, host, scope, command: '', error: hostError };
-    // #463: frozen qor-logic 0.176.1 has no --include. Even an empty, explicitly
-    // supplied filter is an ambiguous selection request; never install all.
-    if (skillFilter !== undefined) {
-      return { ok: false, host, scope, command: '',
-        error: 'selective-skill-install-unsupported-by-frozen-qor-logic-0.176.1' };
-    }
-    if (scope !== 'repo') return { ok: false, host, scope, command: '', error: 'global-scope-receipt-unverified' };
-    const readiness = await checkFrozenQorPackage(this.installer);
-    if (!readiness.ok) {
-      return { ok: false, host, scope, command: '', error: readiness.error };
-    }
-    const py = await this.resolver.resolve();
-    if (!py.ok) {
-      return { ok: false, host, scope, error: 'no-python-found', command: '' };
-    }
-    // -P: never import qor from the workspace, which is this run's cwd (LD11).
-    const args = [
-      ...py.args,
-      '-P', '-m', 'qor.cli', 'install',
-      '--host', host,
-      '--scope', scope,
-    ];
-    const command = `${py.command} ${args.join(' ')}`;
-    this.output.appendLine(`[qor-logic] ${command}`);
-    const result = await this.run(py.command, args, {
-      timeoutMs: INSTALL_TIMEOUT_MS,
-      cwd: this.workspaceRoot,
-      env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
-    });
+    const ready = await this.prepareHostInstall(host, scope, skillFilter);
+    if (!ready.ok) return ready;
+    const { command, result } = await this.runQorInstall(ready.py, host, scope);
     const mapped = qualifyQorHostExit(result, host, this.output);
     if (!mapped.ok) {
       return {
@@ -166,6 +139,54 @@ export class QorLogicSkillIngestor {
       destination,
       installedCount: status.fileCount,
     };
+  }
+
+  /** Refuse before any process launch; resolves Python only once all gates pass. */
+  private async prepareHostInstall(
+    host: QorLogicHost,
+    scope: QorLogicScope,
+    skillFilter?: ReadonlyArray<string>,
+  ): Promise<{ ok: true; py: ResolvedInterpreter } | HostInstallError> {
+    const hostError = frozenHostSelectionError([host]);
+    if (hostError) return { ok: false, host, scope, command: '', error: hostError };
+    // #463: frozen qor-logic 0.176.1 has no --include. Even an empty, explicitly
+    // supplied filter is an ambiguous selection request; never install all.
+    if (skillFilter !== undefined) {
+      return { ok: false, host, scope, command: '',
+        error: 'selective-skill-install-unsupported-by-frozen-qor-logic-0.176.1' };
+    }
+    if (scope !== 'repo') return { ok: false, host, scope, command: '', error: 'global-scope-receipt-unverified' };
+    const readiness = await checkFrozenQorPackage(this.installer);
+    if (!readiness.ok) {
+      return { ok: false, host, scope, command: '', error: readiness.error };
+    }
+    const py = await this.resolver.resolve();
+    if (!py.ok) {
+      return { ok: false, host, scope, error: 'no-python-found', command: '' };
+    }
+    return { ok: true, py };
+  }
+
+  /** The one `qor.cli install` launch; -P: never import qor from the workspace, which is this run's cwd (LD11). */
+  private async runQorInstall(
+    py: ResolvedInterpreter,
+    host: QorLogicHost,
+    scope: QorLogicScope,
+  ): Promise<{ command: string; result: InstallerRunResult }> {
+    const args = [
+      ...py.args,
+      '-P', '-m', 'qor.cli', 'install',
+      '--host', host,
+      '--scope', scope,
+    ];
+    const command = `${py.command} ${args.join(' ')}`;
+    this.output.appendLine(`[qor-logic] ${command}`);
+    const result = await this.run(py.command, args, {
+      timeoutMs: INSTALL_TIMEOUT_MS,
+      cwd: this.workspaceRoot,
+      env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
+    });
+    return { command, result };
   }
 
   private async ensureInstalled(): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -220,19 +241,7 @@ export class QorLogicSkillIngestor {
     host: QorLogicHost,
     scope: QorLogicScope,
   ): Promise<{ ok: true; installedCount: number } | { ok: false; error: string }> {
-    const args = [
-      ...py.args,
-      '-P', '-m', 'qor.cli', 'install',
-      '--host', host,
-      '--scope', scope,
-    ];
-    const cmdString = `${py.command} ${args.join(' ')}`;
-    this.output.appendLine(`[qor-logic] ${cmdString}`);
-    const result = await this.run(py.command, args, {
-      timeoutMs: INSTALL_TIMEOUT_MS,
-      cwd: this.workspaceRoot,
-      env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
-    });
+    const { result } = await this.runQorInstall(py, host, scope);
     return qualifyQorHostExit(result, host, this.output);
   }
 }

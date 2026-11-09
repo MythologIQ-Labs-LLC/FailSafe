@@ -139,6 +139,38 @@ function finalize(
   return report;
 }
 
+type RefusalFields = Omit<QorLogicInstallInvocation, 'phase' | 'status' | 'startedAt' | 'completedAt'> & { error: string };
+
+/** Report a refused install as one `qorlogic-install` error, before any Python or pip side effect. */
+function refuse(fields: RefusalFields, callbacks: InstallCallbacks): QorLogicInstallReport {
+  const at = new Date().toISOString();
+  const inv = emit({ phase: 'qorlogic-install', status: 'error', startedAt: at, completedAt: at, ...fields }, callbacks.onProgress);
+  return finalize([inv], callbacks);
+}
+
+/** probe -> pip -> per-host install -> provenance -> refresh; stops after a failed probe or pip step. */
+async function runInstallPipeline(
+  ingestor: QorLogicSkillIngestor,
+  hosts: QorLogicHost[],
+  scope: QorLogicScope,
+  cb: InstallCallbacks,
+  filterFor: (host: QorLogicHost) => ReadonlyArray<string> | undefined = () => undefined,
+): Promise<QorLogicInstallReport> {
+  const invs: QorLogicInstallInvocation[] = [];
+  const probe = await runProbeStep(ingestor, cb.onProgress);
+  invs.push(probe);
+  if (probe.status === 'error') return finalize(invs, cb);
+  const pip = await runPipStep(ingestor, cb.onProgress);
+  invs.push(pip);
+  if (pip.status === 'error') return finalize(invs, cb);
+  for (const host of hosts) {
+    invs.push(await runHostInstallStep(ingestor, host, scope, cb.onProgress, filterFor(host)));
+  }
+  invs.push(await runProvenanceStep(ingestor.getWorkspaceRoot(), cb.onProgress));
+  invs.push(await runRefreshStep(ingestor, cb.onProgress));
+  return finalize(invs, cb);
+}
+
 export function createInstallSkillsHandler(
   context: vscode.ExtensionContext,
   ingestor: QorLogicSkillIngestor,
@@ -150,34 +182,28 @@ export function createInstallSkillsHandler(
       ? DEFAULT_OPTIONS
       : await resolveInstallSkillsOptions(context);
     if (!options) return null;
-    const invs: QorLogicInstallInvocation[] = [];
     const selectionError = frozenHostSelectionError(options.hosts);
-    if (selectionError) {
-      const at = new Date().toISOString();
-      invs.push(emit({ phase: 'qorlogic-install', status: 'error',
-        startedAt: at, completedAt: at, error: selectionError }, callbacks.onProgress));
-      return finalize(invs, callbacks);
-    }
+    if (selectionError) return refuse({ error: selectionError }, callbacks);
     if (options.scope !== 'repo') {
-      const at = new Date().toISOString();
-      invs.push(emit({ phase: 'qorlogic-install', status: 'error',
-        startedAt: at, completedAt: at, scope: options.scope,
+      return refuse({ scope: options.scope,
         error: 'Global-scope installation is unavailable: FailSafe cannot verify host receipts outside the workspace. No Python process started.',
-      }, callbacks.onProgress));
-      return finalize(invs, callbacks);
+      }, callbacks);
     }
-    const probe = await runProbeStep(ingestor, callbacks.onProgress);
-    invs.push(probe);
-    if (probe.status === 'error') return finalize(invs, callbacks);
-    const pip = await runPipStep(ingestor, callbacks.onProgress);
-    invs.push(pip);
-    if (pip.status === 'error') return finalize(invs, callbacks);
-    for (const host of options.hosts) {
-      invs.push(await runHostInstallStep(ingestor, host, options.scope, callbacks.onProgress));
-    }
-    invs.push(await runProvenanceStep(ingestor.getWorkspaceRoot(), callbacks.onProgress));
-    invs.push(await runRefreshStep(ingestor, callbacks.onProgress));
-    return finalize(invs, callbacks);
+    return runInstallPipeline(ingestor, options.hosts, options.scope, callbacks);
+  };
+}
+
+/** #463: selection keys, including explicit [], cannot be represented by the frozen 0.176.1 CLI. */
+function webOptionRefusal(
+  hosts: QorLogicHost[], scope: QorLogicScope, skillFilter: Record<string, string[]> | undefined, op: { operationId?: string },
+): RefusalFields {
+  const host = hosts.find((h) => skillFilter && Object.prototype.hasOwnProperty.call(skillFilter, h));
+  return {
+    ...op,
+    ...(host ? { host, scope } : { scope }),
+    error: scope !== 'repo'
+      ? 'Global-scope installation is unavailable: host receipts cannot be verified. No Python process started.'
+      : 'Selected-skill installation is unavailable with frozen qor-logic 0.176.1; no Python process or install was started.',
   };
 }
 
@@ -191,44 +217,14 @@ export function createScaffoldWithWebOptions(
     // #538: the Console route passes the approved operation's id; every progress event and
     // the final report carry it.
     const cb = withOperationId(callbacks, context?.operationId);
-    const invs: QorLogicInstallInvocation[] = [];
+    const op = context?.operationId ? { operationId: context.operationId } : {};
     const selectionError = frozenHostSelectionError(hosts);
-    if (selectionError) {
-      const at = new Date().toISOString();
-      invs.push(emit({ phase: 'qorlogic-install', status: 'error',
-        startedAt: at, completedAt: at, scope,
-        ...(context?.operationId ? { operationId: context.operationId } : {}),
-        error: selectionError }, cb.onProgress));
-      return finalize(invs, cb);
-    }
-    // #463: selection keys, including explicit [], cannot be represented by
-    // the frozen 0.176.1 CLI. Refuse BEFORE any Python or pip side effects.
+    if (selectionError) return refuse({ scope, ...op, error: selectionError }, cb);
+    // Refuse BEFORE any Python or pip side effects.
     if (scope !== 'repo' || (skillFilter && Object.keys(skillFilter).length > 0)) {
-      const host = hosts.find((h) => skillFilter && Object.prototype.hasOwnProperty.call(skillFilter, h));
-      const at = new Date().toISOString();
-      invs.push(emit({
-        phase: 'qorlogic-install', status: 'error', startedAt: at, completedAt: at,
-        ...(context?.operationId ? { operationId: context.operationId } : {}),
-        ...(host ? { host, scope } : { scope }),
-        error: scope !== 'repo'
-          ? 'Global-scope installation is unavailable: host receipts cannot be verified. No Python process started.'
-          : 'Selected-skill installation is unavailable with frozen qor-logic 0.176.1; no Python process or install was started.',
-      }, cb.onProgress));
-      return finalize(invs, cb);
+      return refuse(webOptionRefusal(hosts, scope, skillFilter, op), cb);
     }
-    const probe = await runProbeStep(ingestor, cb.onProgress);
-    invs.push(probe);
-    if (probe.status === 'error') return finalize(invs, cb);
-    const pip = await runPipStep(ingestor, cb.onProgress);
-    invs.push(pip);
-    if (pip.status === 'error') return finalize(invs, cb);
-    for (const host of hosts) {
-      const filter = skillFilter ? skillFilter[host] : undefined;
-      invs.push(await runHostInstallStep(ingestor, host, scope, cb.onProgress, filter));
-    }
-    invs.push(await runProvenanceStep(ingestor.getWorkspaceRoot(), cb.onProgress));
-    invs.push(await runRefreshStep(ingestor, cb.onProgress));
-    return finalize(invs, cb);
+    return runInstallPipeline(ingestor, hosts, scope, cb, (host) => (skillFilter ? skillFilter[host] : undefined));
   };
 }
 

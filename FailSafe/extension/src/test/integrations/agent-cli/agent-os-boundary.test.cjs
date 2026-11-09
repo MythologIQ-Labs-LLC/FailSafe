@@ -12,7 +12,9 @@ const cont = read('integrations/agent-cli/continue-wrapper.ts');
 const core = read('integrations/agent-cli/agent-cli-core.ts');
 const contract = read('integrations/agent-cli/agent-containment.ts');
 const command = read('extension/agent-cli-command.ts');
-const catalog = read('integrations/catalog/integration-catalog.ts');
+// The descriptor table moved to integration-catalog-data.ts (Section 4 file cap); the
+// containment logic stays in integration-catalog.ts and is read from there.
+const catalog = read('integrations/catalog/integration-catalog-data.ts') + read('integrations/catalog/integration-catalog.ts');
 
 for (const [label, text, detector, binary] of [
   ['aider', aider, 'detectAider', 'aider'],

@@ -1,14 +1,14 @@
 # Plan: v6.0.12 integration of PR #633 — frozen Qor-logic 0.176.1 consumer (#463) and fail-closed external agents (#475)
 
-**iteration**: 1
+**iteration**: 2 (amends iteration 1 after the 2026-11-09 VETO, ledger Entry #915)
 **change_class**: feature
 **risk_grade (proposed)**: L3 (security-critical: subprocess execution, package installation, credential-adjacent paths)
 **pr_target**: `release/v6.0.12-rc1-candidate-20261108-no-ci` (PR #631, RC1 source `3d722d02`)
-**Source under review**: PR #633 branch `fix/475-no-uncontained-agent-execution-v6012-20261108-no-ci`, head recorded in the gate artifact.
+**Source under review**: PR #633 branch `fix/475-no-uncontained-agent-execution-v6012-20261108-no-ci`; the exact head SHA is stated in the commit that submits this iteration and in the audit request (the plan gate schema has no head field).
 
 ## Ordering inversion (DECLARED, not sanctioned)
 
-This plan is authored **after** the implementation. The #633 commits were written and pushed to a draft PR branch before any `/qor-plan` or `/qor-audit`. Nothing has been merged to `main` or to the RC1 branch, so the integration boundary has not been crossed. A severity-2 `gate_override` shadow event records this deviation, in the manner of session `2026-09-04T0430-62ca33`.
+This plan is authored **after** the implementation. The #633 commits were written and pushed to a draft PR branch before any `/qor-plan` or `/qor-audit`. Nothing has been merged to `main` or to the RC1 branch, so the integration boundary has not been crossed. The native helper recorded a severity-1 `gate_override` shadow event (`b9f0a002…`, session `2026-11-09T1550-4e0666`). The helper wrote it to `docs/PROCESS_SHADOW_GENOME_UPSTREAM.md`, which this repository gitignores, so it is local evidence only and not in the committed tree; this plan text and the commit history are the committed disclosure. (Iteration 1 misstated it as severity-2.)
 
 This audit therefore reviews existing code **before integration**. It does **not** claim, and must not be described as, a pre-implementation PASS. No earlier date is asserted anywhere.
 
@@ -67,6 +67,33 @@ This audit therefore reviews existing code **before integration**. It does **not
   Stale, no-op, forged and count-divergent results are refused.
 - `TESTED_AGAINST_QOR_LOGIC_VERSION` stays `0.169.0`. Frozen 0.176.1 conformance is **not** attested (see Limitations).
 
+### Phase 4: iteration-1 VETO remediation (Entry #915)
+
+Behavior-preserving changes that close the iteration-1 findings:
+
+- **V1, function length and nesting:**
+  - `verifyHostInstallReceipt` is split into `loadReceipt`, `verifyEntry` and a shorter body;
+  - `copyAndVerify` moves its write loop into `writeAll`;
+  - `installHost` becomes `prepareHostInstall` plus `runQorInstall`;
+  - the install-skills handlers share `runInstallPipeline`, `refuse` and `webOptionRefusal`;
+  - `stepQorLogicPackage` becomes `frozenPackagePresent`, `installVerifiedWheel` and `verifyAfterInstall`;
+  - `aggregateReport` gains `collectFailures` and `claimsAreVerified`;
+  - `registerAgentCliCommands` registers separate per-command functions. The guard order is unchanged: the containment check runs first, before any setting, credential or prompt.
+
+  Every touched function is now 40 lines or fewer, with nesting depth 3 or less.
+- **V1, file size:**
+  - the `INTEGRATION_CATALOG` descriptor table moves to `integration-catalog-data.ts`, so `integration-catalog.ts` drops from 313 to 166 lines;
+  - the risk, receipt and outcome builders move to `agent-run-outcome.ts`, so `agent-cli-core.ts` drops from 285 to 161 lines;
+  - the declared-inapplicable control data moves to `qor-conformance-inapplicable.cjs`, so the probe drops from 359 to 342 lines. That is below the RC1 size of 352, but still above 250.
+- **V5, duplication:**
+  - one shared `readBoundedReceipt` (`boundedReceiptRead.ts`) replaces the two receipt readers. Where their bounds differed it applies the stricter: an lstat size check before open, reads capped at size+1, and a minimum of 2 bytes;
+  - a single `runQorInstall` now builds the install argv. The `-P` site inventory goes from 10 to 9.
+- **V2/V3:** the new behavioral test `agent-cli-command-refusal.test.cjs` covers the command refusal, and the Feature Inventory now names a test for every row.
+- **Tests that read source text:**
+  - `agent-os-boundary.test.cjs` and `integration-contracts.test.cjs` now read the moved descriptor table. Only the path changed; no assertion changed.
+  - Doc citations were re-pointed to the moved lines.
+- **Pre-existing overages, not grown by this change:** `defaultInstallerRun` (49 lines, unchanged since RC1) and `renderInstallSkillsCard` (shrank from 43 to 41 lines).
+
 ### Phase 3: integration repairs (`9b66c8f7`, tests and docs only)
 
 - compile scope fix;
@@ -86,6 +113,8 @@ This audit therefore reviews existing code **before integration**. It does **not
 - **Missing control:** `instruction_hygiene_lint` does not exist in 0.176.1 (probe: UNAVAILABLE).
 - **Dependencies:** the offline install cannot provision `jsonschema`/`PyYAML`. A clean host fails closed at `dependency-preflight-failed`, and the operator must provision them. A failed install is not transactionally rolled back; the preflight reduces but does not remove that risk.
 - **Agent CLIs:** Aider/Continue execution is unavailable until an audited OS-enforced boundary (AppContainer/LPAC or VM) exists.
+- **Existing installs:** an already-installed 0.176.1 is accepted on `pip show` metadata plus `pip check`. Its installed files are not re-verified against the pinned wheel's RECORD (iteration-1 audit N2).
+- **Receipt meaning:** a verified host receipt proves that the files on disk match the receipt, not where they came from. A repository could ship matching receipts, so bootstrap's "present with provenance" means receipt-consistent, not origin-attested (iteration-1 audit N1; not a regression versus RC1).
 
 **Non-goals:**
 - no #467 G4, #476 or #505 change;
@@ -99,13 +128,16 @@ This audit therefore reviews existing code **before integration**. It does **not
 
 ## Feature Inventory Touches
 
-| Feature | Op | Test | Descriptor |
+All paths are relative to the repository root. "Behavioral" means the test calls the code and observes effects; "source-order" means it reads source text.
+
+| Feature | Op | Test (depth) | Descriptor |
 |---|---|---|---|
-| agent-os-containment-gate | NEW | `src/test/integrations/agent-cli/agent-os-boundary.test.cjs` | commands and wrappers refuse with no probe or spawn |
-| catalog containment block | MODIFIED | `src/test/ui/integrations-catalog.spec.ts`, catalog unit tests | Aider stays disabled despite settings and a legacy receipt |
-| frozen-wheel-install | NEW | `src/test/qorlogic/QorLogicPackageInstaller.test.ts`, `qorFrozenConsumerIntegration.test.ts` | hash, size, link, offline preflight, pip check |
-| host-install-receipt-verification | NEW | `src/test/qorlogic/QorLogicSkillIngestor.test.ts`, `qorHostReceiptVerify` tests | stale, no-op, forged, count mismatch, containment |
-| unsupported frozen operations | MODIFIED | ingestor, route and UI tests | selective, global, preview and enumeration refuse before subprocess |
+| agent-os-containment-gate (commands) | NEW | `FailSafe/extension/src/test/extension/agent-cli-command-refusal.test.cjs` (behavioral) | Calls the real `registerAgentCliCommands` and invokes both commands. Asserts: the exact refusal warning is shown; no input box opens; no `get`/`has`/`inspect` call on the configuration; no credential-store or credential-UI access; no wrapper call and no child-process spawn; no ledger or apply activity. Its fault injection (a `cfg.get` placed before the guard) makes both tests fail. `FailSafe/extension/src/test/integrations/agent-cli/agent-os-boundary.test.cjs` (source-order) is supplementary only |
+| agent-os-containment-gate (wrappers) | NEW | `FailSafe/extension/src/test/integrations/agent-cli/agent-cli.test.ts` (behavioral) | Without an OS-enforced runner, `runAiderGoverned`/`runContinueGoverned` return `BLOCKED_PRE_EXECUTION` (L3) with no resolver, `--version` probe or spawn; a simulated contained runner is exercised separately |
+| catalog containment block | MODIFIED | `FailSafe/extension/src/test/integrations/catalog/integration-catalog.test.ts` (behavioral, unit); `FailSafe/extension/src/test/ui/integrations-catalog.spec.ts` (Playwright, real ConsoleServer) | Aider/Continue stay `disabled` even with enabled settings and a fresh `connected` legacy receipt; OpenHands still shows `configured-unverified` |
+| frozen-wheel-install | NEW | `FailSafe/extension/src/test/qorlogic/frozenWheel.test.ts`, `FailSafe/extension/src/test/qorlogic/qorDependencyPreflight.test.ts`, `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts`, `FailSafe/extension/src/test/qorlogic/qorPackageEnsure.test.ts`, `FailSafe/extension/src/test/qorlogic/qorFrozenConsumerIntegration.test.ts` (behavioral, real temp files) | Covers: hash mismatch, oversize, symlink and invalid paths; offline dependency preflight refusal; `pip check` failure blocks readiness; version divergence is never replaced |
+| host-install-receipt-verification | NEW | `FailSafe/extension/src/test/qorlogic/qorHostReceiptVerify.test.ts`, `FailSafe/extension/src/test/qorlogic/qorHostInstallOutput.test.ts`, `FailSafe/extension/src/test/qorlogic/QorLogicSkillIngestor.test.ts`, `FailSafe/extension/src/test/qorlogic/qorFrozenConsumerIntegration.test.ts` (behavioral, real hashed receipts) | Refuses each of: missing, empty, tampered, oversized and linked receipts; containment escape; stale or no-op output; wrong host; CLI/receipt count mismatch |
+| unsupported frozen operations | MODIFIED | `FailSafe/extension/src/test/qorlogic/QorLogicSkillIngestor.test.ts` (selected-skill and global scope refuse with zero subprocesses); `FailSafe/extension/src/test/roadmap/qorlogic-preview-disabled.test.ts` (HTTP install preview declines before host parsing or subprocess); `FailSafe/extension/src/test/qorlogic/skillEnumeration.test.ts` (no `list-skills` JSON subprocess, even for forged input) | Refused before Python or pip runs |
 
 ## CI commands (run locally; no hosted CI required for qualification)
 

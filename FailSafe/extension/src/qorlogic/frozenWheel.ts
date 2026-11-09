@@ -21,6 +21,16 @@ export class WheelVerificationError extends Error {
   }
 }
 
+/** Write every byte read so far; a short or failed write refuses the wheel. */
+function writeAll(destFd: number, buffer: Buffer, length: number): void {
+  let written = 0;
+  while (written < length) {
+    const n = fs.writeSync(destFd, buffer, written, length - written);
+    if (n <= 0) throw new WheelVerificationError('unverified-wheel');
+    written += n;
+  }
+}
+
 /** Hash and stage an already-open file descriptor, never an unchecked path. */
 function copyAndVerify(sourceFd: number, staged: string): void {
   const hash = createHash('sha256');
@@ -36,12 +46,7 @@ function copyAndVerify(sourceFd: number, staged: string): void {
         throw new WheelVerificationError('wheel-too-large');
       }
       hash.update(buffer.subarray(0, read));
-      let written = 0;
-      while (written < read) {
-        const n = fs.writeSync(destFd, buffer, written, read - written);
-        if (n <= 0) throw new WheelVerificationError('unverified-wheel');
-        written += n;
-      }
+      writeAll(destFd, buffer, read);
     }
   } finally {
     fs.closeSync(destFd);

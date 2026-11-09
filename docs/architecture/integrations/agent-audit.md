@@ -29,7 +29,7 @@ The parser reads the shared `mcpServers` shape and both auto-approve field names
 
 ## Privileges and scopes
 
-Credential: none `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:142` (`requiredKeys: [],`).
+Credential: none `FailSafe/extension/src/integrations/catalog/integration-catalog-data.ts:60` (`requiredKeys: [],`).
 File access: read-only reads of five workspace-relative paths `FailSafe/extension/src/extension/agent-observe-command.ts:25-31` (`const MCP_CONFIG_CANDIDATES`).
 Write access: the workspace risk register only `FailSafe/extension/src/extension/agent-observe-command.ts:86` (`new RiskRegisterManager(workspaceRoot).importSink()`).
 Reading user-level agent settings outside the workspace would widen file access and is marked requires separate approval (unverified: not implemented).

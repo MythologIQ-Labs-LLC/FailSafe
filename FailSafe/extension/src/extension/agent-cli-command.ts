@@ -131,57 +131,71 @@ export async function handleOutcome(deps: AgentCliDeps, agent: string, out: Agen
 
 function settings(): vscode.WorkspaceConfiguration { return vscode.workspace.getConfiguration('failsafe'); }
 
+interface RunContext {
+  classify: (p: string) => RiskGrade;
+  cwd: string;
+  timeoutMs: () => number;
+}
+
+const run = (title: string, task: () => Promise<AgentRunOutcome>): Thenable<AgentRunOutcome> =>
+  vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title }, task);
+
+function registerReviewProvider(): vscode.Disposable {
+  return vscode.workspace.registerTextDocumentContentProvider(REVIEW_SCHEME, {
+    provideTextDocumentContent: (uri) => reviews.get(path.posix.basename(uri.path, '.diff')) ?? 'This change set is no longer held; it was applied or discarded.',
+  });
+}
+
+function registerContinueCommand(deps: AgentCliDeps, { classify, cwd, timeoutMs }: RunContext): vscode.Disposable {
+  return vscode.commands.registerCommand('failsafe.continue.run', async () => {
+    const cfg = settings();
+    if (!AGENT_OS_CONTAINMENT_AVAILABLE) {
+      vscode.window.showWarningMessage('Agent execution unavailable: FailSafe cannot prove OS-level containment for this CLI. No process was started.');
+      return;
+    }
+    if (!cfg.get<boolean>('integrations.continue.enabled', false)) { vscode.window.showWarningMessage('Continue integration is disabled. Enable `failsafe.integrations.continue.enabled`.'); return; }
+    // No key at all is fine (Continue may use its own login); a key still
+    // in plain-text settings, or unreadable Secure Storage, is not.
+    const key = optionalCredential(deps.creds, 'continue.apiKey', deps.credentialUi);
+    if (!key.ok) return;
+    const prompt = await vscode.window.showInputBox({ title: 'Run Continue (governed)', prompt: 'Prompt for the Continue headless agent', ignoreFocusOut: true });
+    if (!prompt) return;
+    const out = await run('Running Continue in an isolated worktree…', () => runContinueGoverned(
+      {
+        prompt, cwd, timeoutMs: timeoutMs(), baseEnv: process.env,
+        allow: cfg.get<string[]>('integrations.continue.allow', []) ?? [],
+        apiKey: key.value,
+        writesAllowed: cfg.get<boolean>('integrations.continue.allowWrites', false),
+      },
+      { run: defaultAgentRun, classify, issuedAt: new Date().toISOString() },
+    ));
+    await handleOutcome(deps, 'continue', out);
+  });
+}
+
+function registerAiderCommand(deps: AgentCliDeps, { classify, cwd, timeoutMs }: RunContext): vscode.Disposable {
+  return vscode.commands.registerCommand('failsafe.aider.run', async () => {
+    const cfg = settings();
+    if (!AGENT_OS_CONTAINMENT_AVAILABLE) {
+      vscode.window.showWarningMessage('Agent execution unavailable: FailSafe cannot prove OS-level containment for this CLI. No process was started.');
+      return;
+    }
+    if (!cfg.get<boolean>('integrations.aider.enabled', false)) { vscode.window.showWarningMessage('Aider integration is disabled. Enable `failsafe.integrations.aider.enabled`.'); return; }
+    const prompt = await vscode.window.showInputBox({ title: 'Run Aider (governed)', prompt: 'Message for Aider (one-shot)', ignoreFocusOut: true });
+    if (!prompt) return;
+    const out = await run('Running Aider in an isolated worktree…', () => runAiderGoverned(
+      { prompt, cwd, timeoutMs: timeoutMs(), writesAllowed: cfg.get<boolean>('integrations.aider.allowWrites', false) },
+      { run: defaultAgentRun, classify, issuedAt: new Date().toISOString() },
+    ));
+    await handleOutcome(deps, 'aider', out);
+  });
+}
+
 export function registerAgentCliCommands(context: vscode.ExtensionContext, deps: AgentCliDeps): void {
-  const classify = (p: string): RiskGrade => deps.policyEngine.classifyRisk(p);
-  const cwd = deps.workspaceRoot;
-  const timeoutMs = (): number => settings().get<number>('integrations.agentCli.timeoutMs', 900000);
-  const run = (title: string, task: () => Promise<AgentRunOutcome>): Thenable<AgentRunOutcome> =>
-    vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title }, task);
-
-  context.subscriptions.push(
-    vscode.workspace.registerTextDocumentContentProvider(REVIEW_SCHEME, {
-      provideTextDocumentContent: (uri) => reviews.get(path.posix.basename(uri.path, '.diff')) ?? 'This change set is no longer held; it was applied or discarded.',
-    }),
-
-    vscode.commands.registerCommand('failsafe.continue.run', async () => {
-      const cfg = settings();
-      if (!AGENT_OS_CONTAINMENT_AVAILABLE) {
-        vscode.window.showWarningMessage('Agent execution unavailable: FailSafe cannot prove OS-level containment for this CLI. No process was started.');
-        return;
-      }
-      if (!cfg.get<boolean>('integrations.continue.enabled', false)) { vscode.window.showWarningMessage('Continue integration is disabled. Enable `failsafe.integrations.continue.enabled`.'); return; }
-      // No key at all is fine (Continue may use its own login); a key still
-      // in plain-text settings, or unreadable Secure Storage, is not.
-      const key = optionalCredential(deps.creds, 'continue.apiKey', deps.credentialUi);
-      if (!key.ok) return;
-      const prompt = await vscode.window.showInputBox({ title: 'Run Continue (governed)', prompt: 'Prompt for the Continue headless agent', ignoreFocusOut: true });
-      if (!prompt) return;
-      const out = await run('Running Continue in an isolated worktree…', () => runContinueGoverned(
-        {
-          prompt, cwd, timeoutMs: timeoutMs(), baseEnv: process.env,
-          allow: cfg.get<string[]>('integrations.continue.allow', []) ?? [],
-          apiKey: key.value,
-          writesAllowed: cfg.get<boolean>('integrations.continue.allowWrites', false),
-        },
-        { run: defaultAgentRun, classify, issuedAt: new Date().toISOString() },
-      ));
-      await handleOutcome(deps, 'continue', out);
-    }),
-
-    vscode.commands.registerCommand('failsafe.aider.run', async () => {
-      const cfg = settings();
-      if (!AGENT_OS_CONTAINMENT_AVAILABLE) {
-        vscode.window.showWarningMessage('Agent execution unavailable: FailSafe cannot prove OS-level containment for this CLI. No process was started.');
-        return;
-      }
-      if (!cfg.get<boolean>('integrations.aider.enabled', false)) { vscode.window.showWarningMessage('Aider integration is disabled. Enable `failsafe.integrations.aider.enabled`.'); return; }
-      const prompt = await vscode.window.showInputBox({ title: 'Run Aider (governed)', prompt: 'Message for Aider (one-shot)', ignoreFocusOut: true });
-      if (!prompt) return;
-      const out = await run('Running Aider in an isolated worktree…', () => runAiderGoverned(
-        { prompt, cwd, timeoutMs: timeoutMs(), writesAllowed: cfg.get<boolean>('integrations.aider.allowWrites', false) },
-        { run: defaultAgentRun, classify, issuedAt: new Date().toISOString() },
-      ));
-      await handleOutcome(deps, 'aider', out);
-    }),
-  );
+  const ctx: RunContext = {
+    classify: (p: string): RiskGrade => deps.policyEngine.classifyRisk(p),
+    cwd: deps.workspaceRoot,
+    timeoutMs: (): number => settings().get<number>('integrations.agentCli.timeoutMs', 900000),
+  };
+  context.subscriptions.push(registerReviewProvider(), registerContinueCommand(deps, ctx), registerAiderCommand(deps, ctx));
 }

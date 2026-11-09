@@ -43,7 +43,8 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
 const SRC = 'FailSafe/extension/src';
 const TEST_ROOT = `${SRC}/test/`;
 const INTEGRATIONS_DIR = `${SRC}/integrations/`;
-const CATALOG_FILE = `${SRC}/integrations/catalog/integration-catalog.ts`;
+// The INTEGRATION_CATALOG descriptor table lives in its own data module (Section 4 file cap).
+const CATALOG_FILE = `${SRC}/integrations/catalog/integration-catalog-data.ts`;
 const CONTRACT_DIR = 'docs/architecture/integrations/';
 const PORTFOLIO = 'docs/architecture/INTEGRATION_PORTFOLIO.md';
 const SCENARIOS = 'docs/architecture/INTEGRATION_SCENARIOS.md';

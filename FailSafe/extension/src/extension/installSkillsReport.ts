@@ -68,31 +68,44 @@ export async function runInstallStep(
   }
 }
 
-export function aggregateReport(
-  invocations: QorLogicInstallInvocation[],
-): QorLogicInstallReport {
+function collectFailures(invocations: QorLogicInstallInvocation[]): Array<{ host: QorLogicHost; error: string }> {
   const failures: Array<{ host: QorLogicHost; error: string }> = [];
-  const successful = invocations.filter(
-    (i) => i.phase === 'qorlogic-install' && i.status === 'success',
-  );
-  const provenance = invocations.find(
-    (i) => i.phase === 'provenance' && i.status === 'success',
-  )?.summary;
   for (const inv of invocations) {
     if (inv.phase === 'qorlogic-install' && inv.status === 'error' && inv.host) {
       failures.push({ host: inv.host, error: inv.error ?? 'unknown-error' });
     }
   }
-  // #463: a count of receipts can be from *other* hosts. Bind every claimed
-  // successful host to that specific host's on-disk file hash evidence.
-  const proofs = provenance?.verifiedHosts ?? [];
-  const claimsVerified = successful.length === 0
+  return failures;
+}
+
+/**
+ * #463: a count of receipts can be from *other* hosts. Bind every claimed
+ * successful host to that specific host's on-disk file hash evidence.
+ */
+function claimsAreVerified(
+  successful: QorLogicInstallInvocation[],
+  proofs: Array<{ host: QorLogicHost; fileCount: number }>,
+): boolean {
+  return successful.length === 0
     || successful.every((inv) => {
       const proof = proofs.find((v) => v.host === inv.host);
       return !!inv.host && Number.isSafeInteger(inv.installedCount)
         && (inv.installedCount ?? 0) > 0
         && !!proof && proof.fileCount === inv.installedCount;
     });
+}
+
+export function aggregateReport(
+  invocations: QorLogicInstallInvocation[],
+): QorLogicInstallReport {
+  const successful = invocations.filter(
+    (i) => i.phase === 'qorlogic-install' && i.status === 'success',
+  );
+  const provenance = invocations.find(
+    (i) => i.phase === 'provenance' && i.status === 'success',
+  )?.summary;
+  const failures = collectFailures(invocations);
+  const claimsVerified = claimsAreVerified(successful, provenance?.verifiedHosts ?? []);
   // Partial progress is still reported when one host fails but the other
   // host has verified receipts. Without proof, report no installation.
   const totalInstalled = claimsVerified

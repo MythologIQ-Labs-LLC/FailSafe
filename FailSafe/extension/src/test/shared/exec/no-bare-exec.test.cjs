@@ -128,7 +128,8 @@ test('T12: no production bare start outside the two deferred sites, and every py
   // preflight (pip --isolated install --dry-run, pip --isolated check) and the shared qor.cli runner
   // add guarded sites; the old unbounded `pip install --upgrade` site is gone. A new site must still
   // carry -P (asserted above), so this count is an inventory, not a relaxation.
-  assert.equal(r2g, 10, 'exactly 10 python sites carry -P');
+  // The two identical qor.cli install argv sites in the ingestor were unified (audit V5): 10 -> 9.
+  assert.equal(r2g, 9, 'exactly 9 python sites carry -P');
 });
 
 // ---------------------------------------------------------------- R3 (review delta LD17)

@@ -97,15 +97,7 @@ async function stepQorLogicPackage(
   mode: BootstrapMode,
 ): Promise<BootstrapStep> {
   const status = await deps.installer.verifyInstalledVersion();
-  if (status.installed === FROZEN_QOR_LOGIC_VERSION) {
-    const health = await deps.installer.verifyInstalledDependencies();
-    if (!health.ok) {
-      return { name: "qor-logic-package", status: "deferred",
-        detail: `Frozen wheel present but dependencies unhealthy: ${health.error}; skill installation withheld` };
-    }
-    return { name: "qor-logic-package", status: "ok",
-      detail: `frozen version ${FROZEN_QOR_LOGIC_VERSION} and dependencies present; conformance separate` };
-  }
+  if (status.installed === FROZEN_QOR_LOGIC_VERSION) return frozenPackagePresent(deps);
   if (status.installed !== null) {
     return { name: "qor-logic-package", status: "deferred",
       detail: `Installed ${status.installed}; expected frozen ${FROZEN_QOR_LOGIC_VERSION}. No automatic upgrade/downgrade.` };
@@ -114,6 +106,21 @@ async function stepQorLogicPackage(
     return { name: "qor-logic-package", status: "deferred",
       detail: "Missing or unverified qor-logic; select the verified 0.176.1 wheel interactively. No automatic network installation." };
   }
+  return installVerifiedWheel(deps);
+}
+
+async function frozenPackagePresent(deps: BootstrapDeps): Promise<BootstrapStep> {
+  const health = await deps.installer.verifyInstalledDependencies();
+  if (!health.ok) {
+    return { name: "qor-logic-package", status: "deferred",
+      detail: `Frozen wheel present but dependencies unhealthy: ${health.error}; skill installation withheld` };
+  }
+  return { name: "qor-logic-package", status: "ok",
+    detail: `frozen version ${FROZEN_QOR_LOGIC_VERSION} and dependencies present; conformance separate` };
+}
+
+/** Interactive only: local wheel picker, then modal consent, then install and re-verify. */
+async function installVerifiedWheel(deps: BootstrapDeps): Promise<BootstrapStep> {
   const selected = await vscode.window.showOpenDialog({
     canSelectFiles: true, canSelectFolders: false, canSelectMany: false,
     filters: { "Python wheel": ["whl"] },
@@ -127,6 +134,10 @@ async function stepQorLogicPackage(
   if (choice !== "Install verified wheel") return { name: "qor-logic-package", status: "deferred", detail: "operator declined install" };
   const result = await deps.installer.install(selected[0].fsPath);
   if (!result.ok) return { name: "qor-logic-package", status: "failed", detail: result.error ?? "install failed" };
+  return verifyAfterInstall(deps);
+}
+
+async function verifyAfterInstall(deps: BootstrapDeps): Promise<BootstrapStep> {
   const recheck = await deps.installer.verifyInstalledVersion();
   if (recheck.installed !== FROZEN_QOR_LOGIC_VERSION) {
     return { name: "qor-logic-package", status: "failed", detail: "post-install version mismatch" };
