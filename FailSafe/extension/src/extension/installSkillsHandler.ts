@@ -240,15 +240,5 @@ function withOperationId(callbacks: InstallCallbacks, operationId: string | unde
   };
 }
 
-/**
- * Phase 3: skill-filter-aware variant returned alongside the web-options factory.
- * A non-empty skillFilter map is rejected before probing Python or installing
- * a package. The frozen 0.176.1 CLI has no selective-install flag; refusing
- * explicit empty selections also avoids silently installing every skill.
- */
-export function createScaffoldWithSkillFilter(
-  ingestor: QorLogicSkillIngestor,
-  callbacks: InstallCallbacks = {},
-): (hosts: QorLogicHost[], scope: QorLogicScope, skillFilter?: Record<string, string[]>) => Promise<QorLogicInstallReport> {
-  return createScaffoldWithWebOptions(ingestor, callbacks);
-}
+/** Compatibility alias; selected-skill filters are refused by the shared handler. */
+export const createScaffoldWithSkillFilter = createScaffoldWithWebOptions;
