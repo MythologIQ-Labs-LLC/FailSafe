@@ -101,13 +101,20 @@ export async function runProvenanceStep(
     // Presence of .qorlogic-installed.json is not evidence of file integrity.
     const receipts = status.hosts
       .filter((h) => h.installed && QOR_LOGIC_HOSTS.includes(h.host as QorLogicHost))
-      .map((h) => verifyHostInstallReceipt(workspaceRoot, h.host as QorLogicHost))
-      .filter((v) => v.ok);
+      .map((h) => ({ host: h.host as QorLogicHost,
+        result: verifyHostInstallReceipt(workspaceRoot, h.host as QorLogicHost) }))
+      .filter((entry) => entry.result.ok);
     return {
       summary: {
         hostsVerified: receipts.length,
-        totalFiles: receipts.reduce((sum, v) => sum + (v.ok ? v.status.fileCount : 0), 0),
-        destinations: [...new Set(receipts.flatMap((v) => v.ok ? v.status.destinations : []))].sort(),
+        totalFiles: receipts.reduce((sum, entry) =>
+          sum + (entry.result.ok ? entry.result.status.fileCount : 0), 0),
+        destinations: [...new Set(receipts.flatMap((entry) =>
+          entry.result.ok ? entry.result.status.destinations : []))].sort(),
+        verifiedHosts: receipts.map((entry) => ({
+          host: entry.host,
+          fileCount: entry.result.ok ? entry.result.status.fileCount : 0,
+        })),
       },
     };
   });
