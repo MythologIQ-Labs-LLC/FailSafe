@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-09T1958-754dfc",
-  "ts": "2026-11-09T22:30:23Z",
+  "ts": "2026-11-09T22:52:17Z",
   "plan_path": ".failsafe/governance/plans/plan-v6012-release-governance.md",
-  "iteration": 2,
+  "iteration": 3,
   "change_class": "governance",
   "doc_tier": "standard",
   "pr_target": "release/v6.0.12-rc1-candidate-20261108-no-ci",
@@ -35,6 +35,7 @@
     "exclusions": [
       "No merge to main, tag or publish under this plan",
       "No G4 key creation before owner acceptance",
+      "No TPM key, TSA enrollment or G4 implementation under this iteration",
       "No TPM key, TSA enrollment or G4 implementation under this iteration"
     ]
   },
@@ -57,15 +58,15 @@
   "open_questions": [
     "G4 deferral requires an owner decision (not delegable)"
   ],
-  "plan_content_hash": "e220651df84e798125527d3b43f89c2f3a94c0079507680d585004ff6746e486",
-  "remediates": "VETO #917 (V1-V5, N9)",
-  "candidate": "c8419fc9 + this plan commit",
+  "plan_content_hash": "13539396f256c9972dd4f8b85fbd0acf828c57afe4398caecd9e9152f8385475",
+  "remediates": "VETO #918 (B1; N1-N7) after VETO #917",
+  "candidate": "5a7b55ff + inventory commit",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "absent",
-    "ts": "2026-11-09T22:30:23Z"
+    "ts": "2026-11-09T22:52:17Z"
   }
 }
