@@ -85,11 +85,13 @@ export function aggregateReport(
   }
   // #463: a count of receipts can be from *other* hosts. Bind every claimed
   // successful host to that specific host's on-disk file hash evidence.
-  const claimsVerified = successful.length === 0 || !!provenance?.verifiedHosts
-    && successful.every((inv) => {
-      const proof = provenance.verifiedHosts!.find((v) => v.host === inv.host);
-      return !!proof && proof.fileCount >= (inv.installedCount ?? 0)
-        && proof.fileCount > 0;
+  const proofs = provenance?.verifiedHosts ?? [];
+  const claimsVerified = successful.length === 0
+    || successful.every((inv) => {
+      const proof = proofs.find((v) => v.host === inv.host);
+      return !!inv.host && Number.isSafeInteger(inv.installedCount)
+        && (inv.installedCount ?? 0) > 0
+        && !!proof && proof.fileCount === inv.installedCount;
     });
   // Partial progress is still reported when one host fails but the other
   // host has verified receipts. Without proof, report no installation.
