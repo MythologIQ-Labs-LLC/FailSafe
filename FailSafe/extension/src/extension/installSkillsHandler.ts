@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { QorLogicSkillIngestor, QorLogicHost, QorLogicScope } from '../qorlogic/QorLogicSkillIngestor';
 import { verifyHostInstallReceipt } from '../qorlogic/qorHostReceiptVerify';
-import { QOR_LOGIC_HOSTS } from '../qorlogic/hostLayouts';
+import { QOR_LOGIC_HOSTS, frozenHostSelectionError } from '../qorlogic/hostLayouts';
 import {
   type QorLogicInstallInvocation,
   type QorLogicInstallReport,
@@ -151,6 +151,13 @@ export function createInstallSkillsHandler(
       : await resolveInstallSkillsOptions(context);
     if (!options) return null;
     const invs: QorLogicInstallInvocation[] = [];
+    const selectionError = frozenHostSelectionError(options.hosts);
+    if (selectionError) {
+      const at = new Date().toISOString();
+      invs.push(emit({ phase: 'qorlogic-install', status: 'error',
+        startedAt: at, completedAt: at, error: selectionError }, callbacks.onProgress));
+      return finalize(invs, callbacks);
+    }
     if (options.scope !== 'repo') {
       const at = new Date().toISOString();
       invs.push(emit({ phase: 'qorlogic-install', status: 'error',
@@ -185,6 +192,15 @@ export function createScaffoldWithWebOptions(
     // the final report carry it.
     const cb = withOperationId(callbacks, context?.operationId);
     const invs: QorLogicInstallInvocation[] = [];
+    const selectionError = frozenHostSelectionError(hosts);
+    if (selectionError) {
+      const at = new Date().toISOString();
+      invs.push(emit({ phase: 'qorlogic-install', status: 'error',
+        startedAt: at, completedAt: at, scope,
+        ...(context?.operationId ? { operationId: context.operationId } : {}),
+        error: selectionError }, cb.onProgress));
+      return finalize(invs, cb);
+    }
     // #463: selection keys, including explicit [], cannot be represented by
     // the frozen 0.176.1 CLI. Refuse BEFORE any Python or pip side effects.
     if (scope !== 'repo' || (skillFilter && Object.keys(skillFilter).length > 0)) {
