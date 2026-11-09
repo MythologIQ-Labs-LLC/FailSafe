@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.12] - 2026-11-06
+## [6.0.12] - 2026-11-09
 
 ### Added
 - Saved recordings can now be managed from the Console: a new opt-in control and Manage/Delete interface support local audio-vault storage. Each recording needs separate approval in VS Code before it is saved. Storage is limited to 256 MiB; recordings do not have an automatic retention deadline, so delete ones you no longer need (#465).
@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependency updates merged after v6.0.11: glob 14.0.2 (#610), body-parser 2.4.0 (#611), @hono/node-server 2.1.5 (#597), qs 6.17.1, fast-uri 3.1.9 and undici 7.30.1 (#590, #595, #596, #598).
 
 ### Known Limitations
-- Independent complete-ledger checkpoint witnessing with a TPM-backed signing key and RFC 3161 timestamp remains a proposed G4 design, not an implemented or verified release protection (#467). Any deferral needs an explicit recorded checklist decision and audit acceptance.
+- Independent complete-ledger checkpoint witnessing (a TPM-backed signing key and an RFC 3161 timestamp, G4) is not implemented in v6.0.12. Its deferral to v6.0.13 is a recorded owner decision, accepted by independent review, that expires at v6.0.13 or on 2026-12-09, whichever comes first (`docs/releases/V6_0_12_G4_DISPOSITION.md`, #467).
 - Temporary restriction (by design): running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
 - Temporary restriction (by design): selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).
 - Temporary restriction (by design): FailSafe does not install Qor-logic's Python dependencies (`jsonschema`, `PyYAML`); on a clean interpreter the install stops before changing anything until you install them (#463).
