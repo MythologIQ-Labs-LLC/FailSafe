@@ -4,32 +4,29 @@ import { JSDOM } from "jsdom";
 import { renderInstallSkillsCard, bindInstallSkillsCard } from "../../../src/roadmap/ui/modules/install-skills-card.js";
 
 suite("install-skills-card status and output", () => {
-  test("version-floor warning renders only for a verified floor violation", () => {
+  test("#463: frozen mismatch is visible even when an installed version exceeds the old floor", () => {
     const dom = new JSDOM("<!DOCTYPE html><div></div>");
     (globalThis as any).document = dom.window.document;
     try {
-      const violation = renderInstallSkillsCard(
-        { running: false, invocations: [], lastReport: null },
-        { bootstrapState: { qorLogicInstall: {
-          hosts: [], anyInstalled: false, installedVersion: "0.30.0",
-          minimumVersion: "0.31.1", meetsFloor: false,
-        } } },
+      const snapshot = (installedVersion: string | null, matchesFrozen: boolean) =>
+        ({ bootstrapState: { qorLogicInstall: {
+          hosts: [], anyInstalled: false, installedVersion, frozenTarget: "0.176.1",
+          matchesFrozen, minimumVersion: "0.31.1", meetsFloor: true,
+        } } });
+      const below = renderInstallSkillsCard({ running: false }, snapshot("0.30.0", false));
+      assert.match(below, /cc-qorlogic-floor-warning/);
+      assert.match(below, /installed v0\\.30\\.0/);
+      const above = renderInstallSkillsCard({ running: false }, snapshot("0.177.0", false));
+      assert.match(above, /cc-qorlogic-floor-warning/, "future version also diverges");
+      assert.match(above, /No automatic|never silently/);
+      const exact = renderInstallSkillsCard({ running: false }, snapshot("0.176.1", true));
+      assert.equal(exact.includes("cc-qorlogic-floor-warning"), false);
+      const missing = renderInstallSkillsCard({ running: false }, snapshot(null, false));
+      assert.match(missing, /unknown or missing/);
+      const absentMetadata = renderInstallSkillsCard(
+        { running: false }, { bootstrapState: { qorLogicInstall: { hosts: [], anyInstalled: false } } },
       );
-      assert.match(violation, /cc-qorlogic-floor-warning/);
-      assert.match(violation, /qor-logic v0\.30\.0/);
-      const healthy = renderInstallSkillsCard(
-        { running: false, invocations: [], lastReport: null },
-        { bootstrapState: { qorLogicInstall: {
-          hosts: [], anyInstalled: false, installedVersion: "0.31.5",
-          minimumVersion: "0.31.1", meetsFloor: true,
-        } } },
-      );
-      assert.equal(healthy.includes("cc-qorlogic-floor-warning"), false);
-      const unknown = renderInstallSkillsCard(
-        { running: false, invocations: [], lastReport: null },
-        { bootstrapState: { qorLogicInstall: { hosts: [], anyInstalled: false } } },
-      );
-      assert.equal(unknown.includes("cc-qorlogic-floor-warning"), false);
+      assert.equal(absentMetadata.includes("cc-qorlogic-floor-warning"), false);
     } finally {
       delete (globalThis as any).document;
     }
