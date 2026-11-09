@@ -190,8 +190,8 @@ suite('Settings Track C — governance mode + qor version surface', () => {
     });
     assert.match(html, /cc-qor-version-warning/);
     assert.match(html, /frozen Qor-logic package/);
-    assert.match(html, /Installed:\\s*<strong>0\\.1\\.2<\\/strong>/);
-    assert.match(html, /frozen target:\\s*<strong>0\\.176\\.1<\\/strong>/);
+    assert.match(html, /Installed:\s*<strong>0\.1\.2<\/strong>/);
+    assert.match(html, /frozen target:\s*<strong>0\.176\.1<\/strong>/);
   });
 
   test('#463: above-floor but non-frozen version still warns without suggesting auto-upgrade', async () => {
@@ -221,7 +221,7 @@ suite('Settings Track C — governance mode + qor version surface', () => {
       bootstrapState: { qorLogicInstall: { frozenTarget: '0.176.1' } },
       qorLogic: { versionStatus: { installed: null, minimum: '0.2.0', meetsFloor: false } },
     });
-    assert.match(html, /Installed:\\s*<strong>missing or unverified<\\/strong>/);
+    assert.match(html, /Installed:\s*<strong>missing or unverified<\/strong>/);
   });
 });
 
