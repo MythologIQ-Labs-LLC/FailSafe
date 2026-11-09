@@ -92,7 +92,7 @@ function renderHostCheckboxes(hosts) {
 }
 
 function renderScopeRadios() {
-  return `<div style="display:flex;gap:12px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="cc-modal-scope" value="repo" checked><span style="font-size:0.85rem">Workspace</span><span style="font-size:0.7rem;color:var(--text-muted)">(./)</span></label><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="cc-modal-scope" value="global"><span style="font-size:0.85rem">Global</span><span style="font-size:0.7rem;color:var(--text-muted)">(~/)</span></label></div>`;
+  return `<div style="display:flex;gap:12px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="cc-modal-scope" value="repo" checked><span style="font-size:0.85rem">Workspace</span><span style="font-size:0.7rem;color:var(--text-muted)">(./)</span></label><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="cc-modal-scope" value="global" disabled title="Global installation is unavailable until host receipts can be verified"><span style="font-size:0.85rem">Global (unavailable)</span><span style="font-size:0.7rem;color:var(--text-muted)">(~/)</span></label></div>`;
 }
 
 export function renderInstallModal(hosts, running) {
