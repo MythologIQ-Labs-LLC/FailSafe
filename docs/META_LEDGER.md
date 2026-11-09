@@ -35732,3 +35732,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6012-release-governance.md iteration 3 (plan sha256 13539396f256c9972dd4f8b85fbd0acf828c57afe4398caecd9e9152f8385475; candidate 3dc230ce; remediation 5a7b55ff). Independent Option B fresh-context audit, solo mode. RETROSPECTIVE, post-implementation, pre-release PASS under the declared ordering inversion; not a pre-implementation verdict and nothing backdated. #918 B1 closed (settings.js 241 lines, no theme literal; parity test refuses four drift mutations). #917 V1-V5 and #918 N1-N7 closed; no file or function first crosses a razor limit inside the delta; disclosed v6.0.11 razor debt accepted as non-blocking for this release. G4 disposition procedure ruled sound and complete; the disposition itself remains PENDING (committed owner decision file with cited SHA-256, owner-set expiry, item 81 amendment, Judge review of the recorded text) and is a separate release gate: v6.0.12 stays NO-GO until it exists and is reviewed. Still owed before release: README marker flip and date, validate.ps1, 8-target package, PDF, verify-set, installed-VSIX run and host suites on the exact release commit. Non-blocking: stale iteration-2 V2 paragraph, RFC 4122 vs 9562 wording, v6.0.13 deferrals, test:node flakiness on a shared machine. VETOs #917 and #918 and all prior history unchanged. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED. No merge, tag or publication.
 
 ---
+
+### Entry #920: GOVERNANCE DECISION - v6.0.12 G4 disposition (deferral to v6.0.13) - ACCEPTED
+
+**Timestamp**: 2026-11-09T23:29:17Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-09T1958-754dfc`
+**Risk Grade**: L3
+**Verdict**: ACCEPT
+**Target**: `docs/releases/V6_0_12_G4_DISPOSITION.md` (13d92f26, SHA-256 15db8964...118b)
+**Report**: `.agent/staging/G4_DISPOSITION_REVIEW.md` (Content Hash = SHA256 of the review, LF-normalized)
+**Gate**: none (disposition review; recorded here per the PASS #919 procedure)
+
+**Content Hash**: `be810493d46950c37dae69a4ebd6f45691c38555637834ab20da3732439be050`
+**Previous Hash**: `bef24531f3af7d1e40dee826b79d7b872c5dd619809aa758d3e39dc24b91ccd5`
+**Chain Hash (Merkle seal)**: `cdf02922dc0890a77a8c5d65c8bb97bccf73848439c0bbf78af58e211ecc12fa`
+
+**Decision**: G4 RELEASE DISPOSITION ACCEPTED by the independent Judge for v6.0.12 only. Owner decision of 2026-11-09 (responsible owner Knapp-Kevin): defer the TPM-backed checkpoint signing and RFC 3161 independent witness (#467, G4) to v6.0.13; the deferral expires at the v6.0.13 release or on 2026-12-09, whichever comes first, read strictly: it cannot cover any v6.0.12 publication dated 2026-12-09 or later in any time zone and never covers another release. Decision record docs/releases/V6_0_12_G4_DISPOSITION.md at 13d92f26, SHA-256 of the committed file 15db89647f398b84b4ea536bf70c2d96e27147a7a2eb94ed204ee75df0b6118b (4806 bytes); RC1 checklist item 81 (PR #631) amended to cite it, original obligation retained. Review .agent/staging/G4_DISPOSITION_REVIEW.md (this entry's Content Hash). Conditions: the release seal cites the same decision SHA-256; any change to the decision file voids this acceptance until re-reviewed; every preserved ledger-verification and release gate still applies on the exact release commit; this acceptance is not a release GO. Residual risk accepted: no independent witness of the complete ledger bytes (owner-controlled chain and Git history only). No TPM key, TSA or G4 code exists. Historical limits unchanged: disclosed breaks at #340 and #382 and older numbering residue; October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED. Audit PASS #919 and VETOs #915, #917, #918 unchanged.
+
+---
