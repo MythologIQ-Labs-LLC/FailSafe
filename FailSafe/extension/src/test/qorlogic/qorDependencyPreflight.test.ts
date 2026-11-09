@@ -1,7 +1,7 @@
 import { strict as assert } from 'assert';
 import type { ResolvedInterpreter } from '../../qorlogic/PythonInterpreterResolver';
 import type { InstallerRun, InstallerRunResult } from '../../qorlogic/QorLogicPackageInstaller';
-import { preflightFrozenDependencies } from '../../qorlogic/qorDependencyPreflight';
+import { preflightFrozenDependencies, checkInstalledDependencies } from '../../qorlogic/qorDependencyPreflight';
 
 const py: ResolvedInterpreter = {
   ok: true, command: 'python', args: ['-3'], version: '3.13.5', source: 'probe',
@@ -62,5 +62,52 @@ suite('#463: frozen wheel offline dependency preflight', () => {
       assert.equal(out.error, 'dependency-preflight-failed');
       assert.equal(out.details?.length, 1000);
     }
+  });
+});
+
+
+suite('#463: existing frozen wheel dependency health', () => {
+  test('read-only pip check success enables readiness', async () => {
+    let calls = 0;
+    const run: InstallerRun = async (cmd, args) => {
+      calls++;
+      assert.equal(cmd, 'python');
+      assert.deepEqual([...args], ['-3', '-P', '-m', 'pip', '--isolated', 'check']);
+      return result(0, { stdout: 'No broken requirements found.' });
+    };
+    assert.deepEqual(await checkInstalledDependencies(py, run, 30_000), { ok: true });
+    assert.equal(calls, 1);
+  });
+
+  test('missing jsonschema or PyYAML never counts as a ready frozen wheel', async () => {
+    const run: InstallerRun = async () => result(1, {
+      stdout: 'qor-logic 0.176.1 requires jsonschema, which is not installed.',
+    });
+    assert.deepEqual(await checkInstalledDependencies(py, run, 30_000), {
+      ok: false, error: 'dependencies-unsatisfied',
+      details: 'qor-logic 0.176.1 requires jsonschema, which is not installed.',
+    });
+  });
+
+  test('unknown pip check state fails closed on timeout and spawn errors', async () => {
+    for (const failure of [
+      result(null, { timedOut: true }),
+      result(null, { spawnError: 'ENOENT' }),
+      result(null),
+    ]) {
+      const run: InstallerRun = async () => failure;
+      assert.deepEqual(await checkInstalledDependencies(py, run, 200),
+        { ok: false, error: 'dependency-check-unavailable' });
+    }
+  });
+
+  test('subprocess throws and large diagnostics fail closed', async () => {
+    const throwing: InstallerRun = async () => { throw new Error('unavailable'); };
+    assert.deepEqual(await checkInstalledDependencies(py, throwing, 200),
+      { ok: false, error: 'dependency-check-unavailable' });
+    const noisy: InstallerRun = async () => result(1, { stderr: 'x'.repeat(2000) });
+    const status = await checkInstalledDependencies(py, noisy, 200);
+    assert.equal(status.ok, false);
+    if (!status.ok) assert.equal(status.details?.length, 1000);
   });
 });
