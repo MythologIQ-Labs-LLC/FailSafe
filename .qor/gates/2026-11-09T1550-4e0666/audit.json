@@ -1,66 +1,34 @@
 {
   "phase": "audit",
   "session_id": "2026-11-09T1550-4e0666",
-  "ts": "2026-11-09T16:25:15Z",
+  "ts": "2026-11-09T17:09:32Z",
   "target": ".failsafe/governance/plans/plan-v6012-633-frozen-qor-and-agent-refusal.md",
-  "verdict": "VETO",
+  "verdict": "PASS",
   "report_path": ".agent/staging/AUDIT_REPORT.md",
   "risk_grade": "L3",
-  "findings_categories": [
-    "razor-overage",
-    "test-failure",
-    "feature-test-undeclared",
-    "specification-drift",
-    "macro-architecture"
-  ],
-  "target_content_hash": "2be0778197231dd245fd2c5b47ae0f08d8fa0324318375c1876d329bc41c7532",
+  "findings_categories": [],
+  "target_content_hash": "19585ff1d868da3cc84b789edc045e4a3b821dd4459d27cfc528dd503c890148",
   "reviews_remediate_gate": null,
-  "ledger_entry": 915,
-  "ledger_chain_hash": "0370a8d88c508781aa91178b050bf9275fe27a95384f4b43921bd1089deaef9d",
-  "report_content_hash": "04c65db54ffcf147d2b8940077d90065e3fb6f6bdd2fc45d16f806dedef82783",
-  "audited_code": "3d722d02..7bb330ee",
+  "ledger_entry": 916,
+  "ledger_chain_hash": "a9ba65eb83136ab52438b89f0fa70cebaf588abf70140c541a1157879607be1a",
+  "report_content_hash": "b86c9a9c04ee3daaacf4596e17068895bc5baf505d025a7f45d8ddec186f5b9c",
+  "audited_code": "3d722d02..d7b3c837",
   "ordering": "post-implementation, pre-integration audit under declared ordering inversion; not a pre-implementation verdict",
-  "mode": "solo; Option B fresh-context independent auditor; codex-plugin shortfall eb96b713",
+  "mode": "solo; Option B fresh-context independent auditor; codex-plugin shortfall b1a4e6c4",
   "steps_not_run": [
     "sg_closure_lint (tool crash: expects qor/references relative to repo root)",
     "version_applicability.validate (no pyproject.toml; manual check 6.0.12 > v6.0.11)",
-    "prose_test_lint (no tests/ dir)",
+    "prose_test_lint (no tests/ dir; vacuous)",
     "delivery-branch open-for-merges operator confirmation (non-interactive)",
-    "VS Code host suites/test-ui/package not re-executed by auditor"
+    "VS Code host suites, package, validate:vsix, installed-VSIX #475, e2e463, conformance not re-executed by auditor"
   ],
-  "violations": [
-    {
-      "id": "V1",
-      "category": "razor-overage",
-      "location": "FailSafe/extension/src/qorlogic/qorHostReceiptVerify.ts:39-117 (+8 functions, 3 files)"
-    },
-    {
-      "id": "V2",
-      "category": "test-failure",
-      "location": "FailSafe/extension/src/test/integrations/agent-cli/agent-os-boundary.test.cjs:8-58; plan FIT row line 104"
-    },
-    {
-      "id": "V3",
-      "category": "feature-test-undeclared",
-      "location": "plan line 108 (rows 105, 107 partial)"
-    },
-    {
-      "id": "V4",
-      "category": "specification-drift",
-      "location": "plan lines 7, 11; docs/PROCESS_SHADOW_GENOME_UPSTREAM.md:1 (gitignored)"
-    },
-    {
-      "id": "V5",
-      "category": "macro-architecture",
-      "location": "FailSafe/extension/src/qorlogic/boundedHostRecord.ts:146-179 vs qorHostReceiptVerify.ts:44-75"
-    }
-  ],
+  "violations": [],
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
-    "human_oversight": "veto",
-    "ts": "2026-11-09T16:25:15Z"
+    "human_oversight": "pass",
+    "ts": "2026-11-09T17:09:32Z"
   }
 }

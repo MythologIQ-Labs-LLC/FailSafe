@@ -35652,3 +35652,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6012-633-frozen-qor-and-agent-refusal.md iteration 1 (plan sha256 2be0778197231dd245fd2c5b47ae0f08d8fa0324318375c1876d329bc41c7532; code 3d722d02..7bb330ee). Independent Option B fresh-context audit, solo mode (codex-plugin shortfall eb96b713). Post-implementation, pre-integration review under the plan's declared ordering inversion; not a pre-implementation verdict. Security and OWASP passes clean; #475 fails closed and #463 hash-pinned offline install with receipt-bound success are substantively sound; test:node 946/0 and the #463/#475 mocha suites 102/0 re-run by the auditor. VETO grounds: V1 razor-overage (new verifyHostInstallReceipt 79 lines and depth 4, copyAndVerify depth 4, installHost 53, createScaffoldWithWebOptions 50, stepQorLogicPackage 46, aggregateReport 41, createInstallSkillsHandler 41, registerAgentCliCommands 54; integration-catalog.ts, agent-cli-core.ts and qor-conformance-probe.cjs grown past 250); V2 test-failure (FIT row 1 cites the presence-only source scan agent-os-boundary.test.cjs; no in-repo behavioral test of command-level refusal); V3 feature-test-undeclared (FIT row unsupported frozen operations has no test_path); V4 specification-drift by self-application (plan says severity-2 gate_override, recorded b9f0a002 is severity 1 in a gitignored file; plan says head recorded in gate artifact, it is not); V5 macro-architecture (duplicated receipt readers boundedHostRecord.ts and qorHostReceiptVerify.ts). October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED and are neither closed nor reinterpreted; this scope is distinct. Next: /qor-refactor, /qor-organize, Governor amends plan text, then re-run /qor-audit. No merge, tag or publication.
 
 ---
+
+### Entry #916: GATE TRIBUNAL - plan-v6012-633-frozen-qor-and-agent-refusal (iteration 2) - PASS
+
+**Timestamp**: 2026-11-09T17:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-09T1550-4e0666`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6012-633-frozen-qor-and-agent-refusal.md`
+**Report**: `.agent/staging/AUDIT_REPORT.md` (Content Hash = SHA256 of the report, LF-normalized)
+**Gate**: `.qor/gates/2026-11-09T1550-4e0666/audit.json`
+
+**Content Hash**: `b86c9a9c04ee3daaacf4596e17068895bc5baf505d025a7f45d8ddec186f5b9c`
+**Previous Hash**: `0370a8d88c508781aa91178b050bf9275fe27a95384f4b43921bd1089deaef9d`
+**Chain Hash (Merkle seal)**: `a9ba65eb83136ab52438b89f0fa70cebaf588abf70140c541a1157879607be1a`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6012-633-frozen-qor-and-agent-refusal.md iteration 2 (plan sha256 19585ff1d868da3cc84b789edc045e4a3b821dd4459d27cfc528dd503c890148; code 3d722d02..d7b3c837, remediation bcfd2aa7). Independent Option B fresh-context audit, solo mode (codex-plugin shortfall b1a4e6c4). Post-implementation, pre-integration review under the plan's declared ordering inversion; not a pre-implementation verdict and nothing backdated. Iteration-1 findings V1-V5 (Entry #915) all closed: V1 every touched function <=40 lines and depth <=3 (two disclosed pre-existing, not grown), grown files back under cap or below RC1 size; V2 new behavioral agent-cli-command-refusal.test.cjs, mutation-verified by the auditor (config read before guard and removed guard each fail 2/3); V3 every FIT row names existing test paths; V4 plan text corrected (gate_override b9f0a002 severity 1, gitignored local file; head-in-gate claim removed); V5 single readBoundedReceipt and single runQorInstall. Remediation judged behavior-preserving; no test weakened. Auditor re-ran compile, lint 0 errors, test:node 949/0, citation-parity, runner-coverage, #463/#475 mocha 117/0, Playwright 253/0. Non-blocking: pre-existing nested ternary in buildIntegrationStatus; plan line-count slips 166/161 vs 165/160; VS Code 1.145.2, package, validate:vsix, installed-VSIX #475 and conformance not re-run on the post-remediation tree and must be re-run before any seal. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED and are neither closed nor reinterpreted. Next: /qor-substantiate under separate owner authorization. No merge, tag or publication.
+
+---
