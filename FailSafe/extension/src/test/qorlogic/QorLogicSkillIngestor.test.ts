@@ -1,4 +1,5 @@
 import { strict as assert } from 'assert';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -169,10 +170,11 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
 
     const result = await ingestor.ingest({ hosts: ['claude', 'codex'], scope: 'repo' });
 
-    assert.deepEqual(result.installedHosts, ['codex']);
-    assert.equal(result.failures.length, 1);
+    assert.deepEqual(result.installedHosts, []);
+    assert.equal(result.failures.length, 2);
     assert.equal(result.failures[0].host, 'claude');
     assert.match(result.failures[0].error, /claude broke/);
+    assert.deepEqual(result.failures[1], { host: 'codex', error: 'install-receipt-missing' });
     assert.equal(result.ok, false);
   });
 
@@ -198,9 +200,10 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
       installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
     );
 
-    await ingestor.ingest({ hosts: ['claude'], scope: 'global' });
-
-    assert.equal(calls[0].args[calls[0].args.indexOf('--scope') + 1], 'global');
+    const out = await ingestor.ingest({ hosts: ['claude'], scope: 'global' });
+    assert.equal(out.ok, false);
+    assert.equal(out.failures[0].error, 'global-scope-receipt-unverified');
+    assert.equal(calls.length, 0, 'unverified global scope must not run Python');
   });
 });
 
@@ -218,11 +221,15 @@ suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
   function fakeInstallRecord(host: string, base: string, files: string[]): void {
     const baseDir = path.join(withTmpDir(), `.${host}`);
     fs.mkdirSync(baseDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(baseDir, '.qorlogic-installed.json'),
-      JSON.stringify({ files: files.map((p) => ({ path: path.join(baseDir, p), sha256: 'fake' })) }),
-      'utf-8',
-    );
+    const entries = files.map((rel) => {
+      const file = path.join(baseDir, rel);
+      const bytes = Buffer.from(`# ${rel}\n`);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, bytes);
+      return { path: file, sha256: createHash('sha256').update(bytes).digest('hex') };
+    });
+    fs.writeFileSync(path.join(baseDir, '.qorlogic-installed.json'),
+      JSON.stringify({ files: entries }), 'utf-8');
   }
 
   test('reports skillCount + destinations from the install record after successful CLI run', async () => {
@@ -282,9 +289,10 @@ suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
 
     const result = await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
 
-    assert.equal(result.hostStatuses[0].installed, false);
-    assert.equal(result.hostStatuses[0].fileCount, 0);
-    assert.deepEqual(result.hostStatuses[0].destinations, []);
+    assert.equal(result.ok, false, 'zero-exit without receipt is not an install');
+    assert.deepEqual(result.hostStatuses, []);
+    assert.deepEqual(result.installedHosts, []);
+    assert.deepEqual(result.failures, [{ host: 'claude', error: 'install-receipt-missing' }]);
   });
 });
 
