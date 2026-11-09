@@ -130,7 +130,7 @@ suite('Settings cross-component coherence (FX-MONITOR-COHERENCE)', () => {
 // ---------- Track C additions (Phase 60 §3) ----------
 // Governance mode escalation card + qor-logic version warning surfacing.
 
-interface HubLike { governanceModeState?: { mode: string; defaulted: boolean }; qorLogic?: { versionStatus: { installed: string | null; minimum: string; meetsFloor: boolean } }; version?: string }
+interface HubLike { governanceModeState?: { mode: string; defaulted: boolean }; qorLogic?: { versionStatus: { installed: string | null; minimum: string; meetsFloor: boolean } }; bootstrapState?: { qorLogicInstall?: { frozenTarget: string } }; version?: string }
 
 function trackCStore(): any {
   return {
@@ -182,36 +182,46 @@ suite('Settings Track C — governance mode + qor version surface', () => {
     assert.match(html, /data-governance-mode="enforce"/);
   });
 
-  test('qor-logic version warning shown when meetsFloor:false', async () => {
+  test('#463: warning for installed version below the old floor', async () => {
     const html = await paintTrackCSettings({
       governanceModeState: { mode: 'observe', defaulted: true },
+      bootstrapState: { qorLogicInstall: { frozenTarget: '0.176.1' } },
       qorLogic: { versionStatus: { installed: '0.1.2', minimum: '0.2.0', meetsFloor: false } },
     });
     assert.match(html, /cc-qor-version-warning/);
-    assert.match(html, /qor-logic Python package version below minimum/);
-    assert.match(html, /Installed:\s*<strong>0\.1\.2<\/strong>/);
-    assert.match(html, /minimum required:\s*<strong>0\.2\.0<\/strong>/);
+    assert.match(html, /frozen Qor-logic package/);
+    assert.match(html, /Installed:\\s*<strong>0\\.1\\.2<\\/strong>/);
+    assert.match(html, /frozen target:\\s*<strong>0\\.176\\.1<\\/strong>/);
   });
 
-  test('qor-logic version warning hidden when meetsFloor:true', async () => {
+  test('#463: above-floor but non-frozen version still warns without suggesting auto-upgrade', async () => {
     const html = await paintTrackCSettings({
-      governanceModeState: { mode: 'observe', defaulted: true },
-      qorLogic: { versionStatus: { installed: '0.3.0', minimum: '0.2.0', meetsFloor: true } },
+      bootstrapState: { qorLogicInstall: { frozenTarget: '0.176.1' } },
+      qorLogic: { versionStatus: { installed: '0.177.0', minimum: '0.2.0', meetsFloor: true } },
     });
-    assert.ok(!/cc-qor-version-warning/.test(html), 'warning card must be absent when meetsFloor:true');
+    assert.match(html, /cc-qor-version-warning/);
+    assert.match(html, /No automatic upgrade, downgrade or network install/);
   });
 
-  test('qor-logic version warning hidden when versionStatus undefined', async () => {
-    const html = await paintTrackCSettings({ governanceModeState: { mode: 'observe', defaulted: true } });
-    assert.ok(!/cc-qor-version-warning/.test(html), 'warning card must be absent when versionStatus is undefined');
-  });
-
-  test('not-installed surfaced when installed:null', async () => {
+  test('#463: exact frozen version has no mismatch warning', async () => {
     const html = await paintTrackCSettings({
-      governanceModeState: { mode: 'observe', defaulted: true },
+      bootstrapState: { qorLogicInstall: { frozenTarget: '0.176.1' } },
+      qorLogic: { versionStatus: { installed: '0.176.1', minimum: '0.2.0', meetsFloor: true } },
+    });
+    assert.ok(!/cc-qor-version-warning/.test(html));
+  });
+
+  test('warning hidden when versionStatus undefined', async () => {
+    const html = await paintTrackCSettings({ governanceModeState: { mode: 'observe', defaulted: true } });
+    assert.ok(!/cc-qor-version-warning/.test(html));
+  });
+
+  test('#463: missing or unverified install is not described as ready', async () => {
+    const html = await paintTrackCSettings({
+      bootstrapState: { qorLogicInstall: { frozenTarget: '0.176.1' } },
       qorLogic: { versionStatus: { installed: null, minimum: '0.2.0', meetsFloor: false } },
     });
-    assert.match(html, /Installed:\s*<strong>not installed<\/strong>/);
+    assert.match(html, /Installed:\\s*<strong>missing or unverified<\\/strong>/);
   });
 });
 
