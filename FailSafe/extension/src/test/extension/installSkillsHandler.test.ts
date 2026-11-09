@@ -109,6 +109,29 @@ suite('createInstallSkillsHandler', () => {
     }
   });
 
+  test('#463: empty, duplicate and unknown runtime host requests never execute Python', async () => {
+    for (const hosts of [
+      [],
+      ['claude', 'claude'],
+      ['__proto__'],
+    ]) {
+      const fake = new FakeIngestor();
+      let pythonCalls = 0;
+      let pipCalls = 0;
+      fake.probePython = async () => { pythonCalls++; throw Error('unexpected Python process'); };
+      fake.ensurePackageInstalled = async () => { pipCalls++; throw Error('unexpected pip install'); };
+      const handler = createScaffoldWithWebOptions(asIngestor(fake));
+      const result = await handler(hosts as QorLogicHost[], 'repo', undefined, { operationId: 'host-guard' });
+      assert.equal(result.ok, false);
+      assert.deepEqual(result.invocations.map((i) => i.phase), ['qorlogic-install']);
+      assert.match(result.invocations[0].error ?? '', /host-selection-(?:empty|duplicate|unsupported)/);
+      assert.equal(result.invocations[0].operationId, 'host-guard');
+      assert.equal(pythonCalls, 0);
+      assert.equal(pipCalls, 0);
+      assert.equal(fake.installCalls.length, 0);
+    }
+  });
+
   test('#463: global Console operation fails before Python, pip or host writes', async () => {
     const fake = new FakeIngestor();
     let pythonCalls = 0;
