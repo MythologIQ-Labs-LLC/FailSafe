@@ -42,7 +42,23 @@ export async function runPipStep(
 ): Promise<QorLogicInstallInvocation> {
   emit({ phase: 'pip-install', status: 'running', startedAt: new Date().toISOString() }, onProgress);
   const inv = await runInstallStep({ phase: 'pip-install' }, async () => {
-    const result = await ingestor.ensurePackageInstalled();
+    let result = await ingestor.ensurePackageInstalled();
+    if (!result.ok && result.error === 'verified-wheel-required') {
+      // #463: require local wheel choice AND explicit operator confirmation.
+      // Never silently download or upgrade from a configured pip index.
+      const selected = await vscode.window.showOpenDialog({
+        canSelectFiles: true, canSelectFolders: false, canSelectMany: false,
+        filters: { "Python wheel": ["whl"] },
+        openLabel: "Select Qor-logic 0.176.1 verified wheel",
+      });
+      if (!selected?.length) throw new Error('verified-wheel-required: selection cancelled');
+      const consent = await vscode.window.showWarningMessage(
+        'Install frozen Qor-logic 0.176.1 from this wheel? SHA-256 checked before an offline no-dependencies install.',
+        { modal: true }, 'Install verified wheel',
+      );
+      if (consent !== 'Install verified wheel') throw new Error('verified-wheel-required: operator declined');
+      result = await ingestor.ensurePackageInstalled(selected[0].fsPath);
+    }
     if (!result.ok) {
       const err = new Error(result.error) as Error & { stderrTail?: string };
       err.stderrTail = result.stderrTail;
