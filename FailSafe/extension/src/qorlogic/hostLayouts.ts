@@ -2,9 +2,9 @@
 // `qor.hosts.HostTarget` exactly so install + discovery + status detection
 // share one source of truth.
 //
-// MIN_QOR_LOGIC_VERSION must stay aligned with the qor-logic version this
-// install_map mirrors. The installer pins this floor on pip install and
-// surfaces violations via `verifyInstalledVersion()`.
+// MIN_QOR_LOGIC_VERSION remains the historical layout/read floor.
+// Installation is now exact, hash-pinned 0.176.1 with an independent installed
+// dependency health check; merely meeting this floor does not authorize writes.
 //
 // claude / codex / kilo-code: { skills/: base/skills, agents/: base/agents }
 // gemini:                     { commands/: base/commands }
