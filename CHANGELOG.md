@@ -9,23 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [6.0.12] - 2026-11-06
 
+### Added
+- Saved recordings can now be managed from the Console: a new opt-in control and Manage/Delete interface support local audio-vault storage. Each recording needs separate approval in VS Code before it is saved. Storage is limited to 256 MiB; recordings do not have an automatic retention deadline, so delete ones you no longer need (#465).
+
 ### Fixed
+- Concurrent Console startup requests now share the in-progress start instead of starting competing servers; stopping the Console cancels an in-progress start (#471).
+- Sentry issue imports refuse pagination links that change the previously approved project, environment or filter scope (#478).
+- Trust reporting no longer labels unverified checkpoints as verified, including the public trust response and related client typing (#470).
 - The Monitor sidebar and the SRE view now follow the theme chosen in the Console, in all six themes, and stay in step live: a change in the browser Console, the VS Code Settings UI or another window reaches every open Console and Monitor. The theme is kept in the VS Code setting `failsafe.console.theme`, so it survives Monitor reloads, window reloads and restarts, and it is applied before the page is drawn. Before, the Monitor kept a fixed color scheme, and a theme chosen in the browser Console never reached VS Code because the two never share browser storage. A theme chosen in an earlier version in this browser is moved to the setting once (#601).
 - Monitor and SRE text that uses status or accent colors stays readable on the light Pegasus theme; status colors keep their meaning (#601).
 
 ### Security
+- Bicameral tool calls refuse to proceed when the enforcement interceptor is absent or stale, or when its bound client/evaluator changes during a governance decision. Refusal returns an explicit unavailable/conflict result rather than silently running without enforcement (#474).
+- The release gate now treats unreadable or corrupted active intent evidence as blocking rather than interpreting it as approval (#474).
+- OpenHands observation import refuses a legacy lock file until that lock is resolved manually; it does not silently discard or bypass the lock (#474).
 - Only a Console page that VS Code opened can change the theme: the change needs the Console request guard (loopback, exact Origin, JSON) and a per-session key that VS Code adds to the Console link and the page removes from the address bar. Other Console pages show the theme read-only. The Monitor sidebar no longer takes its theme from the embedded page (#601).
 - Continue and Aider no longer start from FailSafe. FailSafe cannot yet run them inside an operating-system boundary, and a git worktree is not a sandbox, so **FailSafe: Run Continue (governed)** and **FailSafe: Run Aider (governed)** now refuse before reading settings or credentials, prompting, or probing the executable (`--version`); no process starts. The Integrations catalog shows both as disabled, and neither an enabled setting nor an earlier successful run can re-enable them (#475).
 - Qor-logic is installed only from a local copy of the frozen `qor_logic-0.176.1-py3-none-any.whl` that you select and confirm. FailSafe checks its pinned SHA-256 on a private copy, checks offline that its dependencies are already installed, installs it offline with no network or dependency download, and then requires `pip show` to report exactly 0.176.1 and `pip check` to pass. It no longer runs `pip install --upgrade` from PyPI, and it never replaces a different installed version (#463).
 - A Qor-logic skill install is reported as successful only when the CLI confirms it for that host and the confirmed file count matches the host's install receipt, with every listed file inside the host folder and matching its SHA-256. An unchanged earlier receipt, a forged or edited receipt, or a count mismatch is reported as a failure (#463).
 
 ### Changed
+- Integration catalog descriptions distinguish currently enforced capabilities from disabled or observational integrations. They no longer imply that an adapter prevents writes when it only observes them (#474).
 - Qor-logic options that the frozen 0.176.1 CLI does not support are no longer offered and are refused before Python runs: installing selected skills, global (user-level) installs, the install preview and the skill list (#463).
 
 ### Dependencies
 - Dependency updates merged after v6.0.11: glob 14.0.2 (#610), body-parser 2.4.0 (#611), @hono/node-server 2.1.5 (#597), qs 6.17.1, fast-uri 3.1.9 and undici 7.30.1 (#590, #595, #596, #598).
 
 ### Known Limitations
+- Security advisory under release qualification: the bundled production dependency zod 3.25.76 is affected by GHSA-mrhx-c7xc-m3w5 (HIGH). Its reachability and mitigations are being assessed; this entry is disclosure, not a completed risk acceptance or claim of safety. Release remains blocked until a documented remediation or authorized, evidence-backed risk decision is independently accepted.
+- Independent complete-ledger checkpoint witnessing with a TPM-backed signing key and RFC 3161 timestamp remains a proposed G4 design, not an implemented or verified release protection (#467). Any deferral needs an explicit recorded checklist decision and audit acceptance.
 - Temporary restriction (by design): running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
 - Temporary restriction (by design): selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).
 - Temporary restriction (by design): FailSafe does not install Qor-logic's Python dependencies (`jsonschema`, `PyYAML`); on a clean interpreter the install stops before changing anything until you install them (#463).
