@@ -1,0 +1,65 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-09T1958-754dfc",
+  "ts": "2026-11-09T19:58:05Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6012-release-governance.md",
+  "iteration": 1,
+  "change_class": "governance",
+  "doc_tier": "standard",
+  "pr_target": "release/v6.0.12-rc1-candidate-20261108-no-ci",
+  "originating_remediation": "GH #467, GH #619, v6.0.12 RC1 delta",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - retrospective review of the RC1 delta (v6.0.11..3d722d02) by group",
+    "Phase 2 - retrospective review of #619 release-PDF gate and byte-pinned brand sources",
+    "Phase 3 - G4 TPM-backed ledger-byte checkpoint with RFC 3161 witness (design; owner acceptance before implementation)",
+    "Phase 4 - release commit, seal and final packaging gates"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Retrospective review: RC1 delta and #619 implemented before audit (declared ordering inversion)",
+      "G4 gives tamper evidence and time ordering, not non-forgeability against the owner; RFC 3161 is not a public log",
+      "Frozen Qor-logic 15/19 conformance; tested-against stays 0.169.0"
+    ],
+    "non_goals": [
+      "No new extension features",
+      "No ledger history edit",
+      "No GOVERNANCE.md amendment (#627)"
+    ],
+    "exclusions": [
+      "No merge to main, tag or publish under this plan",
+      "No G4 key creation before owner acceptance"
+    ]
+  },
+  "ci_commands": [
+    "scripts/validate.ps1 -Version v6.0.12",
+    "npm ci",
+    "npm run compile",
+    "npm run lint",
+    "npm run test:node",
+    "npm run test:runner-coverage",
+    "npm run test:citation-parity",
+    "npm run build:package",
+    "npm test",
+    "npm run test:ui",
+    "npm run release:preflight",
+    "node scripts/package-all-targets.cjs --out dist-vsix --version 6.0.12",
+    "node scripts/build-release-notes-pdf.cjs --version 6.0.12 --out dist-vsix",
+    "node scripts/release-artifacts.cjs verify-set dist-vsix --version 6.0.12"
+  ],
+  "open_questions": [],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-11-09T19:58:05Z"
+  }
+}
