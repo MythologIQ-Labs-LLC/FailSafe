@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import type { QorLogicSkillIngestor, QorLogicHost, QorLogicScope } from '../qorlogic/QorLogicSkillIngestor';
 import { getQorLogicInstallStatus } from '../qorlogic/qorLogicInstallRecord';
+import { verifyHostInstallReceipt } from '../qorlogic/qorHostReceiptVerify';
+import { QOR_LOGIC_HOSTS, type QorLogicHost } from '../qorlogic/hostLayouts';
 import {
   type QorLogicInstallInvocation,
   type QorLogicInstallReport,
@@ -96,12 +98,16 @@ export async function runProvenanceStep(
   emit({ phase: 'provenance', status: 'running', startedAt: new Date().toISOString() }, onProgress);
   const inv = await runInstallStep({ phase: 'provenance' }, async () => {
     const status = getQorLogicInstallStatus(workspaceRoot);
-    const hostsVerified = status.hosts.filter((h) => h.installed).length;
+    // Presence of .qorlogic-installed.json is not evidence of file integrity.
+    const receipts = status.hosts
+      .filter((h) => QOR_LOGIC_HOSTS.includes(h.host as QorLogicHost))
+      .map((h) => verifyHostInstallReceipt(workspaceRoot, h.host as QorLogicHost))
+      .filter((v) => v.ok);
     return {
       summary: {
-        hostsVerified,
-        totalFiles: status.totalFiles,
-        destinations: [...status.destinations],
+        hostsVerified: receipts.length,
+        totalFiles: receipts.reduce((sum, v) => sum + (v.ok ? v.status.fileCount : 0), 0),
+        destinations: [...new Set(receipts.flatMap((v) => v.ok ? v.status.destinations : []))].sort(),
       },
     };
   });
