@@ -19,7 +19,8 @@ export interface QorLogicInstallInvocation {
   destination?: string;
   installedCount?: number;
   version?: string;
-  summary?: { hostsVerified: number; totalFiles: number; destinations: string[] };
+  summary?: { hostsVerified: number; totalFiles: number; destinations: string[];
+    verifiedHosts?: Array<{ host: QorLogicHost; fileCount: number }> };
   error?: string;
   stderrTail?: string;
   /** #538: the approved Console operation this step belongs to. */
@@ -71,42 +72,38 @@ export function aggregateReport(
   invocations: QorLogicInstallInvocation[],
 ): QorLogicInstallReport {
   const failures: Array<{ host: QorLogicHost; error: string }> = [];
-  const destinationSet = new Set<string>();
-  let reportedFiles = 0;
-  let successfulHosts = 0;
-  let provenance: QorLogicInstallInvocation['summary'] | undefined;
+  const successful = invocations.filter(
+    (i) => i.phase === 'qorlogic-install' && i.status === 'success',
+  );
+  const provenance = invocations.find(
+    (i) => i.phase === 'provenance' && i.status === 'success',
+  )?.summary;
   for (const inv of invocations) {
-    if (inv.phase === 'qorlogic-install') {
-      if (inv.status === 'success') {
-        successfulHosts += 1;
-        reportedFiles += inv.installedCount ?? 0;
-      }
-      if (inv.status === 'error' && inv.host) {
-        failures.push({ host: inv.host, error: inv.error ?? 'unknown-error' });
-      }
-    }
-    if (inv.phase === 'provenance' && inv.status === 'success') {
-      provenance = inv.summary;
+    if (inv.phase === 'qorlogic-install' && inv.status === 'error' && inv.host) {
+      failures.push({ host: inv.host, error: inv.error ?? 'unknown-error' });
     }
   }
-  // #463: no successful host install without corresponding on-disk, hashed
-  // provenance. A zero-exit subprocess is insufficient; partial reports
-  // without a provenance phase must not claim delivery.
-  const provenanceSufficient = successfulHosts === 0
-    || !!provenance && provenance.hostsVerified >= successfulHosts
-      && provenance.totalFiles >= reportedFiles;
+  // #463: a count of receipts can be from *other* hosts. Bind every claimed
+  // successful host to that specific host's on-disk file hash evidence.
+  const claimsVerified = successful.length === 0 || !!provenance?.verifiedHosts
+    && successful.every((inv) => {
+      const proof = provenance.verifiedHosts!.find((v) => v.host === inv.host);
+      return !!proof && proof.fileCount >= (inv.installedCount ?? 0)
+        && proof.fileCount > 0;
+    });
+  // Partial progress is still reported when one host fails but the other
+  // host has verified receipts. Without proof, report no installation.
+  const totalInstalled = claimsVerified
+    ? successful.reduce((sum, inv) => sum + (inv.installedCount ?? 0), 0)
+    : 0;
   const ok = invocations.every((i) => i.status === 'success')
-    && failures.length === 0 && provenanceSufficient;
-  // A successful operation reports only verified destination/count evidence.
-  // Failed runs retain diagnostics but do not claim completed installations.
-  if (ok && provenance && successfulHosts > 0) {
-    for (const d of provenance.destinations) destinationSet.add(d);
-  }
+    && failures.length === 0 && claimsVerified;
   return {
     ok,
     invocations,
-    totalInstalled: ok ? reportedFiles : 0,
-    destinations: [...destinationSet].sort(),
+    totalInstalled,
+    destinations: claimsVerified && provenance && successful.length > 0
+      ? [...new Set(provenance.destinations)].sort() : [],
     failures,
   };
 }
