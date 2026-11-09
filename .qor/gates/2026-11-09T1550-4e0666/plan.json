@@ -1,0 +1,61 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-09T1550-4e0666",
+  "ts": "2026-11-09T15:50:27Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6012-633-frozen-qor-and-agent-refusal.md",
+  "iteration": 1,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "release/v6.0.12-rc1-candidate-20261108-no-ci",
+  "originating_remediation": "GH #463, GH #475",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - #475 fail-closed agent refusal (no OS-enforced containment)",
+    "Phase 2 - #463 frozen Qor-logic 0.176.1 consumer (verified wheel, offline, receipt-bound success)",
+    "Phase 3 - integration repairs and truthful docs/release notes (source 011a546a)"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Frozen 0.176.1 fails 4/19 consumer-conformance checks upstream (no install --json; three ledger-prose tamper negatives, #467 G4); TESTED_AGAINST stays 0.169.0",
+      "Offline install does not provision jsonschema/PyYAML and is not transactionally rolled back",
+      "Aider/Continue execution unavailable until an audited OS-enforced boundary exists"
+    ],
+    "non_goals": [
+      "No #467 G4, #476 or #505 change",
+      "No ledger history edit",
+      "No frozen Qor-logic change"
+    ],
+    "exclusions": [
+      "No merge, tag or publish under this plan; release seal needs separate owner authorization"
+    ]
+  },
+  "ci_commands": [
+    "npm ci",
+    "npm run compile",
+    "npm run lint",
+    "npm run test:node",
+    "npm run test:runner-coverage",
+    "npm run test:citation-parity",
+    "npm run build:package",
+    "npm test",
+    "npm run test:ui",
+    "npm run release:preflight",
+    "npm run package",
+    "npm run validate:vsix"
+  ],
+  "open_questions": [],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-11-09T15:50:27Z"
+  }
+}
