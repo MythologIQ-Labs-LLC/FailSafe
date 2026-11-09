@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import type { QorLogicSkillIngestor, QorLogicHost, QorLogicScope } from '../qorlogic/QorLogicSkillIngestor';
-import { getQorLogicInstallStatus } from '../qorlogic/qorLogicInstallRecord';
 import { verifyHostInstallReceipt } from '../qorlogic/qorHostReceiptVerify';
 import { QOR_LOGIC_HOSTS } from '../qorlogic/hostLayouts';
 import {
@@ -97,12 +96,10 @@ export async function runProvenanceStep(
 ): Promise<QorLogicInstallInvocation> {
   emit({ phase: 'provenance', status: 'running', startedAt: new Date().toISOString() }, onProgress);
   const inv = await runInstallStep({ phase: 'provenance' }, async () => {
-    const status = getQorLogicInstallStatus(workspaceRoot);
-    // Presence of .qorlogic-installed.json is not evidence of file integrity.
-    const receipts = status.hosts
-      .filter((h) => h.installed && QOR_LOGIC_HOSTS.includes(h.host as QorLogicHost))
-      .map((h) => ({ host: h.host as QorLogicHost,
-        result: verifyHostInstallReceipt(workspaceRoot, h.host as QorLogicHost) }))
+    // Do not pre-read unbounded, attacker-controlled JSON through the Hub.
+    // The size-bounded verifier must be the first code to open each receipt.
+    const receipts = QOR_LOGIC_HOSTS
+      .map((host) => ({ host, result: verifyHostInstallReceipt(workspaceRoot, host) }))
       .filter((entry) => entry.result.ok);
     return {
       summary: {
