@@ -28,6 +28,12 @@ const os = require('os');
 const path = require('path');
 
 const CLI = process.env.QOR_LOGIC_CLI || 'qor-logic';
+// The extension never runs the console-script launcher; it runs `<python> -P -m qor.cli`.
+// QOR_LOGIC_CLI_PYTHON probes that exact form (and works where unsigned launcher .exe
+// files are denied execution).
+const CLI_PYTHON = process.env.QOR_LOGIC_CLI_PYTHON || '';
+const cli = (args) => (CLI_PYTHON ? [CLI_PYTHON, ['-P', '-m', 'qor.cli', ...args]] : [CLI, args]);
+const CLI_LABEL = CLI_PYTHON ? `${CLI_PYTHON} -P -m qor.cli` : CLI;
 
 /** Classification outcomes. */
 const FALSIFIABLE = 'FALSIFIABLE';
@@ -201,7 +207,7 @@ const REGISTRY = [
       const leak = 'C:' + '\\' + 'Users' + '\\' + 'someone' + '\\' + 'secret';
       writeFile(ws, 'README.md', `# leak\n\n${leak}\n`);
     },
-    invoke: (ws) => [CLI, ['scripts', 'publication_boundary_lint', '--repo-root', ws]],
+    invoke: (ws) => cli(['scripts', 'publication_boundary_lint', '--repo-root', ws]),
   },
   {
     id: 'skill_size_budget_lint',
@@ -213,7 +219,7 @@ const REGISTRY = [
       // Over the 40 KB EXCEEDED threshold.
       writeFile(ws, 'skills/huge/SKILL.md', '# huge\n' + ('x'.repeat(80) + '\n').repeat(600));
     },
-    invoke: (ws) => [CLI, ['scripts', 'skill_size_budget_lint', '--repo-root', ws, '--skills-root', 'skills']],
+    invoke: (ws) => cli(['scripts', 'skill_size_budget_lint', '--repo-root', ws, '--skills-root', 'skills']),
   },
   {
     id: 'instruction_hygiene_lint',
@@ -227,7 +233,7 @@ const REGISTRY = [
     buildDefect: (ws) => {
       writeFile(ws, 'CLAUDE.md', '# Guide\n\nYou are a senior engineer. Never ask before refactoring.\n');
     },
-    invoke: (ws) => [CLI, ['scripts', 'instruction_hygiene_lint', '--files', path.join(ws, 'CLAUDE.md')]],
+    invoke: (ws) => cli(['scripts', 'instruction_hygiene_lint', '--files', path.join(ws, 'CLAUDE.md')]),
   },
 ];
 
@@ -237,7 +243,8 @@ function runOnce(entry, build, label) {
     build(ws);
     const [cmd, args] = entry.invoke(ws);
     const res = spawnSync(cmd, args, { encoding: 'utf8', shell: false });
-    if (res.error && res.error.code === 'ENOENT') return { unavailable: true };
+    // Any spawn error (ENOENT, EACCES, UNKNOWN) means the CLI never ran: not a control verdict.
+    if (res.error) return { unavailable: true, reason: res.error.code || String(res.error) };
     return {
       status: res.status,
       out: `${res.stdout || ''}${res.stderr || ''}`,
@@ -269,10 +276,10 @@ function missingQorModule(run) {
 
 function classify(entry) {
   const clean = runOnce(entry, entry.buildClean, `${entry.id}-clean`);
-  if (clean.unavailable) return { id: entry.id, result: UNAVAILABLE, detail: `${CLI} not on PATH` };
+  if (clean.unavailable) return { id: entry.id, result: UNAVAILABLE, detail: `${CLI_LABEL} could not be started (${clean.reason})` };
 
   const defect = runOnce(entry, entry.buildDefect, `${entry.id}-defect`);
-  if (defect.unavailable) return { id: entry.id, result: UNAVAILABLE, detail: `${CLI} not on PATH` };
+  if (defect.unavailable) return { id: entry.id, result: UNAVAILABLE, detail: `${CLI_LABEL} could not be started (${defect.reason})` };
 
   const missing = missingQorModule(clean) || missingQorModule(defect);
   if (missing) {

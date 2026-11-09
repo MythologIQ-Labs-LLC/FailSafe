@@ -124,7 +124,11 @@ test('T12: no production bare start outside the two deferred sites, and every py
   assert.equal(r1a.length, 2, `exactly the 2 deferred sites: ${r1a.join(', ')}`);
   assert.deepEqual(r2v, [], 'unguarded python -m/-c');
   assert.deepEqual(r2a, R2_ALLOW, 'the non-python -m/-c sites, by file and count');
-  assert.equal(r2g, 7, 'exactly 7 python sites carry -P');
+  // #463 (PR #633): the frozen-wheel install (pip show, pip --isolated install), the dependency
+  // preflight (pip --isolated install --dry-run, pip --isolated check) and the shared qor.cli runner
+  // add guarded sites; the old unbounded `pip install --upgrade` site is gone. A new site must still
+  // carry -P (asserted above), so this count is an inventory, not a relaxation.
+  assert.equal(r2g, 10, 'exactly 10 python sites carry -P');
 });
 
 // ---------------------------------------------------------------- R3 (review delta LD17)

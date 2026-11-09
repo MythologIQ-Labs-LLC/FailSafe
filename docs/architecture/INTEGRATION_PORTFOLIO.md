@@ -54,11 +54,11 @@ Test depth lists the depth labels of the contract's proving tests; `none` means 
 | [agent-config-injection](integrations/agent-config-injection.md) | Write one removable FailSafe governance block into each agent's instruction file | verified-shipped, shipped-inert | no | unit | COMPLETE | 2 |
 | [shield-receipts](integrations/shield-receipts.md) | Bind a SHIELD PASS check to the verified Seal commit of a Qor session | shipped-inert, proposed | no | unit | COMPLETE | 2 |
 | [agent-audit](integrations/agent-audit.md) | Flag risky MCP auto-approve, remote and shell posture in agent configs | verified-shipped, proposed | no | unit | COMPLETE | 2 |
-| [qor-logic-consumer](integrations/qor-logic-consumer.md) | Install qor-logic and read its artifacts with explicit states | verified-shipped | yes | unit | MAINTAIN | 2 |
+| [qor-logic-consumer](integrations/qor-logic-consumer.md) | Install the frozen qor-logic 0.176.1 offline from an operator-approved, hash-verified wheel and read its artifacts with explicit states | verified-shipped, main-unreleased | no | unit | MAINTAIN | 2 |
 | [dependency-admission-lint](integrations/dependency-admission-lint.md) | Warn on freshly published npm dependency versions | verified-shipped, proposed | yes | unit | COMPLETE | 2 |
 | [voice-pack](integrations/voice-pack.md) | Install a verified local speech pack on request, outside the base VSIX | verified-shipped, shipped-unverified | yes | unit | MAINTAIN | 2 |
-| [continue](integrations/continue.md) | Run Continue headless and review its change before it lands | verified-shipped, proposed | yes | unit | MAINTAIN | 2 |
-| [aider](integrations/aider.md) | Run Aider one-shot with auto-commit off and review its change before it lands | verified-shipped, proposed | yes | unit | MAINTAIN | 2 |
+| [continue](integrations/continue.md) | Run Continue headless and review its change before it lands; on main fail-closed (#475): no process starts without OS-enforced containment | shipped-inert, main-unreleased, proposed | no | none | MAINTAIN | 2 |
+| [aider](integrations/aider.md) | Run Aider one-shot with auto-commit off and review its change before it lands; on main fail-closed (#475): no process starts without OS-enforced containment | shipped-inert, main-unreleased, proposed | no | none | MAINTAIN | 2 |
 | [linear](integrations/linear.md) | Start governed work from one Linear issue with provenance, no write access | verified-shipped, shipped-inert, proposed | yes | unit, installed-vscode | MAINTAIN | 3 |
 | [sarif](integrations/sarif.md) | Offline import of SARIF scanner findings as idempotent risks | verified-shipped, proposed | no | unit | MAINTAIN | 3 |
 | [openhands](integrations/openhands.md) | Import a past OpenHands run as signed timeline evidence | verified-shipped, proposed | no | installed-vscode, unit | MAINTAIN | 3 |
@@ -90,10 +90,10 @@ Priority 1 is where a customer is exposed today (data leaves the machine without
 13. **agent-config-injection**: the injected text overstates enforcement (B256); the remove and bulk paths have no caller.
 14. **shield-receipts**: a credibility asset whose every path is unreachable (B216; the damaged ledger, #467, blocks it).
 15. **agent-audit**: reads five workspace-relative files only, so a clean result says little.
-16. **qor-logic-consumer**: hardened and tested; its Console install path has no server-side confirmation.
+16. **qor-logic-consumer**: hardened and tested; on main (#463) it installs only the hash-pinned 0.176.1 wheel offline after operator approval, and conformance with 0.176.1 is not attested (the tested-against version is still 0.169.0).
 17. **dependency-admission-lint**: dependency names go to a third party on every seal, with no switch.
 18. **voice-pack**: works with stubbed downloads; the old organization slug was fixed in #538 (F07, B261), and no voice-pack release is published yet (B287).
-19. **continue** and **aider**: built and unit-tested; no test runs the real CLIs, and Aider has no tool allowlist.
+19. **continue** and **aider**: built and unit-tested in v6.0.8; on main both commands are fail-closed (#475) and start no process, because no OS-enforced containment exists and a git worktree is not a process sandbox; no test runs the real CLIs, and Aider has no tool allowlist.
 20. **linear**, **sarif**, **openhands**, **acp-devin**, **agt**, **tracker-manifest**, **git-bootstrap**: built and tested with small gaps; maintain.
 21. **governance-webhook** and **qor-runtime**: governance-webhook was retired by B288 on 2026-10-19 (its sender, tests and bootstrap field are removed; the contract is kept as history); before that it had no caller on main, and qor-runtime was retired by B289 on 2026-10-19 (its client, three routes, hub entry and API ticker are removed and its settings deprecated, with the four other than apiKey removed later by B326; before that it could not be enabled on main); the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 (done) and B289 (done), each a separate PR.
 
@@ -134,11 +134,11 @@ Computed by the check on every run; it fails when a number here differs from the
 
 | Measure | Count |
 |---|---|
-| `scan-1-files` | 55 |
-| `scan-1-call-sites` | 106 |
+| `scan-1-files` | 54 |
+| `scan-1-call-sites` | 104 |
 | `scan-2-files` | 7 |
-| `browser-files` | 40 |
-| `browser-targets` | 89 |
+| `browser-files` | 39 |
+| `browser-targets` | 87 |
 | `loopback-targets` | 1 |
 | `catalog-ids` | 11 |
 | `integration-entries` | 22 |

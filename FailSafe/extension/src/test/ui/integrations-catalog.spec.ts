@@ -84,6 +84,8 @@ test.describe('#479 — catalog status from recorded evidence', () => {
         [on('slack')]: true, 'failsafe.integrations.slack.webhookUrl': true,
         [on('linear')]: true, 'failsafe.integrations.linear.apiKey': true,
         [on('sarif')]: true,
+        [on('openhands')]: true,
+        // #475: enabled in settings with a healthy legacy receipt, yet must render disabled.
         [on('aider')]: true,
       },
       integrationHealth: {
@@ -92,6 +94,7 @@ test.describe('#479 — catalog status from recorded evidence', () => {
         slack: { result: 'connected', checkedAt: now },
         linear: { result: 'contract-verified', checkedAt: old },
         sarif: { result: 'contract-verified', checkedAt: now },
+        aider: { result: 'connected', checkedAt: now },
       },
     });
     await page.goto(`${controller.url}/command-center.html`);
@@ -104,7 +107,10 @@ test.describe('#479 — catalog status from recorded evidence', () => {
     await expect(card('slack').locator('.cc-intcat-pill-observed')).toHaveText('Last service reached');
     await expect(card('linear').locator('.cc-intcat-pill-stale')).toHaveText('Stale');
     await expect(card('sarif').locator('.cc-intcat-pill-observed')).toHaveText('Last import parsed');
-    await expect(card('aider').locator('.cc-intcat-pill-configured')).toHaveText('Configured · unverified');
+    await expect(card('openhands').locator('.cc-intcat-pill-configured')).toHaveText('Configured · unverified');
+    // #475: no OS-enforced containment, so neither the setting nor the old receipt re-enables Aider.
+    await expect(card('aider').locator('.cc-intcat-pill-disabled')).toHaveText('Disabled');
+    await expect(card('aider').locator('.cc-intcat-pill-observed')).toHaveCount(0);
     await expect(card('sentry').locator('.cc-intcat-pill-observed')).toHaveCount(0);
     await expect(card('jira').locator('.cc-intcat-caps').first()).toHaveText('Implemented path (not live-qualified): preview issues, create intent drafts');
     await expect(page.locator('.cc-intcat-sub')).toContainText('1 failing');

@@ -100,6 +100,26 @@ function ensureSkillDir(host: QorLogicHost, skillName: string, ws: string): stri
   return skillDir;
 }
 
+/**
+ * Simulate `qorlogic install` writing the install record file. The CLI
+ * creates `<base>/.qorlogic-installed.json` containing `{ files: [...] }`.
+ * Our ingestor invokes the CLI via subprocess (mocked here); after a
+ * successful return, it reads the record to determine what landed where.
+ */
+function fakeInstallRecord(host: string, base: string, files: string[]): void {
+  const baseDir = path.join(withTmpDir(), `.${host}`);
+  fs.mkdirSync(baseDir, { recursive: true });
+  const entries = files.map((rel) => {
+    const file = path.join(baseDir, rel);
+    const bytes = Buffer.from(`# ${rel}\n`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, bytes);
+    return { path: file, sha256: createHash('sha256').update(bytes).digest('hex') };
+  });
+  fs.writeFileSync(path.join(baseDir, '.qorlogic-installed.json'),
+    JSON.stringify({ files: entries }), 'utf-8');
+}
+
 suite('QorLogicSkillIngestor: command dispatch', function () {
   this.timeout(10000);
   setup(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingestor-')); });
@@ -288,25 +308,6 @@ suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
   setup(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingestor-')); });
   teardown(() => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* */ } });
 
-  /**
-   * Simulate `qorlogic install` writing the install record file. The CLI
-   * creates `<base>/.qorlogic-installed.json` containing `{ files: [...] }`.
-   * Our ingestor invokes the CLI via subprocess (mocked here); after a
-   * successful return, it reads the record to determine what landed where.
-   */
-  function fakeInstallRecord(host: string, base: string, files: string[]): void {
-    const baseDir = path.join(withTmpDir(), `.${host}`);
-    fs.mkdirSync(baseDir, { recursive: true });
-    const entries = files.map((rel) => {
-      const file = path.join(baseDir, rel);
-      const bytes = Buffer.from(`# ${rel}\n`);
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, bytes);
-      return { path: file, sha256: createHash('sha256').update(bytes).digest('hex') };
-    });
-    fs.writeFileSync(path.join(baseDir, '.qorlogic-installed.json'),
-      JSON.stringify({ files: entries }), 'utf-8');
-  }
 
   test('reports skillCount + destinations from the install record after successful CLI run', async () => {
     const installer = new FakeInstaller();

@@ -30,6 +30,17 @@ const { defaultInstallerRun, QorLogicPackageInstaller } = req('qorlogic', 'QorLo
 const { defaultRun } = req('qorlogic', 'PythonInterpreterResolver.js');
 const { QorLogicSkillIngestor } = req('qorlogic', 'QorLogicSkillIngestor.js');
 const { QorScriptInvoker } = req('qorlogic', 'substrate', 'QorScriptInvoker.js');
+const { FROZEN_QOR_LOGIC_VERSION } = req('qorlogic', 'hostLayouts.js');
+// #463: installHost now gates on the frozen package first. This stand-in reports the
+// exact frozen version as installed and dependency-healthy, so the qor.cli install
+// invocation itself is still reached and its interpreter is still asserted.
+const frozenReadyInstaller = {
+  isInstalled: async () => true,
+  install: async () => { throw new Error('install must not run'); },
+  version: async () => FROZEN_QOR_LOGIC_VERSION,
+  verifyInstalledVersion: async () => ({ installed: FROZEN_QOR_LOGIC_VERSION, minimum: FROZEN_QOR_LOGIC_VERSION, meetsFloor: true, testedAgainst: FROZEN_QOR_LOGIC_VERSION, matchesTested: true }),
+  verifyInstalledDependencies: async () => ({ ok: true }),
+};
 const { loadShadowGenome } = req('qorlogic', 'shadow-genome-client.js');
 let runQorlogicCli;
 try { ({ runQorlogicCli } = req('qorlogic', 'qorCliRun.js')); } catch { /* b66a32d8: the closure body is reproduced below */ }
@@ -95,7 +106,7 @@ test('T11 precondition: a real Python 3.11+ is available and -m from the workspa
 test('T11: QorLogicSkillIngestor.installHost never imports from the workspace', async () => {
   clearMarks();
   recorded.length = 0;
-  const ing = new QorLogicSkillIngestor({}, resolver, ws, recordingInstallerRun, async () => {}, output);
+  const ing = new QorLogicSkillIngestor(frozenReadyInstaller, resolver, ws, recordingInstallerRun, async () => {}, output);
   await ing.installHost('claude', 'repo');
   assert.deepEqual(marks(), []);
   assert.ok(recorded.length >= 1 && recorded.every(guarded), `-P before -m: ${JSON.stringify(recorded)}`);

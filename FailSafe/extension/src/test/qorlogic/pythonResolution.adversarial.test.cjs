@@ -31,6 +31,17 @@ const { PythonInterpreterResolver, defaultRun } = req('qorlogic', 'PythonInterpr
 const { defaultInstallerRun, QorLogicPackageInstaller } = req('qorlogic', 'QorLogicPackageInstaller.js');
 const { QorLogicSkillIngestor } = req('qorlogic', 'QorLogicSkillIngestor.js');
 const { QorScriptInvoker } = req('qorlogic', 'substrate', 'QorScriptInvoker.js');
+const { FROZEN_QOR_LOGIC_VERSION } = req('qorlogic', 'hostLayouts.js');
+// #463: installHost now gates on the frozen package first. This stand-in reports the
+// exact frozen version as installed and dependency-healthy, so the qor.cli install
+// invocation itself is still reached and its interpreter is still asserted.
+const frozenReadyInstaller = {
+  isInstalled: async () => true,
+  install: async () => { throw new Error('install must not run'); },
+  version: async () => FROZEN_QOR_LOGIC_VERSION,
+  verifyInstalledVersion: async () => ({ installed: FROZEN_QOR_LOGIC_VERSION, minimum: FROZEN_QOR_LOGIC_VERSION, meetsFloor: true, testedAgainst: FROZEN_QOR_LOGIC_VERSION, matchesTested: true }),
+  verifyInstalledDependencies: async () => ({ ok: true }),
+};
 const { AdapterService } = req('roadmap', 'services', 'AdapterService.js');
 const { EventBus } = req('shared', 'EventBus.js');
 let te = {};
@@ -202,7 +213,7 @@ test('T13 POSIX attacker-writable PATH folder', { skip: WIN && 'POSIX modes' }, 
 test('T13 (a): PATH source through the skill ingestor never runs a planted interpreter', async () => {
   reset();
   const resolver = new PythonInterpreterResolver(emptyConfig, null, defaultRun);
-  const ing = new QorLogicSkillIngestor({}, resolver, ws, recRun, async () => {}, output);
+  const ing = new QorLogicSkillIngestor(frozenReadyInstaller, resolver, ws, recRun, async () => {}, output);
   await ing.installHost('claude', 'repo');
   noPlant();
   assert.ok(recorded.length >= 1);
@@ -222,7 +233,7 @@ test('T13 (b): PATH source through QorScriptInvoker never runs a planted interpr
 test('T13 (c): the py launcher resolves to the trusted py.exe, never the plant', { skip: !WIN && 'win32 launcher' }, async () => {
   reset();
   const resolver = { resolve: async () => ({ ok: true, command: 'py', args: ['-3'], version: '3.x', source: 'probe' }), invalidate() {} };
-  const ing = new QorLogicSkillIngestor({}, resolver, ws, recRun, async () => {}, output);
+  const ing = new QorLogicSkillIngestor(frozenReadyInstaller, resolver, ws, recRun, async () => {}, output);
   await ing.installHost('claude', 'repo');
   noPlant();
   assert.equal(recorded.length, 1);
@@ -304,7 +315,7 @@ test('T13 (i): with no trusted interpreter anywhere the result is the existing n
     const resolver = new PythonInterpreterResolver(emptyConfig, null, defaultRun);
     const r = await resolver.resolve();
     assert.deepEqual(r, { ok: false, reason: 'no-python-found' });
-    const ing = new QorLogicSkillIngestor({}, resolver, ws, recRun, async () => {}, output);
+    const ing = new QorLogicSkillIngestor(frozenReadyInstaller, resolver, ws, recRun, async () => {}, output);
     const h = await ing.installHost('claude', 'repo');
     assert.equal(h.error, 'no-python-found');
     assert.equal(recorded.length, 0, 'nothing was started');

@@ -271,10 +271,32 @@ suite('Command state mutations (setGovernanceMode, createIntent)', () => {
   });
 
   test('FX003 failsafe.bootstrap — handler resolves cleanly', async function () {
-    // bootstrap shells out to qor-logic Python install + workspace scaffold,
-    // which can take 30s+ on a clean test workspace. Increase timeout.
+    // bootstrap probes qor-logic and scaffolds the workspace, which can take 30s+
+    // on a clean test workspace. Increase timeout.
     this.timeout(120000);
-    await assert.doesNotReject(() => vscode.commands.executeCommand('failsafe.bootstrap') as Promise<unknown>);
+    // #463: with the frozen package absent, interactive bootstrap asks the operator
+    // for the verified local wheel (a native file picker) and modally confirms skill
+    // installs. An unattended host cannot answer either, so model the operator
+    // declining both: the command must still resolve and must install nothing.
+    const win = vscode.window as unknown as Record<string, unknown>;
+    const originals = { showOpenDialog: win.showOpenDialog, showWarningMessage: win.showWarningMessage };
+    let pickerOpened = 0;
+    win.showOpenDialog = async () => { pickerOpened += 1; return undefined; };
+    win.showWarningMessage = async () => undefined;
+    try {
+      await assert.doesNotReject(() => vscode.commands.executeCommand('failsafe.bootstrap') as Promise<unknown>);
+    } finally {
+      win.showOpenDialog = originals.showOpenDialog;
+      win.showWarningMessage = originals.showWarningMessage;
+    }
+    assert.ok(pickerOpened <= 1, 'at most one wheel picker per bootstrap');
+    const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (root) {
+      for (const host of ['.claude', '.codex']) {
+        assert.ok(!fs.existsSync(path.join(root, host, '.qorlogic-installed.json')),
+          `declined bootstrap wrote no ${host} install receipt`);
+      }
+    }
   });
 
   test('FX005 failsafe.organize — handler resolves cleanly', async function () {
