@@ -98,7 +98,8 @@ const mocha = {
   // Test-run census (plan-240 LD5): test-cli's built-in runner.cjs:19-22
   // require()s every mochaOpts.require entry in-process before addFile/run.
   // Plain CJS from src/ — needs no compile step, patches the shared mocha.
-  require: [path.join(__dirname, 'src', 'test', 'census.cjs')],
+  // testHomeGuard first: it must redirect os.homedir() before any test or census code runs.
+  require: [path.join(__dirname, 'src', 'test', 'testHomeGuard.cjs'), path.join(__dirname, 'src', 'test', 'census.cjs')],
 };
 
 export default defineConfig([
