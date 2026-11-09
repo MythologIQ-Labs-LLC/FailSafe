@@ -37,23 +37,28 @@ test("#616 missing, duplicate, placeholder and unclassified release copy is refu
   assert.throws(()=>sectionsFor(changes.replace("### Security\n",""),VERSION),/Uncategorized changelog bullet/);
   assert.throws(()=>sectionsFor("# Changelog\n\n## [6.0.12]\n",VERSION),/Missing or duplicate/);
 });
-test("#616 branding is the exact source PNG, not a drawn replacement or generated substitute",()=>{
+test("#616 branding uses byte-pinned current studio assets, not substitutes",()=>{
   const logos=readLogos();
   assert.equal(logos.length,2);
-  assert.ok(logos[0].data.startsWith("data:image/png;base64,iVBORw0KGgo"));
+  assert.ok(logos[0].data.startsWith("data:image/webp;base64,UklGR"));
   assert.ok(logos[1].data.startsWith("data:image/png;base64,iVBORw0KGgo"));
+  assert.equal(logos[0].sha256, "c0141a60b03cc6b96750cb17ac3b8ca77b5d650539787cdf8fb83ef7ce9694b2");
+  assert.equal(logos[1].sha256, "74d5e8c639e964db764a5f8fa1f631664d793ae2da477e849545dc1e80f53cb0");
   assert.notEqual(logos[0].sha256,logos[1].sha256);
 });
 test("#616 substituted logo bytes fail closed",()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),"release-branding-"));
   const original=path.resolve(__dirname,"../../../assets/release-branding");
   try{
-    for(const name of ["mythologiq-labs.png","failsafe.png"]) fs.copyFileSync(path.join(original,name),path.join(dir,name));
-    fs.appendFileSync(path.join(dir,"failsafe.png"),Buffer.from("altered"));
+    for(const name of ["source-mythologiq-studio.webp","source-failsafe-studio.png"]) fs.copyFileSync(path.join(original,name),path.join(dir,name));
+    fs.appendFileSync(path.join(dir,"source-failsafe-studio.png"),Buffer.from("altered"));
+    assert.throws(()=>readLogos(dir),/Canonical logo bytes changed/);
+    fs.copyFileSync(path.join(original,"source-failsafe-studio.png"),path.join(dir,"source-failsafe-studio.png"));
+    fs.appendFileSync(path.join(dir,"source-mythologiq-studio.webp"),Buffer.from("altered"));
     assert.throws(()=>readLogos(dir),/Canonical logo bytes changed/);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
-test("#616 PDF layout places both original PNGs above exact-version customer copy, with links",()=>{
+test("#616 PDF layout places both studio logos above exact-version customer copy, with links",()=>{
   const html=htmlFor(VERSION,sectionsFor(changes,VERSION),readLogos());
   assert.match(html,/<title>FailSafe v6.0.12 \| Release Notes<\/title>/);
   assert.match(html,/<img alt="MythologIQ Labs"/);
