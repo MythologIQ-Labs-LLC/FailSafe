@@ -7,7 +7,7 @@ import { escapeHtml } from './brainstorm-templates.js';
 import { renderBicameralSettingsCard } from './bicameral-settings-card.js';
 import { renderVoicePackSettingsCard } from './voice-pack-settings-card.js';
 import { renderGovernanceModeCard, bindGovernanceModeCard } from './governance-mode-card.js';
-import { THEMES, canChangeTheme } from './theme-sync.js';
+import { THEME_CHOICES, canChangeTheme } from './theme-sync.js';
 
 // Sentinel attr name used across all bind paths to make listener wiring
 // idempotent: a node carrying data-cc-bound="1" already has its listener
@@ -19,17 +19,6 @@ function bindOnce(node, evt, handler) {
   node.setAttribute?.(BOUND_ATTR, '1');
 }
 
-// #601: which themes exist and their order come from theme-sync.js (THEMES); this table only
-// names and colors them. A theme without an entry here is a drift the parity test refuses.
-const THEME_META = {
-  pegasus: { id: 'pegasus', name: 'Pegasus', label: 'Light', swatch: '#3b82f6' },
-  mythiq: { id: 'mythiq', name: 'Mythiq', label: 'Dark', swatch: '#6366f1' },
-  midnight: { id: 'midnight', name: 'Midnight', label: 'Pitch', swatch: '#475569' },
-  aurora: { id: 'aurora', name: 'Aurora', label: 'Teal', swatch: '#2dd4bf' },
-  crimson: { id: 'crimson', name: 'Crimson', label: 'Red', swatch: '#ef4444' },
-  atmosphere: { id: 'atmosphere', name: 'Atmosphere', label: 'Sky', swatch: '#38bdf8' },
-};
-const THEME_CHOICES = THEMES.map((id) => THEME_META[id]).filter(Boolean);
 export class SettingsRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);

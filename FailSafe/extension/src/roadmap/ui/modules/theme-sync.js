@@ -10,6 +10,18 @@
 
 export const THEMES = Object.freeze(['pegasus', 'mythiq', 'midnight', 'aurora', 'crimson', 'atmosphere']);
 export const DEFAULT_THEME = 'mythiq';
+
+// Display names and swatches for the Console theme chips (settings.js). Which themes exist and
+// their order come from THEMES; a theme without an entry here is drift the parity test refuses.
+const THEME_META = {
+  pegasus: { id: 'pegasus', name: 'Pegasus', label: 'Light', swatch: '#3b82f6' },
+  mythiq: { id: 'mythiq', name: 'Mythiq', label: 'Dark', swatch: '#6366f1' },
+  midnight: { id: 'midnight', name: 'Midnight', label: 'Pitch', swatch: '#475569' },
+  aurora: { id: 'aurora', name: 'Aurora', label: 'Teal', swatch: '#2dd4bf' },
+  crimson: { id: 'crimson', name: 'Crimson', label: 'Red', swatch: '#ef4444' },
+  atmosphere: { id: 'atmosphere', name: 'Atmosphere', label: 'Sky', swatch: '#38bdf8' },
+};
+export const THEME_CHOICES = Object.freeze(THEMES.map((id) => THEME_META[id]).filter(Boolean));
 const KEY_PARAM = 'fsThemeKey';
 const KEY_STORAGE = 'fs-theme-key';
 const LEGACY_THEME_STORAGE = 'fs-theme';

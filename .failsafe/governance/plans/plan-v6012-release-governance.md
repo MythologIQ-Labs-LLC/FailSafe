@@ -1,6 +1,6 @@
 # Plan: v6.0.12 consolidated release governance — RC1 delta, #619 release PDF, #467 G4
 
-**iteration**: 2 (remediation of binding VETO #917; submitted for independent audit iteration 2)
+**iteration**: 3 (remediation of VETO #918 after VETO #917; submitted for independent audit iteration 3)
 **change_class**: governance
 **risk_grade (proposed)**: L3 (security, supply chain and governance integrity)
 **pr_target**: `release/v6.0.12-rc1-candidate-20261108-no-ci` (PR #631), then `main` only after a seal and owner release authorization.
@@ -54,7 +54,7 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
   - ECDSA P-256, created in the **Microsoft Platform Crypto Provider (TPM 2.0)** with `KeyExportPolicy NonExportable`, key usage DigitalSignature only, current user, on the owner's workstation.
   - This host has TPM 2.0 present, initialized and ready, and the provider available.
   - Only the public certificate (`.cer`) and its SHA-256 fingerprint are committed. The private key never leaves the TPM, CI or the repository.
-- **Checkpoint manifest** (canonical JSON):
+- **Checkpoint manifest** (UTF-8 JSON; the exact persisted bytes are what is hashed, signed and verified, never a reserialization):
   - repository and full commit SHA;
   - ledger path;
   - **SHA-256 and byte length of the complete committed ledger blob, including all Verdict/Decision prose**;
@@ -65,7 +65,7 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
   - SHA-256 of the historical-gap statement (the October VETOs UNKNOWN/UNRESOLVED; the pre-anchor break at #382);
   - key fingerprint and UTC instant.
 - **Signature:** over SHA-256(manifest), by the TPM key, through .NET `ECDsaCng` with the provider key opened by name (PowerShell `tools/g4/sign-checkpoint.ps1`).
-- **Independent witness:** an **RFC 3161** timestamp over SHA-256(manifest ‖ signature) from an independent TSA that the owner selects (for example DigiCert or Sectigo public TSAs). The `.tsr` token and the TSA certificate chain are stored with the checkpoint.
+- **Independent witness:** an **RFC 3161** timestamp over SHA-256(`"FailSafe-G4-v1\0"` ‖ u64be(len(manifest)) ‖ manifest ‖ u64be(len(signature)) ‖ signature), length-framed and domain-separated from an independent TSA that the owner selects (for example DigiCert or Sectigo public TSAs). The `.tsr` token and the TSA certificate chain are stored with the checkpoint.
 - **Verifier** (`scripts/g4-verify-checkpoint.cjs` plus `openssl ts -verify`). It recomputes the ledger blob digest at the named commit and checks:
   - the signature against the committed public certificate;
   - that the TSA token is valid, its imprint matches, and its time lies inside the key's validity window;
@@ -86,7 +86,7 @@ The earlier pins `4749bff2…` and `09df4938…` are retired by that owner decis
 
   Each negative needs an observed receipt.
 - **Cadence:** one checkpoint at every `/qor-substantiate` seal and at every release-candidate promotion. A missing, offline or expired witness is BLOCKED, never a neutral PASS.
-- **Revocation:** `tools/g4/revocations.json` holds owner-authorized, RFC 3161-timestamped revocation notices with an effective time. The verifier refuses checkpoints signed after that time. Checkpoints from before revocation stay inspectable, with their original trust state.
+- **Revocation:** `tools/g4/revocations.json` holds owner-authorized, RFC 3161-timestamped revocation notices with an effective time. Its monotonic history is anchored by each checkpoint manifest (registry SHA-256 and version) and by the registry's own committed Git history; the verifier refuses a registry whose version or content is older than the one the latest verified checkpoint names. The verifier refuses checkpoints signed after that time. Checkpoints from before revocation stay inspectable, with their original trust state.
 - **Recovery:** TPM loss or reset makes the key unrecoverable by design. A replacement key needs:
   - a key-transition record, timestamped and bound to the old fingerprint;
   - an owner identity attestation;
@@ -126,7 +126,7 @@ VETO #917 stays in the ledger unchanged. Iteration 2 changes code, tests, releas
 
 Doc citations that moved were relocated (FX1003 91/91, including the v6.0.8 tag check of 339 shipped claims).
 
-**Pre-existing razor debt outside the #917 inventory (disclosed, not release-blocking, not refactored).** These files were over the limit at v6.0.11. RC1 issue wiring grew them slightly. Refactoring them would be an unrelated architectural rewrite in a release-stabilization cycle. Before/after: `bootstrapServers.ts` 555→561 (`bootstrapServers` 394→398); `commands.ts` 702→710; `main.ts` 506→508 (`activate` 383→385); `IntentService.ts` 509→518; `ConsoleRouteRegistrar.ts` 583→588; `connection.js` 402→408; `roadmap.js` 507→511; `brainstorm.js` 301→303; `brainstorm-templates.js` `renderRightPanel` 71→77; `command-center.js` IIFE 209→212. `validate-vsix.cjs` 279→298 (its `main` shrank 138→130). `qor-conformance-probe.cjs` 335→342 is a #633 file under PASS #916. All are tracked as v6.0.13 debt.
+**Pre-existing razor debt outside the #917 inventory (disclosed, not release-blocking, not refactored).** These files were over the limit at v6.0.11. RC1 issue wiring grew them slightly. Refactoring them would be an unrelated architectural rewrite in a release-stabilization cycle. Before/after: `bootstrapServers.ts` 555→561 (`bootstrapServers` 394→398); `commands.ts` 702→710; `main.ts` 506→508 (`activate` 383→385); `IntentService.ts` 509→518; `ConsoleRouteRegistrar.ts` 583→588; `connection.js` 402→408; `roadmap.js` 507→511; `brainstorm.js` 301→303; `brainstorm-templates.js` `renderRightPanel` 71→77; `command-center.js` IIFE 209→212; and the functions `openRoadmapExternal` 44→46 (`commands.ts`), `bindToolbar` 44→45 (`brainstorm.js`), `handleServerMessage` 58→59 (`connection.js`), all already over the limit at v6.0.11. `validate-vsix.cjs` 279→298 (its `main` shrank 138→130). `qor-conformance-probe.cjs` 335→342 is a #633 file under PASS #916. All are tracked as v6.0.13 debt.
 
 **V2 (theme list).** The registry is `CONSOLE_THEMES` (`ConsoleThemeAuthority.ts`). The sidebar chrome renders it directly. `settings.js` builds its chips from `theme-sync.js`'s `THEMES` and only names and colors them. `theme-sync.js` (a browser module), `package.json` (static manifest) and `theme-tokens.css` must hold static copies. The new `themeRegistryParity.test.cjs` checks each copy, in order, against the registry and the default theme. Three drift mutations, run by hand, were each refused: reordering `theme-sync.js`, adding a seventh registry theme, and dropping one `settings.js` entry.
 
@@ -158,7 +158,7 @@ No TPM key, TSA choice or G4 implementation is claimed or authorized. The releas
 **Non-blocking notes from #917:**
 - **PDF footer overlap (fixed, confirmed defect).** A rendered PDF showed the fixed-position footer at the top of pages 2–4, over the section heading rule, and missing from page 1. The footer is now Chromium's margin footer (`displayHeaderFooter`). Measured in the rendered PDF, it sits at y = 754 pt on every page, below the body area (ends at 744.5 pt), right-aligned with the body. A regression test is added.
 - **Audio POST/DELETE without `consoleRequestGuard`.** They keep `rejectIfRemote` plus a per-operation VS Code modal bound to the exact bytes or inode snapshot. Not changed in this release (no new requirement); scheduled for v6.0.13.
-- **Stale `.capture-write.lock`.** Fails closed (busy). Manual removal is the documented recovery; scheduled for v6.0.13.
+- **Stale `.capture-write.lock`.** Fails closed (delete returns 409 busy; a save returns a generic 500). No user-facing recovery document exists yet. Recovery (removing the lock after confirming no other FailSafe window is saving) and a specific busy message on save are scheduled for v6.0.13.
 - **Brand images in every VSIX (852 KB).** Accepted as is for v6.0.12.
 - **N5** (auditor shell T13(g)) is environment-dependent; this host's run is listed in the audit request.
 - **N9** counts are corrected above and in the regenerated inventory.
@@ -171,9 +171,33 @@ No TPM key, TSA choice or G4 implementation is claimed or authorized. The releas
 
 **Inventory.** Regenerated against the new candidate. Every file lists all issues from every commit that touched it. `package.json`, `package-lock.json`, `validate-vsix.cjs` and `validate-docs-coherence.ps1` are no longer attributed to #601 alone.
 
+## Iteration 3: remediation of VETO #918
+
+**B1 (blocking).** The V2 change had taken `settings.js` from 249 to 252 lines. The theme chip table (display names and swatches) now sits beside the registry copy in `theme-sync.js`, which exports `THEME_CHOICES = THEMES.map(...)`. `settings.js` only imports it: 241 lines, with no theme literal left in it. `theme-sync.js` is 182 lines. `themeRegistryParity.test.cjs` now checks `theme-sync.js`'s `THEME_META` keys against the registry. It also asserts that `settings.js` imports `THEME_CHOICES` and holds no theme literal. Dropping a `THEME_META` entry or reordering `THEMES` each fail it.
+
+**Lesson applied (SG event for #918).** Every file touched by the remediation (`git diff --name-only c88181b1`, 22 source files) was rescanned against the absolute limits, not only against the v6.0.11 violation list. The only remaining over-limit items in touched files are unchanged since v6.0.11:
+- `ConsoleServer.ts`: 396 lines (397 at v6.0.11);
+- `buildRouteHost`: 51 lines;
+- an arrow in `ConsoleServerSupport.ts` at depth 4.
+
+**Non-blocking #918 items addressed:**
+- N1: open questions and Sequence step 1 updated.
+- N2: the three omitted grown functions added to the debt list.
+- N3: both changelogs now say that v6.0.11 saved every voice capture without consent, and that those recordings remain in `.failsafe/audio` until deleted through **Manage saved audio**.
+- N4: the inventory evidence column names every lane that touched a file (RC1, #633 under PASS #916, the post-#916 #633 follow-ups `860375e7`/`a874cef3`, #619, iterations 2–3).
+- N5: the changelog states zod 4's strict UUID check.
+- N6: the G4 manifest is hashed as its exact persisted bytes, the timestamp imprint is length-framed and domain-separated, and the revocation anchor is named.
+- N7: corrected; there is no recovery document yet.
+- N8 and N9: deferred or environmental, as the auditor ruled.
+
+**G4 procedure refinements (#918).**
+1. The owner's decision is recorded as a committed file, `docs/releases/V6_0_12_G4_DISPOSITION.md`, written and committed by the owner or on the owner's explicit instruction. Its SHA-256 is cited in the item 81 amendment and in the seal.
+2. The decision must state an expiry: the v6.0.13 release, or a calendar date the owner sets in the decision, whichever comes first (proposed: 2027-02-28; the owner chooses). After expiry, any further release without G4 needs a new decision.
+3. The Judge reviews the recorded file and the amended item 81 text after they exist. No acceptance is given in advance, and this plan's PASS (if any) is not that acceptance.
+
 ## Sequence after this audit
 
-1. Address VETO #917: V1 refactoring, V2 theme source/parity, V3 G4 continuity and revocation requirements (above), V4 production zod HIGH exposure/remediation or authorized bounded risk acceptance, V5 complete customer changelog. Independently audit iteration 2 against the exact revised code candidate and this plan, without changing VETO evidence.
+1. Done: VETO #917 remediated (iteration 2), VETO #918 B1 remediated (iteration 3). Independent `/qor-audit` iteration 3 against the exact candidate named in the audit request; VETO #917 and #918 evidence unchanged.
 2. If PASS, record the authorized G4 choice or remain NO-GO. For deferral, amend checklist item 81 with dated owner authorization and Judge acceptance; for adoption, record key provider, TSA, and cadence.
 3. Only if approved for v6.0.12, implement G4 under `/qor-implement`, run falsification tests and create the genesis checkpoint. If deferred, do not pretend any independent witness exists.
 4. `/qor-implement` gate for the release session, followed by **`/qor-substantiate`** on the exact candidate. The seal's scope must name `v6.0.11..<candidate>` and reference #916 and this plan's PASS.
@@ -209,7 +233,7 @@ node scripts/release-artifacts.cjs verify-set dist-vsix --version 6.0.12; instal
 
 ## Open questions / unresolved mandatory dispositions
 
-- G4: explicit owner authorization for implementation or deferral plus dated checklist item 81 amendment and Judge acceptance is pending.
-- Zod 3.25.76 (GHSA-mrhx-c7xc-m3w5): production `npm audit` reports one HIGH, not zero. Verify affected call paths, input-size bounds and mitigation tests. Either qualify an upgrade or secure explicit version-scoped, expiring owner risk acceptance backed by negative evidence. Disclosure alone does not pass.
-- Playwright `monitor-theme-inheritance.spec.ts:109` intermittently failed: reproduce/isolate race and prove deterministic acceptance rather than treating retries as success.
-- The previous independent audit remains VETO #917 (L3); this draft is not a PASS.
+- G4 release disposition: PENDING the owner's recorded decision, the RC1 checklist item 81 amendment and Judge acceptance (procedure in Iteration 2 above, refined in Iteration 3). v6.0.12 is NO-GO until all three exist.
+- Release date and owner release authorization: not given; no date is invented.
+- Resolved (kept for the record): zod is 4.6.7 and production `npm audit` reports 0 (V4); the Playwright investigation is recorded above with three full-suite runs at 253/0.
+- Prior independent audits: VETO #917 (iteration 1) and VETO #918 (iteration 2) remain in the ledger unchanged.

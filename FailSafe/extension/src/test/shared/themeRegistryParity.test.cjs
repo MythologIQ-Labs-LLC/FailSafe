@@ -34,9 +34,9 @@ const copies = {
     return quoted(m[1]);
   },
   "package.json failsafe.console.theme enum": () => themeSetting().enum,
-  "settings.js THEME_META keys": () => {
-    const m = read("src/roadmap/ui/modules/settings.js").match(/const THEME_META = \{([\s\S]*?)\n\};/);
-    assert.ok(m, "settings.js THEME_META not found");
+  "theme-sync.js THEME_META keys (Console theme chips)": () => {
+    const m = read("src/roadmap/ui/modules/theme-sync.js").match(/const THEME_META = \{([\s\S]*?)\n\};/);
+    assert.ok(m, "theme-sync.js THEME_META not found");
     return [...m[1].matchAll(/^\s*([a-z]+): \{ id: '([a-z]+)'/gm)].map((x) => (assert.equal(x[1], x[2]), x[1]));
   },
   "theme-tokens.css [data-theme] blocks": () =>
@@ -63,8 +63,10 @@ test("the sidebar chrome and the settings chips derive from the registry instead
   assert.match(sidebar, /new Set\(\$\{JSON\.stringify\(CONSOLE_THEMES\)\}\)/);
   assert.doesNotMatch(sidebar, /'pegasus'|"pegasus"/);
   const settings = read("src/roadmap/ui/modules/settings.js");
-  assert.match(settings, /import \{ THEMES, canChangeTheme \} from '\.\/theme-sync\.js';/);
-  assert.match(settings, /const THEME_CHOICES = THEMES\.map\(/);
+  assert.match(settings, /import \{ THEME_CHOICES, canChangeTheme \} from '\.\/theme-sync\.js';/);
+  assert.match(settings, /\$\{THEME_CHOICES\.map\(/);
+  assert.doesNotMatch(settings, /'pegasus'|"pegasus"/);
+  assert.match(read("src/roadmap/ui/modules/theme-sync.js"), /export const THEME_CHOICES = Object\.freeze\(THEMES\.map\(/);
 });
 
 test("the parity check itself detects a drifted copy", () => {
