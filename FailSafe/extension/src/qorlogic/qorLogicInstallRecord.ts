@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { readBoundedHostRecord } from "./boundedHostRecord";
 import {
   HOST_INSTALL_LAYOUTS,
   getQorLogicHosts,
@@ -71,14 +72,9 @@ export function readInstallRecord(workspaceRoot: string, host: string): QorLogic
   const layout = resolveLayout(workspaceRoot, host);
   if (!layout) return null;
   const fullPath = path.join(workspaceRoot, layout.recordPath);
-  if (!fs.existsSync(fullPath)) return null;
-  try {
-    const parsed = JSON.parse(fs.readFileSync(fullPath, "utf8"));
-    if (!parsed || !Array.isArray(parsed.files)) return null;
-    return parsed as QorLogicInstallRecord;
-  } catch {
-    return null;
-  }
+  // Read-only Hub status must not parse unbounded or linked workspace JSON.
+  // Presence remains advisory, never an attestation of installed file hashes.
+  return readBoundedHostRecord(fullPath);
 }
 
 function emptyStatus(host: string, recordPath: string): HostInstallStatus {
