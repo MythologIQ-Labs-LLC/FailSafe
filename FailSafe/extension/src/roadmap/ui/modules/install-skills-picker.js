@@ -13,12 +13,12 @@ const skillCache = new Map();
 const esc = (value) => escapeHtml(value ?? '');
 
 export function renderPickerSection(_hosts, _running) {
-  return [
-    '<details class="cc-modal-picker" data-cc-picker="root">',
-    '  <summary>[+] Per-host skills (advanced)</summary>',
-    '  <div class="cc-picker-body" data-state="collapsed" data-cc-picker-body></div>',
-    '</details>',
-  ].join('\n');
+  // #463: the frozen 0.176.1 engine has no selective install contract.
+  // Do not expose a picker that can misrepresent "select none" as "install all".
+  return '<div class="cc-picker-unavailable" role="status">' +
+    'Per-skill selection is unavailable for frozen Qor-logic 0.176.1. ' +
+    'The Install action installs all available skills for the selected hosts.' +
+    '</div>';
 }
 
 function getCheckedHosts(modalEl) {
