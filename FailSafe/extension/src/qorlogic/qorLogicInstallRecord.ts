@@ -5,6 +5,7 @@ import {
   getQorLogicHosts,
   type HostInstallLayout,
   type QorLogicHost,
+  FROZEN_QOR_LOGIC_VERSION,
 } from "./hostLayouts";
 import { loadHostRegistry } from "./hostRegistry";
 
@@ -54,6 +55,8 @@ export interface QorLogicInstallStatus {
   installedVersion?: string | null;
   minimumVersion?: string;
   meetsFloor?: boolean;
+  frozenTarget?: string;
+  matchesFrozen?: boolean;
 }
 
 function resolveLayout(workspaceRoot: string, host: string): HostInstallLayout | null {
@@ -113,6 +116,8 @@ export function getQorLogicInstallStatus(
     status.installedVersion = versionStatus.installed;
     status.minimumVersion = versionStatus.minimum;
     status.meetsFloor = versionStatus.meetsFloor;
+    status.frozenTarget = FROZEN_QOR_LOGIC_VERSION;
+    status.matchesFrozen = versionStatus.installed === FROZEN_QOR_LOGIC_VERSION;
   }
   return status;
 }
