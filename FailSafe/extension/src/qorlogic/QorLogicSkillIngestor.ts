@@ -6,6 +6,7 @@ import type {
   OutputChannelLike,
 } from './QorLogicPackageInstaller';
 import { FROZEN_QOR_LOGIC_VERSION, type QorLogicHost } from './hostLayouts';
+import { checkFrozenQorPackage, ensureFrozenQorPackage } from './qorPackageEnsure';
 import { getHostInstallStatus, type HostInstallStatus } from './qorLogicInstallRecord';
 
 export type { QorLogicHost } from './hostLayouts';
@@ -98,19 +99,7 @@ export class QorLogicSkillIngestor {
    * `probePython()` succeeded first.
    */
   async ensurePackageInstalled(approvedWheelPath?: string): Promise<{ ok: true; command: string } | { ok: false; error: string; stderrTail?: string }> {
-    const status = await this.installer.verifyInstalledVersion();
-    if (status.installed === FROZEN_QOR_LOGIC_VERSION) {
-      return { ok: true, command: `qor-logic ${status.installed} already installed (conformance not attested)` };
-    }
-    if (status.installed !== null) {
-      return { ok: false, error: `version-divergence: installed ${status.installed}; frozen target ${FROZEN_QOR_LOGIC_VERSION}. No implicit replacement.` };
-    }
-    if (!approvedWheelPath) return { ok: false, error: 'verified-wheel-required' };
-    const installed = await this.installer.install(approvedWheelPath);
-    if (!installed.ok) return { ok: false, error: installed.error ?? 'install-failed', stderrTail: installed.stderr };
-    const verified = await this.installer.verifyInstalledVersion();
-    if (verified.installed !== FROZEN_QOR_LOGIC_VERSION) return { ok: false, error: 'post-install-mismatch' };
-    return { ok: true, command: installed.command };
+    return ensureFrozenQorPackage(this.installer, approvedWheelPath);
   }
 
   /**
@@ -182,10 +171,7 @@ export class QorLogicSkillIngestor {
   }
 
   private async ensureInstalled(): Promise<{ ok: true } | { ok: false; error: string }> {
-    const status = await this.installer.verifyInstalledVersion();
-    if (status.installed === FROZEN_QOR_LOGIC_VERSION) return { ok: true };
-    if (status.installed !== null) return { ok: false, error: `version-divergence: ${status.installed}` };
-    return { ok: false, error: 'verified-wheel-required' };
+    return checkFrozenQorPackage(this.installer);
   }
 
   private failAll(hosts: QorLogicHost[], error: string): QorLogicIngestResult {
