@@ -30,6 +30,7 @@ Temporary feature restrictions in this release (by design):
 - Running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
 - Selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).
 - FailSafe does not install Qor-logic's Python dependencies (`jsonschema`, `PyYAML`); on a clean interpreter the install stops before changing anything until you install them (#463).
+- On Windows without long-path support, installing Qor-logic into an interpreter in a deeply nested folder can exceed the 260-character path limit; pip then fails and FailSafe reports the install as failed (#463).
 
 Defects and gaps scheduled for later remediation:
 - An editor save that enforcement denies is reported, not prevented (#505).
