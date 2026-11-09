@@ -72,23 +72,40 @@ export function aggregateReport(
 ): QorLogicInstallReport {
   const failures: Array<{ host: QorLogicHost; error: string }> = [];
   const destinationSet = new Set<string>();
-  let totalInstalled = 0;
+  let reportedFiles = 0;
+  let successfulHosts = 0;
+  let provenance: QorLogicInstallInvocation['summary'] | undefined;
   for (const inv of invocations) {
-    if (inv.installedCount) totalInstalled += inv.installedCount;
-    if (inv.destination) destinationSet.add(inv.destination);
-    if (inv.summary?.destinations) {
-      for (const d of inv.summary.destinations) destinationSet.add(d);
+    if (inv.phase === 'qorlogic-install') {
+      if (inv.status === 'success') {
+        successfulHosts += 1;
+        reportedFiles += inv.installedCount ?? 0;
+      }
+      if (inv.status === 'error' && inv.host) {
+        failures.push({ host: inv.host, error: inv.error ?? 'unknown-error' });
+      }
     }
-    if (inv.phase === 'qorlogic-install' && inv.status === 'error' && inv.host) {
-      failures.push({ host: inv.host, error: inv.error ?? 'unknown-error' });
+    if (inv.phase === 'provenance' && inv.status === 'success') {
+      provenance = inv.summary;
     }
   }
-  const ok = invocations.every((i) => i.status === 'success' || i.status === 'running')
-    && failures.length === 0;
+  // #463: no successful host install without corresponding on-disk, hashed
+  // provenance. A zero-exit subprocess is insufficient; partial reports
+  // without a provenance phase must not claim delivery.
+  const provenanceSufficient = successfulHosts === 0
+    || !!provenance && provenance.hostsVerified >= successfulHosts
+      && provenance.totalFiles >= reportedFiles;
+  const ok = invocations.every((i) => i.status === 'success')
+    && failures.length === 0 && provenanceSufficient;
+  // A successful operation reports only verified destination/count evidence.
+  // Failed runs retain diagnostics but do not claim completed installations.
+  if (ok && provenance && successfulHosts > 0) {
+    for (const d of provenance.destinations) destinationSet.add(d);
+  }
   return {
     ok,
     invocations,
-    totalInstalled,
+    totalInstalled: ok ? reportedFiles : 0,
     destinations: [...destinationSet].sort(),
     failures,
   };
