@@ -11,8 +11,9 @@ import { loadHostRegistry } from "./hostRegistry";
 
 // `qorlogic install --host <H>` writes `<base>/.qorlogic-installed.json`
 // containing `{ "files": [{ "path": "...", "sha256": "..." }] }`.
-// That file is the source of truth. Read it. Don't infer from directory
-// listings, don't synthesize provenance, don't pollute.
+// That file claims install provenance; only qorHostReceiptVerify can qualify
+// its file hashes/containment for a successful installation claim.
+// Read-only Hub status below describes record presence, not a security PASS.
 
 export interface QorLogicInstalledFile {
   path: string;
