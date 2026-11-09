@@ -9,10 +9,12 @@ function esc(value) {
   return escapeHtml(value ?? '');
 }
 
-export function renderPreviewButton(running) {
-  const disabled = running ? 'disabled' : '';
-  return `<button class="cc-btn cc-modal-preview" data-action="preview" ${disabled}
-    style="font-size:0.8rem;padding:6px 14px">Preview Changes</button>`;
+export function renderPreviewButton(_running) {
+  // #463: the frozen CLI has no proved JSON write-set preview.
+  // Keep the control visible for discoverability, but never actionable.
+  return `<button class="cc-btn cc-modal-preview" data-action="preview" disabled
+    title="Frozen Qor-logic 0.176.1 does not support safe install preview"
+    style="font-size:0.8rem;padding:6px 14px">Preview unavailable</button>`;
 }
 
 function readSelectedHosts(modal) {
@@ -70,7 +72,7 @@ function findBody(container) {
     || container;
 }
 
-function renderPreviewInto(container, byHost) {
+export function renderPreviewInto(container, byHost) {
   const body = findBody(container);
   let pane = body.querySelector('.cc-preview-pane');
   if (!pane) {
