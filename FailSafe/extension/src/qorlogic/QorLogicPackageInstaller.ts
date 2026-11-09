@@ -40,6 +40,7 @@ export type InstallError =
   | 'verified-wheel-required'
   | 'invalid-wheel-path'
   | 'unverified-wheel'
+  | 'wheel-too-large'
   | 'package-state-unknown'
   | 'version-divergence'
   | 'post-install-mismatch'
