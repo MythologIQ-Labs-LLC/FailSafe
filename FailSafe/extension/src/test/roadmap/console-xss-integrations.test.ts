@@ -9,7 +9,7 @@ import { displayTag } from '../../roadmap/ui/modules/skill-utils.js';
 // @ts-expect-error JS module import in TS test context
 import { renderInstallModal } from '../../roadmap/ui/modules/install-skills-modal.js';
 // @ts-expect-error JS module import in TS test context
-import { renderPreviewButton, bindPreviewEvents } from '../../roadmap/ui/modules/install-skills-preview.js';
+import { renderPreviewButton, renderPreviewInto } from '../../roadmap/ui/modules/install-skills-preview.js';
 // @ts-expect-error JS module import in TS test context
 import { renderPickerSection, bindPickerEvents } from '../../roadmap/ui/modules/install-skills-picker.js';
 // @ts-expect-error JS module import in TS test context
@@ -74,20 +74,15 @@ suite('Lane E XSS: install skills modal, preview, picker (X18-X20)', () => {
     assert.equal((root.querySelector('input.cc-modal-host') as HTMLInputElement).value, DQ);
   });
 
-  test('X19 preview: an echoed host key round-trips through data-host (S14)', async () => {
+  test('X19 disabled preview: hostile host keys remain inert in retained renderer (S14)', async () => {
     const root = doc.getElementById('m')!;
     root.innerHTML = `<div class="cc-modal"><div class="cc-modal-body">
       <input type="checkbox" class="cc-modal-host" checked>${renderPreviewButton(false)}</div></div>`;
+    assert.equal((root.querySelector('[data-action="preview"]') as HTMLButtonElement).disabled, true);
     (root.querySelector('input.cc-modal-host') as HTMLInputElement).value = 'claude';
-    (globalThis as Record<string, unknown>).fetch = async () => ({
-      ok: true, status: 200,
-      json: async () => ({ byHost: { [DQ]: { wouldWrite: [] }, [`${DQ}2`]: { degraded: true } } }),
-    });
-    bindPreviewEvents(root, {}, () => undefined);
-    (root.querySelector('[data-action="preview"]') as HTMLButtonElement).click();
-    await settle();
+    renderPreviewInto(root, { [DQ]: { wouldWrite: [] }, [`${DQ}2`]: { degraded: true } });
     const blocks = root.querySelectorAll('.cc-preview-host');
-    assert.equal(blocks.length, 2, 'both host blocks render');
+    assert.equal(blocks.length, 2, 'retained renderer still escapes hostile host keys');
     assertInert(root);
     assert.equal(blocks[0].getAttribute('data-host'), DQ);
     assert.equal(blocks[1].getAttribute('data-host'), `${DQ}2`);
