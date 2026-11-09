@@ -1,16 +1,29 @@
 {
   "phase": "audit",
   "session_id": "2026-11-09T1958-754dfc",
-  "ts": "2026-11-09T20:17:51Z",
+  "ts": "2026-11-09T22:48:40Z",
   "target": ".failsafe/governance/plans/plan-v6012-release-governance.md",
   "verdict": "VETO",
   "report_path": ".agent/staging/AUDIT_REPORT.md",
   "risk_grade": "L3",
   "findings_categories": [
-    "razor-overage",
-    "macro-architecture",
-    "specification-drift",
-    "infrastructure-mismatch"
+    "razor-overage"
+  ],
+  "target_content_hash": "e220651df84e798125527d3b43f89c2f3a94c0079507680d585004ff6746e486",
+  "report_content_hash": "3c9f6fffc2ffea150cb25609f296376992e81103e0280adfb9acffd1b6033754",
+  "iteration": 2,
+  "ledger_entry": 918,
+  "ledger_chain_hash": "e071892d7015db2b19649ee6f9f337aed1ddc053a329bffe52fbc862d391bc94",
+  "audited_candidate": "689f2682",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "razor-overage",
+      "file": "FailSafe/extension/src/roadmap/ui/modules/settings.js",
+      "detail": "249 -> 252 lines in c8419fc9 (V2 remediation), undisclosed"
+    }
   ],
   "ai_provenance": {
     "system": "Qor-logic",
@@ -18,6 +31,6 @@
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "veto",
-    "ts": "2026-11-09T20:17:51Z"
+    "ts": "2026-11-09T22:48:40Z"
   }
 }

@@ -3079,3 +3079,25 @@ Integrating feature work into a release candidate without a gate. Listing tamper
 ### Remediation Attempted
 
 None by the auditor. Required: `/qor-refactor` (V1), `/qor-organize` (V2), then the Governor amends the plan text (V3 add a byte-prefix continuity check and bind the revocation list hash into each manifest; V4 disclose or remediate the zod advisory and correct the evidence; V5 complete the v6.0.12 CHANGELOG) and re-runs `/qor-audit`.
+
+## SG Event 2026-11-09: A single-source refactor pushed a file it touched back over the razor cap (plan-v6012-release-governance iter 2, ledger #918)
+
+**Date**: 2026-11-09T22:48:16Z
+**Verdict ID**: Entry #918 - GATE TRIBUNAL - VETO (session `2026-11-09T1958-754dfc`)
+**Failure Mode**: COMPLEXITY_VIOLATION
+
+### What Failed
+
+Iteration 2 closed every #917 finding (V1-V5, PDF footer), but the V2 remediation that derives the Console theme chips from the registry added an id-keyed metadata table to `settings.js`, taking it from 249 to 252 lines, past the 250-line cap the file had earlier been brought under (`fad2a29a`). The plan did not disclose it and claimed V1 closed.
+
+### Why It Failed
+
+The razor rescan compared each changed file against its v6.0.11 baseline and listed only files that were already over the cap or whose functions grew. A file that first crosses a limit inside the delta was not flagged, because the comparison keyed on violations present at the baseline.
+
+### Pattern to Avoid
+
+Rescan every file touched by a remediation against the absolute limits, not only against the baseline's violation list; any first-time crossing is a new violation, whatever the motive of the change.
+
+### Remediation Attempted
+
+None by the auditor. Required: `/qor-refactor` of `settings.js` below 250 lines, plan iteration 3, then `/qor-audit` iteration 3 on the new candidate.

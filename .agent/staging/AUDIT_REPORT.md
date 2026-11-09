@@ -1,13 +1,13 @@
 # AUDIT REPORT
 
-**Tribunal Date**: 2026-11-09T20:17:51Z
-**Target**: `.failsafe/governance/plans/plan-v6012-release-governance.md` (iteration 1, sha256 `ff33ddad868048598fd08dd46036adbde25e66a1027561416247b4ed4e76a1ca`) with appendix `plan-v6012-release-governance-inventory.md` (sha256 `98ece3d98b1bb6275801fdcecb8ec6b8a62b6a2a9f675560a7c8c4bcc8c7d9b3`); gate `.qor/gates/2026-11-09T1958-754dfc/plan.json`
-**Subject code**: `v6.0.11..e99c4e1e` (release-code freeze), reviewed at HEAD `aefd8a44` (governance-only commit on top of `e99c4e1e`)
+**Tribunal Date**: 2026-11-09
+**Target**: `.failsafe/governance/plans/plan-v6012-release-governance.md` (iteration 2). Committed blob sha256 (LF, equals the gate's `plan_content_hash`) `e220651df84e798125527d3b43f89c2f3a94c0079507680d585004ff6746e486`; working-tree CRLF bytes sha256 `22add5b616e554548c62549cd4691d14b9b3a62c8bd47412c83c363dadedd6de`. Appendix `plan-v6012-release-governance-inventory.md` (working tree sha256 `60fe6ce090e078f7c9fb97f68a910e77fb8b3b7a802f35f7ce107e95582eb21a`). Gate `.qor/gates/2026-11-09T1958-754dfc/plan.json` (iteration 2, sha256 `8a5ec05f2c35ce64ed439415dd37b758c30affbe9e7f935f975f761613045049`)
+**Candidate**: `689f2682d329c00a179237d9880e27030671a3b1` (HEAD of `fix/475-no-uncontained-agent-execution-v6012-20261108-no-ci`); remediation reviewed as `git diff c88181b1 689f2682` (`362ad28e`, `c8fb4dde`, `d15cb4af`, `c8419fc9`, `689f2682`)
 **Session**: `2026-11-09T1958-754dfc`
 **Risk Grade**: L3
-**Auditor**: The Qor-logic Judge, independent Option B fresh-context audit, solo mode (codex-plugin capability shortfall event `ec9db1f1`)
+**Auditor**: The Qor-logic Judge. Independent fresh-context audit, iteration 2, solo mode (Option B).
 
-**Ordering**: this is a RETROSPECTIVE, post-implementation, pre-release review of the RC1 delta (`v6.0.11..3d722d02`) and #619 (`a874cef3..e99c4e1e`), plus a PROSPECTIVE design review of G4. It is not a pre-implementation verdict and nothing is backdated. #633 files (`3d722d02..74aab814`) carry PASS #916 and were not re-audited. The October VETOs #610-#612 and event `7126134e` remain UNKNOWN/UNRESOLVED; this audit does not close, reinterpret or rely on them, and the plan does not either (plan lines 20-23).
+**Ordering**: this is a RETROSPECTIVE, post-implementation, pre-release review under the declared ordering inversion of the RC1 delta (`v6.0.11..3d722d02`), #619, and the iteration-2 remediation, plus a PROSPECTIVE design review of G4. It is not a pre-implementation verdict and must never be described as one. #633 files under PASS #916 were not re-audited, except where the RC1 delta or iteration 2 also changed them (`settings.js`). VETO #917 stands unchanged in the ledger. The October VETOs #610–#612 and event `7126134e` remain UNKNOWN/UNRESOLVED. This audit does not close, reinterpret or rely on them, and does not count them for or against the plan.
 
 ---
 
@@ -17,143 +17,143 @@
 
 ### Executive Summary
 
-The security posture of the RC1 delta and #619 is substantively sound: no OWASP Top-10 violation was found on the new local HTTP routes (theme write, audio list/delete, audio store) or the new file I/O, and auditor-run mutations confirmed that the key guards (theme key, per-capture VS Code consent, Sentry scope, ledger-summary strictness, serialized Console start) are each caught by tests. The verdict is nevertheless VETO on five grounds: (V1) Section 4 Razor overage in new and grown RC1 and #619 code, judged by the same standard that produced VETO #915; (V2) the six-theme list is hard-coded in five places with no cross-source parity test; (V3) the G4 verifier, as specified, cannot refuse an edit or removal of earlier ledger entries that a later checkpoint re-signs (no append-only continuity check), and the revocation list is not bound into checkpoints, so the plan's own falsification claims are not achievable by the described checks; (V4) the plan's dependency acceptance cites a production `npm audit` that currently reports one HIGH advisory (zod 3.25.76, GHSA-mrhx-c7xc-m3w5), undisclosed; (V5) the v6.0.12 CHANGELOG, which the #619 generator renders verbatim into the customer PDF, omits the user-visible and privacy-relevant RC1 changes (#465 audio consent/quota/delete, #470, #471, #474, #478, OpenHands lock refusal).
+Iteration 2 closes V2, V3, V4 and V5 of #917 on substance, and every item #917 named under V1 is now within the razor. The extractions I inspected preserve behavior, and two of them were confirmed by mutation. The verdict is still VETO on one narrow, mechanical ground. The V2 remediation itself (`c8419fc9`) pushed `src/roadmap/ui/modules/settings.js` from 249 to **252** lines. That is a new crossing of the 250-line file limit inside the release delta. It is not disclosed, the plan states that V1 is closed, and it is the same class of finding #917 treated as blocking (`FailSafeSidebarProvider.ts` 242→266, "crosses 250"). The project kept this file under the cap on purpose (`fad2a29a` "align modified files with source line cap", 251→249). The fix is a few lines. Every other finding below is non-blocking.
 
 ### Steps run / not run
 
 | Step | Status | Result |
 |---|---|---|
-| Governance health preflight (`governance-health --profile skill-entry`) | RUN | all OK (META_LEDGER pre-anchor residuals tolerated, post-anchor clean) |
-| Step 0 gate check | RUN | plan artifact found and valid (`plan-iter1.json`) |
-| Step 0.3 plan_iteration_status_lint | RUN | rc=0 (ready) |
-| Step 0.4 unchanged-plan short-circuit | RUN | should_skip=False (first audit of this plan) |
-| Step 0.5 cycle-count / session-total | RUN | None / None |
-| Step 0.6 lints | RUN, plan path passed explicitly (`current_phase_plan_path()` raises InterdictionError on this non-phase branch) | Clean: plan_test, enumeration, grep (0 citations), signature_widening, data_round_trip, feature_tdd, gate_schema_freeze. WARN: delivery_branch (pr_target prose is not a branch name), ci_coverage (semgrep install step), workspace_fragility (ledger_chain_failure_count=333 pre-anchor, 19 branches, 11498 diff lines), live_progress (45 repo-wide; the only delta-file hit, `brainstorm-templates.js`, is static widths: false positive), publication_boundary (400 lockfile URL findings, structural). NOT RUNNABLE: sg_closure_lint (FileNotFoundError for `qor/references/doctrine-shadow-genome-countermeasures.md` relative to the repo root) |
-| Step 0.7 spec-delta | RUN | no `spec_deltas` declared, so the mechanical half does not apply; Judge half folded into V3/V5 |
-| Step 1 mode / risk score | RUN | solo (no codex plugin, no external reviewer configured); `audit_risk_score` option_b_required false (this audit is Option B regardless) |
-| Step 2 state verification | RUN | ARCHITECTURE_PLAN, META_LEDGER, CONCEPT present |
-| Step 3 prompt-injection canaries | RUN | rc=0; WARN-only `<script` code-span hits inside historical META_LEDGER prose |
-| Version-applicability | RUN | ok; change_class governance, version-not-applicable |
-| Security, OWASP, Ghost UI, Razor, Self-application, Test functionality, Dependency, Macro, Feature-test, Infrastructure alignment, Filter-stage, Orphan | RUN | see below |
-| prose_test_lint --enforce (`--tests-dir FailSafe/extension/src/test`) | RUN | rc=0 |
-| runtime_contract_walk | RUN | 0 findings |
-| Documentation drift | RUN | one orphan advisory (below) |
-| Step 7 veto_pattern | RUN | no repeated-VETO pattern |
-| Auditor re-execution | RUN | `npm run compile` exit 0; `npm run test:node` 966 pass / 2 fail (both pythonResolution T13(g), environment-dependent, see N5); targeted mocha on compiled tests: ConsoleThemeRoute 19/0, AudioVault* (7 files) 41/0, Bicameral parity/factory/registrations 17/0, openhands-import 39/0 (with the suite's 15 s timeout), integration-catalog-renderer 9/0, theme-sync 13/0, ReleasePipelineGate 24/0, four Sentry suites 0 failing; `node --test` bicameralLaunch.adversarial + releaseArtifacts + releasePdf + releaseWorkflow 80/0 (the PDF browser-render test executed, not skipped); Playwright `monitor-theme-inheritance.spec.ts --repeat-each=4` 28/0; `npm audit --omit=dev` 1 HIGH |
-| Auditor mutations (compiled `out/`, gitignored, each restored) | RUN | theme-key check removed: ConsoleThemeRoute 3 failing. Audio consent forced to approved: AudioVaultPersistenceConsent 4 failing. Sentry scope check removed: 2 failing. Ledger-summary sealScope/partition checks removed: ReleasePipelineGate 2 failing. Console start join removed: ConsoleLifecycleService 2 failing |
-| NOT RUN by the auditor | | VS Code extension-host suites (1.122.1, 1.145.2), `npm run lint`, `validate.ps1`, 8-target package, PDF, `verify-set`, installed-VSIX #475. The offered finalgate logs were inspected instead: ehost 1.122.1 6131 passing / 23 pending; 1.145.2 exit 0; installed #475 19/19 on both hosts; lint 0 errors / 136 warnings; package-all, PDF, verify-set and validate-vsix FAILED on `e99c4e1e` by design of the README marker gate, so the release packaging chain has not yet completed on any commit. Steps 4.1/4.2 (no `reviews-remediate` argument). Execution-continuity pass (not declared) |
+| Native `governance-health --profile skill-entry` | RUN | all OK (pre-anchor residuals tolerated, post-anchor band clean) |
+| Native `verify-ledger` | RUN | known pre-anchor BREAK at #382 (disclosed), gaps [158, 298] WARN; not counted against this plan |
+| Native `plan_iteration_status_lint --plan`, `plan_grep_lint --plan`, `plan_test_lint --plan` | RUN | rc 0, rc 0 (0 citations truth-checked), rc 0 |
+| Native `prompt_injection_canaries --files <plan> <inventory>` | RUN | rc 0 |
+| Gate check | RUN | `plan.json` iteration 2; `plan_content_hash` equals the committed-blob sha256 above. The gate's `open_questions` lists only G4, but the plan's own "Open questions" section is stale (N1) |
+| `npm run compile` | RUN | exit 0 |
+| `npm run lint` | RUN | exit 0; 0 errors, 136 warnings |
+| `npm run test:node` | RUN | 998 tests: 979 pass, 1 fail, 18 skipped. The single failure is `ArchitectureLinks.test.cjs:199` "event loop lag 101 ms", a timing assertion, on a machine shared with another long run. The file is untouched since v6.0.11, and re-running it alone gave 12/0. Not attributed to the delta |
+| `npm run test:citation-parity` | RUN | structure OK (28 plans) |
+| Focused `node --test` | RUN | `zodBoundedCollections` 3/0, `releasePdf` 9/0, `releaseArtifacts` 55/0 (includes the new CLI spawn test), `themeRegistryParity` 7/0, `releaseWorkflow` 10/0 |
+| Focused mocha on compiled `out/` | RUN | ReleasePipelineGate 24, ConsoleThemeRoute 19, AudioVault* (7 files) 38, BicameralRoute.parity 8, .upstream 4, .verdict-event 4, bicameralBinding 6, bicameralToolRoute.factory 4, .registrations 5, bicameral-advanced-tools/capability-hint/card/composite-sync/open-binding 36, openhands-import 39 + 1 pending, ConsoleLifecycleService 9 + BusMigration 3, integration-catalog-renderer 9, sidebarInitializeLogic 10, theme-sync 13, glossary-bicameral 5; 0 failing. `BicameralRoute.test`, `bicameral-activation`, `SidebarToggle` need the VS Code host (not run) |
+| Focused Playwright `monitor-theme-inheritance.spec.ts --repeat-each=3` | RUN | 21/21 |
+| Razor scan (session `razor.cjs` plus a v6.0.11-vs-HEAD delta scanner over every changed non-test source file) | RUN | see Razor Pass |
+| Theme-parity drift mutations (scratch copy of the seven inputs) | RUN | reorder `theme-sync.js`: 1 failing; drop a `package.json` enum value: 1 failing; rename a `theme-tokens.css` block: 1 failing; reintroduce a sidebar literal: 1 failing |
+| Behavior mutations (compiled `out/`, gitignored, each restored and verified with `cmp`) | RUN | `governedProceed` stale-client check removed: BicameralRoute.parity 2 failing. Rollback sidecar unlink removed: AudioVaultBoundary.security 1 failing. Capture-lock EEXIST→BUSY mapping broken: AudioVaultQuota 2 failing |
+| zod verification | RUN | `package.json` `^4.6.7`; lockfile `node_modules/zod` 4.6.7 from registry.npmjs.org with integrity; installed 4.6.7; `npm ls zod`: a single deduped 4.6.7 for both SDKs and `zod-to-json-schema` 3.25.1 (peer `^3.25 \|\| ^4`); `npm audit --omit=dev`: **0 vulnerabilities** |
+| SDK smoke (scratch) | RUN | MCP SDK 1.32.0 on zod 4.6.7: `registerTool` with zod 4 shapes, `listTools` produces JSON Schema (`maxLength`/`maxItems`), a valid call succeeds, an invalid call is refused with -32602 and two issues. ACP SDK 0.24.0 (peer `^3.25.0 \|\| ^4.0.0`) loads and exports `AgentSideConnection`/`ClientSideConnection`; the ACP node suites pass inside `test:node` |
+| Release-notes PDF render (scratch, the generator's exported `htmlFor`/`footerFor` and identical `page.pdf` options) | RUN | 4 pages; the footer "MythologIQ Labs \| FailSafe v6.0.12" is the last text line on every page, page 1 included |
+| Changelog parity | RUN | the `[6.0.12]` sections of `CHANGELOG.md` and `FailSafe/extension/CHANGELOG.md` are byte-identical after CRLF normalization (6937 chars) |
+| Inventory recount | RUN | see N9 closure |
+| NOT RUN (per instruction) | | VS Code extension-host suites, the full Playwright suite, `validate.ps1`, the 8-target package, `verify-set`, the installed-VSIX run. The orchestrator supplies those; this report does not assert their results |
 
 ### Audit Results
 
 #### Security Pass (L3)
-**Result**: PASS (no placeholder auth, no hardcoded secret, no bypassed check, no mock auth).
-- Theme write `POST /api/v1/ui/theme` (`ConsoleThemeRoute.ts:54-70`): consoleRequestGuard (loopback socket, loopback Host, exact Origin, JSON), then a 32-byte per-process key compared in constant time over SHA-256 digests (`:35-38`), rate-limited; unsupported values refused by `isConsoleTheme` (`ConsoleThemeAuthority.ts:18-20`). `theme.js` emits only a validated list value through `JSON.stringify` (`ConsoleThemeRoute.ts:46-51`). The key travels as `fsThemeKey` and is removed with `history.replaceState` (`theme-sync.js:82-94`); the compact Monitor iframe URL carries no key, so pages VS Code did not open are read-only. The sidebar postMessage handler ignores the embedded frame and unsupported names (`FailSafeSidebarProvider.ts:209-216`).
-- Audio vault: no persistence without a per-capture VS Code modal bound to the SHA-256 of an owned copy of the bytes, re-hashed after approval (`brainstorm-pending-routes.ts:18-50`); ids validated `^[0-9a-f]{64}$` before any path construction (`AudioVaultService.ts:5,193,232`; routes `:64,88`); symlink and realpath containment (`AudioVaultService.ts:30-45`); quota counts every entry and refuses links and hard links (`:63-78`); `wx` exclusive creates with mode 0600; sidecar rollback; deletion is snapshot-bound (dev, ino, mtime, ctime) and re-checked under the shared lock (`:206-228`); reads use O_NOFOLLOW plus inode match (`:236-242`). The client renders ids with textContent only (`brainstorm-audio-management.js`).
-- #474 B233: governed Bicameral routes fail closed (503) on a missing or stale interceptor and 409 on a client or evaluator change across the awaited governance call (`bicameralRouteShared.ts:174-227`); auto-connect reuses the trusted-resolved, interceptor-bound client instead of constructing an ungoverned one (`bootstrapBicameral.ts:303-348`; resolution through `trustedCommandPath` at `:183`).
-- #470: `/api/v1/trust` never reports a verified pass count (`ConsoleRouteRegistrar.ts:430-441`). #473 path: a corrupt active intent blocks release (`IntentStore.ts:39-54`, `ReleasePipelineGate.ts:42-56`); the ledger summary rejects contradictory or ill-shaped green reports (`LedgerIntegritySummary.ts:88-131`). #478: Link pages may change only `cursor` (`sentry-client.ts:78-93`). #471: a concurrent start joins the first; stop cancels (`ConsoleLifecycleService.ts:45-123`).
-- #619: the workflows add no trigger and no new secret use; PDF steps run in the build job without secrets; publish loops are restricted to `.vsix` lines (`release.yml:180,193,233,246`); the generator escapes all CHANGELOG text and loads no external resources; the brand pins were verified by the auditor (`git hash-object` and SHA-256 equal the plan table: `8401110b...`/`74d5e8c6...`, `b2b7181b...`/`c0141a60...`).
+**Result**: PASS. Iteration 2 changes no security boundary.
+- Theme: `wireConsoleTheme` (`ConsoleThemeRoute.ts:79-93`) keeps the same 32-byte per-process key (`randomBytes(32)`), the same guard and constant-time route, and the same `ui.theme` broadcast. It is wired after `setupAllRoutes`, as before. Nothing reads `getThemeKey()` before the constructor assigns it.
+- Audio: `readCaptureBody` keeps the 415 → 400 → owned-copy order before the modal. `capturePrompt` text is unchanged. The re-hash after approval is unchanged. `openCaptureLock` keeps `wx`/0600 and EEXIST→BUSY with no wait or removal. `withCaptureLock` keeps lock release in `finally` and queue release in the outer `finally`. `rollbackCapture` keeps the order close, then the created sidecar only, then audio, with AggregateError `AUDIO_VAULT_ROLLBACK_INCOMPLETE`.
+- Bicameral: `connectedClient` keeps 503 ("not wired") before 409 with each route's original text. `governedProceed` takes the evaluator snapshot before `governToolCall` and then runs `rejectStaleBicameralClient(..., true, evaluator)`. Ratify keeps the order: rejectIfRemote → body 400s → 503/409 → operator modal → govern → stale → ratify → ledger (non-blocking) → event. Tool routes keep 503 → 409 → parse 400 → govern (governed only) → stale. Auto-connect `autoConnectCommand`/`governedBindingCheck` are line-for-line moves, and the WeakMaps are still single module instances.
+- OpenHands: `prepareEvidenceFolder` = `refuseLinkedFolders` + `mkdir` + `refuseLinks`, both before the lock and in `ensureParent`. `refuseLegacyLockFile` and every `assertHeld` remain. A summary failure is still reported, not thrown.
+- Lifecycle: `listenOnce` is a verbatim move. The generation re-check and close-on-cancel still precede `announceListening`.
+- Sidebar: the rendered CSS and nonce are unchanged. The theme set is `JSON.stringify(CONSOLE_THEMES)`, a compile-time constant. The host-only theme message handling is unchanged.
 
 #### OWASP Top 10 Pass
-**Result**: PASS. A03: no shell or string-built commands in the delta. A04: failures are fail-closed (theme 401/400; audio 415/409/507/503; Bicameral 503/409; release gate BLOCK on an intent read error; ledger summary `unavailable`). A05: no secrets; created files 0600. A08: only `JSON.parse` of local files; no unsafe deserialization. A defense-in-depth gap is recorded as N1 (non-blocking).
+**Result**: PASS. No new injection surface. The PDF footer template HTML-escapes the version (`footerFor("6.<b>")` → `6.&lt;b&gt;`, which the test asserts). zod 4 removes the A04/A06 exposure of GHSA-mrhx-c7xc-m3w5.
 
 #### Ghost UI Pass
-**Result**: PASS. New controls are wired: the save-audio toggle gates the POST (`brainstorm-voice-wiring.js:33-35`); MANAGE SAVED AUDIO and DELETE call real routes; theme chips call `requestTheme` and are disabled with an explanation when the page lacks the key. No progress UI was added.
+**Result**: PASS. Settings chips are `THEMES.map(id => THEME_META[id])`. Every chip still calls `requestTheme`. The Manage/Delete UI is still wired to real routes.
 
 #### Section 4 Razor Pass
-**Result**: FAIL (V1). Measured with the session razor script and compared with `v6.0.11`:
-- New functions over 40 lines: `storeAudio` 52 (`brainstorm-pending-routes.ts:7-58`); `wireSavedAudioManager` 64 and inner `reload` 43 (`brainstorm-audio-management.js:3-66`, `:14-56`); `publishRelease` 41 (`release-artifacts.cjs:171-211`, #619).
-- Grown past 40, or grown while already over 40: `maybeAutoConnectBicameral` 46 (`bootstrapBicameral.ts:303-348`, was within 40); `wireBicameralClient` 43 to 48 (`:218-265`); `start` 56 to `startBound` 62 (`ConsoleLifecycleService.ts:56-117`); `persistOpenHandsObservations` 62 to 67 (`openhands-import.ts:260-326`); `bicameralToolRoute` 42 to 46 (`bicameralToolRoutes.ts:60-105`); ratify handler 83 to 85 at depth 4 (`bicameralDecisionRoutes.ts:101-185`); `getHtml` 120 to 131 (`FailSafeSidebarProvider.ts:125-255`); `renderRightPanel` 71 to 77 (`brainstorm-templates.js:72-148`); `main` 59 to 61 (`release-artifacts.cjs:233-293`).
-- New nesting depth 4: `captureExclusive` try/try/catch/if (`AudioVaultService.ts:96-122`); `requestTheme` try/if/if/try (`theme-sync.js:105-125`).
-- Files: `FailSafeSidebarProvider.ts` 242 to 266 (crosses 250). Grown while over 250: `bootstrapBicameral.ts` 293 to 348, `openhands-import.ts` 284 to 326, `ConsoleServer.ts` 397 to 418, `release-artifacts.cjs` 254 to 299 (#619), `validate-vsix.cjs` 279 to 298, and smaller growth in `commands.ts` 702 to 710, `bootstrapServers.ts` 555 to 561, `IntentService.ts` 509 to 518, `ConsoleRouteRegistrar.ts` 583 to 588, `connection.js` 402 to 408, `roadmap.js` 507 to 511, `main.ts` 506 to 508, `brainstorm.js` 301 to 303. `AudioVaultService.ts` sits exactly at 250.
-- Nested ternaries: none new in the reviewed files.
+**Result**: FAIL (B1).
+- **Every item #917 named is now within limits** (measured): `FailSafeSidebarProvider.ts` 244 (`getHtml` 36); `storeAudio` 31/d3; `wireSavedAudioManager` 27; `captureExclusive`/`withCaptureLock` depth ≤ 3, `openCaptureLock` d3; `bootstrapBicameral.ts` 223 (`maybeAutoConnectBicameral` 30, `wireFromConfig` 39/d3); `openhands-import.ts` 230 (`persistOpenHandsObservations` 36); `bicameralToolRoutes.ts` (`runBicameralTool` 32/d3); `bicameralDecisionRoutes.ts` (largest `driftRoute` 28/d2); `startBound` 26; `release-artifacts.cjs` 249; `ConsoleServer.ts` 396 (397 at v6.0.11; `buildRouteHost` 51, unchanged since v6.0.11); `theme-sync.js` with no function over 25 or deeper than 2. New files are all small: `sidebarChrome.ts` 49, `audioVaultIo.ts` 29, `bootstrapBicameralSettings.ts` 73, `bootstrapBicameralTypes.ts` 103, `openhands-evidence-file.ts` 124, `release-artifacts-cli.cjs` 90.
+- **B1, new violation:** `src/roadmap/ui/modules/settings.js` is 252 lines at HEAD. History: v6.0.11 221; RC1 `c23792de` 250; #633 `a1d2b784` 251; `fad2a29a` (owner, "align modified files with source line cap") 249; `e99c4e1e` and `c88181b1` 249; **`c8419fc9` (V2 remediation) 252**. The plan's pre-existing-debt list omits it, and the plan's V1 statement treats the razor as closed.
+- **Ruling on the disclosed pre-existing debt:** acceptable for this release and not blocking. These files and functions were already over the limit at v6.0.11, they grew by a few lines of issue wiring, and refactoring 380–400-line functions such as `activate` and `bootstrapServers` during release stabilization is unrelated architectural risk. They are tracked as v6.0.13 debt. The exemption covers only code that was **already over the limit at v6.0.11**. A file or function that first crosses a limit inside the delta is not pre-existing debt, so B1 is outside it. The disclosure is also incomplete, which is non-blocking but must be corrected (N2): `commands.ts` `openRoadmapExternal` 44→46, `brainstorm.js` `bindToolbar` 44→45 and `connection.js` `handleServerMessage` 58→59 grew in the RC1 delta (`c23792de`) and are not listed. `ConsoleServerSupport.ts` `createBrainstormService` inner arrow at depth 4 is unchanged since v6.0.11 and is not attributable to the delta.
+- Nested ternaries: none new.
 
 #### Self-Application Sub-Pass
-`originating_remediation` = "GH #467, GH #619, v6.0.12 RC1 delta". Applying #467's discipline (complete-ledger-byte tamper evidence) to the plan's own G4 design yields V3.
+`originating_remediation` is #917. Applying #917's own razor standard to the remediation diff yields B1.
 
 #### Test Functionality Pass
-**Result**: PASS for the tests the plan cites. They invoke the units and assert outputs; five auditor mutations were each caught (see Steps). `releaseWorkflow.test.cjs` asserts YAML structure and order (CI config cannot be invoked locally); noted as N6. No closed-enum taxonomy is declared.
-
-#### Feature Test Coverage Pass
-**Result**: PASS. The plan declares no `feature_inventory_touches` block; its scope table names existing behavioral test files for every group (verified to exist and pass).
+**Result**: PASS. No test was deleted or weakened in `c88181b1..689f2682`: the changes to test files are additions, plus the Playwright context cleanup. `themeRegistryParity.test.cjs` is a source-text parity check (appropriate for a static manifest and browser modules), and my four drift mutations each failed it. `zodBoundedCollections.test.cjs` pins the version floor, asserts one `too_big` issue for 200,000 elements, and checks the real `parseReviewRequest` refusal text and time. The new PDF test is structural: no `<footer>`/`position: fixed`, escaping, and the `displayHeaderFooter` call. My render confirmed the runtime placement. The new `release-artifacts` CLI test spawns the script and checks real dispatch and exit codes.
 
 #### Dependency Pass
-**Result**: FAIL on the plan's acceptance evidence (V4); the dependency changes themselves are justified: glob 14.0.2 (engines 18 || 20 || >=22), body-parser 2.4.0, @hono/node-server 2.1.5, qs 6.17.1, fast-uri 3.1.9, undici 7.30.1 (dev), new transitive `@isaacs/nonrecursive-glob-match` through minimatch 11; zero added `hasInstallScript`; every added `resolved` URL is on registry.npmjs.org; setup-python pinned by SHA (`oss-sast.yml:24`).
+**Result**: PASS. zod 4.6.7 is justified (it fixes HIGH GHSA-mrhx-c7xc-m3w5), it comes from the registry, and it is a single deduped copy. Both SDK peer ranges admit `^4`. FailSafe's zod usage compiles. The v4 breaks I checked: `z.record` is already two-argument; `.errors` is not used; `issue.message` text is only interpolated, and no node test asserts zod wording. `.uuid()` is now RFC-strict (N5). Every id validated by `.uuid()` is generated by `crypto.randomUUID()` (`IntentService.ts:263`, `deliveryReview.ts:999`, `intentDecision.ts:437`), so FailSafe-created data is unaffected.
+- **Unbounded-array residual: fairly non-blocking.** The advisory concerns bounded collections, and those now refuse at the bound. Unbounded arrays (`createRiskTool.ts:100` `relatedArtifacts`, `IntentTypes.ts:22-23,44`, `AgentOverlayLoader.ts`) are reachable only from a local MCP stdio peer (10 MB per message), from local files, or not from the network at all. Memory is linear in input and has been the same in every zod version. The work is scheduled for v6.0.13 (body limits, `.max()`, the ACP line cap).
 
 #### Macro-Level Architecture Pass
-**Result**: FAIL (V2). The theme set is hard-coded in `ConsoleThemeAuthority.ts:14`, `theme-sync.js:11`, `FailSafeSidebarProvider.ts:193` (a TypeScript template that could interpolate `CONSOLE_THEMES`), `settings.js:23ff` and `package.json:644-651`; the only test compares `theme-sync.js` with a literal (`theme-sync.test.ts:72-74`). Drift would cause refusal, not exposure, so severity is low, but the single-source-of-truth check fails (the same class as VETO #915 V5).
+**Result**: PASS (V2 closed). `CONSOLE_THEMES` (`ConsoleThemeAuthority.ts:14`) is the registry. The sidebar renders `new Set(${JSON.stringify(CONSOLE_THEMES)})`. `settings.js` derives its chip set and order from `theme-sync.js` `THEMES` and only supplies names and colors. The static copies (`theme-sync.js`, the `package.json` enum and default, `theme-tokens.css` blocks, `settings.js` meta keys) are checked in order by the parity test. No other theme list exists in non-test source (`grep` for `atmosphere`/`crimson`). One residual: `THEME_CHOICES` applies `.filter(Boolean)`, which would silently drop a theme that lacks metadata at runtime, but the parity test refuses that drift at build time.
 
 #### Infrastructure Alignment Pass
-**Result**: FAIL (V4). Verified true: TPM 2.0 present, initialized and ready, and Microsoft Platform Crypto Provider available (`tpmtool getdeviceinformation`, `certutil -csplist`); brand pins; workflow claims; the #916 reference. Not true: "production `npm audit`" as dependency evidence (plan line 31) reports 1 HIGH. Count drift (non-blocking, N9): the plan says 44 RC1 non-test production files; `git diff --name-only v6.0.11..3d722d02` minus tests and docs gives 49 (including `.vscode-test.mjs`, `qor-conformance-probe.cjs`, HTML and CSS); the inventory attributes `package.json`, `package-lock.json`, `validate-vsix.cjs` and `validate-docs-coherence.ps1` to "#601 theme".
+**Result**: PASS with the drift recorded under N1, N4 and N9. The production `npm audit` claim is now true (0).
 
 #### Filter-Stage Ordering Coherence
-**Result**: PASS. `governToolCall` (client identity, interceptor binding, intercept, re-bind, verdict) and `storeAudio` (type, size, owned copy, consent, socket, re-hash, lock and quota, write) contain no inversion.
+**Result**: PASS (see Security: Bicameral 503 → 409 → govern → stale-client; audio type → size → own copy → consent → socket → re-hash → lock/quota → write).
 
 #### Orphan Pass
-**Result**: PASS. `ConsoleThemeRoute` and `ConsoleThemeAuthority` are imported by `ConsoleServer.ts:44-45`; `consoleThemeSetting` by `bootstrapServers.ts:96`; `theme-sync.js` by `command-center.js:30`, `connection.js:4`, `roadmap.js:9`, `settings.js:10` and the SRE head; `brainstorm-audio-management.js` by `brainstorm.js:16`; `build-release-notes-pdf.cjs` by `release.yml:126-128` and `native-vsix-qualification.yml`.
+**Result**: PASS. `sidebarChrome.ts` ← `FailSafeSidebarProvider.ts`; `audioVaultIo.ts` ← `AudioVaultService.ts`; `bootstrapBicameralSettings.ts`/`Types.ts` ← `bootstrapBicameral.ts` (re-exported); `openhands-evidence-file.ts` ← `openhands-import.ts`; `release-artifacts-cli.cjs` ← `release-artifacts.cjs` (spawn-tested); `consoleUiEntryFile` and `wireConsoleTheme` ← `ConsoleServer.ts`.
 
-### G4 design (prospective; soundness only, acceptance is the owner's)
+### Per-finding closure (#917)
 
-Sound: non-exportable TPM-resident P-256 key with only the public certificate committed; manifest over the complete committed ledger blob including all prose; independent RFC 3161 witness with stored token and chain; BLOCKED (never neutral PASS) on missing, offline or expired witness; explicit no-fallback-key recovery requiring an independent PASS; honest limitations (owner-held key gives tamper evidence and time ordering, not non-forgeability against the owner; no public log; TSA trust and availability; Windows-only; no re-verification at or below #914; October VETOs untouched). Blocking gap: V3. Non-blocking design notes: N10.
+| #917 | Status | Evidence |
+|---|---|---|
+| V1 razor | **Closed for every named item; superseded by B1** | Measurements above; behavior preserved (diff review plus three mutations caught) |
+| V2 theme list | **Closed** | Single registry, derivation, parity test, four drift mutations each caught |
+| V3 G4 spec | **Closed** | The manifest now requires the prior ledger length and SHA-256 and that the first N bytes are byte-identical to the prior committed ledger, refused even when re-signed. The revocation-registry digest and version are bound into each manifest, with rollback, removal or unverifiable change refused, and with an explicit statement that a signature over the registry alone cannot detect wholesale rollback, so an independently anchored monotonic history is required. Falsification bullets were added for a modified earlier prefix and for revocation deletion, edit or rollback. Exact persisted UTF-8 manifest bytes replace reserialization. Length framing and domain separation are stated. Truncation (newest tail plus newest checkpoints) is disclosed as needing an independently retained trusted head. Residual wording drift: N6 |
+| V4 zod HIGH | **Closed** | 4.6.7 in manifest, lockfile and `node_modules`; `npm audit --omit=dev` 0; SDKs accept zod 4 (smoke); regression test present and passing |
+| V5 changelog | **Closed** | Both `[6.0.12]` sections are identical and cover #465, #470, #471, #474 (503/409 refusals, strict intent read, OpenHands lock refusal, catalog relabel), #478 and zod. The claims match source (`ConsoleLifecycleService.ts` generation cancel, `bicameralDecisionRoutes.ts` 503/409, `brainstorm-pending-routes.ts` prompt text and 256 MiB). Framing notes: N3, N5 |
+| N7 PDF footer | **Closed** | `displayHeaderFooter` margin footer; the render shows the footer as the last line on all 4 pages; regression test added |
+| N4 Playwright | **Accepted as non-blocking** | The context leak is real and fixed (contexts tracked and closed in `afterEach` before the server). The root cause of the single `ERR_CONNECTION_FAILED` is honestly stated as unproven. Three consecutive full-suite runs at 253/0 (orchestrator-supplied; not re-run here, per instruction) plus my focused 21/21 are acceptable evidence for a pre-assertion navigation failure that was seen once. They are not retries of the failing spec |
+| N9 counts/attribution | **Partially closed** (N4) | Counts verified: 49 RC1 files (`v6.0.11..3d722d02`, plan's filter); 94 total at HEAD; 24 changed in iteration 2; inventory split 36/51/7 sums to 94. Attribution still drifts (N4) |
+| N1, N2, N3, N5, N6, N8, N10, N11 | Carried as stated in the plan | N2 recovery documentation overclaim: N7 below |
 
 ### Violations Found
 
 | ID | Category | Location | Description |
 |---|---|---|---|
-| V1 | razor-overage | Razor Pass (for example `brainstorm-pending-routes.ts:7-58`, `brainstorm-audio-management.js:3-66`, `bootstrapBicameral.ts:303-348`, `ConsoleLifecycleService.ts:56-117`, `AudioVaultService.ts:96-122`, `theme-sync.js:105-125`, `release-artifacts.cjs:171-211`, `FailSafeSidebarProvider.ts` 242 to 266) | New or grown functions over 40 lines or deeper than 3; files grown past or beyond 250 lines (RC1 and #619) |
-| V2 | macro-architecture | `ConsoleThemeAuthority.ts:14`, `theme-sync.js:11`, `FailSafeSidebarProvider.ts:193`, `settings.js:23`, `package.json:644` | Theme set duplicated five times with no cross-source parity test |
-| V3 | specification-drift | plan lines 57-86 (G4) | The verifier checks the ledger blob at the named commit and the checkpoint hash chain only; nothing requires checkpoint N's ledger bytes to be a byte-prefix extension of checkpoint N-1's. An edit, removal or reorder of earlier entries committed after checkpoint N-1 and re-signed by checkpoint N passes every listed check, contradicting the falsification bullets "an edited Verdict or Decision text" and "removed or reordered entries" (lines 73-74). `tools/g4/revocations.json` is not committed into the manifest, so deleting a revocation notice is undetectable (line 85) |
-| V4 | infrastructure-mismatch | plan line 31; `FailSafe/extension/package-lock.json` (`node_modules/zod` 3.25.76) | The plan's dependency evidence "production npm audit" reports 1 HIGH (GHSA-mrhx-c7xc-m3w5, zod below 4.6.6; unchanged since v6.0.11 and used for in-product validation, including `src/mcp/FailSafeServer.ts`); neither the plan nor the v6.0.12 CHANGELOG discloses it |
-| V5 | specification-drift | `CHANGELOG.md:10-38` (rendered verbatim by `build-release-notes-pdf.cjs:112`) | The v6.0.12 notes omit RC1 user-visible changes: #465 (audio is no longer saved without consent; opt-in toggle, per-recording VS Code approval, 256 MiB quota, Manage/Delete UI, no retention deadline), #470 (`/api/v1/trust` shape and the `getTrustScores` type), #471, #474 B233 (503/409 refusals), #478 (pagination refusal), the OpenHands legacy-lock refusal that requires manual lock removal, integration-catalog relabeling, and the strict release-gate intent read |
+| B1 | razor-overage | `FailSafe/extension/src/roadmap/ui/modules/settings.js` (252 lines; `c8419fc9`) | The iteration-2 V2 remediation grew the file from 249 to 252, crossing the 250-line limit inside the release delta. The file had been brought back under the cap deliberately (`fad2a29a`). It is not in the plan's disclosed debt, and the plan represents V1 as closed. Same class as #917's blocking `FailSafeSidebarProvider.ts` crossing |
 
 ### Non-blocking findings
 
-- N1 `brainstorm-pending-routes.ts:140-144`: the audio POST and the new DELETE use only `rejectIfRemote`, not `consoleRequestGuard` as every other mutating Console route does. Mitigated by the app-wide `consoleHostGuard` (`ConsoleRouteRegistrar.ts:161`), CORS preflight (DELETE and `audio/webm` are not simple requests) and the per-operation VS Code modal.
-- N2 `AudioVaultService.ts:105-111`: a crash while holding `.capture-write.lock` makes every later save a generic 500 ("Storage failed"; the route does not map `AUDIO_VAULT_WRITE_BUSY`) and every delete a 409, with no documented recovery.
-- N3 `assets/release-branding/*` (852,450 bytes) are packaged into every VSIX (`.vscodeignore` excludes `scripts/` but not these release-only inputs; observed in the finalgate win32-x64 VSIX).
-- N4 Playwright `monitor-theme-inheritance.spec.ts:109` failed once in finalgate; the auditor's `--repeat-each=4` run passed 28/28. The intermittency in the #601 reconnect path is unexplained.
-- N5 Auditor `test:node` 966/2: `pythonResolution.adversarial.test.cjs:291` T13(g) and its LD20 wrapper fail with `pipAvailable` false in this shell although `python -m pip` works; AdapterService is unchanged in the delta; finalgate shows 968/0. Environment-dependent, not attributed to the delta.
-- N6 `releaseWorkflow.test.cjs` is a structural YAML contract test (appropriate for CI config; not runtime proof).
-- N7 Preview PDF: the fixed footer overlaps body text at a page boundary (`build-release-notes-pdf.cjs:97`; `full.png`).
-- N8 The 8-target package, PDF, `verify-set` and `validate-vsix --source-only` have not completed on any commit (README marker gate, by design); plan step 5 must run them on the release commit.
-- N9 File-count and inventory attribution drift (see Infrastructure Alignment).
-- N10 G4: "canonical JSON" is unspecified across a .NET signer and a Node verifier (signing and stamping the stored manifest bytes avoids re-canonicalization); the RFC 3161 imprint over `manifest || signature` has no length framing; truncation (deleting the newest checkpoints together with the ledger tail) is undetectable without an external append-only log and should be named explicitly in the limitations.
-- N11 Lint WARNs as listed in Steps; `sg_closure_lint` not runnable from the repo root.
+- **N1** Plan internal staleness. "Open questions" still says production `npm audit` "reports one HIGH, not zero" and asks to "prove deterministic acceptance" for Playwright, and "Sequence" step 1 still reads as pre-remediation. Both contradict the V4 and Playwright sections and the gate's `open_questions`. Correct this in the next iteration.
+- **N2** The razor debt disclosure is incomplete: add `openRoadmapExternal` 44→46, `bindToolbar` 44→45 and `handleServerMessage` 58→59.
+- **N3** Changelog #465 framing. It is listed under "Added" as a new opt-in vault. It does not say that v6.0.11 saved every captured recording to `.failsafe/audio` with no consent (`brainstorm-voice-wiring.js:32-35` and the v6.0.11 `storeAudio`), or that recordings saved earlier may still be on disk and can now be deleted from Manage. This is not false, but it understates a privacy-relevant fix. The owner should consider a "Fixed/Security" line before the PDF is generated.
+- **N4** Inventory attribution. `FailSafe/extension/.vscode-test.mjs` (#591; changed by `c23792de` and `860375e7`, never in `a874cef3..e99c4e1e`) is attributed to "#619". `settings.js`, `aider-wrapper.ts`, `continue-wrapper.ts` and `qor-conformance-probe.cjs` were also changed by the RC1 delta, and `settings.js` by iteration 2, yet their audit evidence reads only "PASS #916". The inventory header range is `v6.0.11 .. c8419fc9` (the file set equals HEAD's).
+- **N5** zod 4 `.uuid()` is RFC 9562-strict. `00000000-0000-0000-0000-000000000001`-style ids (used as the legacy fixture in `IntentStore.test.ts:18`) are now refused wherever `IntentIdSchema`/`.uuid()` applies. Every FailSafe generator uses `randomUUID()`, so this fails closed only for hand-made ids. The changelog sentence "FailSafe's schemas ... work unchanged on zod 4" slightly overstates this. Validation message wording also changed in v4.
+- **N6** G4 wording. The design bullets still say "canonical JSON" and "RFC 3161 timestamp over SHA-256(manifest ‖ signature)", while the limitations bullet requires persisted bytes and length framing and domain separation. Reconcile the two before any implementation. "Independently anchored" revocation history does not yet name its anchor (for example, each notice RFC 3161-stamped and the registry digest chained per checkpoint).
+- **N7** The plan says stale `.capture-write.lock` "manual removal is the documented recovery". No user-facing document mentions it (the only hits are the plan and audit reports), and the save path still returns a generic 500 for BUSY (`brainstorm-pending-routes.ts:60-66`), while delete maps it to 409. This is a plan overclaim, and the work is scheduled for v6.0.13.
+- **N8** Unbounded-array zod residual (see Dependency Pass): fairly deferred to v6.0.13.
+- **N9** `test:node` timing flake `ArchitectureLinks.test.cjs:199` under machine load (12/0 in isolation; not in the delta).
+
+### G4 release disposition ruling
+
+- **Is the procedure sound and complete?** It is sound in substance: (1) a dated owner decision that names the residual risk and compensating controls and expires at v6.0.13; (2) amendment of RC1 checklist item 81 in the PR #631 body, which only the owner may authorize; (3) independent Judge acceptance of the recorded disposition; NO-GO until all three exist. It does not let anyone, an agent included, presume owner consent, and the release notes already disclose G4 as not implemented. Three refinements are needed, none blocking:
+  - (a) Name where the decision is recorded (for example a committed file or ledger entry with a content hash), so the Judge can bind acceptance to exact bytes.
+  - (b) Add a calendar backstop to the expiry. "Expires at the v6.0.13 release" is open-ended if v6.0.13 slips, yet the plan calls the deferral time-bound.
+  - (c) Step 3 must be an audit of the recorded text. It cannot be pre-accepted.
+- **Disposition status now:** PENDING. Steps 1–3 have not occurred, and this Judge cannot accept a decision that does not exist yet. Nothing here accepts the deferral.
+- **Is a PASS conditional on it?** No. The Gate Tribunal verdict is binary and covers the code and plan. G4 disposition is a separate **release** gate: whatever this plan's verdict is, v6.0.12 stays **NO-GO** until steps 1–3 are complete. Once B1 is fixed, a PASS on this plan would not be conditional on G4, and the release would still be NO-GO pending that disposition.
 
 ### Per-ground directives
 
 #### Section 4 Razor
+B1: bring `settings.js` to 250 lines or fewer without behavior change, and keep the parity test green. Also correct N1 and N2 in the plan text.
 
-V1: the new and grown functions and files listed in the Razor Pass, in the RC1 delta and #619.
-
-**Required next action:** `/qor-refactor`
-
-#### Orphan file / Macro-arch breach
-
-V2: a single source for the theme list, or a parity test across all five sources.
-
-**Required next action:** `/qor-organize`
-
-#### Plan-text
-
-V3: the G4 design must make the verifier require byte-prefix (append-only) continuity of the ledger between consecutive checkpoints and bind the revocation list (its hash) into each manifest, with the falsification list aligned to checks that achieve it. V4: disclose or remediate the production advisory and correct the dependency evidence. V5: complete the v6.0.12 CHANGELOG for the RC1 user-visible changes before the PDF is generated.
-
-**Required next action:** Governor: amend plan text, re-run `/qor-audit`
+**Required next action:** `/qor-refactor`, then Governor: amend plan text (N1, N2, and optionally N3–N7), re-run `/qor-audit` (iteration 3) on the exact new candidate.
 
 ## Documentation Drift
 
 <!-- qor:drift-section -->
-Non-VETO advisory. These issues would hard-block at /qor-substantiate per `qor/references/doctrine-documentation-integrity.md`.
-
-- Orphan: Orphan home: 'Vacuous pass' -> '.failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md' does not exist.
+Non-VETO advisory. The inventory attribution (N4) and plan staleness (N1) would be flagged at `/qor-substantiate` under documentation integrity.
 
 ## Process Pattern Advisory
 
 <!-- qor:veto-pattern-advisory -->
-No repeated-VETO pattern detected in the last 2 sealed phases.
+Second consecutive VETO on this plan (#917 → iteration 2). The blocking ground differs (#917 V1–V5 → B1), and B1 is a regression introduced by the remediation. Recommend running the razor scanner over the remediation diff before resubmission. This does not yet meet the `/qor-course-correct` threshold.
 
 ### Verdict Hash
 
-SHA256(this report, LF-normalized) is recorded as the Content Hash of the META_LEDGER GATE TRIBUNAL entry for session `2026-11-09T1958-754dfc`.
+SHA256(this report, LF-normalized) is to be recorded by the orchestrator as the Content Hash of the META_LEDGER GATE TRIBUNAL entry for session `2026-11-09T1958-754dfc`.
 
 ---
+**Verdict**: VETO (Risk Grade L3)
+
 _This verdict is binding. Gate LOCKED. No merge, tag or publication._
