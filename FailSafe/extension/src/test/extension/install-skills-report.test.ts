@@ -49,10 +49,12 @@ suite('aggregateReport', () => {
       inv('python-probe'),
       inv('pip-install'),
       inv('qorlogic-install', { host: 'claude', destination: '.claude/skills/', installedCount: 17 }),
+      inv('provenance', { summary: { hostsVerified: 1, totalFiles: 17,
+        destinations: ['.claude/skills/'], verifiedHosts: [{ host: 'claude', fileCount: 17 }] } }),
       inv('refresh'),
     ]);
     assert.equal(report.ok, true);
-    assert.equal(report.invocations.length, 4);
+    assert.equal(report.invocations.length, 5);
     assert.equal(report.totalInstalled, 17);
     assert.deepEqual(report.destinations, ['.claude/skills/']);
     assert.equal(report.failures.length, 0);
@@ -64,6 +66,8 @@ suite('aggregateReport', () => {
       inv('pip-install'),
       inv('qorlogic-install', { host: 'claude', status: 'error', error: 'host-failed' }),
       inv('qorlogic-install', { host: 'codex', destination: '.codex/skills/', installedCount: 17 }),
+      inv('provenance', { summary: { hostsVerified: 1, totalFiles: 17,
+        destinations: ['.codex/skills/'], verifiedHosts: [{ host: 'codex', fileCount: 17 }] } }),
     ]);
     assert.equal(report.ok, false);
     assert.equal(report.failures.length, 1);
@@ -75,9 +79,11 @@ suite('aggregateReport', () => {
     const report = aggregateReport([
       inv('qorlogic-install', { host: 'claude', destination: '.claude/skills/', installedCount: 5 }),
       inv('qorlogic-install', { host: 'codex', destination: '.codex/skills/', installedCount: 5 }),
-      inv('provenance', { summary: { hostsVerified: 2, totalFiles: 10, destinations: ['.claude/skills/', '.codex/agents/'] } }),
+      inv('provenance', { summary: { hostsVerified: 2, totalFiles: 10,
+        destinations: ['.claude/skills/', '.codex/agents/'],
+        verifiedHosts: [{ host: 'claude', fileCount: 5 }, { host: 'codex', fileCount: 5 }] } }),
     ]);
-    assert.deepEqual(report.destinations, ['.claude/skills/', '.codex/agents/', '.codex/skills/']);
+    assert.deepEqual(report.destinations, ['.claude/skills/', '.codex/agents/']);
   });
 
   test('JSON.stringify round-trips without throwing', () => {
@@ -92,9 +98,13 @@ suite('aggregateReport', () => {
     assert.equal(parsed.invocations[0].interpreter, '/usr/bin/python3');
   });
 
-  test('ok=true when all invocations are success or running', () => {
-    const report = aggregateReport([inv('python-probe'), inv('pip-install')]);
-    assert.equal(report.ok, true);
+  test('completed read-only phases remain successful; running is not a final PASS', () => {
+    const completed = aggregateReport([inv('python-probe'), inv('pip-install')]);
+    assert.equal(completed.ok, true);
+    const inProgress = aggregateReport([
+      inv('python-probe'), inv('pip-install', { status: 'running' }),
+    ]);
+    assert.equal(inProgress.ok, false);
   });
 
   test('ok=false when any invocation has status error', () => {
@@ -103,4 +113,47 @@ suite('aggregateReport', () => {
     ]);
     assert.equal(report.ok, false);
   });
+  test('#463: process exit zero cannot become delivery success with no receipt', () => {
+    const report = aggregateReport([
+      inv('qorlogic-install', { host: 'claude', installedCount: 2 }),
+      inv('provenance', { summary: { hostsVerified: 0, totalFiles: 0,
+        destinations: [], verifiedHosts: [] } }),
+    ]);
+    assert.equal(report.ok, false);
+    assert.equal(report.totalInstalled, 0);
+    assert.deepEqual(report.destinations, []);
+  });
+
+  test('#463: unrelated verified host cannot authorize the requested host', () => {
+    const report = aggregateReport([
+      inv('qorlogic-install', { host: 'claude', installedCount: 17 }),
+      inv('provenance', { summary: { hostsVerified: 1, totalFiles: 17,
+        destinations: ['.codex/skills/'], verifiedHosts: [{ host: 'codex', fileCount: 17 }] } }),
+    ]);
+    assert.equal(report.ok, false);
+    assert.equal(report.totalInstalled, 0);
+    assert.deepEqual(report.destinations, []);
+  });
+
+  test('#463: unproven file count cannot be claimed by a successful host', () => {
+    for (const fileCount of [0, 16, 18]) {
+      const report = aggregateReport([
+        inv('qorlogic-install', { host: 'claude', installedCount: 17 }),
+        inv('provenance', { summary: { hostsVerified: 1, totalFiles: fileCount,
+          destinations: ['.claude/skills/'], verifiedHosts: [{ host: 'claude', fileCount }] } }),
+      ]);
+      assert.equal(report.ok, false);
+      assert.equal(report.totalInstalled, 0);
+    }
+  });
+
+  test('#463: missing provenance cannot be replaced with host counts', () => {
+    const report = aggregateReport([
+      inv('qorlogic-install', { host: 'claude', installedCount: 17 }),
+      inv('refresh'),
+    ]);
+    assert.equal(report.ok, false);
+    assert.equal(report.totalInstalled, 0);
+  });
+
 });
