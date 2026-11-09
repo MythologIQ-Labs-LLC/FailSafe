@@ -27,7 +27,6 @@ const THEMES = [
   { id: 'crimson', name: 'Crimson', label: 'Red', swatch: '#ef4444' },
   { id: 'atmosphere', name: 'Atmosphere', label: 'Sky', swatch: '#38bdf8' },
 ];
-
 export class SettingsRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);
@@ -36,7 +35,6 @@ export class SettingsRenderer {
     this._lastHub = {};
     this._installState = { running: false, steps: [], lastReport: null };
   }
-
   render(hubData) {
     if (!this.container) return;
     if (hubData && Object.keys(hubData).length) this._lastHub = hubData;
