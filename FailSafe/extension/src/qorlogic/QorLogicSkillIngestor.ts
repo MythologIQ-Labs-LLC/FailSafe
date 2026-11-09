@@ -5,7 +5,7 @@ import type {
   InstallerRunResult,
   OutputChannelLike,
 } from './QorLogicPackageInstaller';
-import { type QorLogicHost } from './hostLayouts';
+import { FROZEN_QOR_LOGIC_VERSION, type QorLogicHost } from './hostLayouts';
 import { getHostInstallStatus, type HostInstallStatus } from './qorLogicInstallRecord';
 
 export type { QorLogicHost } from './hostLayouts';
@@ -97,16 +97,20 @@ export class QorLogicSkillIngestor {
    * orchestrator to emit a `pip-install` invocation. Caller must ensure
    * `probePython()` succeeded first.
    */
-  async ensurePackageInstalled(): Promise<{ ok: true; command: string } | { ok: false; error: string; stderrTail?: string }> {
+  async ensurePackageInstalled(approvedWheelPath?: string): Promise<{ ok: true; command: string } | { ok: false; error: string; stderrTail?: string }> {
     const status = await this.installer.verifyInstalledVersion();
-    if (status.meetsFloor) return { ok: true, command: `qor-logic ${status.installed} already meets floor ${status.minimum}` };
-    const result = await this.installer.install();
-    if (result.ok) return { ok: true, command: 'python -m pip install --upgrade qor-logic' };
-    return {
-      ok: false,
-      error: result.error ?? 'install-failed',
-      stderrTail: undefined,
-    };
+    if (status.installed === FROZEN_QOR_LOGIC_VERSION) {
+      return { ok: true, command: `qor-logic ${status.installed} already installed (conformance not attested)` };
+    }
+    if (status.installed !== null) {
+      return { ok: false, error: `version-divergence: installed ${status.installed}; frozen target ${FROZEN_QOR_LOGIC_VERSION}. No implicit replacement.` };
+    }
+    if (!approvedWheelPath) return { ok: false, error: 'verified-wheel-required' };
+    const installed = await this.installer.install(approvedWheelPath);
+    if (!installed.ok) return { ok: false, error: installed.error ?? 'install-failed', stderrTail: installed.stderr };
+    const verified = await this.installer.verifyInstalledVersion();
+    if (verified.installed !== FROZEN_QOR_LOGIC_VERSION) return { ok: false, error: 'post-install-mismatch' };
+    return { ok: true, command: installed.command };
   }
 
   /**
@@ -136,6 +140,11 @@ export class QorLogicSkillIngestor {
     if (skillFilter !== undefined) {
       return { ok: false, host, scope, command: '',
         error: 'selective-skill-install-unsupported-by-frozen-qor-logic-0.176.1' };
+    }
+    const version = await this.installer.verifyInstalledVersion();
+    if (version.installed !== FROZEN_QOR_LOGIC_VERSION) {
+      return { ok: false, host, scope, command: '',
+        error: `frozen-qor-logic-required: ${version.installed ?? 'unknown'}` };
     }
     const py = await this.resolver.resolve();
     if (!py.ok) {
@@ -174,10 +183,9 @@ export class QorLogicSkillIngestor {
 
   private async ensureInstalled(): Promise<{ ok: true } | { ok: false; error: string }> {
     const status = await this.installer.verifyInstalledVersion();
-    if (status.meetsFloor) return { ok: true };
-    const result = await this.installer.install();
-    if (result.ok) return { ok: true };
-    return { ok: false, error: result.error ?? 'install-failed' };
+    if (status.installed === FROZEN_QOR_LOGIC_VERSION) return { ok: true };
+    if (status.installed !== null) return { ok: false, error: `version-divergence: ${status.installed}` };
+    return { ok: false, error: 'verified-wheel-required' };
   }
 
   private failAll(hosts: QorLogicHost[], error: string): QorLogicIngestResult {
