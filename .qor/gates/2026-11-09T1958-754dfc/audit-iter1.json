@@ -1,0 +1,23 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-09T1958-754dfc",
+  "ts": "2026-11-09T20:17:51Z",
+  "target": ".failsafe/governance/plans/plan-v6012-release-governance.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT.md",
+  "risk_grade": "L3",
+  "findings_categories": [
+    "razor-overage",
+    "macro-architecture",
+    "specification-drift",
+    "infrastructure-mismatch"
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-09T20:17:51Z"
+  }
+}

@@ -3057,3 +3057,25 @@ Security hardening that grows by accretion inside one function. Watching the fil
 ### Remediation Attempted
 
 None by the auditor. Required: `/qor-refactor` (V1), `/qor-organize` (V5), then the Governor amends the plan text (V2 cite behavioral tests and add a command-level behavioral test; V3 name test paths; V4 correct the severity, event location and head claim) and re-runs `/qor-audit`.
+
+## SG Event 2026-11-09: Sound security code released unplanned with razor breaches, a witness design without append-only continuity, and release notes that omit the delta (plan-v6012-release-governance iter 1, ledger #917)
+
+**Date**: 2026-11-09T20:17:51Z
+**Verdict ID**: Entry #917 - GATE TRIBUNAL - VETO (session `2026-11-09T1958-754dfc`)
+**Failure Mode**: COMPLEXITY_VIOLATION (with macro-architecture, specification-drift and infrastructure-mismatch grounds)
+
+### What Failed
+
+The v6.0.12 RC1 delta (#601 theme, #465 audio vault, #474, #470, #471, #478, dependencies) and #619 (release PDF) were implemented without a plan or audit and reviewed retrospectively. The security code holds: guarded theme writes with a per-process key, per-capture consent bound to the bytes, contained and snapshot-bound vault I/O, fail-closed Bicameral governance, and auditor mutations were each caught. But new and grown functions exceed 40 lines or depth 3 (`storeAudio` 52, `wireSavedAudioManager` 64, `publishRelease` 41, `startBound` 62, `captureExclusive` depth 4) and over-cap files grew. The theme list is hard-coded in five places. The G4 ledger witness design checks the ledger blob at a named commit and a hash chain of checkpoints, but never requires a later checkpoint's ledger to extend the earlier one byte for byte, so a re-signed rewrite of history passes; its revocation list is not bound into checkpoints. The plan cites a production npm audit that reports one HIGH advisory. The CHANGELOG, rendered verbatim into the customer PDF, omits most of the RC1 user-visible changes, including that audio is no longer saved without consent.
+
+### Why It Failed
+
+Work merged as integration commits without a planning gate, so no Razor check ran until release. The witness design enumerated falsification cases without tracing each to the check that refuses it. Release notes were written for the planned #463/#475 scope, and the RC1 delta was folded into the candidate without a notes pass. Dependency evidence was named in the plan rather than run.
+
+### Pattern to Avoid
+
+Integrating feature work into a release candidate without a gate. Listing tamper cases a verifier "must refuse" without mapping each to a specific check, and chaining checkpoint hashes in place of proving append-only continuity of the protected bytes. Citing an audit command as evidence without running it. Generating customer-facing release documents from a changelog that does not cover the delta.
+
+### Remediation Attempted
+
+None by the auditor. Required: `/qor-refactor` (V1), `/qor-organize` (V2), then the Governor amends the plan text (V3 add a byte-prefix continuity check and bind the revocation list hash into each manifest; V4 disclose or remediate the zod advisory and correct the evidence; V5 complete the v6.0.12 CHANGELOG) and re-runs `/qor-audit`.
