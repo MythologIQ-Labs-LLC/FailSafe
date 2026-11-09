@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { QorLogicSkillIngestor, QorLogicHost, QorLogicScope } from '../qorlogic/QorLogicSkillIngestor';
 import { getQorLogicInstallStatus } from '../qorlogic/qorLogicInstallRecord';
 import { verifyHostInstallReceipt } from '../qorlogic/qorHostReceiptVerify';
-import { QOR_LOGIC_HOSTS, type QorLogicHost } from '../qorlogic/hostLayouts';
+import { QOR_LOGIC_HOSTS } from '../qorlogic/hostLayouts';
 import {
   type QorLogicInstallInvocation,
   type QorLogicInstallReport,
