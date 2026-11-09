@@ -3,6 +3,7 @@ import type { PythonInterpreterResolver, ResolvedInterpreter } from './PythonInt
 import type { InstallerRun, InstallerRunResult, OutputChannelLike, QorLogicInstallResult } from './QorLogicPackageInstaller';
 import { FROZEN_QOR_LOGIC_VERSION } from './hostLayouts';
 import { withVerifiedQorWheel, WheelVerificationError } from './frozenWheel';
+import { preflightFrozenDependencies } from './qorDependencyPreflight';
 
 const PIP_SHOW_TIMEOUT_MS = 30_000;
 const formatCommand = (cmd: string, args: ReadonlyArray<string>): string => [cmd, ...args].join(' ');
@@ -68,7 +69,13 @@ async function installStagedWheel(
   const args = [...py.args, '-P', '-m', 'pip', '--isolated', 'install',
     '--no-index', '--no-deps', '--no-cache-dir', '--no-compile', verifiedPath];
   const command = formatCommand(py.command, args);
-  output.appendLine('[qor-logic] installing locally verified 0.176.1 wheel (offline, no dependencies)');
+  // Check dependency resolution in dry-run mode before any installation.
+  // This still cannot guarantee rollback if the actual pip install fails.
+  const readiness = await preflightFrozenDependencies(py, verifiedPath, run, timeoutMs);
+  if (!readiness.ok) {
+    return { ok: false, command: '', error: readiness.error, stderr: readiness.details };
+  }
+  output.appendLine('[qor-logic] dependency preflight passed; installing verified 0.176.1 wheel offline');
   const result = await runSafely(() => run(py.command, args, { timeoutMs }));
   if (!result) return { ok: false, command, error: 'spawn-failed' };
   const mapped = mapInstallResult(result, command, output);
