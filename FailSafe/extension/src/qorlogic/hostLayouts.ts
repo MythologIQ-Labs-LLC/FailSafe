@@ -61,6 +61,16 @@ export const HOST_INSTALL_LAYOUTS: Record<QorLogicHost, HostInstallLayout> = {
 
 export const QOR_LOGIC_HOSTS: QorLogicHost[] = ["claude", "codex", "kilo-code", "gemini"];
 
+/** #463: validate runtime host lists before any Python/pip or file mutation. */
+export function frozenHostSelectionError(hosts: unknown): string | null {
+  if (!Array.isArray(hosts) || hosts.length === 0) return "host-selection-empty";
+  if (hosts.some((host) => typeof host !== "string" || !QOR_LOGIC_HOSTS.includes(host as QorLogicHost))) {
+    return "host-selection-unsupported";
+  }
+  if (new Set(hosts).size !== hosts.length) return "host-selection-duplicate";
+  return null;
+}
+
 /**
  * Minimum qor-logic version this extension is compatible with. Must match the
  * version cited in the header comment above (i.e. the version whose
