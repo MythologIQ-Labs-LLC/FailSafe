@@ -26,8 +26,14 @@ class FakeInstaller implements IQorLogicPackageInstaller {
   /** Version reported by verifyInstalledVersion() while `installed` is true. */
   public installedVersion = FROZEN_QOR_LOGIC_VERSION;
   public meetsFloor = true;
+  public dependenciesOk = true;
   public installResult: QorLogicInstallResult = { ok: true, command: 'python -m pip install qor-logic' };
   public installCalls = 0;
+  async verifyInstalledDependencies() {
+    return this.dependenciesOk
+      ? { ok: true as const }
+      : { ok: false as const, error: 'dependencies-unsatisfied' as const, details: 'missing jsonschema' };
+  }
   async isInstalled(): Promise<boolean> { return this.installed; }
   async install(): Promise<QorLogicInstallResult> {
     this.installCalls += 1;
