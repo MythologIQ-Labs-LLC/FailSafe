@@ -27,7 +27,7 @@ class FakeIngestor {
   async ensurePackageInstalled() {
     return this.pipError
       ? { ok: false as const, error: this.pipError, stderrTail: 'mock-stderr' }
-      : { ok: true as const, command: 'python -m pip install --upgrade qor-logic' };
+      : { ok: true as const, command: 'qor-logic 0.176.1 verified and dependency-ready' };
   }
 
   async installHost(host: QorLogicHost, scope: QorLogicScope): Promise<HostInstallResult> {
@@ -82,6 +82,27 @@ suite('createInstallSkillsHandler', () => {
       assert.equal(fake.installCalls.length, 0);
       assert.equal(events.length, 1);
     }
+  });
+
+  test('#463: global Console operation fails before Python, pip or host writes', async () => {
+    const fake = new FakeIngestor();
+    let pythonCalls = 0;
+    let pipCalls = 0;
+    fake.probePython = async () => { pythonCalls++; throw Error('unexpected global Python probe'); };
+    fake.ensurePackageInstalled = async () => { pipCalls++; throw Error('unexpected global pip install'); };
+    const events: QorLogicInstallInvocation[] = [];
+    const run = createScaffoldWithWebOptions(asIngestor(fake), { onProgress: (e) => events.push(e) });
+    const report = await run(['claude'], 'global', undefined, { operationId: 'scope-test' });
+    assert.equal(report.ok, false);
+    assert.equal(report.invocations.length, 1);
+    assert.equal(report.invocations[0].phase, 'qorlogic-install');
+    assert.equal(report.invocations[0].scope, 'global');
+    assert.match(report.invocations[0].error ?? '', /Global-scope installation is unavailable/);
+    assert.equal(report.invocations[0].operationId, 'scope-test');
+    assert.equal(pythonCalls, 0);
+    assert.equal(pipCalls, 0);
+    assert.equal(fake.installCalls.length, 0);
+    assert.equal(events.length, 1);
   });
 
   test('full success: 5+N invocations in declared order with correct phases', async () => {
