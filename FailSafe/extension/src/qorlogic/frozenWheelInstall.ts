@@ -35,7 +35,7 @@ export async function installFrozenWheel(args: {
       return { ok: false, command: '', error: 'package-state-unknown' };
     }
     if (before.code === 0) {
-      const existing = /^Name:\\s*qor-logic\\s*$/im.test(before.stdout)
+      const existing = /^Name:\s*qor-logic\s*$/im.test(before.stdout)
         ? parseVersionLine(before.stdout) : null;
       if (!existing) return { ok: false, command: '', error: 'package-state-unknown' };
       if (existing !== FROZEN_QOR_LOGIC_VERSION) {
@@ -43,7 +43,7 @@ export async function installFrozenWheel(args: {
       }
       return { ok: true, command: 'already-installed', version: existing };
     }
-    if (before.code !== 1 || !/Package\\(s\\) not found:\\s*qor-logic/i.test(before.stderr)) {
+    if (before.code !== 1 || !/Package\(s\) not found:\s*qor-logic/i.test(before.stderr)) {
       return { ok: false, command: '', error: 'package-state-unknown' };
     }
 
@@ -55,12 +55,12 @@ export async function installFrozenWheel(args: {
           '--no-index', '--no-deps', '--no-cache-dir', '--no-compile', verifiedPath];
         const cmdString = formatCommand(py.command, args);
         output.appendLine('[qor-logic] installing locally verified 0.176.1 wheel (offline, no dependencies)');
-        const run = await runSafely(() => run(py.command, args, { timeoutMs: timeoutMs }));
-        if (!run) return { ok: false, command: cmdString, error: 'spawn-failed' };
-        const mapped = mapInstallResult(run, cmdString, output);
+        const installResult = await runSafely(() => run(py.command, args, { timeoutMs }));
+        if (!installResult) return { ok: false, command: cmdString, error: 'spawn-failed' };
+        const mapped = mapInstallResult(installResult, cmdString, output);
         if (!mapped.ok) return mapped;
         const after = await runSafely(() => runPipShow(py, run));
-        if (!after || after.code !== 0 || !/^Name:\\s*qor-logic\\s*$/im.test(after.stdout)
+        if (!after || after.code !== 0 || !/^Name:\s*qor-logic\s*$/im.test(after.stdout)
           || parseVersionLine(after.stdout) !== FROZEN_QOR_LOGIC_VERSION) {
           return { ok: false, command: cmdString, error: 'post-install-mismatch' };
         }
