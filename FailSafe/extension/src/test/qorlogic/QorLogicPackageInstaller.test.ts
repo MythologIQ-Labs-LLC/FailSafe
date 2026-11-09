@@ -1,4 +1,7 @@
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
   PythonInterpreterResolver,
   type RunCommand,
@@ -10,9 +13,9 @@ import {
   type InstallerRunResult,
   type OutputChannelLike,
 } from '../../qorlogic/QorLogicPackageInstaller';
-import { MIN_QOR_LOGIC_VERSION, TESTED_AGAINST_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
+import { MIN_QOR_LOGIC_VERSION, TESTED_AGAINST_QOR_LOGIC_VERSION, FROZEN_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
+import { FROZEN_QOR_WHEEL_NAME, FROZEN_QOR_WHEEL_SHA256, withVerifiedQorWheel } from '../../qorlogic/frozenWheel';
 
-const PINNED_SPEC = `qor-logic>=${MIN_QOR_LOGIC_VERSION}`;
 
 function fixedResolver(command: string, args: string[] = []): PythonInterpreterResolver {
   const config = { get: () => undefined, inspect: () => undefined };
@@ -92,118 +95,71 @@ suite('QorLogicPackageInstaller: isInstalled', () => {
   });
 });
 
-suite('QorLogicPackageInstaller: install', () => {
-  test('invokes <python> -m pip install qor-logic via list-form spawn', async () => {
-    const resolver = fixedResolver('/opt/py/python');
-    const { run, calls } = makeInstallerRun(() => ok('Successfully installed qor-logic-0.31.1'));
-    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
-
-    const result = await installer.install();
-
-    assert.equal(result.ok, true);
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].cmd, '/opt/py/python');
-    assert.deepEqual(calls[0].args, ['-P', '-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
-    // Verify args are list-form (no shell concatenation): no single arg contains a space joining flags.
-    for (const arg of calls[0].args) {
-      assert.equal(arg.includes(' '), false, `arg "${arg}" must not contain spaces (list-form check)`);
-    }
-  });
-
-  test('uses interpreter prefix args (e.g. py -3) in install command', async () => {
-    const resolver = fixedResolver('py', ['-3']);
-    const { run, calls } = makeInstallerRun(() => ok());
-    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
-
-    await installer.install();
-
-    assert.equal(calls[0].cmd, 'py');
-    assert.deepEqual(calls[0].args, ['-3', '-P', '-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
-  });
-
-  test('returns ok:false error:timeout when run times out', async () => {
-    const resolver = fixedResolver('python');
-    const { run } = makeInstallerRun(() => ({ stdout: '', stderr: '', code: null, timedOut: true }));
-    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
-
-    const result = await installer.install();
-
-    assert.equal(result.ok, false);
-    assert.equal(result.error, 'timeout');
-  });
-
-  test('returns ok:false error:pip-failed and surfaces stderr when pip exits non-zero', async () => {
-    const resolver = fixedResolver('python');
-    const { run } = makeInstallerRun(() => fail(1, 'ERROR: Could not find a version'));
-    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
-
-    const result = await installer.install();
-
-    assert.equal(result.ok, false);
-    assert.equal(result.error, 'pip-failed');
-    assert.match(result.stderr ?? '', /Could not find a version/);
-  });
-
-  test('returns ok:false error:spawn-failed when run reports spawnError', async () => {
-    const resolver = fixedResolver('python');
-    const { run } = makeInstallerRun(() => ({
-      stdout: '', stderr: '', code: null, timedOut: false, spawnError: 'ENOENT',
-    }));
-    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
-
-    const result = await installer.install();
-
-    assert.equal(result.ok, false);
-    assert.equal(result.error, 'spawn-failed');
-  });
-
-  test('short-circuits with no-python-found when resolver fails; does not invoke run', async () => {
+suite('QorLogicPackageInstaller: verified offline install', () => {
+  test('implicit install refuses before resolving Python or making subprocesses', async () => {
     const resolver = noPythonResolver();
     const { run, calls } = makeInstallerRun(() => ok());
     const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
-
-    const result = await installer.install();
-
-    assert.equal(result.ok, false);
-    assert.equal(result.error, 'no-python-found');
+    assert.deepEqual(await installer.install(), { ok: false, command: '', error: 'verified-wheel-required' });
     assert.equal(calls.length, 0);
   });
 
-  test('respects custom timeoutMs constructor argument', async () => {
-    const resolver = fixedResolver('python');
-    const { run, calls } = makeInstallerRun(() => ok());
-    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run, 5_000);
-
-    await installer.install();
-
-    assert.equal(calls[0].timeoutMs, 5_000);
+  test('existing future/older version refuses replacement, with no pip install', async () => {
+    for (const version of ['0.177.0', '0.169.0', '0.31.1']) {
+      const { run, calls } = makeInstallerRun(() => ok(`Name: qor-logic\\nVersion: ${version}\\n`));
+      const result = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run)
+        .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
+      assert.equal(result.ok, false);
+      assert.equal(result.error, 'version-divergence');
+      assert.equal(result.version, version);
+      assert.equal(calls.length, 1);
+      assert.deepEqual(calls[0].args, ['-P', '-m', 'pip', 'show', 'qor-logic']);
+    }
   });
 
-  test('logs the exact command to the output channel', async () => {
-    const resolver = fixedResolver('/usr/bin/python3.12');
-    const { run } = makeInstallerRun(() => ok());
-    const lines: string[] = [];
-    const channel: OutputChannelLike = { appendLine: (l) => lines.push(l) };
-    const installer = new QorLogicPackageInstaller(resolver, channel, run);
-
-    await installer.install();
-
-    assert.ok(lines.some((l) => l.includes(`/usr/bin/python3.12 -P -m pip install --upgrade ${PINNED_SPEC}`)));
+  test('already-installed frozen exact version causes no mutation', async () => {
+    const { run, calls } = makeInstallerRun(() => ok(`Name: qor-logic\\nVersion: ${FROZEN_QOR_LOGIC_VERSION}\\n`));
+    const result = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run)
+      .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
+    assert.equal(result.ok, true);
+    assert.equal(result.version, FROZEN_QOR_LOGIC_VERSION);
+    assert.equal(calls.length, 1, 'read-only pip show only');
   });
 
-  test('pins minimum version (>=MIN_QOR_LOGIC_VERSION) and uses --upgrade in argv', async () => {
-    const resolver = fixedResolver('python');
-    const { run, calls } = makeInstallerRun(() => ok());
-    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+  test('missing and ambiguous pip metadata do not trigger an install', async () => {
+    for (const result of [fail(2, 'failed'), ok('Version: 0.176.1\\n'), fail(1, 'failed')]) {
+      const { run, calls } = makeInstallerRun(() => result);
+      const out = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run)
+        .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
+      assert.equal(out.error, 'package-state-unknown');
+      assert.equal(calls.length, 1);
+    }
+  });
 
-    await installer.install();
+  test('absent package plus invalid path or wrong bytes refuses before pip install', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qorwheel-test-'));
+    try {
+      const fake = path.join(dir, FROZEN_QOR_WHEEL_NAME);
+      fs.writeFileSync(fake, Buffer.from('untrusted wheel'));
+      for (const file of [fake, path.join(dir, 'not-the-wheel.whl')]) {
+        const { run, calls } = makeInstallerRun(() => fail(1, 'WARNING: Package(s) not found: qor-logic'));
+        const out = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run).install(file);
+        assert.equal(out.error, file === fake ? 'unverified-wheel' : 'invalid-wheel-path');
+        assert.equal(calls.length, 1, 'pip show only, no pip install');
+      }
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
 
-    assert.equal(calls.length, 1);
-    assert.ok(
-      calls[0].args.includes(PINNED_SPEC),
-      `captured argv must contain ${PINNED_SPEC}; got ${JSON.stringify(calls[0].args)}`,
-    );
-    assert.ok(calls[0].args.includes('--upgrade'), 'captured argv must include --upgrade');
+  test('wheel verifier independently rejects fake content and cleans staged files', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qorwheel-test-'));
+    try {
+      const file = path.join(dir, FROZEN_QOR_WHEEL_NAME);
+      fs.writeFileSync(file, 'fake wheel');
+      assert.match(FROZEN_QOR_WHEEL_SHA256, /^[a-f0-9]{64}$/);
+      let consumed = false;
+      await assert.rejects(withVerifiedQorWheel(file, async () => { consumed = true; }), /unverified-wheel/);
+      assert.equal(consumed, false);
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });
 
