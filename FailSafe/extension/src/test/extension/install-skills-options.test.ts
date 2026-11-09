@@ -110,7 +110,9 @@ suite('resolveInstallSkillsOptions', () => {
       assert.equal(geminiItem?.picked, true);
       assert.equal(claudeItem?.picked, false);
       const globalScope = stubs.scopeItemsCaptured.find((i) => i.label === 'global');
-      assert.equal(globalScope?.picked, true);
+      const repoScope = stubs.scopeItemsCaptured.find((i) => i.label === 'repo');
+      assert.equal(globalScope, undefined, 'global-scope install is unsupported');
+      assert.equal(repoScope?.picked, true, 'legacy global preference cannot enable it');
     } finally { restore(); }
   });
 
