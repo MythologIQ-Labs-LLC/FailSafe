@@ -16,7 +16,11 @@ import type {
   QorLogicInstallInvocation,
 } from '../../extension/installSkillsReport';
 
+const fakeRoots = new Set<string>();
 class FakeIngestor {
+  private readonly root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-install-handler-'));
+  constructor() { fakeRoots.add(this.root); }
+
   public probeError: string | null = null;
   public pipError: string | null = null;
   public hostFailures = new Map<QorLogicHost, string>();
@@ -40,15 +44,28 @@ class FakeIngestor {
     if (err) {
       return { ok: false, host, scope, error: err, command: `qorlogic install --host ${host}` };
     }
+    // Native test fixture must create the same kind of hashed record as
+    // the actual frozen CLI; a fake exit code is not provenance evidence.
+    const base = path.join(this.root,
+      host === 'kilo-code' ? '.kilo' : `.${host}`);
+    const entries: Array<{ path: string; sha256: string }> = [];
+    for (let i = 0; i < 17; i += 1) {
+      const file = path.join(base, host === 'gemini' ? 'commands' : 'skills', `qor-${i}.md`);
+      const bytes = Buffer.from(`# ${host} ${i}`);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, bytes);
+      entries.push({ path: file, sha256: createHash('sha256').update(bytes).digest('hex') });
+    }
+    fs.writeFileSync(path.join(base, '.qorlogic-installed.json'), JSON.stringify({ files: entries }));
     return {
       ok: true, host, scope,
       command: `qorlogic install --host ${host}`,
       destination: `.${host}/skills/`,
-      installedCount: 17,
+      installedCount: entries.length,
     };
   }
 
-  getWorkspaceRoot() { return '/tmp/workspace'; }
+  getWorkspaceRoot() { return this.root; }
   async rescanWorkspace() { /* noop */ }
 }
 
@@ -63,6 +80,10 @@ function fakeContext(): vscode.ExtensionContext {
 }
 
 suite('createInstallSkillsHandler', () => {
+  teardown(() => {
+    for (const root of fakeRoots) fs.rmSync(root, { recursive: true, force: true });
+    fakeRoots.clear();
+  });
   test('#463: Console selected-skill requests (including []) fail before Python and pip', async () => {
     for (const filter of [{ claude: ['qor-audit'] }, { claude: [] }]) {
       const fake = new FakeIngestor();
