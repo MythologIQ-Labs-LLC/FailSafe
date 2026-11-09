@@ -4,6 +4,7 @@ import * as path from "path";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import type { IQorLogicPackageInstaller } from "../qorlogic/QorLogicPackageInstaller";
 import type { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
+import { verifyHostInstallReceipt } from "../qorlogic/qorHostReceiptVerify";
 import { FROZEN_QOR_LOGIC_VERSION } from "../qorlogic/hostLayouts";
 import { assembleReport, type BootstrapStep, type BootstrapReport } from "./bootstrapAssembleReport";
 export { assembleReport, type BootstrapStep, type BootstrapReport };
@@ -40,7 +41,7 @@ export async function runWorkspaceBootstrap(
 ): Promise<BootstrapReport> {
   const steps: BootstrapStep[] = [];
   steps.push(await stepWorkspaceMigration(deps, mode));
-  steps.push(stepGovernanceDirs(deps));
+  steps.push(stepGovernanceDirs(deps, mode));
   const pkgStep = await stepQorLogicPackage(deps, mode);
   steps.push(pkgStep);
   if (pkgStep.status === "ok" || pkgStep.status === "performed") {
@@ -66,12 +67,18 @@ async function stepWorkspaceMigration(
   }
 }
 
-function stepGovernanceDirs(deps: BootstrapDeps): BootstrapStep {
+function stepGovernanceDirs(deps: BootstrapDeps, mode: BootstrapMode): BootstrapStep {
   const required = [
     path.join(deps.workspaceRoot, ".failsafe"),
     path.join(deps.workspaceRoot, ".failsafe", "governance"),
     path.join(deps.workspaceRoot, ".failsafe", "governance", "plans"),
   ];
+  if (mode === "silent") {
+    const missing = required.filter((dir) => !fs.existsSync(dir));
+    return { name: "governance-dirs", status: missing.length ? "deferred" : "ok",
+      detail: missing.length ? `${missing.length} directory(s) missing; silent mode never creates them`
+        : "all directories present" };
+  }
   let created = 0;
   for (const dir of required) {
     if (fs.existsSync(dir)) continue;
@@ -149,11 +156,17 @@ async function stepSkillIngestion(
   if (approve !== "Install skills") return { name: "skill-ingestion", status: "deferred", detail: "operator declined" };
   deps.output.appendLine("[bootstrap] running qorlogic install for claude+codex");
   const result = await deps.ingestor.ingest({ hosts: ["claude", "codex"], scope: "repo" });
-  if (!result.ok && result.installedHosts.length === 0) {
+  const missingHosts = (["claude", "codex"] as const)
+    .filter((host) => !result.installedHosts.includes(host));
+  if (!result.ok || missingHosts.length > 0) {
     return {
       name: "skill-ingestion",
       status: "failed",
-      detail: result.failures.map((f) => `${f.host}: ${f.error}`).join("; "),
+      detail: [
+        `Verified ${result.installedHosts.length}/2 requested hosts`,
+        ...missingHosts.map((host) => `${host}: not installed`),
+        ...result.failures.map((f) => `${f.host}: ${f.error}`),
+      ].join("; "),
     };
   }
   return {
@@ -164,14 +177,9 @@ async function stepSkillIngestion(
 }
 
 function skillsAlreadyIngested(workspaceRoot: string): boolean {
-  const skillsRoot = path.join(workspaceRoot, ".claude", "skills");
-  if (!fs.existsSync(skillsRoot)) return false;
-  for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    if (!entry.name.startsWith("qor-")) continue;
-    const sourceYml = path.join(skillsRoot, entry.name, "SOURCE.yml");
-    if (fs.existsSync(sourceYml)) return true;
-  }
-  return false;
+  // #463: SOURCE.yml may be stale, user-created or present for only one host.
+  // Idempotence requires *both* hosts to have current on-disk files whose
+  // bytes match the checked, size-bounded Qor-logic installation receipts.
+  return (["claude", "codex"] as const)
+    .every((host) => verifyHostInstallReceipt(workspaceRoot, host).ok);
 }
-
