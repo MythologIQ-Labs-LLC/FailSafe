@@ -141,6 +141,14 @@ export function createInstallSkillsHandler(
       : await resolveInstallSkillsOptions(context);
     if (!options) return null;
     const invs: QorLogicInstallInvocation[] = [];
+    if (options.scope !== 'repo') {
+      const at = new Date().toISOString();
+      invs.push(emit({ phase: 'qorlogic-install', status: 'error',
+        startedAt: at, completedAt: at, scope: options.scope,
+        error: 'Global-scope installation is unavailable: FailSafe cannot verify host receipts outside the workspace. No Python process started.',
+      }, callbacks.onProgress));
+      return finalize(invs, callbacks);
+    }
     const probe = await runProbeStep(ingestor, callbacks.onProgress);
     invs.push(probe);
     if (probe.status === 'error') return finalize(invs, callbacks);
@@ -169,14 +177,16 @@ export function createScaffoldWithWebOptions(
     const invs: QorLogicInstallInvocation[] = [];
     // #463: selection keys, including explicit [], cannot be represented by
     // the frozen 0.176.1 CLI. Refuse BEFORE any Python or pip side effects.
-    if (skillFilter && Object.keys(skillFilter).length > 0) {
-      const host = hosts.find((h) => Object.prototype.hasOwnProperty.call(skillFilter, h));
+    if (scope !== 'repo' || (skillFilter && Object.keys(skillFilter).length > 0)) {
+      const host = hosts.find((h) => skillFilter && Object.prototype.hasOwnProperty.call(skillFilter, h));
       const at = new Date().toISOString();
       invs.push(emit({
         phase: 'qorlogic-install', status: 'error', startedAt: at, completedAt: at,
         ...(context?.operationId ? { operationId: context.operationId } : {}),
-        ...(host ? { host, scope } : {}),
-        error: 'Selected-skill installation is unavailable with frozen qor-logic 0.176.1; no Python process or install was started.',
+        ...(host ? { host, scope } : { scope }),
+        error: scope !== 'repo'
+          ? 'Global-scope installation is unavailable: host receipts cannot be verified. No Python process started.'
+          : 'Selected-skill installation is unavailable with frozen qor-logic 0.176.1; no Python process or install was started.',
       }, cb.onProgress));
       return finalize(invs, cb);
     }
