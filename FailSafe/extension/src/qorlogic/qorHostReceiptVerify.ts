@@ -100,7 +100,7 @@ export function verifyHostInstallReceipt(
     }
     // All paths/digests came from the same checked receipt descriptor.
     const destinations = [...new Set(record.files.map((entry) =>
-      path.dirname(entry.path).replace(/\\\\/g, '/') + '/'))].sort();
+      path.dirname(entry.path).replace(/\\/g, '/') + '/'))].sort();
     const status: HostInstallStatus = {
       host, installed: true, recordPath, fileCount: seen.size,
       destinations, recordMtime,
