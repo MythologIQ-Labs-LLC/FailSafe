@@ -162,6 +162,30 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
     assert.equal(calls.length, 1, 'CLI ran once but did not create a receipt');
   });
 
+  test('#463: direct host stale receipt with no positive CLI output is refused', async () => {
+    fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md']);
+    const { run, calls } = makeRun(() => ok(''));
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    const out = await ingestor.installHost('claude', 'repo');
+    assert.equal(out.ok, false);
+    if (!out.ok) assert.equal(out.error, 'install-confirmation-missing-or-invalid');
+    assert.equal(calls.length, 1);
+  });
+
+  test('#463: direct host confirmed file count must match hashed receipt', async () => {
+    fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md']);
+    const { run, calls } = makeRun(() => ok('Installed 2 files to claude\\n'));
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    const out = await ingestor.installHost('claude', 'repo');
+    assert.equal(out.ok, false);
+    if (!out.ok) assert.equal(out.error, 'install-output-receipt-count-mismatch');
+    assert.equal(calls.length, 1);
+  });
+
   test('#463: direct global-scope request cannot run the CLI or inspect credentials', async () => {
     let resolves = 0;
     const resolver = fixedResolver();
