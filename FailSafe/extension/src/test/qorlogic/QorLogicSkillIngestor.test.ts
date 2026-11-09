@@ -151,8 +151,8 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
     assert.equal(calls.length, 0, 'neither version probes nor installs may run');
   });
 
-  test('#463: direct single-host zero exit without a receipt is a failure', async () => {
-    const { run, calls } = makeRun(() => ok());
+  test('#463: direct single-host positive stdout but no receipt is a failure', async () => {
+    const { run, calls } = makeRun(() => ok('Installed 1 files to claude\n'));
     const ingestor = new QorLogicSkillIngestor(
       new FakeInstaller(), fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
     );
@@ -214,7 +214,7 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
     const resolver = fixedResolver();
     const { run } = makeRun((call) => {
       if (call.args.includes('claude')) return fail('claude broke');
-      return ok();
+      return ok('Installed 1 files to codex\n');
     });
     const ingestor = new QorLogicSkillIngestor(
       installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
@@ -288,7 +288,7 @@ suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
     const installer = new FakeInstaller();
     const resolver = fixedResolver();
     fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md', 'skills/log-decision.md', 'agents/agent-architect.md']);
-    const { run } = makeRun(() => ok());
+    const { run } = makeRun(() => ok('Installed 3 files to claude\n'));
     const ingestor = new QorLogicSkillIngestor(
       installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
     );
@@ -307,6 +307,30 @@ suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
     assert.match(dests, /agents/);
   });
 
+  test('#463: stale valid receipt cannot substitute for a new install confirmation', async () => {
+    fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md']);
+    const { run } = makeRun(() => ok(''));
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    const result = await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.installedHosts, []);
+    assert.deepEqual(result.failures, [{ host: 'claude', error: 'install-confirmation-missing-or-invalid' }]);
+  });
+
+  test('#463: reported host write count must equal verified receipt count', async () => {
+    fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md']);
+    const { run } = makeRun(() => ok('Installed 2 files to claude\n'));
+    const ingestor = new QorLogicSkillIngestor(
+      new FakeInstaller(), fixedResolver(), withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+    const result = await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.installedHosts, []);
+    assert.deepEqual(result.failures, [{ host: 'claude', error: 'install-output-receipt-count-mismatch' }]);
+  });
+
   test('does NOT write SOURCE.yml anywhere after install (no provenance pollution)', async () => {
     const installer = new FakeInstaller();
     const resolver = fixedResolver();
@@ -315,7 +339,7 @@ suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
     fs.mkdirSync(path.join(ws, '.claude', 'skills', 'user-custom-skill'), { recursive: true });
     fs.writeFileSync(path.join(ws, '.claude', 'skills', 'user-custom-skill', 'SKILL.md'), '# user-owned');
     fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md']);
-    const { run } = makeRun(() => ok());
+    const { run } = makeRun(() => ok('Installed 1 files to claude\n'));
     const ingestor = new QorLogicSkillIngestor(
       installer, resolver, ws, run, async () => undefined, sinkChannel,
     );
@@ -333,8 +357,8 @@ suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
   test('returns hostStatuses[].installed=false when install record is absent', async () => {
     const installer = new FakeInstaller();
     const resolver = fixedResolver();
-    // No fakeInstallRecord call → CLI succeeds (exit 0) but no record on disk.
-    const { run } = makeRun(() => ok());
+    // CLI reports a positive write but creates no receipt on disk.
+    const { run } = makeRun(() => ok('Installed 1 files to claude\n'));
     const ingestor = new QorLogicSkillIngestor(
       installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
     );
