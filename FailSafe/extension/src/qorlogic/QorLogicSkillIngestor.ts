@@ -36,7 +36,6 @@ export interface QorLogicIngestResult {
    */
   hostStatuses: HostInstallStatus[];
 }
-
 export interface HostInstallSuccess {
   ok: true;
   host: QorLogicHost;
