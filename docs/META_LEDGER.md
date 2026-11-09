@@ -35632,3 +35632,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Not Claimed**: this entry does not repair or re-verify entries at or below the boundary, is not an external witness or signature, and is not an audit PASS.
 
 ---
+
+### Entry #915: GATE TRIBUNAL - plan-v6012-633-frozen-qor-and-agent-refusal (iteration 1) - VETO
+
+**Timestamp**: 2026-11-09T16:35:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-09T1550-4e0666`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6012-633-frozen-qor-and-agent-refusal.md`
+**Report**: `.agent/staging/AUDIT_REPORT.md` (Content Hash = SHA256 of the report, LF-normalized)
+**Gate**: `.qor/gates/2026-11-09T1550-4e0666/audit.json`
+
+**Content Hash**: `04c65db54ffcf147d2b8940077d90065e3fb6f6bdd2fc45d16f806dedef82783`
+**Previous Hash**: `96500e67bd9bf323d223f11de6097455b658457a40611ddef57ee32772a56f10`
+**Chain Hash (Merkle seal)**: `0370a8d88c508781aa91178b050bf9275fe27a95384f4b43921bd1089deaef9d`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6012-633-frozen-qor-and-agent-refusal.md iteration 1 (plan sha256 2be0778197231dd245fd2c5b47ae0f08d8fa0324318375c1876d329bc41c7532; code 3d722d02..7bb330ee). Independent Option B fresh-context audit, solo mode (codex-plugin shortfall eb96b713). Post-implementation, pre-integration review under the plan's declared ordering inversion; not a pre-implementation verdict. Security and OWASP passes clean; #475 fails closed and #463 hash-pinned offline install with receipt-bound success are substantively sound; test:node 946/0 and the #463/#475 mocha suites 102/0 re-run by the auditor. VETO grounds: V1 razor-overage (new verifyHostInstallReceipt 79 lines and depth 4, copyAndVerify depth 4, installHost 53, createScaffoldWithWebOptions 50, stepQorLogicPackage 46, aggregateReport 41, createInstallSkillsHandler 41, registerAgentCliCommands 54; integration-catalog.ts, agent-cli-core.ts and qor-conformance-probe.cjs grown past 250); V2 test-failure (FIT row 1 cites the presence-only source scan agent-os-boundary.test.cjs; no in-repo behavioral test of command-level refusal); V3 feature-test-undeclared (FIT row unsupported frozen operations has no test_path); V4 specification-drift by self-application (plan says severity-2 gate_override, recorded b9f0a002 is severity 1 in a gitignored file; plan says head recorded in gate artifact, it is not); V5 macro-architecture (duplicated receipt readers boundedHostRecord.ts and qorHostReceiptVerify.ts). October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED and are neither closed nor reinterpreted; this scope is distinct. Next: /qor-refactor, /qor-organize, Governor amends plan text, then re-run /qor-audit. No merge, tag or publication.
+
+---

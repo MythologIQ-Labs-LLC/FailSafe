@@ -3035,3 +3035,25 @@ The upstream fix already ships and was simply never called: `ledger_fragment` (P
 **Lesson**: When a rule is a predicate over counters, write the counter identities first (`unique = eligible - duplicates`) and express every rule over the same term. When a test exercises a production I/O function, the plan must name the seam that makes it testable, or the test is aspirational.
 
 **Countermeasure applied**: VETO iteration 3. Amend LD8 over the unique count with an explicit precedence, and give the default transport an injectable request function.
+
+## SG Event 2026-11-09: Correct fail-closed security code shipped with function-size breaches and a source-text test standing in for behavior (plan-v6012-633-frozen-qor-and-agent-refusal iter 1, ledger #915)
+
+**Date**: 2026-11-09T16:35:00Z
+**Verdict ID**: Entry #915 - GATE TRIBUNAL - VETO (session `2026-11-09T1550-4e0666`)
+**Failure Mode**: COMPLEXITY_VIOLATION (with test-failure, feature-test-undeclared, specification-drift and macro-architecture grounds)
+
+### What Failed
+
+PR #633 (#463 frozen Qor-logic consumer, #475 agent refusal), audited after implementation under a declared ordering inversion. The new receipt verifier `qorHostReceiptVerify.ts:39-117` is 79 lines at nesting depth 4. `copyAndVerify` reaches depth 4. Six more touched functions exceed 40 lines, and three over-cap files grew. The plan cites `agent-os-boundary.test.cjs`, a source-text substring scan, as the test for the #475 gate. One Feature Inventory row names no test path. The plan misstates its own disclosure: it says severity-2, but the recorded gate_override `b9f0a002` is severity 1 and lives in a gitignored file, and the claimed gate-artifact head record does not exist. Receipt reading is duplicated in `boundedHostRecord.ts` and `qorHostReceiptVerify.ts` with divergent bounds.
+
+### Why It Failed
+
+Hardening was added one negative case at a time across about 120 commits, each adding a check inside the same function rather than extracting a stage. File-length caps were watched (one commit removed blank lines to stay at 249), but function length and nesting were not. A structural source scan was written as defense in depth and then promoted, in the plan, to the feature's test. The plan was written after the code, from memory of the evidence rather than from the artifacts.
+
+### Pattern to Avoid
+
+Security hardening that grows by accretion inside one function. Watching the file-line cap while ignoring the function and nesting caps. Citing a source-text assertion as the feature test when an invoking test exists or is needed. Writing post-hoc disclosure prose without re-reading the recorded event and gate artifact it describes.
+
+### Remediation Attempted
+
+None by the auditor. Required: `/qor-refactor` (V1), `/qor-organize` (V5), then the Governor amends the plan text (V2 cite behavioral tests and add a command-level behavioral test; V3 name test paths; V4 correct the severity, event location and head claim) and re-runs `/qor-audit`.
