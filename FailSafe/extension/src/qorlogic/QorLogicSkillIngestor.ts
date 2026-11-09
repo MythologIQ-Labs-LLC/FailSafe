@@ -5,7 +5,7 @@ import type {
   InstallerRunResult,
   OutputChannelLike,
 } from './QorLogicPackageInstaller';
-import { type QorLogicHost } from './hostLayouts';
+import { frozenHostSelectionError, type QorLogicHost } from './hostLayouts';
 import { checkFrozenQorPackage, ensureFrozenQorPackage } from './qorPackageEnsure';
 import { type HostInstallStatus } from './qorLogicInstallRecord';
 import { verifyHostInstallReceipt } from './qorHostReceiptVerify';
@@ -70,6 +70,8 @@ export class QorLogicSkillIngestor {
   ) {}
 
   async ingest(options: QorLogicIngestOptions): Promise<QorLogicIngestResult> {
+    const hostError = frozenHostSelectionError(options.hosts);
+    if (hostError) return this.failAll(Array.isArray(options.hosts) ? options.hosts : [], hostError);
     if (options.scope !== 'repo') return this.failAll(options.hosts, 'global-scope-receipt-unverified');
     const py = await this.resolver.resolve();
     if (!py.ok) {
@@ -113,6 +115,8 @@ export class QorLogicSkillIngestor {
 
   /** Single-host install for the Console; requires verified package and receipt. */
   async installHost(host: QorLogicHost, scope: QorLogicScope, skillFilter?: ReadonlyArray<string>): Promise<HostInstallResult> {
+    const hostError = frozenHostSelectionError([host]);
+    if (hostError) return { ok: false, host, scope, command: '', error: hostError };
     // #463: frozen qor-logic 0.176.1 has no --include. Even an empty, explicitly
     // supplied filter is an ambiguous selection request; never install all.
     if (skillFilter !== undefined) {
