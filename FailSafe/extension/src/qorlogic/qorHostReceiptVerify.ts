@@ -41,7 +41,28 @@ export function verifyHostInstallReceipt(
 ): VerifiedHostReceipt {
   const layout = HOST_INSTALL_LAYOUTS[host];
   if (!layout) return { ok: false, error: 'install-receipt-integrity-failed' };
-  const record = readInstallRecord(workspaceRoot, host);
+  const recordPath = path.join(workspaceRoot, layout.recordPath);
+  let record: ReturnType<typeof readInstallRecord>;
+  let workspace: string;
+  let base: string;
+  try {
+    // Refuse unbounded/malicious JSON before the existing reader touches it.
+    const recordStat = fs.lstatSync(recordPath);
+    if (!recordStat.isFile() || recordStat.isSymbolicLink() || recordStat.size > 1024 * 1024) {
+      throw Error('record file invalid');
+    }
+    workspace = fs.realpathSync(workspaceRoot);
+    base = fs.realpathSync(path.join(workspaceRoot, layout.base));
+    if (!within(workspace, base) || !within(base, fs.realpathSync(recordPath))) {
+      throw Error('record escaped host');
+    }
+    record = readInstallRecord(workspaceRoot, host);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { ok: false, error: 'install-receipt-missing' };
+    }
+    return { ok: false, error: 'install-receipt-integrity-failed' };
+  }
   if (!record || !Array.isArray(record.files) || record.files.length === 0) {
     return { ok: false, error: 'install-receipt-missing' };
   }
@@ -49,12 +70,6 @@ export function verifyHostInstallReceipt(
     return { ok: false, error: 'install-receipt-integrity-failed' };
   }
   try {
-    const workspace = fs.realpathSync(workspaceRoot);
-    const base = fs.realpathSync(path.join(workspaceRoot, layout.base));
-    if (!within(workspace, base)) throw Error('host outside workspace');
-    const recordPath = path.join(workspaceRoot, layout.recordPath);
-    if (!fs.lstatSync(recordPath).isFile()) throw Error('record not file');
-    if (!within(base, fs.realpathSync(recordPath))) throw Error('record escaped host');
     let total = 0;
     const seen = new Set<string>();
     for (const item of record.files) {
