@@ -88,22 +88,19 @@ suite('Lane E XSS: install skills modal, preview, picker (X18-X20)', () => {
     assert.equal(blocks[1].getAttribute('data-host'), `${DQ}2`);
   });
 
-  test('X20 picker: hostile host and skill names stay inert (S15)', async () => {
+  test('X20 frozen picker is not actionable and cannot fetch hostile skill names', async () => {
     const root = doc.getElementById('m')!;
     root.innerHTML = `<input type="checkbox" class="cc-modal-host" checked>${renderPickerSection([], false)}`;
     (root.querySelector('input.cc-modal-host') as HTMLInputElement).value = TAG;
-    const fetchStub = async () => ({ json: async () => ({ skills: [{ name: DQ }] }) });
-    bindPickerEvents(root, { fetch: fetchStub });
-    const details = root.querySelector('[data-cc-picker="root"]') as HTMLDetailsElement;
-    details.open = true;
-    details.dispatchEvent(new (doc.defaultView as unknown as { Event: typeof Event }).Event('toggle'));
-    await settle();
-    const block = root.querySelector('.cc-picker-host');
-    assert.ok(block, 'the host block renders');
+    let fetched = 0;
+    bindPickerEvents(root, { fetch: async () => { fetched++; throw new Error('unsupported'); } });
     assertInert(root);
-    assert.equal(block!.getAttribute('data-host'), TAG);
-    assert.equal((root.querySelector('.cc-picker-skill input') as HTMLInputElement).value, DQ);
+    assert.equal(fetched, 0, 'no unsupported skill enumeration endpoint');
+    assert.equal(root.querySelectorAll('.cc-picker-skill input').length, 0);
+    assert.match(root.textContent ?? '', /Per-skill selection is unavailable/);
+    assert.match(root.textContent ?? '', /installs all available skills/);
   });
+
 });
 
 suite('Lane E XSS: Bicameral card (X21)', () => {
