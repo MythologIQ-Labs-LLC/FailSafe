@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-09T1550-4e0666",
-  "ts": "2026-11-09T15:50:27Z",
+  "ts": "2026-11-09T16:54:31Z",
   "plan_path": ".failsafe/governance/plans/plan-v6012-633-frozen-qor-and-agent-refusal.md",
-  "iteration": 1,
+  "iteration": 2,
   "change_class": "feature",
   "doc_tier": "standard",
   "pr_target": "release/v6.0.12-rc1-candidate-20261108-no-ci",
@@ -18,7 +18,8 @@
   "phases": [
     "Phase 1 - #475 fail-closed agent refusal (no OS-enforced containment)",
     "Phase 2 - #463 frozen Qor-logic 0.176.1 consumer (verified wheel, offline, receipt-bound success)",
-    "Phase 3 - integration repairs and truthful docs/release notes (source 011a546a)"
+    "Phase 3 - integration repairs and truthful docs/release notes (source 011a546a)",
+    "Phase 4 - iteration-1 VETO remediation (Entry #915): razor splits, shared receipt reader, behavioral #475 command test, plan-text corrections"
   ],
   "boundaries": {
     "limitations": [
@@ -56,6 +57,6 @@
     "host": "claude-code",
     "model_family": "claude-opus-5",
     "human_oversight": "absent",
-    "ts": "2026-11-09T15:50:27Z"
+    "ts": "2026-11-09T16:54:31Z"
   }
 }
