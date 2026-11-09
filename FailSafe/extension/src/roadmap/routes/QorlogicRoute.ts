@@ -78,6 +78,12 @@ function registerPreview(app: Application, deps: QorlogicRouteDeps): void {
     }
     try {
       const byHost = await runPreviewBatch(hosts, scope, skillFilter, deps.previewInstall);
+      if (Object.values(byHost).some((result) => result.degraded !== false)) {
+        // A degraded preview is not operator approval and must not be labelled success.
+        res.status(501).json({ ok: false, degraded: true,
+          reason: 'frozen-qor-logic-install-preview-unavailable', byHost });
+        return;
+      }
       res.json({ ok: true, byHost });
     } catch (err) {
       res.status(500).json({ error: String(err) });
