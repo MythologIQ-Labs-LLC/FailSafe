@@ -9,6 +9,7 @@ import { frozenHostSelectionError, type QorLogicHost } from './hostLayouts';
 import { checkFrozenQorPackage, ensureFrozenQorPackage } from './qorPackageEnsure';
 import { type HostInstallStatus } from './qorLogicInstallRecord';
 import { verifyHostInstallReceipt } from './qorHostReceiptVerify';
+import { parseQorHostInstallCount } from './qorHostInstallOutput';
 
 export type { QorLogicHost } from './hostLayouts';
 export type QorLogicScope = 'repo' | 'global';
@@ -146,7 +147,7 @@ export class QorLogicSkillIngestor {
       cwd: this.workspaceRoot,
       env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
     });
-    const mapped = mapHostResult(result, this.output);
+    const mapped = mapHostResult(result, this.output, host);
     if (!mapped.ok) {
       return {
         ok: false, host, scope, command,
@@ -157,6 +158,9 @@ export class QorLogicSkillIngestor {
     const verified = verifyHostInstallReceipt(this.workspaceRoot, host);
     if (!verified.ok) return { ok: false, host, scope, command, error: verified.error };
     const status = verified.status;
+    if (mapped.installedCount !== status.fileCount) {
+      return { ok: false, host, scope, command, error: 'install-output-receipt-count-mismatch' };
+    }
     const destination = status.destinations[0] ?? '';
     return {
       ok: true, host, scope, command,
@@ -195,6 +199,9 @@ export class QorLogicSkillIngestor {
       }
       const verified = verifyHostInstallReceipt(this.workspaceRoot, host);
       if (!verified.ok) { failures.push({ host, error: verified.error }); continue; }
+      if (verified.status.fileCount !== result.installedCount) {
+        failures.push({ host, error: 'install-output-receipt-count-mismatch' }); continue;
+      }
       installedHosts.push(host);
       hostStatuses.push(verified.status);
       const status = verified.status;
@@ -213,7 +220,7 @@ export class QorLogicSkillIngestor {
     py: ResolvedInterpreter,
     host: QorLogicHost,
     scope: QorLogicScope,
-  ): Promise<{ ok: true } | { ok: false; error: string }> {
+  ): Promise<{ ok: true; installedCount: number } | { ok: false; error: string }> {
     const args = [
       ...py.args,
       '-P', '-m', 'qor.cli', 'install',
@@ -227,19 +234,22 @@ export class QorLogicSkillIngestor {
       cwd: this.workspaceRoot,
       env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
     });
-    return mapHostResult(result, this.output);
+    return mapHostResult(result, this.output, host);
   }
 }
 
 function mapHostResult(
   result: InstallerRunResult,
   output: OutputChannelLike,
-): { ok: true } | { ok: false; error: string } {
+  host: QorLogicHost,
+): { ok: true; installedCount: number } | { ok: false; error: string } {
   if (result.timedOut) return { ok: false, error: 'timeout' };
   if (result.spawnError) return { ok: false, error: `spawn-failed: ${result.spawnError}` };
   if (result.code !== 0) {
     if (result.stderr) output.appendLine(result.stderr);
     return { ok: false, error: result.stderr.trim() || `exit-code-${result.code}` };
   }
-  return { ok: true };
+  const installedCount = parseQorHostInstallCount(result.stdout, host);
+  if (installedCount === null) return { ok: false, error: 'install-confirmation-missing-or-invalid' };
+  return { ok: true, installedCount };
 }
