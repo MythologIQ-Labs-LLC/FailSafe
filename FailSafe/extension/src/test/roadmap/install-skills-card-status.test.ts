@@ -15,7 +15,7 @@ suite("install-skills-card status and output", () => {
         } } });
       const below = renderInstallSkillsCard({ running: false }, snapshot("0.30.0", false));
       assert.match(below, /cc-qorlogic-floor-warning/);
-      assert.match(below, /installed v0\\.30\\.0/);
+      assert.match(below, /installed v0\.30\.0/);
       const above = renderInstallSkillsCard({ running: false }, snapshot("0.177.0", false));
       assert.match(above, /cc-qorlogic-floor-warning/, "future version also diverges");
       assert.match(above, /No automatic|never silently/);
