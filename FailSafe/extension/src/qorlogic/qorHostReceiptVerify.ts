@@ -7,7 +7,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { HOST_INSTALL_LAYOUTS, type QorLogicHost } from './hostLayouts';
-import { getHostInstallStatus, readInstallRecord, type HostInstallStatus } from './qorLogicInstallRecord';
+import type { QorLogicInstallRecord, HostInstallStatus } from './qorLogicInstallRecord';
 
 const MAX_FILES = 2048;
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
@@ -42,21 +42,28 @@ export function verifyHostInstallReceipt(
   const layout = HOST_INSTALL_LAYOUTS[host];
   if (!layout) return { ok: false, error: 'install-receipt-integrity-failed' };
   const recordPath = path.join(workspaceRoot, layout.recordPath);
-  let record: ReturnType<typeof readInstallRecord>;
+  let record: QorLogicInstallRecord | null;
   let workspace: string;
   let base: string;
+  let recordMtime: string;
   try {
-    // Refuse unbounded/malicious JSON before the existing reader touches it.
-    const recordStat = fs.lstatSync(recordPath);
-    if (!recordStat.isFile() || recordStat.isSymbolicLink() || recordStat.size > 1024 * 1024) {
-      throw Error('record file invalid');
-    }
     workspace = fs.realpathSync(workspaceRoot);
     base = fs.realpathSync(path.join(workspaceRoot, layout.base));
     if (!within(workspace, base) || !within(base, fs.realpathSync(recordPath))) {
       throw Error('record escaped host');
     }
-    record = readInstallRecord(workspaceRoot, host);
+    // Open once with no-follow. Validate and parse using that same descriptor;
+    // do not reopen an attacker-replaceable pathname after checking it.
+    const fd = fs.openSync(recordPath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+    try {
+      const info = fs.fstatSync(fd);
+      if (!info.isFile() || info.size > 1024 * 1024) throw Error('record invalid');
+      recordMtime = info.mtime.toISOString();
+      const parsed: unknown = JSON.parse(fs.readFileSync(fd, 'utf8'));
+      record = parsed && typeof parsed === 'object'
+        && Array.isArray((parsed as { files?: unknown }).files)
+        ? parsed as QorLogicInstallRecord : null;
+    } finally { fs.closeSync(fd); }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
       return { ok: false, error: 'install-receipt-missing' };
@@ -91,8 +98,13 @@ export function verifyHostInstallReceipt(
         }
       } finally { fs.closeSync(fd); }
     }
-    const status = getHostInstallStatus(workspaceRoot, host);
-    if (!status.installed || status.fileCount !== seen.size) throw Error('receipt drift');
+    // All paths/digests came from the same checked receipt descriptor.
+    const destinations = [...new Set(record.files.map((entry) =>
+      path.dirname(entry.path).replace(/\\\\/g, '/') + '/'))].sort();
+    const status: HostInstallStatus = {
+      host, installed: true, recordPath, fileCount: seen.size,
+      destinations, recordMtime,
+    };
     return { ok: true, status };
   } catch {
     return { ok: false, error: 'install-receipt-integrity-failed' };
