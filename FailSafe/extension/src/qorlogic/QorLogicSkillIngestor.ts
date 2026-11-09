@@ -7,7 +7,8 @@ import type {
 } from './QorLogicPackageInstaller';
 import { type QorLogicHost } from './hostLayouts';
 import { checkFrozenQorPackage, ensureFrozenQorPackage } from './qorPackageEnsure';
-import { getHostInstallStatus, type HostInstallStatus } from './qorLogicInstallRecord';
+import { type HostInstallStatus } from './qorLogicInstallRecord';
+import { verifyHostInstallReceipt } from './qorHostReceiptVerify';
 
 export type { QorLogicHost } from './hostLayouts';
 export type QorLogicScope = 'repo' | 'global';
@@ -69,6 +70,7 @@ export class QorLogicSkillIngestor {
   ) {}
 
   async ingest(options: QorLogicIngestOptions): Promise<QorLogicIngestResult> {
+    if (options.scope !== 'repo') return this.failAll(options.hosts, 'global-scope-receipt-unverified');
     const py = await this.resolver.resolve();
     if (!py.ok) {
       return this.failAll(options.hosts, 'no-python-found');
@@ -82,21 +84,14 @@ export class QorLogicSkillIngestor {
     return aggregate;
   }
 
-  /**
-   * Resolve Python interpreter. Used by Round 2 install-UX orchestrator
-   * to emit a `python-probe` invocation distinct from the rest of the chain.
-   */
+  /** Resolve Python for the UI's explicit probe stage. */
   async probePython(): Promise<{ ok: true; interpreter: string; command: string } | { ok: false; error: string }> {
     const py = await this.resolver.resolve();
     if (!py.ok) return { ok: false, error: 'no-python-found' };
     return { ok: true, interpreter: py.command, command: `${py.command} ${py.args.join(' ')}` };
   }
 
-  /**
-   * Install or upgrade the qor-logic package. Used by Round 2 install-UX
-   * orchestrator to emit a `pip-install` invocation. Caller must ensure
-   * `probePython()` succeeded first.
-   */
+  /** Fresh installation requires an approved, hash-verified offline wheel. */
   async ensurePackageInstalled(approvedWheelPath?: string): Promise<{ ok: true; command: string } | { ok: false; error: string; stderrTail?: string }> {
     return ensureFrozenQorPackage(this.installer, approvedWheelPath);
   }
@@ -116,12 +111,7 @@ export class QorLogicSkillIngestor {
     await this.rescan(this.workspaceRoot);
   }
 
-  /**
-   * Single-host install. Used by Round 2 install-UX orchestrator
-   * (`createInstallSkillsHandler` in extension/installSkillsHandler.ts) to emit
-   * per-step telemetry. Caller is responsible for python-resolve and pip-install
-   * sequencing; this method assumes both have already succeeded.
-   */
+  /** Single-host install for the Console; requires verified package and receipt. */
   async installHost(host: QorLogicHost, scope: QorLogicScope, skillFilter?: ReadonlyArray<string>): Promise<HostInstallResult> {
     // #463: frozen qor-logic 0.176.1 has no --include. Even an empty, explicitly
     // supplied filter is an ambiguous selection request; never install all.
@@ -129,6 +119,7 @@ export class QorLogicSkillIngestor {
       return { ok: false, host, scope, command: '',
         error: 'selective-skill-install-unsupported-by-frozen-qor-logic-0.176.1' };
     }
+    if (scope !== 'repo') return { ok: false, host, scope, command: '', error: 'global-scope-receipt-unverified' };
     const readiness = await checkFrozenQorPackage(this.installer);
     if (!readiness.ok) {
       return { ok: false, host, scope, command: '', error: readiness.error };
@@ -159,7 +150,9 @@ export class QorLogicSkillIngestor {
         stderrTail: result.stderr ? result.stderr.slice(-512) : undefined,
       };
     }
-    const status = getHostInstallStatus(this.workspaceRoot, host);
+    const verified = verifyHostInstallReceipt(this.workspaceRoot, host);
+    if (!verified.ok) return { ok: false, host, scope, command, error: verified.error };
+    const status = verified.status;
     const destination = status.destinations[0] ?? '';
     return {
       ok: true, host, scope, command,
@@ -196,11 +189,11 @@ export class QorLogicSkillIngestor {
         failures.push({ host, error: result.error });
         continue;
       }
+      const verified = verifyHostInstallReceipt(this.workspaceRoot, host);
+      if (!verified.ok) { failures.push({ host, error: verified.error }); continue; }
       installedHosts.push(host);
-      // The CLI returned 0; read its install record (canonical truth).
-      // No directory walks, no synthesized provenance.
-      const status = getHostInstallStatus(this.workspaceRoot, host);
-      hostStatuses.push(status);
+      hostStatuses.push(verified.status);
+      const status = verified.status;
       skillCount += status.fileCount;
     }
     return {
