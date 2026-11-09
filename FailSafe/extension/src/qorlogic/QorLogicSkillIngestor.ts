@@ -5,7 +5,7 @@ import type {
   InstallerRunResult,
   OutputChannelLike,
 } from './QorLogicPackageInstaller';
-import { FROZEN_QOR_LOGIC_VERSION, type QorLogicHost } from './hostLayouts';
+import { type QorLogicHost } from './hostLayouts';
 import { checkFrozenQorPackage, ensureFrozenQorPackage } from './qorPackageEnsure';
 import { getHostInstallStatus, type HostInstallStatus } from './qorLogicInstallRecord';
 
@@ -129,10 +129,9 @@ export class QorLogicSkillIngestor {
       return { ok: false, host, scope, command: '',
         error: 'selective-skill-install-unsupported-by-frozen-qor-logic-0.176.1' };
     }
-    const version = await this.installer.verifyInstalledVersion();
-    if (version.installed !== FROZEN_QOR_LOGIC_VERSION) {
-      return { ok: false, host, scope, command: '',
-        error: `frozen-qor-logic-required: ${version.installed ?? 'unknown'}` };
+    const readiness = await checkFrozenQorPackage(this.installer);
+    if (!readiness.ok) {
+      return { ok: false, host, scope, command: '', error: readiness.error };
     }
     const py = await this.resolver.resolve();
     if (!py.ok) {
