@@ -25,13 +25,14 @@ export type BootstrapMode = "auto" | "interactive" | "silent";
  *   1. WorkspaceMigration.checkAndRepair — `.failsafe/` dirs, `.gitignore`,
  *      intent schema, etc. (existing).
  *   2. Ensure governance directory shape (`.failsafe/governance/`).
- *   3. qor-logic Python package — install when missing.
- *   4. QorLogic skill ingestion — run when no qor-* skills are present
- *      with synthesized provenance.
+ *   3. Read-only frozen Qor-logic version + dependency checks; an absent
+ *      package needs an explicit local verified wheel and operator consent.
+ *   4. Qor-logic skill ingestion requires interactive approval; installation
+ *      success requires on-disk receipt and actual file SHA-256 verification.
  *
- * `mode === "silent"` only performs side-effect-free checks and reports.
- * `mode === "auto"` performs side effects up to the cost of the network
- * (pip install). `mode === "interactive"` prompts before each side effect.
+ * Silent/auto never download or upgrade the package or install its skills.
+ * The workspace migration and governance directory steps may still write
+ * in non-silent modes. Interactive mode asks before package/skill installation.
  */
 export async function runWorkspaceBootstrap(
   deps: BootstrapDeps,
