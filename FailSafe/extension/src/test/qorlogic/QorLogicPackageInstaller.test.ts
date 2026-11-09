@@ -127,6 +127,30 @@ suite('QorLogicPackageInstaller: verified offline install', () => {
     assert.deepEqual(calls[1].args, ['-P', '-m', 'pip', '--isolated', 'check']);
   });
 
+  test('existing exact version with broken dependencies must not report successful install', async () => {
+    const { run, calls } = makeInstallerRun((call) => call.args.includes('check')
+      ? fail(1, 'qor-logic 0.176.1 requires PyYAML')
+      : ok(`Name: qor-logic\nVersion: ${FROZEN_QOR_LOGIC_VERSION}\n`));
+    const result = await new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run)
+      .install('/tmp/' + FROZEN_QOR_WHEEL_NAME);
+    assert.equal(result.ok, false);
+    assert.equal(result.error, 'dependencies-unsatisfied');
+    assert.equal(calls.length, 2);
+    assert.ok(calls.every((c) => !c.args.includes('install')));
+    assert.deepEqual(calls[1].args, ['-P', '-m', 'pip', '--isolated', 'check']);
+  });
+
+  test('installed dependency check failure cannot be misclassified as healthy', async () => {
+    const { run, calls } = makeInstallerRun(() => fail(1, 'missing jsonschema'));
+    const installer = new QorLogicPackageInstaller(fixedResolver('python'), sinkChannel, run);
+    const status = await installer.verifyInstalledDependencies();
+    assert.deepEqual(status, {
+      ok: false, error: 'dependencies-unsatisfied', details: 'missing jsonschema',
+    });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].args, ['-P', '-m', 'pip', '--isolated', 'check']);
+  });
+
   test('missing and ambiguous pip metadata do not trigger an install', async () => {
     for (const result of [fail(2, 'failed'), ok('Version: 0.176.1\n'), fail(1, 'failed')]) {
       const { run, calls } = makeInstallerRun(() => result);
