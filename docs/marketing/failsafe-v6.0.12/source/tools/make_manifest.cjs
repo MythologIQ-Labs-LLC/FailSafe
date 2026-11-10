@@ -17,7 +17,10 @@ const role = (r) => {
   if (/^screenshots\//.test(r)) return 'screenshot';
   if (/^audio\/narration\//.test(r)) return 'selected narration take (unprocessed)';
   if (/^audio\/narration-takes\/round1/.test(r)) return 'narration take, earlier voice, round 1 (not used)';
-  if (/^audio\/narration-takes\/.*\.wav$/.test(r)) return 'narration take, round 2';
+  if (/^audio\/narration-takes\/.*_m3-.*\.wav$/.test(r)) return 'narration take, final voice';
+  if (/^audio\/narration-takes\/.*\.wav$/.test(r)) return 'narration take, earlier voice, round 2 (not used)';
+  if (/^audio\/voice-candidates\/.*-sample\.wav$/.test(r)) return 'narrator voice candidate: sample line';
+  if (/^audio\/voice-candidates\/.*\.wav$/.test(r)) return 'narrator voice candidate: design clip';
   if (/^audio\/mix\/export\/master\.wav$/.test(r)) return 'Sonic Rift Studio export: master';
   if (/^audio\/mix\/export\/stems\//.test(r)) return 'Sonic Rift Studio export: stem';
   if (/^audio\/[^/]+-mix\.wav$/.test(r)) return 'final mixed audio (film length)';

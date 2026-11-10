@@ -40,7 +40,7 @@
   "details": "PROVENANCE.md"
  },
  "storage": {
-  "in_git_bytes": 40705168,
+  "in_git_bytes": 40705496,
   "local_only_bytes": 446573564,
   "local_only_location": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12 (owner workstation)"
  },
@@ -62,7 +62,7 @@
   {
    "path": "README.md",
    "bytes": 7001,
-   "sha256": "b0c7e1e62beac526608bc8414826e8ad295979fd6a6627c6ab06c7c1938037b6",
+   "sha256": "87ce8e1a542e713fa2d71450fed0e9621936e8cbb4fe26daec4cda9abf40e96a",
    "role": "document / production input",
    "in_git": true
   },
@@ -147,378 +147,378 @@
    "path": "audio/narration-takes/VO_S01_m3-take1.wav",
    "bytes": 414840,
    "sha256": "126def0ed2553ef2544ef25d76ba92c7d001fe135570b3b4f2f9338e5dc54000",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S01_m3-take2.wav",
    "bytes": 452034,
    "sha256": "eb559687b7a32efd4fa9dc6d5a45d8b0f5160929fe9e5ac2988ed4721e88f8bc",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S01_m3-take3.wav",
    "bytes": 452938,
    "sha256": "fc35bf2dabe43450f6a570b997319709ee4c63dd67db7973974ca1707387a5bd",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S01_r2-take1.wav",
    "bytes": 435386,
    "sha256": "b6ddcb240143584d00b408f9b0be62e0e40c7349206f1b4bf1f9e905ecabc33b",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S01_r2-take2.wav",
    "bytes": 450462,
    "sha256": "f3c49ad5bf66a018c714fc73fc5e92e27dc60e6e04e5a4500fae1ed7a7c9ee17",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S01_r2-take3.wav",
    "bytes": 432684,
    "sha256": "2154c0f1bdd65e435b9964120dc44192c8ff3599085ce0990b1e889981cf091f",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02B_m3-take1.wav",
    "bytes": 414538,
    "sha256": "f5f189f5e0707a2f7c5f4e0cc774afe9dc7b47649195df5d37b540d7d9e5f8d5",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02B_m3-take2.wav",
    "bytes": 412430,
    "sha256": "f651641dd6fa5e27803473007fdb885a52c92a6958cda5b1a5e33ba36816abff",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02B_m3-take3.wav",
    "bytes": 415442,
    "sha256": "3b5cf928b8d7407ffc7972d615b468f192218720fcc5fb9ef230e37eaa82fcc5",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02B_r2-take1.wav",
    "bytes": 417324,
    "sha256": "62b063bf95a8f3faf8410c6d1042ffaf393128294ba0c511dbecba59d28ca985",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02B_r2-take2.wav",
    "bytes": 425858,
    "sha256": "718675e111228cb59e263498fd9f145425a92c3832abf3a058c42360b2d446f6",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02B_r2-take3.wav",
    "bytes": 408364,
    "sha256": "32819f6e78adf08afcca25a0e1f1a06acb6692be8f8e0e8674eba96d31de0265",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02_m3-take1.wav",
    "bytes": 498566,
    "sha256": "56283579f66611a6a541548ae6334ec40e0ce8462c0a2efdfa39b9d9d26a8b0a",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02_m3-take2.wav",
    "bytes": 543592,
    "sha256": "5ed54bac079d0927527750ca22e2c9147e649deac2def862ef52159d3714b6d5",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02_m3-take3.wav",
    "bytes": 520252,
    "sha256": "3f43805829aa614aa0908bef1f235bddc7e88b6212d6a6e8886e0cd37539fda7",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02_r2-take1.wav",
    "bytes": 527688,
    "sha256": "95c9ab5345112e7f42dcbe55196bbff1f15ca6de3e96ea399046ce4dbd680936",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02_r2-take2.wav",
    "bytes": 544470,
    "sha256": "5bfad4f7e67004a50904c44dc7a112e70f4435514f1ac4ce2995bc096b64cc20",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S02_r2-take3.wav",
    "bytes": 529252,
    "sha256": "c529852faee8654232faedf50591e7667899937dae29b18b42858830f0880066",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S03_m3-take1.wav",
    "bytes": 744854,
    "sha256": "530d7176a4f8282b7c32bc336e3227d56098b437cff6c956b6024918cdb49ba3",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S03_m3-take2.wav",
    "bytes": 738528,
    "sha256": "23e64b65cca1baac5183620233fa84aa907db7b44f5791d9e83e5a5f65ffbcdd",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S03_m3-take3.wav",
    "bytes": 761870,
    "sha256": "c724e7b715a6a0f2c81d9ea4019f8e0dd7391dac5f774f9acb2191806a0ddebb",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S03_r2-take1.wav",
    "bytes": 787956,
    "sha256": "5ce8930bb2037d042876b8cdb4077372eb458011f62fd62e82bf983024b53e5b",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S03_r2-take2.wav",
    "bytes": 791084,
    "sha256": "59e92e7e1a06e60ea94fa0d18b93a0931e2406746be1e82bf98e6bb2394ec4d5",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S03_r2-take3.wav",
    "bytes": 738036,
    "sha256": "b53773cda2fe8b4ede6cad3d860cf59137fe1bc82a303731579073fa97a279f9",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S04_m3-take1.wav",
    "bytes": 593964,
    "sha256": "98de390c9eb468fa00919b462dcf0311138fd590bd05a1d2783b1eab11f41e0b",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S04_m3-take2.wav",
    "bytes": 588414,
    "sha256": "7b2f6b254a71bcd9a966be5dd91f36f601f8f1f8244efeeb8a49cd7d3a346096",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S04_m3-take3.wav",
    "bytes": 616402,
    "sha256": "221a5c4881c507c5016bfd6351eeb2896a72973b8cfcf721257dcee03bbcd9c3",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S04_r2-take1.wav",
    "bytes": 608756,
    "sha256": "8567ba4f3dd9f782dc139d36bfe096f986ed79102881b97b083c510c4aee9f8c",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S04_r2-take2.wav",
    "bytes": 629804,
    "sha256": "84db1441a86832b6833dcae6d85cabb9d62dae608bc402a35b4d838b800cc487",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S04_r2-take3.wav",
    "bytes": 624400,
    "sha256": "ac90914487a7d3df5f487e47debc69eac9c1ec6303bb3dd5e948dd878a1742ac",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S05_m3-take1.wav",
    "bytes": 519348,
    "sha256": "cb546584c5d2235f15bfb4d671c90a524ad70837496e73531ba1dad046719cd9",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S05_m3-take2.wav",
    "bytes": 487874,
    "sha256": "5ae4c42307dfd0cf7964ef38dc6360106e715cb677c03b274ff70b4807116ab9",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S05_m3-take3.wav",
    "bytes": 502482,
    "sha256": "f3c9fccc10cf071520ee78c916221c107b83847e46640477b36a73e8b2c3f405",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S05_r2-take1.wav",
    "bytes": 520578,
    "sha256": "2df31f85ce610ca6692ba3db3c0facbe9ce10697f63e1b25d33aaba4ec0e124f",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S05_r2-take2.wav",
    "bytes": 521430,
    "sha256": "838df78f7d6b730051755d81f2d4098a88b4ef11bbf7a8cce90aff48f3c435f5",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S05_r2-take3.wav",
    "bytes": 501236,
    "sha256": "cf81c27e7bec91d9cee064ba36278819b28e1a97e8ed332e63dd1284b7a651bd",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S06_m3-take1.wav",
    "bytes": 499320,
    "sha256": "5ec682826f80e9f0e05477ffbdbcfd27f711586829ec6b1c4d96b9ffe3e0c1b5",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S06_m3-take2.wav",
    "bytes": 490284,
    "sha256": "067f8ee5b2ff6ea13cb96723f15155b0bdb19ab5c4cf94bf7dbd548effd74c10",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S06_m3-take3.wav",
    "bytes": 481098,
    "sha256": "ee08ebdc4d2482963921900e2e76291385a485556aaddb220de964338d50b331",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S06_r2-take1.wav",
    "bytes": 495972,
    "sha256": "9813c64a348019e90152d2a952583e4cf6debfe71f0d79a73adb510f9917aa58",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S06_r2-take2.wav",
    "bytes": 494266,
    "sha256": "32e0408845fb621e1603d1b3315cdae626702589788a2384f1a5e5070e6b81c6",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S06_r2-take3.wav",
    "bytes": 499812,
    "sha256": "ec7f47b8aacb9a9843ee5bc18170ad20db926d5ce9f7a50c8a1522f5cf24256a",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S07_m3-take1.wav",
    "bytes": 567460,
    "sha256": "6093d5df431501fa562f799ae659dc283c3a9b5cb523d7fc337ac58b4d2ad64d",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S07_m3-take2.wav",
    "bytes": 577098,
    "sha256": "53324d4fa39e56938e570fe7b55198c17381d0aa4535caddbc5e3621f25dcbc4",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S07_m3-take3.wav",
    "bytes": 567310,
    "sha256": "cf336588020d45aca5f0dedd5a4f3e3ff3c3cc6436881a768e34d5a36fef927f",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S07_r2-take1.wav",
    "bytes": 554852,
    "sha256": "bc9a24442b47bb5ef7598354d9024ea390ef234882e9b9d988df096135842662",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S07_r2-take2.wav",
    "bytes": 560258,
    "sha256": "3fe71c705a9cb15eeeb1e604b5ac4da7da623d47683b4df98dbc84f6747710cf",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S07_r2-take3.wav",
    "bytes": 561252,
    "sha256": "6e12b286b1101de07e303bdbec2e019f9a1f6a2e99eab6371c8f2b61d01c2b0d",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S08_m3-take1.wav",
    "bytes": 397974,
    "sha256": "ec01b6fc6e439206156a9e17b413082ab986c6bce7a30c0fb134e02f81b3524c",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S08_m3-take2.wav",
    "bytes": 388788,
    "sha256": "b7622fbeadea79e8a8d32697b284f739f7c7836d418bdeeb4d8a526c79651607",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S08_m3-take3.wav",
    "bytes": 392598,
    "sha256": "65f01dad3dd663e679fa8a2bd1af70eee675d239a574008df38461cd1be1e47c",
-   "role": "narration take, round 2",
+   "role": "narration take, final voice",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S08_r2-take1.wav",
    "bytes": 400116,
    "sha256": "9953bf8f9995a8d2f4bbd070ba58c99efe690763eb2b9e5db15141fce7ef1b4f",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S08_r2-take2.wav",
    "bytes": 394142,
    "sha256": "7d66f34db72f1c73bab260034b58512ea23b1a6b7c4b10f0269ca09691c81c6b",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
    "path": "audio/narration-takes/VO_S08_r2-take3.wav",
    "bytes": 374800,
    "sha256": "027809565b1c19fc0a2e1d74c3af374c843284137027a8b8c8c169a4dcc8c9bf",
-   "role": "narration take, round 2",
+   "role": "narration take, earlier voice, round 2 (not used)",
    "in_git": false
   },
   {
@@ -875,56 +875,56 @@
    "path": "audio/voice-candidates/narrator-male-1-sample.wav",
    "bytes": 463148,
    "sha256": "b81580a32b51f1bcf0f9191b951a362f9953a7a420f0e299d58f307118a6d7a0",
-   "role": "document / production input",
+   "role": "narrator voice candidate: sample line",
    "in_git": true
   },
   {
    "path": "audio/voice-candidates/narrator-male-1.wav",
    "bytes": 403244,
    "sha256": "19b54c4724597a98f3a4277db6f73c15ea1520aa933f85e08eee6cd34729db96",
-   "role": "document / production input",
+   "role": "narrator voice candidate: design clip",
    "in_git": true
   },
   {
    "path": "audio/voice-candidates/narrator-male-2-sample.wav",
    "bytes": 475820,
    "sha256": "4fe3f4d31dff9625c94af1065d9b42d287e7c6cbb02d7f9960fc82cc8f7ef872",
-   "role": "document / production input",
+   "role": "narrator voice candidate: sample line",
    "in_git": true
   },
   {
    "path": "audio/voice-candidates/narrator-male-2.wav",
    "bytes": 372524,
    "sha256": "37f03a0286fa2bdce804bb79eb14616a2e85d674272702723e014be9c2fd538d",
-   "role": "document / production input",
+   "role": "narrator voice candidate: design clip",
    "in_git": true
   },
   {
    "path": "audio/voice-candidates/narrator-male-3-sample.wav",
    "bytes": 416428,
    "sha256": "f03f0671bed68ce092ff4fe2384e3d5c43490ef65bb516f18ab9942f61abcd63",
-   "role": "document / production input",
+   "role": "narrator voice candidate: sample line",
    "in_git": true
   },
   {
    "path": "audio/voice-candidates/narrator-male-3.wav",
    "bytes": 361004,
    "sha256": "e3d0b639fbfd47df9271f6ce9ca25433ae7845b6ed86dd4e4878b7fafead17f6",
-   "role": "document / production input",
+   "role": "narrator voice candidate: design clip",
    "in_git": true
   },
   {
    "path": "audio/voice-candidates/narrator-male-4-sample.wav",
    "bytes": 503724,
    "sha256": "e0945e9e3440902b2447a9828581ba28881454784fc06f0ad45b22f3517e0b80",
-   "role": "document / production input",
+   "role": "narrator voice candidate: sample line",
    "in_git": true
   },
   {
    "path": "audio/voice-candidates/narrator-male-4.wav",
    "bytes": 449324,
    "sha256": "875de006d7bfb34e999499e9364a7f1504825abae04fdf3ab693e504426a75f3",
-   "role": "document / production input",
+   "role": "narrator voice candidate: design clip",
    "in_git": true
   },
   {
@@ -1755,8 +1755,8 @@
   },
   {
    "path": "source/tools/make_manifest.cjs",
-   "bytes": 5444,
-   "sha256": "1ec2c40eb56a8e044468aef96028808ac6d3abe667526d9deccb57e9f15219d3",
+   "bytes": 5772,
+   "sha256": "8067ae1a652a22dbbc95aa14de691d19f2425fb63f89bf7f101aad7413f9bfeb",
    "role": "production script",
    "in_git": true
   },

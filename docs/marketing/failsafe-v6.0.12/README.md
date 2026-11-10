@@ -16,7 +16,7 @@ Everything between the title card and the end card is a real screen recording of
 | `audio/` | `narration/` the nine selected takes (unprocessed WAV); `narration-takes/` every take and the scores; `mix/` the Sonic Rift project, its export (master, stem) and QA; the final film mix WAV |
 | `source/` | `captures/` raw window recordings and event logs; `capture-rig/` the capture scripts and fixture bundle; `tools/` narration, mix, edit and caption scripts; `edit/` the cut list and cards; `narration/` the script and the voice design clip |
 
-**Large files and Git.** The repository has no LFS and ignores `docs/`. Following the 6.0.11 media precedent, the media branch carries the deliverables (video, poster, captions, screenshots, selected narration takes, scripts, documents; about 38 MB, added with `git add -f`). The raw captures, all narration takes and the WAV masters (about 432 MB) stay on the workstation at `C:\dev\mythologiq\failsafe\docs\marketing\failsafe-v6.0.12\`; `manifest.json` lists each with its SHA-256 and `"in_git": false`. The media branch is not meant to be merged into `main`.
+**Large files and Git.** The repository has no LFS and ignores `docs/`. Following the 6.0.11 media precedent, the media branch carries the deliverables (video, poster, captions, screenshots, selected narration takes, scripts, documents; about 41 MB, added with `git add -f`). The raw captures, all narration takes and the WAV masters (about 447 MB) stay on the workstation at `C:\dev\mythologiq\failsafe\docs\marketing\failsafe-v6.0.12\`; `manifest.json` lists each with its SHA-256 and `"in_git": false`. The media branch is not meant to be merged into `main`.
 
 ## Website placement (Studio #175, Stage B)
 
@@ -64,4 +64,4 @@ Do not add install counts, "blocks", "prevents", "certified" or "verified delive
 3. Accept the added setup scene and its line (scene 2b), and the film running without music.
 4. Decide whether the "override.approved" row at 1:36 and the empty SRE state at 0:39 are acceptable on screen.
 5. Confirm the end-card wording and the Marketplace / Open VSX / GitHub references.
-6. Decide where the 432 MB of sources should live long term, and whether the media branch may be pushed.
+6. Decide where the 447 MB of sources should live long term, and whether the media branch may be pushed.
