@@ -1,0 +1,47 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-10T2144-75f601",
+  "ts": "2026-11-10T21:44:08Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-636-g4-postseal-checkpoint-exception.md",
+  "iteration": 1,
+  "change_class": "governance",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #636, GH #638",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - amend RELEASE_INTEGRATION_PATH.md with a strict additive-only G4 post-seal checkpoint exception and exact-commit release verification on H and M"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Operator preflight only; not enforced by CI"
+    ],
+    "non_goals": [
+      "No key, TSA, policy or checkpoint",
+      "No scope decision"
+    ],
+    "exclusions": [
+      "No bypass; no diagnostic PASS as release evidence"
+    ]
+  },
+  "ci_commands": [
+    "git diff-tree --no-renames -r --name-status C^ C -- tools/g4/checkpoints (per post-seal commit)",
+    "g4-verify-checkpoint.cjs --release on H and M"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "e88952bfb6569dda2a7830e9bb62623702c46a40358975c4194c07d9e07f5458",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-10T21:44:08Z"
+  }
+}
