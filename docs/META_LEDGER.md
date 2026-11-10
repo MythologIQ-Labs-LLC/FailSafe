@@ -35852,3 +35852,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: SESSION SEAL for #634 (plan-v6012-634-release-runner-pin.md, content hash = the audited plan, sha256 9b8d356238d761878661f11f51f79ace034044a4df0d85577680dd1ff752bb4c; PASS #923). Reality = Promise. Builds on seal #922 (v6.0.12 release, Merkle c269ea24...): product source unchanged; the sealed v6.0.12 extension tree is now 3b8177919117ba0629acd901650cbf09007ab3f8 (seal #922 tree 1d49f88a plus the 2026-11-10 date lines); release.yml pins ubuntu-24.04. The commit carrying this entry is the v6.0.12 release commit to be tagged; its FailSafe/extension tree must equal 3b817791. Local requalification SHA256SUMS.txt sha256 c8bc3877550b531351b0c5d07cee31d99010f6063cbec5bd1ffd452752da04ea (not byte-reproducible; the tag workflow builds and publishes its own set, whose checksums are recorded after publication). G4 disposition docs/releases/V6_0_12_G4_DISPOSITION.md sha256 15db89647f398b84b4ea536bf70c2d96e27147a7a2eb94ed204ee75df0b6118b accepted #920 (expires at v6.0.13 or 2026-12-09); publication on 2026-11-10 is inside it. One-time unpublished-tag replacement, owner exception of 2026-11-10 (#634): old annotated tag v6.0.12 object ff833f5c410d9418291303d31702c4075846b1a0 -> commit 45c1957c21b3151c9ac0b3944b99d1e09f6f3b33 (tagger Knapp-Kevin 1794277482 -0500), whose only run 42742575394 failed before packaging with 0 artifacts and no publication (verified twice; re-checked immediately before replacement). The new tag object and its run are recorded in the post-publication entry. Seal #922, audits #919 and #923, #920 and VETOs #915, #917, #918 unchanged. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED.
 
 ---
+
+### Entry #926: RELEASE - FailSafe v6.0.12 published (tag e949f270 -> 0e70e539, run 42842387243)
+
+**Timestamp**: 2026-11-10T15:41:15Z
+**Phase**: RELEASE
+**Author**: Judge
+**Session**: `2026-11-10T1500-49ff26`
+**Risk Grade**: L2
+**Verdict**: PUBLISHED
+**Target**: `v6.0.12` -> `0e70e53956e893cda40c7eea01722dfc25db7cf0`
+**Report**: published `SHA256SUMS.txt` (GitHub Release v6.0.12)
+**Gate**: release run 42842387243
+
+**Content Hash**: `fadb1be668ef537d29873a656d06e0f054518f8b1e60b6b017f73d1790c5e85c`
+**Previous Hash**: `cfb6d35dc81e2f26a3d4740f47e5fd0ae4735d48be05f278cd34be61da47545c`
+**Chain Hash (Merkle seal)**: `71b46e4091cff6597310b602cd67559e04a4033df9ec49006a067f61c9e49074`
+
+**Decision**: RELEASE PUBLISHED: FailSafe v6.0.12, 2026-11-10. Content Hash = the published SHA256SUMS.txt (LF-normalized). Tag v6.0.12: new annotated object e949f270479c2524924ab438689f2f3a8e9eab39 -> commit 0e70e53956e893cda40c7eea01722dfc25db7cf0 (main; seal #925; extension tree 3b8177919117ba0629acd901650cbf09007ab3f8), replacing the unpublished object ff833f5c410d9418291303d31702c4075846b1a0 -> 45c1957c once under the owner exception (#634), after a no-publication re-check at 2026-11-10T15:14Z. Release run 42842387243 (single tag-triggered run, ubuntu-24.04, checkout 0e70e539): SemVer gate, Build & Test (test:all: host 6139+17 passing, node 967/0, Playwright 253 passed; 8 target VSIXs; PDF; verify-set), Publish to VS Code Marketplace, Publish to Open VSX, Create GitHub Release: all success. Production approved after verifying the CI artifact set: SHA256SUMS verified; every VSIX version 6.0.12 with its target, package.json identical to the tag, README/CHANGELOG markers 2026-11-10; contents identical entry-for-entry (EOL-normalized) to the locally qualified packages. Published artifact identities (SHA256SUMS.txt sha256 fadb1be668ef537d29873a656d06e0f054518f8b1e60b6b017f73d1790c5e85c): win32-x64 c247052b, win32-arm64 e4a6ba1b, linux-x64 678cd323, linux-arm64 985e32d3, alpine-x64 f4ca3e9f, alpine-arm64 00651e72, darwin-x64 96cd4a54, darwin-arm64 15a68828, FailSafe-v6.0.12-Release-Notes.pdf f29f551f. These are CI-built identities, distinct from the local qualification sets recorded in #922 and #925 (builds are not byte-reproducible). Post-publication: GitHub Release https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.12 (not draft, 10 assets, checksums equal the CI set); verify-release-provenance: VS Code Marketplace and Open VSX each serve all 8 targets byte-identical to SHA256SUMS; listings show 6.0.12. G4 deferral (#920) used within its expiry. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED.
+
+---
