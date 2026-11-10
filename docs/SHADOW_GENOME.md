@@ -3101,3 +3101,29 @@ Rescan every file touched by a remediation against the absolute limits, not only
 ### Remediation Attempted
 
 None by the auditor. Required: `/qor-refactor` of `settings.js` below 250 lines, plan iteration 3, then `/qor-audit` iteration 3 on the new candidate.
+
+## SG Event 2026-11-10: A whole-directory force-add committed a session signing key, and a seal check demanded an impossible tree equality (plan-v6013-636 iter 1, ledger #928)
+
+**Date**: 2026-11-10
+**Verdict ID**: Entry #928 - GATE TRIBUNAL - VETO (session `2026-11-10T1647-d432f4`)
+**Failure Mode**: SECURITY_EXPOSURE (near-miss) and SPECIFICATION_DRIFT
+
+### What Failed
+
+Two local commits staged gate artifacts with `git add -f .qor`. That force-added the gitignored session HMAC key `.qor/session/keys/<sid>.key` into a branch of a public repository. Neither commit was pushed, and both were rebuilt without the key.
+
+Separately, the release-path draft required the merge's full tree to equal the sealed tree, while also placing the seal record inside the release PR. A seal cannot contain the hash of a tree that includes itself, so no compliant release could pass that check.
+
+### Why It Failed
+
+`-f` overrides every ignore rule under the named path, including `*.key`. The seal model was written as "tree equality" without walking through the order in which the seal commit itself is created.
+
+### Pattern to Avoid
+
+Never force-add a whole governance directory. Stage named artifact paths only (`.qor/gates/<sid>/`, `.qor/session/current`), and check `git status` for `*.key` before committing.
+
+Bind a seal to the sealed commit and its product subtree. Then restrict the diff that follows it to governance paths, and check that mechanically.
+
+### Remediation
+
+Both commits were rebuilt key-free. The release path's iteration 2 (PASS #929) binds the seal to S and the extension subtree, and enforces a governance-path allow-list from S to the final head.

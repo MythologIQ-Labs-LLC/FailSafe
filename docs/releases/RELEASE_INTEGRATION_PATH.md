@@ -28,7 +28,7 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
 
 ## Compliant release path (no bypass)
 
-**Governance paths:** `docs/META_LEDGER.md`, `docs/SHADOW_GENOME.md`, `docs/SYSTEM_STATE.md`, `.agent/staging/**`, `.qor/gates/**`, `.qor/session/current`, `.failsafe/governance/**` and `docs/releases/**`.
+**Governance paths:** `docs/META_LEDGER.md`, `docs/SHADOW_GENOME.md`, `docs/SYSTEM_STATE.md`, `.agent/staging/**`, `.qor/gates/**`, `.qor/session/current`, `.failsafe/governance/**` and `docs/releases/**`. Excluded: any decision file cited by SHA-256 in the seal (for example a release disposition). Its SHA-256 is re-checked at H and must be unchanged.
 
 1. **Release PR and seal.** The release-candidate branch (for example `release/vX.Y.Z-rc*`) is opened as a PR to `main`.
    - The seal is created on that branch at sealed commit **S**. It binds S's `FailSafe/extension` subtree hash, which identifies the packaged product source, as well as S itself.
@@ -36,14 +36,15 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
 2. **Before merging:**
    - Every required check passes on the final PR head **H**: the PR Full Test, CodeQL and code quality. A missing or skipped check is not a pass.
    - H's commit message has no CI-skip marker (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`, `skip-checks: true`), so the PR Full Test runs on H.
-   - **Ancestry.** `origin/main` is an ancestor of H. If `main` moved after S, the release branch is updated and the seal is redone on the new base before merging. A stale seal is never merged.
+   - **Ancestry**, checked immediately before `gh pr merge`: `origin/main` is an ancestor of H. If `main` moved after S, the release branch is updated and the seal is redone on the new base before merging. A stale seal is never merged.
    - **Seal scope.** `git diff --name-only S H` lists only governance paths, and `git rev-parse H:FailSafe/extension` equals S's sealed subtree.
 3. **Merge.** Use the **merge-commit** method only (`gh pr merge <n> --merge --match-head-commit <H>`). Squash and rebase rewrite commits and are not used for release PRs. The PR title carries no CI-skip marker, because GitHub puts the title into the merge commit message.
 4. **After merging, before any tag**, all of the following are checked. Any failure is a hard stop that is reported, not overridden.
    - The merge commit **M** has parents (previous `main`, H), and `M^{tree}` equals `H^{tree}`.
    - `M:FailSafe/extension` equals the sealed subtree.
    - M's message has no CI-skip marker.
-   - The rule suite for the push to `main` (`GET /repos/{owner}/{repo}/rulesets/rule-suites?ref=refs/heads/main`) reports **`result=pass`**, meaning no rule was bypassed.
+   - The rule suite for the push to `main` reports **`result=pass`**, meaning no rule was bypassed. It is selected by `after_sha == M` and `before_sha ==` the previous `main` (`GET /repos/{owner}/{repo}/rulesets/rule-suites?ref=refs/heads/main`).
+   - **Recovery if any check fails:** do not tag. Fix forward through a new PR and re-seal. The failed merge and its rule suite are recorded.
 5. **Tag.** Create an annotated `vX.Y.Z` on M, so the tag-triggered release workflow runs from M. M is the artifact-producing commit. Once any publication has started, the tag is never moved.
 6. **Post-publication record (through a PR).** The record binds:
    - the merge commit M;
@@ -56,6 +57,7 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
 **Residual risks:**
 - **Tags are unprotected.** No ruleset protects tags, so "never move a published tag" is enforced by policy and by the post-publication record, not by GitHub.
 - **Admin merges look the same.** An admin merge with every rule satisfied also records `pass`. The control proves that no rule was bypassed, not which merge flag was used.
+- **"Merge commit only" is policy.** The ruleset still allows squash and rebase. The step 4 parent and tree checks detect any other method.
 
 ## Break-glass (emergency only)
 
@@ -68,11 +70,17 @@ Within 24 hours, the rule-suite ID and `result=bypass` are recorded in the ledge
 ## Acceptance test (non-release)
 
 PR #640 (#635, CI runner pin) is merged through steps 2–4 on a non-release change. The test passes only if:
-- the merge was a normal PR merge (`mergedBy`, merge commit present, no `--admin`);
+- the merge was a normal PR merge (`mergedBy`, merge commit present) with no rule bypassed;
 - its rule suite reports `result=pass` for the Production Block evaluation;
 - the merge commit's tree equals the PR head's tree.
 
 This proves that the ruleset accepts the intended path for the owner's account with no rule bypassed. A `bypass` result fails the test, and the path is redesigned before v6.0.13.
+
+**Result (2026-11-10): PASS.**
+- PR #640 was marked ready after every required check passed on head `1a5b8e3c4d33d26c2879f3e8e8b5b58fceb3773c`, including PR Full Test run 42854988809 and CodeQL.
+- It was merged with `gh pr merge 640 --merge --match-head-commit <head>` by Knapp-Kevin at 2026-11-10T16:46:08Z, as merge commit `e7549b4213d5c810daddb499a4816d49733080a4` (parents `f923fffb`, `1a5b8e3c`).
+- Rule suite **5025516418** records `f923fffb → e7549b42` as **`result=pass`**: all five rules passed and none was bypassed.
+- The merge tree `3e208e25…2202` equals the PR head tree.
 
 ## Not changed
 

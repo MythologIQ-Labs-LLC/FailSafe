@@ -35912,3 +35912,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-636-release-integration-path.md iteration 1 (plan sha256 89f5a131248e1a2b5e2176ba18829af3d861bd5bb8fbd4a91f36e41c33d2301e; local candidate 46fcfdc4 on main e7549b42). Independent Option B audit; risk raised to L3. Verified: ruleset 16423247 facts; four v6.0.12 rule suites result=bypass; acceptance rule suite 5025516418 (f923fffb->e7549b42) result=pass, all five rules passing; PR #640 merge tree equals head tree; release.yml accepts a tag on a merge commit. Blocking B1 (security): the local commit force-added the session HMAC key .qor/session/keys/2026-11-10T1647-d432f4.key (gitignored; public repo); it was never pushed and the commit was rebuilt without it; the same defect in the G4 lane's unpushed commit 5519fa66 was also removed (rebuilt as 3d92d88f). Blocking B2 (specification-drift): the path required the merge's full tree to equal the sealed tree while also placing the seal inside the release PR, which no compliant release can satisfy. Non-blocking N1-N6: pre-merge ancestry check, mechanical CI-skip check on the merge message and final head, post-publication binding chain, unprotected tags as residual risk, tighter break-glass, 'no rule bypassed' wording.
 
 ---
+
+### Entry #929: GATE TRIBUNAL - plan-v6013-636-release-integration-path (iteration 2) - PASS
+
+**Timestamp**: 2026-11-10T16:57:47Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1647-d432f4`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-636-release-integration-path.md`
+**Report**: `.agent/staging/AUDIT_REPORT-636.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1647-d432f4/audit.json`
+
+**Content Hash**: `44348efcb695fa6b91d1fe40998e35a6eb7a395c5962d8e2ccec320f7fb3872f`
+**Previous Hash**: `396eda43ca5e7f65f5816119621b0300ece52a0e30c3fcb91dbe13f4841e6dc2`
+**Chain Hash (Merkle seal)**: `7616aa5eb52f547cb89ba171151aee3e0f92a1e5ec81b0dc0f16ca5c9ce5ade8`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-636-release-integration-path.md iteration 2 (plan sha256 fe26b2c66c9bff4323a339ac971cf6e234171b900543c2da460d8e4ec1295e6a; candidate 506262f6 on main e7549b42), after VETO #928. Independent Option B audit, L3. B1 closed: no session key is tracked on the branch, the former commits 46fcfdc4 and 5519fa66 are unreachable from every local and remote ref (GitHub returns 422 for both), and no remote ref ever held a key; the G4 lane 3d92d88f is key-free. B2 closed: the seal binds the sealed commit S and its FailSafe/extension subtree; S->final head may touch listed governance paths only; merge tree equals final-head tree and merge extension subtree equals the seal; all mechanical. N1-N6 addressed. Post-audit wording applied per auditor notes: ancestry checked immediately before merge and recovery stated; rule suite selected by after_sha/before_sha; cited decision files excluded from the governance allow-list; merge-commit-only recorded as policy; acceptance wording 'no rule bypassed'; the acceptance result paragraph (PR #640, rule suite 5025516418 result=pass), lost from the working copy during a failed local rebase, restored with the audited facts.
+
+---
