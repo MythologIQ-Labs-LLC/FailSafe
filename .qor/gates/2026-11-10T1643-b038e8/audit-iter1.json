@@ -1,0 +1,36 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T1643-b038e8",
+  "ts": "2026-11-10T18:11:35Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-witness.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-638.md",
+  "risk_grade": "L3",
+  "findings_categories": [
+    "coverage-gap"
+  ],
+  "target_content_hash": "73d670915b7c18087db17e311aad6392ca06a16e4c61a323f425708960ee8051",
+  "report_content_hash": "aa111433480a441be1b33cab023e44ce69b8c5821243686b83852af3babff4bf",
+  "iteration": 1,
+  "ledger_entry": 930,
+  "ledger_chain_hash": "9b0775093550000522027e391ee7c776ea03e281e6802991869e445c492370b0",
+  "audited_candidate": "3d92d88f",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "coverage-gap",
+      "detail": "six verifier checks survived mutation with all 47 tests passing"
+    }
+  ],
+  "merge_obligations": "PR Full Test success on final head; rule-suite pass; native qualification on first v6.0.13 RC",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-10T18:11:35Z"
+  }
+}
