@@ -1,0 +1,54 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-10T1500-49ff26",
+  "ts": "2026-11-10T15:00:34Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6012-634-release-runner-pin.md",
+  "iteration": 1,
+  "change_class": "governance",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #634",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - pin five release.yml jobs to ubuntu-24.04 and reconcile the 2026-11-10 release date",
+    "Phase 2 - requalify consumers of the changed files; one-time unpublished-tag replacement; one tag run"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Other ubuntu-latest workflows tracked separately"
+    ],
+    "non_goals": [
+      "No Playwright upgrade",
+      "No version change",
+      "No product source change"
+    ],
+    "exclusions": [
+      "No tag replacement if any 6.0.12 publication exists"
+    ]
+  },
+  "ci_commands": [
+    "scripts/validate.ps1",
+    "npm run test:node",
+    "node scripts/validate-vsix.cjs --source-only",
+    "npm run release:preflight",
+    "node scripts/package-all-targets.cjs --out dist-vsix --version 6.0.12",
+    "node scripts/build-release-notes-pdf.cjs --version 6.0.12 --out dist-vsix",
+    "node scripts/release-artifacts.cjs verify-set dist-vsix --version 6.0.12"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "9b8d356238d761878661f11f51f79ace034044a4df0d85577680dd1ff752bb4c",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-10T15:00:34Z"
+  }
+}
