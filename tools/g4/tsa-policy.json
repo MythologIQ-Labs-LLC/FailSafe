@@ -1,0 +1,6 @@
+{
+  "schema": "failsafe-g4-tsa-policy/v1",
+  "status": "pending-owner-decision",
+  "note": "No TSA is selected. The verifier returns BLOCKED TSA_POLICY_UNSELECTED until the owner records a TSA decision and commits its trusted root under tools/g4/tsa-roots/ with its DER SHA-256 here. See docs/releases/V6_0_13_G4_OWNER_DECISIONS.md.",
+  "trustedRoots": []
+}

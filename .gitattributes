@@ -1,3 +1,10 @@
 *.sh text eol=lf
 .githooks/* text eol=lf
 FailSafe/extension/src/test/fixtures/qor-consumer/** text eol=lf
+# G4 ledger witness (#638): digests cover exact committed bytes; never convert line endings.
+tools/g4/checkpoints/** binary
+tools/g4/keys/** binary
+tools/g4/tsa-roots/** -text
+tools/g4/revocations.json -text
+tools/g4/tsa-policy.json -text
+tools/g4/HISTORICAL_GAPS.md -text
