@@ -36032,3 +36032,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-release-mode.md iteration 2 (plan sha256 aedaa1d9c763581e334dba1ba2d82993d54aaa61edcc393284c97dfa5587fea2; candidate 0063b2d2fc8b749fff5b8a0189d189783b0db5f7; remediation 55b61840; draft PR #646 stacked on #644), after VETO #933. Independent audit, L3. B1 closed: in --release every file under tools/g4/checkpoints and tools/g4/keys (the only files the verifier reads from the checkout) must equal its blob at HEAD; the auditor's skip-worktree, assume-unchanged, same-size-swap, deleted-file and junction constructions are all REFUSED RELEASE_TREE_MISMATCH. B2 closed: a flag is never taken as a value (exit 2) and results and CLI output carry mode release|diagnostic. B3 closed. Replace refs and dirty submodules no longer pass. No remaining --release PASS with a condition unmet was found. Mutations: 42, 36 killed; survivors non-blocking (git status / ls-tree failure branches, missing disk file tolerated, --ignore-submodules removal, missing flag value, one equivalent mutant). G4 suites 88/88; OpenSSL absent 82 skipped with reason, 0 fail; full test:node 1068 pass, 0 fail; razor clean; no session key tracked. Non-blocking: a diagnostic PASS still exits 0, so evidence consumers must check mode: release; enumerate the two evidence directories on disk; one doc sentence. Implementation PASS only: G4 is not operationally qualified until owner key enrollment, TSA selection and a genesis checkpoint verified in --release mode.
 
 ---
+
+### Entry #935: GATE TRIBUNAL - plan-v6013-638-g4-release-mode (bounded delta to cf8dd879) - ACCEPT
+
+**Timestamp**: 2026-11-10T20:21:09Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1844-963204`
+**Risk Grade**: L3
+**Verdict**: ACCEPT (PASS #934 extends)
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-release-mode.md`
+**Report**: `.agent/staging/AUDIT_REPORT-638-release-mode-delta1.md` (Content Hash = SHA256, LF-normalized); VETO #933 and PASS #934 reports preserved
+**Gate**: `.qor/gates/2026-11-10T1844-963204/audit.json`
+
+**Content Hash**: `8af42427ed4fba7d6dbc3d38b1ff288f8d454d55e58236c685df5747826ff3b2`
+**Previous Hash**: `c2a9d96833988902d302da30754b74d597db3433f64708feb981ecf4c22bcb74`
+**Chain Hash (Merkle seal)**: `7620e39e1d4a75e03d6219fa2d7615d978460af0f9e43eaaea9d7000dc226a94`
+
+**Decision**: BOUNDED-DELTA AUDIT ACCEPTED for PR #646 (G4 release-mode enforcement, #638): PASS #934 extends to final source cf8dd879308c54d9935614978dee3d4c4213aa4c. 0063b2d2->2e846092 records only; 2e846092->aec5730e is a non-forced merge of main 42f61921 (the normal merge of PR #644) whose tree equals its first parent, adding no content; aec5730e->cf8dd879 changes one test (g4ReleaseBinding same-size swap: adds git update-index --assume-unchanged and asserts git status is blind before expecting REFUSED RELEASE_TREE_MISMATCH), after Linux CI run 42886339390 showed Git still noticing the mtime-restored change and the verifier returning BLOCKED RELEASE_TREE_DIRTY (fail-closed either way). Production code byte-identical to the audited source. The test is not weakened: removing the byte binding or comparing lengths only makes it fail. Auditor re-run: G4 suites 88/88; OpenSSL absent 82 skipped with reason, 0 fail; 42 mutants, 36 killed, survivor set identical to #934; razor clean. CI on cf8dd879: 13 of 13 checks pass; PR Full Test 42888118970 (ubuntu-24.04) 1053 pass, 0 fail, 33 skipped (one G4 skip: the Windows-PowerShell-only TPM signer test; all 23 release-mode tests ran). Governor's Windows run: 88/88. Non-blocking: the pure mtime-restored construction without an index flag is no longer asserted by a test (restore it platform-neutrally: either refusal, never PASS). G4 remains not operationally qualified; no owner approval is implied.
+
+---
