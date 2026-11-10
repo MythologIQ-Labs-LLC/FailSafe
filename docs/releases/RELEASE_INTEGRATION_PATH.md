@@ -28,21 +28,22 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
 
 ## Compliant release path (no bypass)
 
-**Governance paths:** `docs/META_LEDGER.md`, `docs/SHADOW_GENOME.md`, `docs/SYSTEM_STATE.md`, `.agent/staging/**`, `.qor/gates/**`, `.qor/session/current`, `.failsafe/governance/**` and `docs/releases/**`. Excluded: any decision file cited by SHA-256 in the seal (for example a release disposition). Its SHA-256 is re-checked at H and must be unchanged.
+**Governance paths:** `docs/META_LEDGER.md`, `docs/SHADOW_GENOME.md`, `docs/SYSTEM_STATE.md`, `.agent/staging/**`, `.qor/gates/**`, `.qor/session/current`, `.failsafe/governance/**` and `docs/releases/**`. Excluded: any decision file cited by SHA-256 in the seal (for example a release disposition). Its SHA-256 is re-checked at H and must be unchanged. **The only exception outside those paths** is the creation of new, immutable G4 checkpoint evidence under `tools/g4/checkpoints/**`, subject to the strict conditions below. It never permits changes to G4 trust configuration, existing checkpoints or packaged product code.
 
 1. **Release PR and seal.** The release-candidate branch (for example `release/vX.Y.Z-rc*`) is opened as a PR to `main`.
    - The seal is created on that branch at sealed commit **S**. It binds S's `FailSafe/extension` subtree hash, which identifies the packaged product source, as well as S itself.
-   - Commits after S (the seal record, gate artifacts, SYSTEM_STATE) may touch **governance paths only**. Any other change voids the seal.
+   - Commits after S (the seal record, gate artifacts, SYSTEM_STATE) may touch **governance paths only**, except the narrowly constrained addition of G4 checkpoint files below. Any other change voids the seal.
 2. **Before merging:**
    - Every required check passes on the final PR head **H**: the PR Full Test, CodeQL and code quality. A missing or skipped check is not a pass.
    - H's commit message has no CI-skip marker (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`, `skip-checks: true`), so the PR Full Test runs on H.
    - **Ancestry**, checked immediately before `gh pr merge`: `origin/main` is an ancestor of H. If `main` moved after S, the release branch is updated and the seal is redone on the new base before merging. A stale seal is never merged.
-   - **Seal scope.** `git diff --name-only S H` lists only governance paths, and `git rev-parse H:FailSafe/extension` equals S's sealed subtree.
+   - **Seal scope.** `git diff --no-renames --name-status S H` lists only governance paths and permitted **new** G4 checkpoint files (see exception). `git rev-parse H:FailSafe/extension` equals S's sealed subtree. Every post-seal checkpoint must have a clean-HEAD `mode: release` `PASS OK` verification using the owner-held fingerprint and latest external head before merge; absence of an approved TSA or owner key remains NO-GO.
 3. **Merge.** Use the **merge-commit** method only (`gh pr merge <n> --merge --match-head-commit <H>`). Squash and rebase rewrite commits and are not used for release PRs. The PR title carries no CI-skip marker, because GitHub puts the title into the merge commit message.
 4. **After merging, before any tag**, all of the following are checked. Any failure is a hard stop that is reported, not overridden.
    - The merge commit **M** has parents (previous `main`, H), and `M^{tree}` equals `H^{tree}`.
    - `M:FailSafe/extension` equals the sealed subtree.
    - M's message has no CI-skip marker.
+   - If G4 applies, independently verify on a clean checkout of **M**, using `--release --commit M`, `--repository`, the owner-held fingerprint and externally retained trusted checkpoint head. Require `mode: release` and `PASS OK` without limitations before any tag; a diagnostic PASS never counts.
    - The rule suite for the push to `main` reports **`result=pass`**, meaning no rule was bypassed. It is selected by `after_sha == M` and `before_sha ==` the previous `main` (`GET /repos/{owner}/{repo}/rulesets/rule-suites?ref=refs/heads/main`).
    - **Recovery if any check fails:** do not tag. Fix forward through a new PR and re-seal. The failed merge and its rule suite are recorded.
 5. **Tag.** Create an annotated `vX.Y.Z` on M, so the tag-triggered release workflow runs from M. M is the artifact-producing commit. Once any publication has started, the tag is never moved.
@@ -58,6 +59,19 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
 - **Tags are unprotected.** No ruleset protects tags, so "never move a published tag" is enforced by policy and by the post-publication record, not by GitHub.
 - **Admin merges look the same.** An admin merge with every rule satisfied also records `pass`. The control proves that no rule was bypassed, not which merge flag was used.
 - **"Merge commit only" is policy.** The ruleset still allows squash and rebase. The step 4 parent and tree checks detect any other method.
+
+## Strict G4 post-seal checkpoint exception (#638)
+
+A checkpoint attests a **previously committed** seal or RC-promotion commit, so it cannot be included in that same commit. The signed/timestamped witness must therefore be added after S but before the final qualified PR head H. The G4 exception is **additive evidence only**, not a general expansion of mutable post-seal source.
+
+- Allowed path shape: `tools/g4/checkpoints/g4-NNNNNN/{manifest.json,manifest.sig,timestamp.tsq,timestamp.tsr,tsa-chain.pem}`. All five named files must be added together under a **new** `g4-NNNNNN` directory; file contents remain byte-identical after first commit. No other file type, symlink, extra path, deletion, modification or rename is allowed under `tools/g4/checkpoints/`.
+- `tools/g4/keys/**`, `tools/g4/tsa-roots/**`, `tools/g4/tsa-policy.json`, `tools/g4/revocations.json`, and G4 product scripts are **not** added to the post-seal allow-list. Trust selection and public owner certificates must be committed and qualified **before** S. This exception cannot retroactively authorize them.
+- The operator checks `git diff --no-renames --name-status S H -- tools/g4/checkpoints`: every listed change must be `A`, in an entirely new numbered directory, with the five exact filenames; compare the committed S and H trees so an old checkpoint cannot silently disappear or be replaced. Check `git diff --no-renames --name-status S H` for every other path under the original governance-only rule.
+- A complete G4 checkpoint is not sufficient on its own. Before merging, the owner must already have an independently retained certificate fingerprint and latest checkpoint head. On a clean checkout of H, run `g4-verify-checkpoint.cjs --release` with `--commit H`, the correct repository, fingerprint and trusted head; require `mode: release` and `PASS OK`. The externally retained head is recorded at creation, **before** any later GitHub Release body exists; the release body is a subsequent publication of the already retained pin.
+- Immediately after the merge-commit M, re-run the same **release** verification with `--commit M` on a clean checkout. Verify the no-bypass rule-suite receipt and sealed extension subtree as above **before tagging**. If S's provenance, G4 signatures, RFC 3161 token, external pins, ancestry, CI or ruleset gate fails, stop and correct through a new audited PR/re-seal. No administrative bypass, unsigned checkpoint, diagnostic PASS or silently altered seal is permitted.
+- A new RC promotion requiring another checkpoint repeats the additive-only and exact-commit verification process. A provider outage or missing owner decision is a release block, not permission to weaken the rule.
+
+These are required operator checks, not proof that CI already enforces the allow-list. No live checkpoint is authorized or created by this documentation amendment. Any future executable preflight requires its own tests and independent audit.
 
 ## Break-glass (emergency only)
 
