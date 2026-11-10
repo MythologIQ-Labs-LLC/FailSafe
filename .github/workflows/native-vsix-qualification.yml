@@ -26,7 +26,7 @@ permissions:
 jobs:
   package-all:
     name: Package and validate the target VSIX set
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # actions: read lets the rehearsal prove the release guard's history lookup
     # works with a job token before any tag exists.
     permissions:
