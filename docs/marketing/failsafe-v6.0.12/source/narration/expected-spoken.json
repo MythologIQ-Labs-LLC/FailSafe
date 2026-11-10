@@ -1,0 +1,11 @@
+{
+ "VO_S01_": "AI can help you write code faster. But when something changes, how do you know what happened, what it affects, and whether it's ready to ship?",
+ "VO_S02_": "Meet FailSafe. A development companion that helps solo developers keep their work visible, understand potential risks, and maintain a record of important decisions.",
+ "VO_S02B_": "Setup starts in the Console. Install the Core Logic skills, approve the request in VS Code, and the workspace is ready.",
+ "VO_S03_": "With version six point zero point twelve, the Console, Monitor, and S R E views share a consistent visual experience. Change your theme, and your workspace follows. The information stays familiar, wherever you're working.",
+ "VO_S04_": "Now imagine a small but important bug. A date validator accepts a day that doesn't exist. We document the issue, write a regression test, and see the failure for ourselves.",
+ "VO_S05_": "Fixing the code is only part of the job. FailSafe helps surface the risks and governance requirements around a change, so the developer knows what still needs attention.",
+ "VO_S06_": "The corrected validator passes its tests. We can inspect the difference, see the recorded decisions, and compare the result with what we intended to change.",
+ "VO_S07_": "Every change has a story. What we set out to do, what we changed, what we checked, and what still needs review. FailSafe helps make that story easier to follow.",
+ "VO_S08_": "Move faster without losing sight of the work. FailSafe. Build with AI. Know what changed."
+}

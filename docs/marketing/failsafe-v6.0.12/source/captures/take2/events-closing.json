@@ -1,0 +1,29 @@
+{
+ "seg": "closing",
+ "t0": "2026-11-10T19:42:33.557Z",
+ "clean": true,
+ "error": null,
+ "rects": {
+  "vscode": "3432,0,5368,1088",
+  "console": "3431,0,5369,1197"
+ },
+ "events": [
+  {
+   "t": 2.618,
+   "at": "2026-11-10T19:42:36.175Z",
+   "name": "seg.start",
+   "seg": "closing"
+  },
+  {
+   "t": 4.51,
+   "at": "2026-11-10T19:42:38.067Z",
+   "name": "closing.twoShot"
+  },
+  {
+   "t": 14.522,
+   "at": "2026-11-10T19:42:48.079Z",
+   "name": "seg.end",
+   "seg": "closing"
+  }
+ ]
+}

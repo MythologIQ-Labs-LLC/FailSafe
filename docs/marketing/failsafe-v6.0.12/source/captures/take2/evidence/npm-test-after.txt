@@ -1,0 +1,56 @@
+
+> tasklet-demo@0.3.0 test
+> node --test --test-reporter=tap "test/**/*.test.ts"
+
+TAP version 13
+# Subtest: create assigns ids and defaults to normal priority
+ok 1 - create assigns ids and defaults to normal priority
+  ---
+  duration_ms: 0.7954
+  type: 'test'
+  ...
+# Subtest: complete marks a task done and list filters by status
+ok 2 - complete marks a task done and list filters by status
+  ---
+  duration_ms: 0.6755
+  type: 'test'
+  ...
+# Subtest: overdue returns open tasks due on or before today, earliest first
+ok 3 - overdue returns open tasks due on or before today, earliest first
+  ---
+  duration_ms: 1.0873
+  type: 'test'
+  ...
+# Subtest: titles are trimmed and must not be empty
+ok 4 - titles are trimmed and must not be empty
+  ---
+  duration_ms: 0.6774
+  type: 'test'
+  ...
+# Subtest: unknown priorities are rejected
+ok 5 - unknown priorities are rejected
+  ---
+  duration_ms: 0.1068
+  type: 'test'
+  ...
+# Subtest: due dates must be YYYY-MM-DD
+ok 6 - due dates must be YYYY-MM-DD
+  ---
+  duration_ms: 0.7951
+  type: 'test'
+  ...
+# Subtest: impossible calendar days are rejected, real leap days accepted (TASK-14)
+ok 7 - impossible calendar days are rejected, real leap days accepted (TASK-14)
+  ---
+  duration_ms: 0.119
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.1125

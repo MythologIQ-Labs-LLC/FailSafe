@@ -1,0 +1,5 @@
+ M .gitignore
+ M src/validation.ts
+ M test/validation.test.ts
+?? .claude/
+?? .vscode/

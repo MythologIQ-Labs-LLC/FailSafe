@@ -1,0 +1,44 @@
+{
+ "seg": "decision",
+ "t0": "2026-11-10T19:42:08.785Z",
+ "clean": true,
+ "error": null,
+ "rects": {
+  "vscode": "3432,0,5368,1088",
+  "console": "3431,0,5369,1197"
+ },
+ "events": [
+  {
+   "t": 2.494,
+   "at": "2026-11-10T19:42:11.279Z",
+   "name": "seg.start",
+   "seg": "decision"
+  },
+  {
+   "t": 3.212,
+   "at": "2026-11-10T19:42:11.997Z",
+   "name": "decision.risks"
+  },
+  {
+   "t": 8.235,
+   "at": "2026-11-10T19:42:17.020Z",
+   "name": "decision.compliance"
+  },
+  {
+   "t": 12.312,
+   "at": "2026-11-10T19:42:21.097Z",
+   "name": "decision.delivery"
+  },
+  {
+   "t": 18.334,
+   "at": "2026-11-10T19:42:27.119Z",
+   "name": "decision.overview"
+  },
+  {
+   "t": 24.341,
+   "at": "2026-11-10T19:42:33.126Z",
+   "name": "seg.end",
+   "seg": "decision"
+  }
+ ]
+}

@@ -1,0 +1,3 @@
+mode picker: "3 Results\n EnforceDefault — full governance: intent-gated saves, L3 approvals.\n AssistSmart defaults, 
+chose the highlighted default
+console at http://localhost:9376/?workspace=…&ui=console&theme=dark

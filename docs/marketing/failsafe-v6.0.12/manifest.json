@@ -1,0 +1,1526 @@
+{
+ "title": "FailSafe: From Change to Confidence",
+ "tagline": "Build with AI. Know what changed.",
+ "product_version": "6.0.12",
+ "produced": "2026-11-10",
+ "approval_status": "PENDING OWNER REVIEW",
+ "tracking": [
+  "MythologIQ-Labs-LLC/FailSafe#645",
+  "MythologIQ-Labs-LLC/FailSafe#589",
+  "Knapp-Kevin/MythologIQ#175"
+ ],
+ "film": {
+  "file": "video/failsafe-6.0.12-from-change-to-confidence.mp4",
+  "seconds": 113.5,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "video": "H.264 High, yuv420p",
+  "audio": "AAC-LC 48 kHz stereo",
+  "integrated_lufs": -16,
+  "true_peak_dbfs": -1.3,
+  "loudness_range_lu": 4
+ },
+ "provenance": {
+  "product_package": {
+   "file": "mythologiq-failsafe-6.0.12-win32-x64.vsix",
+   "sha256": "c247052b08b3c5edf7521900e83a2eabeec934705fb27a36cfbb7bc3cc8f2fae",
+   "source": "https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.12",
+   "tag_commit": "0e70e53956e893cda40c7eea01722dfc25db7cf0"
+  },
+  "editor": "VS Code 1.145.2 (c4453f8ea430795f941c1b2ff6c9321135a74a02), isolated profile",
+  "os": "Windows 11 Pro 10.0.26300",
+  "browser": "Chrome 157.0.8103.38, disposable profile",
+  "fixture": "fictional Tasklet repository, failsafe-demo-workspace@demo-baseline (86c12f875d632dd9e21ca46e5afa83e7e8035060) + docs/CONCEPT.md",
+  "capture": "ffmpeg 9.0.1 gfxcapture (Windows.Graphics.Capture), two windows, lossless",
+  "narration": "Sonic Rift 0.9.1, Qwen3 voice cloning of the synthetic \"Guide\" voice design, generated locally",
+  "mix": "Sonic Rift Studio export engine, -16 LUFS target; no music",
+  "data_classification": "fictional demo data; no personal data",
+  "rights": "first-party capture and branding; synthetic narration; DM Sans under OFL",
+  "details": "PROVENANCE.md"
+ },
+ "storage": {
+  "in_git_bytes": 38317783,
+  "local_only_bytes": 432118424,
+  "local_only_location": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12 (owner workstation)"
+ },
+ "files": [
+  {
+   "path": ".gitattributes",
+   "bytes": 95,
+   "sha256": "7002d48de5adccd3aa99204b10df1fbbf610c27dad3bf8e4e15cc1341270a628",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "PROVENANCE.md",
+   "bytes": 13773,
+   "sha256": "ec28c05ca7be430589e6e79c92f4c1fa634aa6e9e928fe00be99e51160428139",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "README.md",
+   "bytes": 6868,
+   "sha256": "956427a6caa406953015b6c08c2d1518e21f8b90c7bd0fc061e119fa4e6442df",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/failsafe-6.0.12-from-change-to-confidence-mix.wav",
+   "bytes": 32688102,
+   "sha256": "710a96940b11d6585ccf9bc115a4d14bd241a22468c76e18edf3d852eb389849",
+   "role": "final mixed audio (film length)",
+   "in_git": false
+  },
+  {
+   "path": "audio/mix/caption-timing-report.json",
+   "bytes": 4679,
+   "sha256": "51d2f6867622b973121135fd56b388e8b59eb8348954594f4c75dc2992cc081e",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/mix/cues.json",
+   "bytes": 3054,
+   "sha256": "d3958845a474d0505516f0b3bbf0a82906465e09000a62f9b12d88ac35cb836d",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/mix/export/manifest.json",
+   "bytes": 1472,
+   "sha256": "6ca5615058b4ec49edea2b5e72d671848d87fb47adeb460d1880e8931cda266e",
+   "role": "document / production input",
+   "in_git": false
+  },
+  {
+   "path": "audio/mix/export/master.wav",
+   "bytes": 31163780,
+   "sha256": "bc254b75a8cf76686065c1dfd8a1742e330c36941e78513483e6fc251cb653e1",
+   "role": "Sonic Rift Studio export: master",
+   "in_git": false
+  },
+  {
+   "path": "audio/mix/export/stems/track_001_c339447c19b4.wav",
+   "bytes": 31163780,
+   "sha256": "f4f06fc2cf66623018d3f5c410c36ae0a79ff85e87f933b5e1fc096226f140b4",
+   "role": "Sonic Rift Studio export: stem",
+   "in_git": false
+  },
+  {
+   "path": "audio/mix/failsafe-6.0.12-film.sonicrift.json",
+   "bytes": 5554,
+   "sha256": "5e79535f9e9ff16998f8e741bf4709d51da5e97ce399fdfb29aad64466ab5f08",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/mix/mix-log.json",
+   "bytes": 2484,
+   "sha256": "dc344f145af8082f808ccd6e87d0580e9c5b371ff92d5417f848a10734330252",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/mix/qa-transcription.json",
+   "bytes": 1472,
+   "sha256": "67dc6fcde96bb67029724ddd03f79b7013c6ab14b3fba201f37a6b75a3622ce5",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration-takes/VO_S01_r2-take1.wav",
+   "bytes": 435386,
+   "sha256": "b6ddcb240143584d00b408f9b0be62e0e40c7349206f1b4bf1f9e905ecabc33b",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S01_r2-take2.wav",
+   "bytes": 450462,
+   "sha256": "f3c49ad5bf66a018c714fc73fc5e92e27dc60e6e04e5a4500fae1ed7a7c9ee17",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S01_r2-take3.wav",
+   "bytes": 432684,
+   "sha256": "2154c0f1bdd65e435b9964120dc44192c8ff3599085ce0990b1e889981cf091f",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S02B_r2-take1.wav",
+   "bytes": 417324,
+   "sha256": "62b063bf95a8f3faf8410c6d1042ffaf393128294ba0c511dbecba59d28ca985",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S02B_r2-take2.wav",
+   "bytes": 425858,
+   "sha256": "718675e111228cb59e263498fd9f145425a92c3832abf3a058c42360b2d446f6",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S02B_r2-take3.wav",
+   "bytes": 408364,
+   "sha256": "32819f6e78adf08afcca25a0e1f1a06acb6692be8f8e0e8674eba96d31de0265",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S02_r2-take1.wav",
+   "bytes": 527688,
+   "sha256": "95c9ab5345112e7f42dcbe55196bbff1f15ca6de3e96ea399046ce4dbd680936",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S02_r2-take2.wav",
+   "bytes": 544470,
+   "sha256": "5bfad4f7e67004a50904c44dc7a112e70f4435514f1ac4ce2995bc096b64cc20",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S02_r2-take3.wav",
+   "bytes": 529252,
+   "sha256": "c529852faee8654232faedf50591e7667899937dae29b18b42858830f0880066",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S03_r2-take1.wav",
+   "bytes": 787956,
+   "sha256": "5ce8930bb2037d042876b8cdb4077372eb458011f62fd62e82bf983024b53e5b",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S03_r2-take2.wav",
+   "bytes": 791084,
+   "sha256": "59e92e7e1a06e60ea94fa0d18b93a0931e2406746be1e82bf98e6bb2394ec4d5",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S03_r2-take3.wav",
+   "bytes": 738036,
+   "sha256": "b53773cda2fe8b4ede6cad3d860cf59137fe1bc82a303731579073fa97a279f9",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S04_r2-take1.wav",
+   "bytes": 608756,
+   "sha256": "8567ba4f3dd9f782dc139d36bfe096f986ed79102881b97b083c510c4aee9f8c",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S04_r2-take2.wav",
+   "bytes": 629804,
+   "sha256": "84db1441a86832b6833dcae6d85cabb9d62dae608bc402a35b4d838b800cc487",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S04_r2-take3.wav",
+   "bytes": 624400,
+   "sha256": "ac90914487a7d3df5f487e47debc69eac9c1ec6303bb3dd5e948dd878a1742ac",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S05_r2-take1.wav",
+   "bytes": 520578,
+   "sha256": "2df31f85ce610ca6692ba3db3c0facbe9ce10697f63e1b25d33aaba4ec0e124f",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S05_r2-take2.wav",
+   "bytes": 521430,
+   "sha256": "838df78f7d6b730051755d81f2d4098a88b4ef11bbf7a8cce90aff48f3c435f5",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S05_r2-take3.wav",
+   "bytes": 501236,
+   "sha256": "cf81c27e7bec91d9cee064ba36278819b28e1a97e8ed332e63dd1284b7a651bd",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S06_r2-take1.wav",
+   "bytes": 495972,
+   "sha256": "9813c64a348019e90152d2a952583e4cf6debfe71f0d79a73adb510f9917aa58",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S06_r2-take2.wav",
+   "bytes": 494266,
+   "sha256": "32e0408845fb621e1603d1b3315cdae626702589788a2384f1a5e5070e6b81c6",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S06_r2-take3.wav",
+   "bytes": 499812,
+   "sha256": "ec7f47b8aacb9a9843ee5bc18170ad20db926d5ce9f7a50c8a1522f5cf24256a",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S07_r2-take1.wav",
+   "bytes": 554852,
+   "sha256": "bc9a24442b47bb5ef7598354d9024ea390ef234882e9b9d988df096135842662",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S07_r2-take2.wav",
+   "bytes": 560258,
+   "sha256": "3fe71c705a9cb15eeeb1e604b5ac4da7da623d47683b4df98dbc84f6747710cf",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S07_r2-take3.wav",
+   "bytes": 561252,
+   "sha256": "6e12b286b1101de07e303bdbec2e019f9a1f6a2e99eab6371c8f2b61d01c2b0d",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S08_r2-take1.wav",
+   "bytes": 400116,
+   "sha256": "9953bf8f9995a8d2f4bbd070ba58c99efe690763eb2b9e5db15141fce7ef1b4f",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S08_r2-take2.wav",
+   "bytes": 394142,
+   "sha256": "7d66f34db72f1c73bab260034b58512ea23b1a6b7c4b10f0269ca09691c81c6b",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/VO_S08_r2-take3.wav",
+   "bytes": 374800,
+   "sha256": "027809565b1c19fc0a2e1d74c3af374c843284137027a8b8c8c169a4dcc8c9bf",
+   "role": "narration take, round 2",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/log_dark.json",
+   "bytes": 12226,
+   "sha256": "ca41f08f363e69ba208e20da4a7624f9382e9dd144b2866f26812349fd67dd52",
+   "role": "document / production input",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/narrator_speech_page.png",
+   "bytes": 211694,
+   "sha256": "8ef87eb85a606bcf4ba10e3aacf8a7d399b520719c1417ff19b30658a68a382c",
+   "role": "document / production input",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S01_take1.wav",
+   "bytes": 365484,
+   "sha256": "eaf9394d1f0fa848a32b80f00048e68a98f77a63411cee0c1f729b7a409d0a6b",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S01_take2.wav",
+   "bytes": 372652,
+   "sha256": "f7cf7edd3c844f96e26fdc5f486ef3d847be85964099c37cf92e3c904467b098",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S01_take3.wav",
+   "bytes": 373676,
+   "sha256": "dd36c336d1f38c6bb265dfb4300fd5bfb6d9702b0e36c19e369bc638aca748ca",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S01_take4.wav",
+   "bytes": 373164,
+   "sha256": "4ede80c8a8e3c5802efa323bd650fda358f8974665358fb8ccdc4ae97655c0c0",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S02_take1.wav",
+   "bytes": 453420,
+   "sha256": "367ffc11557cc088b0855fbb716410b4fe6f6d8148c680800c52b866c5933a58",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S02_take2.wav",
+   "bytes": 465836,
+   "sha256": "da495bd13c5f1c045a2d89a4af0d03818f3d1be21e5e53cb6f5e7b52481a7676",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S02_take3.wav",
+   "bytes": 424620,
+   "sha256": "d5956f7a7b7f9bd173dce28a536bad7e90fd032a30f112221c64e0abeb199994",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S02_take4.wav",
+   "bytes": 452268,
+   "sha256": "46b47edb97b9d1c1342f480e879240706da7ddf25a8976aa92b3c7f69b796bcf",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S03_take1.wav",
+   "bytes": 668076,
+   "sha256": "97a523f00348053210c588c8c76540ef73d5fa863a42ae1110284ea1e387de74",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S03_take2.wav",
+   "bytes": 621228,
+   "sha256": "a7421732e728139ebd6b8df2fe001f278a0cf1b4ec4961f888ad57370d54b864",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S03_take3.wav",
+   "bytes": 596396,
+   "sha256": "a6b8c4bd61982b9d009ecad9d0013762947ce57f312a21df2a8d08bb7c3d982a",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S03_take4.wav",
+   "bytes": 643500,
+   "sha256": "e8f4e154e936a09543359cf773887ee3bdd290162d84afde2d0eae1e823b5403",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S04_take1.wav",
+   "bytes": 516524,
+   "sha256": "40b075fee7a9e61aceb3c7f78a96a1f7a21ce7d561944a57406ba552a94f97b2",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S04_take2.wav",
+   "bytes": 513708,
+   "sha256": "c6b980e272bb06a1a496f7e8dae00372ff3421847ec2b805c2cfd89255688822",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S04_take3.wav",
+   "bytes": 499372,
+   "sha256": "6a63ee9554e4e7ce63e87db4cf8840558a5f4223461ebd7afe7b193a1ab609bf",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S04_take4.wav",
+   "bytes": 515756,
+   "sha256": "c8fc451e46f92c4c9012597ab7a9f36153f2a422ff5e8e3bea6536076ef99b0a",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S05_take1.wav",
+   "bytes": 466604,
+   "sha256": "9d87f9d46afbdccd4cff891fe8b5ff6a634fd0e9571070123ad874ecc7f0579e",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S05_take2.wav",
+   "bytes": 421676,
+   "sha256": "f6b3b29583c0a72f606554be705b0689797792fee8473115c5473d2ea2de1c2a",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S05_take3.wav",
+   "bytes": 424364,
+   "sha256": "4c65b91acd42896a8fad8337a28f9eb63f8136c7f07ec0dc841540ed0697074c",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S05_take4.wav",
+   "bytes": 421548,
+   "sha256": "f7c9f79de193b78d56c2d97fc6b5293179351ab3cffb6b9251b274e8f58129f7",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S06_take1.wav",
+   "bytes": 392620,
+   "sha256": "e880385abfc4f3c446c0ad2c9c27ff6f027b5797dc8c11ddf3411c17b83833af",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S06_take2.wav",
+   "bytes": 431276,
+   "sha256": "4736e32290091005fc509116037259037923ff8ced8dd6afccebb9a49c8ada3f",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S06_take3.wav",
+   "bytes": 424364,
+   "sha256": "04bd63501d2afe582a321d0386b0c26e70e6d31f18cc54ed3ff37ae91f5db475",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S06_take4.wav",
+   "bytes": 409004,
+   "sha256": "6ea73ce9e1c41fbf02925e30e7c16c33ca6a3bf11adad59b595ca6ced42cc61b",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S07_take1.wav",
+   "bytes": 490284,
+   "sha256": "a2826b25683069c665db854c1f83b402a3b759dcde2fe19801446d9337023e6a",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S07_take2.wav",
+   "bytes": 465708,
+   "sha256": "b435bf2e444da1d7646b925b2f95029b8f29aa6280d3dfc65172c5a96af83f30",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S07_take3.wav",
+   "bytes": 466604,
+   "sha256": "eaaa5b4848ab9ea8c02d575f2b364474e67c9dfd5e87d9d0b1c0822d4f4f37d2",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S07_take4.wav",
+   "bytes": 475948,
+   "sha256": "34fc68b71925af06cd9c4c3caa3c1f0fbe84e7eef2a8c7088bbde9764222dcbc",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S08_take1.wav",
+   "bytes": 281516,
+   "sha256": "c9d374f50521eea7892236d8917a016b36ceb8390b2c03798d337d110e8842f3",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S08_take2.wav",
+   "bytes": 262316,
+   "sha256": "0921bf3f8080eaefb89cdadde206f27f9f2cb3c9ebbc9b9d10c2b3d5b9760418",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S08_take3.wav",
+   "bytes": 305324,
+   "sha256": "6db4ac95c1f5e321b99f63ab8d210aae3353c3ef33035ba6fe7a2a1e8863a8ae",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/VO_S08_take4.wav",
+   "bytes": 275628,
+   "sha256": "50306703f46683af36aecbd40b289c282ced2058d69dded4dece3989b1ecd3f7",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/log_dark.json",
+   "bytes": 13180,
+   "sha256": "38bf3c2672e2387f71f409e49b003d2a7b9dd78d8b881c3948223412a1e2ad3a",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/round1-rejected-pace/narrator_speech_page.png",
+   "bytes": 210684,
+   "sha256": "c6abd0a6e254cabb45a51bf0d05ee908484c3776d304473927cdb7370ca859ac",
+   "role": "narration take, round 1 (rejected: pace)",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration-takes/scores-r2.json",
+   "bytes": 18813,
+   "sha256": "bccaebfe22676de677828e0be5537607e68a6da266e25d6c95c7f16afaa25552",
+   "role": "document / production input",
+   "in_git": false
+  },
+  {
+   "path": "audio/narration/VO_S01.wav",
+   "bytes": 435386,
+   "sha256": "b6ddcb240143584d00b408f9b0be62e0e40c7349206f1b4bf1f9e905ecabc33b",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S02.wav",
+   "bytes": 527688,
+   "sha256": "95c9ab5345112e7f42dcbe55196bbff1f15ca6de3e96ea399046ce4dbd680936",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S02B.wav",
+   "bytes": 425858,
+   "sha256": "718675e111228cb59e263498fd9f145425a92c3832abf3a058c42360b2d446f6",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S03.wav",
+   "bytes": 787956,
+   "sha256": "5ce8930bb2037d042876b8cdb4077372eb458011f62fd62e82bf983024b53e5b",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S04.wav",
+   "bytes": 624400,
+   "sha256": "ac90914487a7d3df5f487e47debc69eac9c1ec6303bb3dd5e948dd878a1742ac",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S05.wav",
+   "bytes": 501236,
+   "sha256": "cf81c27e7bec91d9cee064ba36278819b28e1a97e8ed332e63dd1284b7a651bd",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S06.wav",
+   "bytes": 494266,
+   "sha256": "32e0408845fb621e1603d1b3315cdae626702589788a2384f1a5e5070e6b81c6",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S07.wav",
+   "bytes": 560258,
+   "sha256": "3fe71c705a9cb15eeeb1e604b5ac4da7da623d47683b4df98dbc84f6747710cf",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "audio/narration/VO_S08.wav",
+   "bytes": 374800,
+   "sha256": "027809565b1c19fc0a2e1d74c3af374c843284137027a8b8c8c169a4dcc8c9bf",
+   "role": "selected narration take (unprocessed)",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/01-console-overview-dark.png",
+   "bytes": 263472,
+   "sha256": "8869ffcd5323f5ec06a06154551227c405c86999dbdad64f16e659eb337451ce",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/02-monitor-vscode-dark.png",
+   "bytes": 273270,
+   "sha256": "1d5557e074d4c09715fb689280c61968b83a70e7da32a9c7242a06b713bb4463",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/03-console-monitor-pegasus-light.png",
+   "bytes": 421028,
+   "sha256": "cf68102b98372c53b7404468142be0f2a840c06e5f358c9378d0cbb6d45b43a1",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/04-fix-risk-notice.png",
+   "bytes": 327115,
+   "sha256": "24e824653ccbd436a08828c440b3d6841e1bbbe52d930ddb73178bafa6e63f51",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/04b-governance-audit-log.png",
+   "bytes": 519187,
+   "sha256": "a58d0b70973cbd09accabb0491c0d4c9f4b9cf7cfc3832e10c8f7708ed6b260f",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/05-tests-pass.png",
+   "bytes": 271254,
+   "sha256": "d1db981ac1fc7cbc933d705ee4d4c6dbed6fd8be0310f87e6f53d72da8b09c69",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/05b-diff.png",
+   "bytes": 295825,
+   "sha256": "e7c31e8daac23596df9d9876c0ebbb059f365d0f4fe0573ecff08311eaded4d3",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/05c-delivery-pending.png",
+   "bytes": 767489,
+   "sha256": "3b3bc1a1e69b3983e8a539fe9d056fc61776113ddd7c32bc53738632c3e342cc",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/06-alt-homepage-console-monitor-after-journey.png",
+   "bytes": 439549,
+   "sha256": "717b4069d242fc961fa7b05065c660f7da1454b4d02421e3b4d0a2eb4548cd9c",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/06-homepage-console-monitor-6.0.12.png",
+   "bytes": 440558,
+   "sha256": "919608f8bd61205694ae0e301b4938a43135ba0ced0aeca8a8f117f779ed10f2",
+   "role": "homepage image (composite of two simultaneous recordings)",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/full/07-monitor-panel-mobile.png",
+   "bytes": 131378,
+   "sha256": "c662a7407a89c0e752490e9675a69b4cec199eb10beed20a2b080cc14a2cf1dc",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/source-frames/03a-console-pegasus.png",
+   "bytes": 252349,
+   "sha256": "918a660af4f02bda30e5c361158503e47898b572c8521c9c76e5a0b1d6afbe26",
+   "role": "unedited source frame for a composite",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/source-frames/03b-vscode-monitor-pegasus.png",
+   "bytes": 180557,
+   "sha256": "2ca6cd667a1d73439d57ebf10995126eb7f4696b31b1da1252149779876ae009",
+   "role": "unedited source frame for a composite",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/source-frames/06a-console-overview-dark.png",
+   "bytes": 262223,
+   "sha256": "04422cf6d58be3a74ee2d2f1dcfce94242d9e141f6c5fbd06993a120cd1b6597",
+   "role": "unedited source frame for a composite",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/source-frames/06b-vscode-monitor-dark.png",
+   "bytes": 570758,
+   "sha256": "76f6b951a1f47ecb2c284d02e7048572526e8a2d3832501666d99e9d5517b9fd",
+   "role": "unedited source frame for a composite",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/source-frames/06c-console-overview-after-setup.png",
+   "bytes": 263472,
+   "sha256": "8869ffcd5323f5ec06a06154551227c405c86999dbdad64f16e659eb337451ce",
+   "role": "unedited source frame for a composite",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/source-frames/06d-vscode-monitor-after-setup.png",
+   "bytes": 274634,
+   "sha256": "6ca5ddee3f4f49f2aec155b25b45f025a8f459698ed0adbeb07bcc15e0835747",
+   "role": "unedited source frame for a composite",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/01-console-overview-dark.jpg",
+   "bytes": 15305,
+   "sha256": "846ec90a63e1ac1d5e283e149f5c8f8b94b0ee1d96e57050dcb894115dfaac73",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/02-monitor-vscode-dark.jpg",
+   "bytes": 21305,
+   "sha256": "e5545aa3da06ecdac0706997b4ed92a8fa17b9dfb7915d04e54bdfe2b3cc00e0",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/03-console-monitor-pegasus-light.jpg",
+   "bytes": 18195,
+   "sha256": "c92c57fc45d578985c905bfaefca05a2389e28a2f4b461a034a2201cd20511e0",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/04-fix-risk-notice.jpg",
+   "bytes": 26204,
+   "sha256": "a10212d9200ba3e2c19cb966491364b2512faa2bbe986a1ec4eb709e16474f15",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/04b-governance-audit-log.jpg",
+   "bytes": 20085,
+   "sha256": "176643c643fd39d8aed597b64afd9c38783513d9293bdcbf8e17d60f20d4d572",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/05-tests-pass.jpg",
+   "bytes": 20577,
+   "sha256": "324191cc588945803f1ec331a04c2459e8cdb51b14747c8ef6168fb33fb77b5c",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/05b-diff.jpg",
+   "bytes": 23773,
+   "sha256": "385de803f0074a4707a7937f6f0e220b16d35598744b0ba04c4d317e0f82878f",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/05c-delivery-pending.jpg",
+   "bytes": 8991,
+   "sha256": "334789a182240b1eb8be662951d9cd80fe9a6e53c07ece255b2fc9cf4e976cec",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/06-alt-homepage-console-monitor-after-journey.jpg",
+   "bytes": 15932,
+   "sha256": "e88044c98d251a5175c33260bd66399f3b6fe9788a8348eb31268cd818e3a378",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/thumbnails/06-homepage-console-monitor-6.0.12.jpg",
+   "bytes": 15901,
+   "sha256": "48cdbe5cd69e52dedc98569c080efab562f16b6fba3e399a24eb5c1dac595ef0",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/01-console-overview-dark.jpg",
+   "bytes": 153211,
+   "sha256": "7754b2e5d7c9a28e5b4ce3bbb3a58f0110305d72719bd20690c0a5e82b577a10",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/01-console-overview-dark.webp",
+   "bytes": 62598,
+   "sha256": "74fa828eeec5198dd238728f067a7549d446970bee631836f684e920f058e163",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/02-monitor-vscode-dark.jpg",
+   "bytes": 267034,
+   "sha256": "b26a542d839a1662b72c736bf7e15ad42b4138fb945c3bed06b6fbf3310bb2b9",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/02-monitor-vscode-dark.webp",
+   "bytes": 116916,
+   "sha256": "8e25c24f06ce8a072ef0fb06fa9f2b755ebf4e4616b987d5ae856525e11a1162",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/03-console-monitor-pegasus-light.jpg",
+   "bytes": 157490,
+   "sha256": "cd26a207696298bb9715bac858a34b421067d362afc35b1a86cb174147156c03",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/03-console-monitor-pegasus-light.webp",
+   "bytes": 56570,
+   "sha256": "7d44ef0dc11af898a4e2cf09baa33034aff3a16b59692ed6b5259538e9437727",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/04-fix-risk-notice.jpg",
+   "bytes": 316931,
+   "sha256": "7477de783b299c686fd63290b4f266a953afa3153d759026b5e4d29ffe66158f",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/04-fix-risk-notice.webp",
+   "bytes": 139982,
+   "sha256": "8adccf69e7776d2212f3e2773a907d5ef3d01289d9d6e0c3dcd572f151f0ec4b",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/04b-governance-audit-log.jpg",
+   "bytes": 193679,
+   "sha256": "02311dcabfe1eec7888a0e70b46a0d3355690e1e4ddbaaa24e34cd5e5f302051",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/04b-governance-audit-log.webp",
+   "bytes": 91026,
+   "sha256": "fda5e6419372f6c05eac5a4fe7f2c79f48e87adba96e9c20ad98125fde485d9a",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/05-tests-pass.jpg",
+   "bytes": 247746,
+   "sha256": "202da24307740b7a08795d8a5c6786c467c94f5e484cba712beee8fe2b68c9ed",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/05-tests-pass.webp",
+   "bytes": 107796,
+   "sha256": "18eb1f0b9f8697a03bf13f6ac19cce94be5a28e6c111dd268ae4425f3ab7025d",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/05b-diff.jpg",
+   "bytes": 304021,
+   "sha256": "7f90a1f93a038cb2bf065834b1a63c83d4d591844b7c389e083a979e4f893d25",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/05b-diff.webp",
+   "bytes": 137690,
+   "sha256": "1f4ca780673851fd1d1bffc5b347d9473984284c5a4773d2c397889d361a55a3",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/05c-delivery-pending.jpg",
+   "bytes": 97744,
+   "sha256": "eef2d17d2971374ca6cdcd2fdb02feb388fb5565bc2daca5188d5bf692d65000",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/05c-delivery-pending.webp",
+   "bytes": 41408,
+   "sha256": "6c5a6de75032470e4d41feebed68249fce4c57a8d1b23e850b624f6612fc81e2",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/06-alt-homepage-console-monitor-after-journey.jpg",
+   "bytes": 153238,
+   "sha256": "727791b7eee46d058e704f3496dd5b5df9fd0b49ab7131466c2e2867251cca1e",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/06-alt-homepage-console-monitor-after-journey.webp",
+   "bytes": 64840,
+   "sha256": "1023e01a74e1bfa70b10fcae97ee6a89c61ab16b077e26ef0e4a8b8e02a301b7",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/06-homepage-console-monitor-6.0.12.jpg",
+   "bytes": 153115,
+   "sha256": "caf27eb4fa4f2fd1c630ab9584536747f61844e581541102590bc34fa630b024",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "screenshots/web/06-homepage-console-monitor-6.0.12.webp",
+   "bytes": 64592,
+   "sha256": "ce77b96bf1d234d481a4e258414b65ee42849843e48802105d816ae58c2e521a",
+   "role": "screenshot",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/capture.cjs",
+   "bytes": 3205,
+   "sha256": "f976e2dda844a152923060c1ad9762633e138d363e61df69e406f5794c14ab3d",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/driver/extension.js",
+   "bytes": 4599,
+   "sha256": "0da6efa162c80eaededf59ee80b5bbcaf8271eac413d3053f99256c9c1bbc331",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/driver/package.json",
+   "bytes": 263,
+   "sha256": "fd8f8fcbdd6cf8bb656c1e7f756c11f3faeb9a5eba31fe312deff2cc6dc1767b",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/fixture-addon/docs/CONCEPT.md",
+   "bytes": 803,
+   "sha256": "24b353c83291f50b9d59cb5cfc4ae63965a86bc6092aa5099e8eb20891676475",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/isolated-user-settings.json",
+   "bytes": 1335,
+   "sha256": "b970437f3db65706cb7c6eb7bb3281314332ab9d1be4573ac62282eefca82161",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/lib.cjs",
+   "bytes": 7059,
+   "sha256": "775ac90ed841baf0f7173bbb9f31338f880993f2c6375e16747e51dd84139045",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/open-console.cmd",
+   "bytes": 884,
+   "sha256": "1d593850e8c430a2509cc3f76a92672fb6e7924dae4c1a8247daae1583e143ff",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/perform.cjs",
+   "bytes": 13057,
+   "sha256": "5d25622d4ba2f5dd52054ad1b24965eb3bd151ad5ce2ab41503be839b147028e",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/prep.ps1",
+   "bytes": 5039,
+   "sha256": "10dc56460f3984adae35b46f894cf3ee445de9ea16a9eaf9e7be5cb78e768ce1",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/release-SHA256SUMS.txt",
+   "bytes": 977,
+   "sha256": "fadb1be668ef537d29873a656d06e0f054518f8b1e60b6b017f73d1790c5e85c",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/settle.cjs",
+   "bytes": 1710,
+   "sha256": "abf422d68e3a888ba9289c29d7e561f14703028aa043f997c5fa42e3ae29c445",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/stage.cjs",
+   "bytes": 1669,
+   "sha256": "f3323d9abf44008f13d2b61f049bcb39497db24df35af8ccb4ad79be1b77ac60",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/stage.json",
+   "bytes": 323,
+   "sha256": "a6d2c2c09f594b8ade614114eb2679a1c3185d675cf6ce917c3cc00376fe13c4",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/tasklet-demo-baseline.bundle",
+   "bytes": 8532,
+   "sha256": "8df98c8d599ad5728df051c3844907bdc61e4be22942ad029f0258886d077149",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/capture-rig/winpos.ps1",
+   "bytes": 2547,
+   "sha256": "978f69146d580f706af8b37b8e46741728c7f212536293ba23a2619083ba5870",
+   "role": "capture rig",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/console-closing.mkv",
+   "bytes": 518400,
+   "sha256": "76e34c77979d9c6265bbe6f46faaeb01094267e3f9f847453d1ec938d30fea7e",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-decision.mkv",
+   "bytes": 5235438,
+   "sha256": "f2e807b30f64d51a0314897e0a6f626c9c075fe56b4f5d74d10a5ac6bd62b86b",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-fix.mkv",
+   "bytes": 10103448,
+   "sha256": "877090815a576a3a04302c4f052de448c59517da71dcf0d2c120df342de69f3b",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-issue.mkv",
+   "bytes": 621984,
+   "sha256": "ba4aad4fe1d20fc1b9ff40013f44cc87257713b380d6b15db56c12a56d77d1da",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-overview.mkv",
+   "bytes": 1044704,
+   "sha256": "649185c9a5c3f0b854ea20417df98e1de516f1899f344360027762975df2f9b9",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-setup.mkv",
+   "bytes": 16357742,
+   "sha256": "54ca6fcac800879dd8e8b778bcc15e39672908da3f7a5cdc24341488e96347ba",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-themes.mkv",
+   "bytes": 18964452,
+   "sha256": "2b383e83fb02ca3bc2f40a61222710f712e3fefdb2df34fa3da2345f31e0e0c8",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-verify.mkv",
+   "bytes": 692763,
+   "sha256": "8d16a044db6938eeb965c45d97fc297bc484f2367dd6e312cbbde97c050a04e8",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/console-workspace.mkv",
+   "bytes": 649610,
+   "sha256": "a05214e778674f8958c8b63f7dd308c3e474ae17c1a222a2dcb8b70a37190dde",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/events-closing.json",
+   "bytes": 482,
+   "sha256": "1d1cf5b5fee5a065bf0a75b2aa34a34b41e28dbc54e6bd9946e68c83ac90dc8a",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-decision.json",
+   "bytes": 765,
+   "sha256": "8ce900f7766c93cf4f12b6511fcd7bdd94441cdc2a713e11791d0ef8c3431bd7",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-fix.json",
+   "bytes": 823,
+   "sha256": "56b39039f0fee8b4524d8cad980bf38838b812351894b6a1535c0693ab837283",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-issue.json",
+   "bytes": 747,
+   "sha256": "440b9e77c1727a074811e872a4f7506e09d09ab4f768d78baaf0c020abdecca8",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-overview.json",
+   "bytes": 587,
+   "sha256": "9d5ebcc17a55f0f8d2dab0c2cc4b00ca66e4e5e2aee4600a8272d04c85d796eb",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-setup.json",
+   "bytes": 2587,
+   "sha256": "b838bfdc0fc7cdc418256a84c86f5c97149fa89d0eae00a162572aa20e59b36b",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-themes.json",
+   "bytes": 3856,
+   "sha256": "ec2d18dfe4caee9c5ed5f45cd38d6807a97d69c999de7e5c1cf3e8832c03ee76",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-verify.json",
+   "bytes": 667,
+   "sha256": "d2dd419437264922e788cbe704536067314824d03b508ebff75052c7c254997d",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/events-workspace.json",
+   "bytes": 674,
+   "sha256": "4febe50c65170376468546bdb6e2db79212a2c61e8504e0d680384c6e778f951",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/driver-actions.log",
+   "bytes": 8743,
+   "sha256": "14e85f11e15b7bcdfe289e35df5a494d1e95ed33f1b846d36f865bd371a00673",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/fixture-head.txt",
+   "bytes": 41,
+   "sha256": "ee36851d0175a53e58db56fb5c69673f8f6db60d4c20a2329ce4ac7fa99a5fce",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/git-diff-stat.txt",
+   "bytes": 152,
+   "sha256": "ab36203a6be4eb41f12876b2370e3936032d5d3dfa112e1c470ea68634b29710",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/git-diff.patch",
+   "bytes": 1765,
+   "sha256": "792165386f93ff7d2e809019a21190d7351be6efd4c6ac573148800b13da14f8",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/git-status.txt",
+   "bytes": 86,
+   "sha256": "c9a934bc166b91d6abe2c9251220f1203861d5361949b7fefe3d1806e3f769d8",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/hub-after.json",
+   "bytes": 36257,
+   "sha256": "71bd749c0cbdb7cdfe98129dfe1ef8e8e72ab9b7a051d38db4237116d036a095",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/isolated-user-settings.json",
+   "bytes": 1335,
+   "sha256": "b970437f3db65706cb7c6eb7bb3281314332ab9d1be4573ac62282eefca82161",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/npm-test-after.txt",
+   "bytes": 1359,
+   "sha256": "7a7bf7cb4d3990f64ac5ce0ba203dcb15f47e5914fa4666fd333fa533c793b3d",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/stage.json",
+   "bytes": 323,
+   "sha256": "a6d2c2c09f594b8ade614114eb2679a1c3185d675cf6ce917c3cc00376fe13c4",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/take2-perform.txt",
+   "bytes": 3491,
+   "sha256": "a716eeb483423d38f94521287c75ecd6f49e916d216d20184c7929efb5b804e1",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/take2-prep.txt",
+   "bytes": 539,
+   "sha256": "ef9cfa404762083a783f9f0c6d42444cc9a687e33e4df5970d24f390bbbc4f2d",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/take2-settle.txt",
+   "bytes": 221,
+   "sha256": "7ff494a59a2988c428c67f628035cd598f8179149a3ea493d1659a681868be55",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/evidence/take2-stage.json",
+   "bytes": 238,
+   "sha256": "6530fa20c7ffafc6c19763fbbb7acbedb4106d819bd1c804d8e0ebbabc1eaed3",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2/vscode-closing.mkv",
+   "bytes": 17845509,
+   "sha256": "941c4a74885418723d4b6d277ad0c331e4942a14a48ce9a7631681d1696718db",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-decision.mkv",
+   "bytes": 21026674,
+   "sha256": "a6deeba26a9667477cb35aa47c2b850040b58e41b6cb1f872375c70bc9a8b8b8",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-fix.mkv",
+   "bytes": 30962054,
+   "sha256": "4a1c452c34a6742fca3855a39301a411f362d75b8b9487dadbb426f1d61a962e",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-issue.mkv",
+   "bytes": 23667591,
+   "sha256": "69d0a37dcd665a2f3fe13f0b3435677af46053a76351070605a44a4f130d1af8",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-overview.mkv",
+   "bytes": 18814278,
+   "sha256": "a1e4fcc8b477191cb21a3129ce4acda16e98502e2b77c3ab5f7465fb9a579a92",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-setup.mkv",
+   "bytes": 34394687,
+   "sha256": "70b1d39c731d6aac55770fe50b28afee122f770728f8099fbf16488cc69e6f1a",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-themes.mkv",
+   "bytes": 32874645,
+   "sha256": "bd3350eaa7d39e2e22a412c900657f6c1a63cee74067766afd9687c0cfd100db",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-verify.mkv",
+   "bytes": 24153558,
+   "sha256": "72d6bfe2b63b9d3a20aad8312610c3a37204d4ed4ccfd6b9fc70029b6c348adf",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2/vscode-workspace.mkv",
+   "bytes": 9649307,
+   "sha256": "c37b46933796c530f6f037bb3be8aa5bddf84fae28894a535a895b990e92f4e4",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2b/console-themes.mkv",
+   "bytes": 12407329,
+   "sha256": "e7afd8fe5bda1ad24116bb52fab1444b3caeb2f995bb2d6766ecbf683b9fd0ed",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/captures/take2b/events-themes.json",
+   "bytes": 3595,
+   "sha256": "0fc2801b3d66e3362bc5ea441e73974f5d220a00961cf2891f86eac2ca237dd6",
+   "role": "capture log / evidence",
+   "in_git": true
+  },
+  {
+   "path": "source/captures/take2b/vscode-themes.mkv",
+   "bytes": 28149818,
+   "sha256": "8cf428f0a3ff1ce44561ab6142bbea295ed09b423fb57efc23ccf28012eac7e0",
+   "role": "raw window recording (lossless)",
+   "in_git": false
+  },
+  {
+   "path": "source/edit/card-end.png",
+   "bytes": 122158,
+   "sha256": "d79810a398e8333525db49e451ad2959a430836b5f07744265f6ddfc97828363",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "source/edit/card-title.png",
+   "bytes": 108130,
+   "sha256": "524ece8f0841681290ae96f3f268906dd88a27bcfd7bd374e99e90a171f5608e",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "source/edit/edit-decision-list.json",
+   "bytes": 7935,
+   "sha256": "2e8c334b82f93e3faedc47e3261c61c6ced0456de3d8ec0de5520730542ed2ee",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "source/narration/expected-spoken.json",
+   "bytes": 1539,
+   "sha256": "7384688fb0a6ccbed4299b6dca18506c38323386231238cc9f0bc6c4df55f739",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "source/narration/guide-voice-design.wav",
+   "bytes": 245804,
+   "sha256": "91e8e930abddadc0ae3280e4f56f1fdebb2bdee045b4682b50a8aa6fd4922b11",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "source/narration/lines-spoken.json",
+   "bytes": 1546,
+   "sha256": "636468c504882e2a32d84271d66f380efa2c24d5a21132f8cd9c398a7fb9b8f7",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "source/narration/lines.json",
+   "bytes": 1480,
+   "sha256": "684ed294b64d1179577339159dc9464240ec02826dade27f9ab963a9c5b16aee",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/build_film.py",
+   "bytes": 12497,
+   "sha256": "6cafebe208c8c5276caf0fb6967c915d92396ead76d184b21bfa96e856c6241d",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/failsafe_narration.py",
+   "bytes": 4298,
+   "sha256": "45a989ec16de959d90729449488f2f9689150f2edd02f994dc1d239a34e700c4",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/make_captions.cjs",
+   "bytes": 3867,
+   "sha256": "54b80bcaaedd2fd89133f020ee0898ff6e2197f4961ddafa7931d6e5395da6f8",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/make_manifest.cjs",
+   "bytes": 5388,
+   "sha256": "b2ae77ac4073f9bc7bb81e469986e97a281c93ad663533742d2e65b5f8331762",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/mix_narration.py",
+   "bytes": 2902,
+   "sha256": "13b1fac8362911fd0fedaab05ecb3270b0efa86d0371025f68de2f4f50c2518d",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/qa_transcribe.py",
+   "bytes": 1158,
+   "sha256": "9fa1ffaa6c040a4d290f2eb486aa8e9f6e887a2bd24e76bf86aeb21122d50e7a",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/score_takes.py",
+   "bytes": 4773,
+   "sha256": "ba1ba05a7a0640373143d7c1a7104ce560bf809c594c81b824201c6d291950a0",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "source/tools/sonic_rift_harness.py",
+   "bytes": 4587,
+   "sha256": "c6a2d1023dd05038ed0fb28b2e8716c4ade0e79d10c699d593d9bc94563e2a04",
+   "role": "production script",
+   "in_git": true
+  },
+  {
+   "path": "transcript.md",
+   "bytes": 6334,
+   "sha256": "50bbb0331db95707436a58d0d82e2027d06f78ed1adac58c0207d01c1a9b6f83",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "video/failsafe-6.0.12-from-change-to-confidence-poster.jpg",
+   "bytes": 222928,
+   "sha256": "aab132e15a4706faba09137e2da082f7e6ba94cf88066a7ce35833b6d9f16b88",
+   "role": "poster",
+   "in_git": true
+  },
+  {
+   "path": "video/failsafe-6.0.12-from-change-to-confidence-poster.png",
+   "bytes": 413269,
+   "sha256": "fa5a1c45094cdbdf2d65112406e0d2fb4447d1383007a322a3e49a61397d40a8",
+   "role": "poster",
+   "in_git": true
+  },
+  {
+   "path": "video/failsafe-6.0.12-from-change-to-confidence-silent-captioned.mp4",
+   "bytes": 10221763,
+   "sha256": "de50bf0820c67aee9cc6c867e364bc8611fdd4f9b6c70f0ed0aba583d436d80f",
+   "role": "silent captioned variant",
+   "in_git": true
+  },
+  {
+   "path": "video/failsafe-6.0.12-from-change-to-confidence.en.vtt",
+   "bytes": 2475,
+   "sha256": "b39fde21b76fefb9a926b9a863452699e6e85d5ede27b892bf63ed5173f1ca7a",
+   "role": "captions (WebVTT, English)",
+   "in_git": true
+  },
+  {
+   "path": "video/failsafe-6.0.12-from-change-to-confidence.mp4",
+   "bytes": 12963777,
+   "sha256": "d7eee8f3b69b1920420eed07a3af38d869b5487852834d15e91e9fc9d257cec5",
+   "role": "primary narrated film",
+   "in_git": true
+  }
+ ]
+}

@@ -1,0 +1,39 @@
+{
+ "seg": "workspace",
+ "t0": "2026-11-10T19:37:56.844Z",
+ "clean": true,
+ "error": null,
+ "rects": {
+  "vscode": "3432,0,5368,1088",
+  "console": "3431,0,5369,1197"
+ },
+ "events": [
+  {
+   "t": 2.429,
+   "at": "2026-11-10T19:37:59.273Z",
+   "name": "seg.start",
+   "seg": "workspace"
+  },
+  {
+   "t": 5.242,
+   "at": "2026-11-10T19:38:02.086Z",
+   "name": "workspace.explorer"
+  },
+  {
+   "t": 8.5,
+   "at": "2026-11-10T19:38:05.344Z",
+   "name": "workspace.readme"
+  },
+  {
+   "t": 12.132,
+   "at": "2026-11-10T19:38:08.976Z",
+   "name": "workspace.monitor"
+  },
+  {
+   "t": 20.139,
+   "at": "2026-11-10T19:38:16.983Z",
+   "name": "seg.end",
+   "seg": "workspace"
+  }
+ ]
+}

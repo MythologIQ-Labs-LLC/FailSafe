@@ -1,0 +1,11 @@
+{
+ "S01": "AI can help you write code faster. But when something changes, how do you know what happened, what it affects, and whether it's ready to ship?",
+ "S02": "Meet FailSafe. A development companion that helps solo developers keep their work visible, understand potential risks, and maintain a record of important decisions.",
+ "S02B": "Setup starts in the Console. Install the Qor-Logic skills, approve the request in VS Code, and the workspace is ready.",
+ "S03": "With version 6.0.12, the Console, Monitor, and SRE views share a consistent visual experience. Change your theme, and your workspace follows. The information stays familiar, wherever you're working.",
+ "S04": "Now imagine a small but important bug. A date validator accepts a day that doesn't exist. We document the issue, write a regression test, and see the failure for ourselves.",
+ "S05": "Fixing the code is only part of the job. FailSafe helps surface the risks and governance requirements around a change, so the developer knows what still needs attention.",
+ "S06": "The corrected validator passes its tests. We can inspect the difference, see the recorded decisions, and compare the result with what we intended to change.",
+ "S07": "Every change has a story. What we set out to do, what we changed, what we checked, and what still needs review. FailSafe helps make that story easier to follow.",
+ "S08": "Move faster without losing sight of the work. FailSafe. Build with AI. Know what changed."
+}

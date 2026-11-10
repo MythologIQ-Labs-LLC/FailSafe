@@ -1,0 +1,85 @@
+2.43 seg.start {"seg":"workspace"}
+5.24 workspace.explorer 
+8.50 workspace.readme 
+12.13 workspace.monitor 
+20.14 seg.end {"seg":"workspace"}
+segment workspace clean stop true ok
+2.38 seg.start {"seg":"setup"}
+3.81 setup.banner {"banner":"flex"}
+11.01 setup.card 
+14.54 setup.modal 
+18.48 setup.hosts.claudeOnly 
+20.32 setup.modal.install 
+20.32 setup.vscode.dialog {"dialog":"Install\nCancel\nInstall Qor-logic skills?\nHosts (as requested): claude\nScope (as requested): repo\nSkills for claude: all\nFailSafe first installs or upgrades the qor-logic Python packag
+24.84 setup.vscode.approve {"clicked":true}
+29.94 setup.installed {"done":true,"banner":"none","card":"QORLOGIC SKILLS\nHOST FILES FOUND\n\nInstall governance skills only with the frozen Qor-logic v0.176.1 package. If the package is missing, choose the SHA-256-verif
+36.21 setup.overview.noBanner {"banner":"none"}
+42.21 seg.end {"seg":"setup"}
+segment setup clean stop true ok
+2.55 seg.start {"seg":"overview"}
+4.62 overview.console 
+10.98 overview.consoleEditorTab 
+19.99 seg.end {"seg":"overview"}
+segment overview clean stop true ok
+3.28 seg.start {"seg":"themes"}
+5.99 themes.config {"console":"mythiq","sidebar":"mythiq","frame":"mythiq"}
+14.10 theme.notApplied {"theme":"pegasus","attempt":1}
+18.18 theme.notApplied {"theme":"pegasus","attempt":2}
+21.46 theme.applied {"theme":"pegasus","attempt":3,"ms":3180}
+21.46 themes.click.pegasus 
+22.99 themes.pegasus {"console":"pegasus","sidebar":"pegasus","frame":"pegasus"}
+27.51 themes.sre.pegasus 
+30.04 themes.sre.state {"console":"pegasus","sidebar":"pegasus","frame":"pegasus"}
+33.68 theme.applied {"theme":"aurora","attempt":1,"ms":110}
+33.68 themes.click.aurora 
+35.20 themes.aurora {"console":"aurora","sidebar":"aurora","frame":"aurora"}
+38.34 theme.applied {"theme":"atmosphere","attempt":1,"ms":109}
+38.34 themes.click.atmosphere 
+39.86 themes.atmosphere {"console":"atmosphere","sidebar":"atmosphere","frame":"atmosphere"}
+42.90 themes.monitor.back 
+46.02 theme.applied {"theme":"crimson","attempt":1,"ms":114}
+46.02 themes.click.crimson 
+49.66 theme.applied {"theme":"midnight","attempt":1,"ms":106}
+49.66 themes.click.midnight 
+53.28 theme.applied {"theme":"pegasus","attempt":1,"ms":111}
+53.28 themes.click.pegasus2 
+56.80 themes.reload.monitor 
+60.83 themes.afterReload {"console":"pegasus","sidebar":"pegasus","frame":"pegasus"}
+62.47 theme.applied {"theme":"mythiq","attempt":1,"ms":110}
+62.47 themes.click.mythiq 
+64.00 themes.mythiq {"console":"mythiq","sidebar":"mythiq","frame":"mythiq"}
+68.52 themes.overview.mythiq 
+72.53 seg.end {"seg":"themes"}
+segment themes clean stop true ok
+2.42 seg.start {"seg":"issue"}
+4.17 issue.open 
+10.54 issue.test.open 
+14.36 issue.test.saved 
+23.68 issue.npmtest.fail 
+31.69 seg.end {"seg":"issue"}
+segment issue clean stop true ok
+2.47 seg.start {"seg":"fix"}
+3.59 fix.open 
+8.44 fix.saved 
+17.77 fix.panelClosed 
+22.62 fix.console.mode 
+27.84 fix.console.audit 
+33.85 seg.end {"seg":"fix"}
+segment fix clean stop true ok
+2.50 seg.start {"seg":"verify"}
+3.44 verify.npmtest.pass 
+11.57 verify.diff 
+20.69 verify.console.audit 
+27.70 seg.end {"seg":"verify"}
+segment verify clean stop true ok
+2.49 seg.start {"seg":"decision"}
+3.21 decision.risks 
+8.23 decision.compliance 
+12.31 decision.delivery 
+18.33 decision.overview 
+24.34 seg.end {"seg":"decision"}
+segment decision clean stop true ok
+2.62 seg.start {"seg":"closing"}
+4.51 closing.twoShot 
+14.52 seg.end {"seg":"closing"}
+segment closing clean stop true ok

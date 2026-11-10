@@ -1,0 +1,3 @@
+{ "name": "failsafe-qual-driver", "publisher": "qual", "version": "0.0.2", "engines": { "vscode": "^1.90.0" },
+  "main": "./extension.js", "activationEvents": ["onStartupFinished"],
+  "description": "Disposable qualification/demo driver. Not part of FailSafe." }

@@ -1,0 +1,90 @@
+{
+ "sonic_rift_version": "0.9.1",
+ "app": "C:/LocalAI/Voice/Chatterbox/demo-v091/app/Sonic Rift",
+ "project": "failsafe-6.0.12-film.sonicrift.json",
+ "export": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\mix\\export",
+ "cues": [
+  {
+   "scene": "S01",
+   "take": "VO_S01.wav",
+   "source_rate": 24000,
+   "seconds": 9.07,
+   "start": 1,
+   "end": 10.07,
+   "asset_id": "voice_1d6678ae7f5c5abdcea2542ef355daa725a4b71e2558b35da37a7582ef7d4abc"
+  },
+  {
+   "scene": "S02",
+   "take": "VO_S02.wav",
+   "source_rate": 24000,
+   "seconds": 10.993,
+   "start": 11.2,
+   "end": 22.193,
+   "asset_id": "voice_daa35ff56b9ecd2ce96c68188b542ff280a015a219c1d0df64c4b0493c259610"
+  },
+  {
+   "scene": "S02B",
+   "take": "VO_S02B.wav",
+   "source_rate": 24000,
+   "seconds": 8.871,
+   "start": 23.2,
+   "end": 32.071,
+   "asset_id": "voice_5d77caa599530de551aab501ca69b2a3d6a4349153f9e0e3503314de59a54b18"
+  },
+  {
+   "scene": "S03",
+   "take": "VO_S03.wav",
+   "source_rate": 24000,
+   "seconds": 16.415,
+   "start": 33.7,
+   "end": 50.115,
+   "asset_id": "voice_3f74dbbdc6e38f0a27d07ed10c708d0ddf5ef591fdbf40488ad0bf3b76dc7084"
+  },
+  {
+   "scene": "S04",
+   "take": "VO_S04.wav",
+   "source_rate": 24000,
+   "seconds": 13.007,
+   "start": 51.1,
+   "end": 64.107,
+   "asset_id": "voice_c5d4c3119061d8ca574a44eaa1b081c91f2f65362bb2ac7ab389a7f0a01297e8"
+  },
+  {
+   "scene": "S05",
+   "take": "VO_S05.wav",
+   "source_rate": 24000,
+   "seconds": 10.441,
+   "start": 65.1,
+   "end": 75.541,
+   "asset_id": "voice_bfb55966ba72b4607f487adcb36b9b25233aaa0869b38ee5da47a136f54377c8"
+  },
+  {
+   "scene": "S06",
+   "take": "VO_S06.wav",
+   "source_rate": 24000,
+   "seconds": 10.296,
+   "start": 76.5,
+   "end": 86.796,
+   "asset_id": "voice_94aeec5163181800983bdb15a5079919bef6141966fbaa4d5ebc8412561f250d"
+  },
+  {
+   "scene": "S07",
+   "take": "VO_S07.wav",
+   "source_rate": 24000,
+   "seconds": 11.671,
+   "start": 87.7,
+   "end": 99.371,
+   "asset_id": "voice_e323cc7d830a25e4888152b510e2c594a844716698eb406f00e2f42132cc517f"
+  },
+  {
+   "scene": "S08",
+   "take": "VO_S08.wav",
+   "source_rate": 24000,
+   "seconds": 7.807,
+   "start": 100.4,
+   "end": 108.207,
+   "asset_id": "voice_295ad6b83a87ea18c1f6850db9657c82081a212ba0eff0275d0359ee71a1f21c"
+  }
+ ],
+ "export_result": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\mix\\export\\manifest.json"
+}

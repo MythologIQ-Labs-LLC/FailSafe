@@ -1,0 +1,37 @@
+diff --git a/.gitignore b/.gitignore
+index c2658d7..f900cd4 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1 +1,2 @@
+ node_modules/
++.failsafe/
+diff --git a/src/validation.ts b/src/validation.ts
+index 00df864..49fccad 100644
+--- a/src/validation.ts
++++ b/src/validation.ts
+@@ -24,7 +24,10 @@ export function validateDueDate(dueDate: string | undefined): string | undefined
+   if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) throw new ValidationError(`due date "${dueDate}" is not YYYY-MM-DD`);
+   const parsed = new Date(`${dueDate}T00:00:00Z`);
+   if (Number.isNaN(parsed.getTime())) throw new ValidationError(`due date "${dueDate}" is not a date`);
+-  return parsed.toISOString().slice(0, 10);
++  // TASK-14: Date rolls impossible days forward (2026-02-30 -> 2026-03-02); reject them instead.
++  const canonical = parsed.toISOString().slice(0, 10);
++  if (canonical !== dueDate) throw new ValidationError(`due date "${dueDate}" does not exist`);
++  return canonical;
+ }
+ 
+ export function validateNewTask(input: NewTaskInput): Required<Pick<NewTaskInput, 'title' | 'priority'>> & { dueDate?: string } {
+diff --git a/test/validation.test.ts b/test/validation.test.ts
+index 81af7a0..2b5f559 100644
+--- a/test/validation.test.ts
++++ b/test/validation.test.ts
+@@ -17,3 +17,9 @@ test('due dates must be YYYY-MM-DD', () => {
+   assert.throws(() => validateDueDate('11/03/2026'), ValidationError);
+   assert.throws(() => validateDueDate('2026-13-01'), ValidationError);
+ });
++
++test('impossible calendar days are rejected, real leap days accepted (TASK-14)', () => {
++  assert.throws(() => validateDueDate('2026-02-30'), ValidationError);
++  assert.throws(() => validateDueDate('2026-04-31'), ValidationError);
++  assert.equal(validateDueDate('2028-02-29'), '2028-02-29');
++});

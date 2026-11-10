@@ -1,0 +1,191 @@
+{
+ "seg": "themes",
+ "t0": "2026-11-10T19:42:58.490Z",
+ "clean": true,
+ "error": null,
+ "rects": {
+  "vscode": "3432,0,5368,1088",
+  "console": "3431,0,5369,1197"
+ },
+ "events": [
+  {
+   "t": 2.612,
+   "at": "2026-11-10T19:43:01.102Z",
+   "name": "seg.start",
+   "seg": "themes"
+  },
+  {
+   "t": 5.468,
+   "at": "2026-11-10T19:43:03.958Z",
+   "name": "themes.config",
+   "console": "mythiq",
+   "sidebar": "mythiq",
+   "frame": "mythiq"
+  },
+  {
+   "t": 9.609,
+   "at": "2026-11-10T19:43:08.099Z",
+   "name": "theme.applied",
+   "theme": "pegasus",
+   "attempt": 1,
+   "ms": 110
+  },
+  {
+   "t": 9.609,
+   "at": "2026-11-10T19:43:08.099Z",
+   "name": "themes.click.pegasus"
+  },
+  {
+   "t": 11.128,
+   "at": "2026-11-10T19:43:09.618Z",
+   "name": "themes.pegasus",
+   "console": "pegasus",
+   "sidebar": "pegasus",
+   "frame": "pegasus"
+  },
+  {
+   "t": 15.639,
+   "at": "2026-11-10T19:43:14.129Z",
+   "name": "themes.sre.pegasus"
+  },
+  {
+   "t": 18.173,
+   "at": "2026-11-10T19:43:16.663Z",
+   "name": "themes.sre.state",
+   "console": "pegasus",
+   "sidebar": "pegasus",
+   "frame": "pegasus"
+  },
+  {
+   "t": 21.819,
+   "at": "2026-11-10T19:43:20.309Z",
+   "name": "theme.applied",
+   "theme": "aurora",
+   "attempt": 1,
+   "ms": 118
+  },
+  {
+   "t": 21.819,
+   "at": "2026-11-10T19:43:20.309Z",
+   "name": "themes.click.aurora"
+  },
+  {
+   "t": 23.346,
+   "at": "2026-11-10T19:43:21.836Z",
+   "name": "themes.aurora",
+   "console": "aurora",
+   "sidebar": "aurora",
+   "frame": "aurora"
+  },
+  {
+   "t": 26.472,
+   "at": "2026-11-10T19:43:24.962Z",
+   "name": "theme.applied",
+   "theme": "atmosphere",
+   "attempt": 1,
+   "ms": 109
+  },
+  {
+   "t": 26.472,
+   "at": "2026-11-10T19:43:24.962Z",
+   "name": "themes.click.atmosphere"
+  },
+  {
+   "t": 28.004,
+   "at": "2026-11-10T19:43:26.494Z",
+   "name": "themes.atmosphere",
+   "console": "atmosphere",
+   "sidebar": "atmosphere",
+   "frame": "atmosphere"
+  },
+  {
+   "t": 31.024,
+   "at": "2026-11-10T19:43:29.514Z",
+   "name": "themes.monitor.back"
+  },
+  {
+   "t": 34.153,
+   "at": "2026-11-10T19:43:32.643Z",
+   "name": "theme.applied",
+   "theme": "crimson",
+   "attempt": 1,
+   "ms": 108
+  },
+  {
+   "t": 34.153,
+   "at": "2026-11-10T19:43:32.643Z",
+   "name": "themes.click.crimson"
+  },
+  {
+   "t": 37.792,
+   "at": "2026-11-10T19:43:36.282Z",
+   "name": "theme.applied",
+   "theme": "midnight",
+   "attempt": 1,
+   "ms": 107
+  },
+  {
+   "t": 37.792,
+   "at": "2026-11-10T19:43:36.282Z",
+   "name": "themes.click.midnight"
+  },
+  {
+   "t": 41.431,
+   "at": "2026-11-10T19:43:39.921Z",
+   "name": "theme.applied",
+   "theme": "pegasus",
+   "attempt": 1,
+   "ms": 104
+  },
+  {
+   "t": 41.431,
+   "at": "2026-11-10T19:43:39.921Z",
+   "name": "themes.click.pegasus2"
+  },
+  {
+   "t": 44.935,
+   "at": "2026-11-10T19:43:43.425Z",
+   "name": "themes.reload.monitor"
+  },
+  {
+   "t": 48.962,
+   "at": "2026-11-10T19:43:47.452Z",
+   "name": "themes.afterReload",
+   "console": "pegasus",
+   "sidebar": "pegasus",
+   "frame": "pegasus"
+  },
+  {
+   "t": 50.604,
+   "at": "2026-11-10T19:43:49.094Z",
+   "name": "theme.applied",
+   "theme": "mythiq",
+   "attempt": 1,
+   "ms": 116
+  },
+  {
+   "t": 50.604,
+   "at": "2026-11-10T19:43:49.094Z",
+   "name": "themes.click.mythiq"
+  },
+  {
+   "t": 52.13,
+   "at": "2026-11-10T19:43:50.620Z",
+   "name": "themes.mythiq",
+   "console": "mythiq",
+   "sidebar": "mythiq",
+   "frame": "mythiq"
+  },
+  {
+   "t": 56.654,
+   "at": "2026-11-10T19:43:55.144Z",
+   "name": "themes.overview.mythiq"
+  },
+  {
+   "t": 60.659,
+   "at": "2026-11-10T19:43:59.149Z",
+   "name": "seg.end",
+   "seg": "themes"
+  }
+ ]
+}

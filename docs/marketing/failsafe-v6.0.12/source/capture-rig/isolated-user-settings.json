@@ -1,0 +1,38 @@
+{
+  "security.workspace.trust.enabled": false,
+  "update.mode": "none",
+  "extensions.autoUpdate": "off",
+  "extensions.autoCheckUpdates": false,
+  "extensions.ignoreRecommendations": true,
+  "telemetry.telemetryLevel": "off",
+  "workbench.startupEditor": "none",
+  "workbench.tips.enabled": false,
+  "workbench.colorTheme": "Dark Modern",
+  "window.zoomLevel": 1,
+  "window.restoreWindows": "none",
+  "editor.fontSize": 14,
+  "editor.minimap.enabled": false,
+  "editor.renderWhitespace": "none",
+  "terminal.integrated.fontSize": 13,
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "terminal.integrated.env.windows": {
+    "PROMPT": "tasklet$G ",
+    "NPM_CONFIG_UPDATE_NOTIFIER": "false",
+    "NPM_CONFIG_FUND": "false"
+  },
+  "git.openRepositoryInParentFolders": "never",
+  "git.autofetch": false,
+  "chat.disableAIFeatures": true,
+  "chat.commandCenter.enabled": false,
+  "workbench.layoutControl.enabled": false,
+  "window.commandCenter": true,
+  "github.copilot.enable": {
+    "*": false
+  },
+  "files.autoSave": "off",
+  "explorer.confirmDragAndDrop": false,
+  "workbench.externalBrowser": "C:\\dev\\mythologiq\\failsafe\\_work\\v6012-film\\rig\\open-console.cmd",
+  "failsafe.console.theme": "mythiq",
+  "failsafe.qorlogic.pythonPath": "C:/demo/python/Scripts/python.exe",
+  "window.dialogStyle": "custom"
+}

@@ -1,0 +1,76 @@
+{
+ "seg": "setup",
+ "t0": "2026-11-10T19:38:17.418Z",
+ "clean": true,
+ "error": null,
+ "rects": {
+  "vscode": "3432,0,5368,1088",
+  "console": "3431,0,5369,1197"
+ },
+ "events": [
+  {
+   "t": 2.385,
+   "at": "2026-11-10T19:38:19.803Z",
+   "name": "seg.start",
+   "seg": "setup"
+  },
+  {
+   "t": 3.808,
+   "at": "2026-11-10T19:38:21.226Z",
+   "name": "setup.banner",
+   "banner": "flex"
+  },
+  {
+   "t": 11.008,
+   "at": "2026-11-10T19:38:28.426Z",
+   "name": "setup.card"
+  },
+  {
+   "t": 14.535,
+   "at": "2026-11-10T19:38:31.953Z",
+   "name": "setup.modal"
+  },
+  {
+   "t": 18.485,
+   "at": "2026-11-10T19:38:35.903Z",
+   "name": "setup.hosts.claudeOnly"
+  },
+  {
+   "t": 20.315,
+   "at": "2026-11-10T19:38:37.733Z",
+   "name": "setup.modal.install"
+  },
+  {
+   "t": 20.325,
+   "at": "2026-11-10T19:38:37.743Z",
+   "name": "setup.vscode.dialog",
+   "dialog": "Install\nCancel\nInstall Qor-logic skills?\nHosts (as requested): claude\nScope (as requested): repo\nSkills for claude: all\nFailSafe first installs or upgrades the qor-logic Python package when it is below the minimum version, then runs qor install for each host.\n\nOperation: op_6c41fb4f-682d-4a8e-a2e5-ee277f121769\nThis request expires in 2 minutes; approving it later does nothing.\n\nRequested from the FailSafe Console over loopback. If you did not just ask for this, choose Cancel."
+  },
+  {
+   "t": 24.84,
+   "at": "2026-11-10T19:38:42.258Z",
+   "name": "setup.vscode.approve",
+   "clicked": true
+  },
+  {
+   "t": 29.944,
+   "at": "2026-11-10T19:38:47.362Z",
+   "name": "setup.installed",
+   "done": true,
+   "banner": "none",
+   "card": "QORLOGIC SKILLS\nHOST FILES FOUND\n\nInstall governance skills only with the frozen Qor-logic v0.176.1 package. If the package is missing, choose the SHA-256-verified wheel and approve the local offline install. Existing divergent versions are not replaced.\n\nC\nClaude\n78 files\nUpdated 11/10/2026\nX\nCodex\nNot installed\nK\nKilo\nNot installed\nG\nGemini\nNot installed\nInstall / Refresh Skills\nBootstrap Workspace\nShow Output\n✓ Resolved Python: C:\\demo\\python\\Scripts\\python.exe\n✓ qor-logic 0.176.1 already installed (conformance not attested)\n✓ qorlogic install --host claude --scope repo — 78 skills → c:/demo/tasklet/.claude/agents/\n✓ Provenance verified: 1 host record, 78 files\n✓ Refreshing hub\nInstalled "
+  },
+  {
+   "t": 36.206,
+   "at": "2026-11-10T19:38:53.624Z",
+   "name": "setup.overview.noBanner",
+   "banner": "none"
+  },
+  {
+   "t": 42.208,
+   "at": "2026-11-10T19:38:59.626Z",
+   "name": "seg.end",
+   "seg": "setup"
+  }
+ ]
+}

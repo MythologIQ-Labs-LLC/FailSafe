@@ -1,0 +1,6 @@
+fixture 6032a0006b29004c772cb6b3ab6e6798ceca06d6 demo-baseline-6012
+vsix sha256 c247052b08b3c5edf7521900e83a2eabeec934705fb27a36cfbb7bc3cc8f2fae C:\dev\mythologiq\failsafe\_work\v6012-film\rig\vsix\published\mythologiq-failsafe-6.0.12-win32-x64.vsix
+ext mythologiq.mythologiq-failsafe-6.0.12
+ext qual.failsafe-qual-driver-0.0.2
+console listener 127.0.0.1:9376 pid=36652
+2026-11-10T19:37:32.052Z pid=36652 failsafe found=true path=C:\dev\mythologiq\failsafe\_work\v6012-film\rig\iso\ext\mythologiq.mythologiq-failsafe-6.0.12 version=6.0.12

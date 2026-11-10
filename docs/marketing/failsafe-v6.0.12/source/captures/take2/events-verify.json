@@ -1,0 +1,39 @@
+{
+ "seg": "verify",
+ "t0": "2026-11-10T19:41:40.419Z",
+ "clean": true,
+ "error": null,
+ "rects": {
+  "vscode": "3432,0,5368,1088",
+  "console": "3431,0,5369,1197"
+ },
+ "events": [
+  {
+   "t": 2.503,
+   "at": "2026-11-10T19:41:42.922Z",
+   "name": "seg.start",
+   "seg": "verify"
+  },
+  {
+   "t": 3.438,
+   "at": "2026-11-10T19:41:43.857Z",
+   "name": "verify.npmtest.pass"
+  },
+  {
+   "t": 11.573,
+   "at": "2026-11-10T19:41:51.992Z",
+   "name": "verify.diff"
+  },
+  {
+   "t": 20.689,
+   "at": "2026-11-10T19:42:01.108Z",
+   "name": "verify.console.audit"
+  },
+  {
+   "t": 27.698,
+   "at": "2026-11-10T19:42:08.117Z",
+   "name": "seg.end",
+   "seg": "verify"
+  }
+ ]
+}

@@ -1,0 +1,34 @@
+{
+ "seg": "overview",
+ "t0": "2026-11-10T19:39:00.155Z",
+ "clean": true,
+ "error": null,
+ "rects": {
+  "vscode": "3432,0,5368,1088",
+  "console": "3431,0,5369,1197"
+ },
+ "events": [
+  {
+   "t": 2.551,
+   "at": "2026-11-10T19:39:02.706Z",
+   "name": "seg.start",
+   "seg": "overview"
+  },
+  {
+   "t": 4.623,
+   "at": "2026-11-10T19:39:04.778Z",
+   "name": "overview.console"
+  },
+  {
+   "t": 10.98,
+   "at": "2026-11-10T19:39:11.135Z",
+   "name": "overview.consoleEditorTab"
+  },
+  {
+   "t": 19.987,
+   "at": "2026-11-10T19:39:20.142Z",
+   "name": "seg.end",
+   "seg": "overview"
+  }
+ ]
+}
