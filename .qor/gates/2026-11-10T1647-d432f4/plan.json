@@ -1,0 +1,45 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-10T1647-d432f4",
+  "ts": "2026-11-10T16:47:15Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-636-release-integration-path.md",
+  "iteration": 1,
+  "change_class": "governance",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #636",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - document the PR-merge release path with exact-tree and rule-suite pass verification; record v6.0.12 bypass receipts; acceptance test on PR #640"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Bypass remains technically available to admins"
+    ],
+    "non_goals": [
+      "No ruleset or setting change"
+    ],
+    "exclusions": [
+      "No routine owner bypass"
+    ]
+  },
+  "ci_commands": [
+    "gh api rulesets/rule-suites (result=pass for the merge)"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "89f5a131248e1a2b5e2176ba18829af3d861bd5bb8fbd4a91f36e41c33d2301e",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-10T16:47:15Z"
+  }
+}
