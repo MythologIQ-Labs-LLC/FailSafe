@@ -5,6 +5,7 @@
 **Risk grade:** L3, exact-commit seal and independent witness integrity
 **Base:** `main` `6a7eced4de4c2bf540430b440379ee3ef29af8a3`
 **Target:** `main`
+**Branch:** `fix/636-g4-postseal-checkpoint-exception` (draft PR #650; supersedes #649, whose `governance/` branch prefix violated the CI branch naming rule).
 **Scope:** `docs/releases/RELEASE_INTEGRATION_PATH.md` plus this plan. No extension/product code, workflow, GitHub ruleset, G4 policy, TPM key, TSA or checkpoint change.
 
 ## Problem
