@@ -46,10 +46,6 @@ const STYLE = `
 .cc-intcat-btn:hover { border-color:#68d391; }
 .cc-intcat-docs { color:#5fb0d8; font-size:.82rem; text-decoration:none; }
 .cc-intcat-docs:hover { text-decoration:underline; }
-.cc-intcat-statewright { background:linear-gradient(180deg,#182332,#111a25); border:1px solid #425168; border-radius:10px; padding:14px; }
-.cc-intcat-statewright p { color:#a9b8cb; margin:0 0 10px; font-size:.88rem; }
-.cc-intcat-web-link { display:inline-block; background:#141a22; color:#f1efe7; border:1px solid #5fb0d8; border-radius:8px; padding:7px 14px; font:inherit; text-decoration:none; }
-.cc-intcat-web-link:hover, .cc-intcat-web-link:focus-visible { border-color:#9fdcff; color:#fff; text-decoration:underline; }
 `;
 
 const PILL = {
@@ -94,17 +90,6 @@ const CAPABILITY_TEXT = {
   notify: 'send notifications',
   'isolated-run': 'run in an isolated worktree',
 };
-
-// #652: Statewright website-first handoff. No adapter, credential, provider data,
-// or connection-status claim: navigation occurs only after the operator clicks.
-const STATEWRIGHT_HANDOFF = `
-  <section class="cc-intcat-statewright" data-id="statewright" aria-label="Statewright AI website integration">
-    <div class="cc-intcat-head"><strong>Statewright AI</strong><span class="cc-intcat-pill">Website handoff</span></div>
-    <p>View your workflow runs and transition history on Statewright's website. Statewright handles sign-in and run data. FailSafe does not read Statewright history or enforce Statewright workflows.</p>
-    <div class="cc-intcat-actions">
-      <a class="cc-intcat-web-link" href="https://statewright.ai/runs" target="_blank" rel="noopener noreferrer">Open Statewright Run History</a>
-    </div>
-  </section>`;
 
 function resultLabel(s) {
   const r = s.lastResult;
@@ -199,7 +184,7 @@ export class IntegrationCatalogRenderer {
     if (typeof document === 'undefined' || document.getElementById(STYLE_ID)) return;
     const el = document.createElement('style');
     el.id = STYLE_ID;
-    el.textContent = STYLE;
+    el.textContent = STYLE + STATEWRIGHT_STYLES;
     document.head.appendChild(el);
   }
 
@@ -257,3 +242,23 @@ export class IntegrationCatalogRenderer {
   // config changes. Accept + ignore events for TabGroup parity.
   onEvent() {}
 }
+
+// Keep additive handoff constants after the existing renderer to preserve
+// source-location anchors enforced by FX1003 integration contracts.
+const STATEWRIGHT_STYLES = `
+.cc-intcat-statewright { background:linear-gradient(180deg,#182332,#111a25); border:1px solid #425168; border-radius:10px; padding:14px; }
+.cc-intcat-statewright p { color:#a9b8cb; margin:0 0 10px; font-size:.88rem; }
+.cc-intcat-web-link { display:inline-block; background:#141a22; color:#f1efe7; border:1px solid #5fb0d8; border-radius:8px; padding:7px 14px; font:inherit; text-decoration:none; }
+.cc-intcat-web-link:hover, .cc-intcat-web-link:focus-visible { border-color:#9fdcff; color:#fff; text-decoration:underline; }
+`;
+
+// #652: Statewright website-first handoff. No adapter, credential, provider data,
+// or connection-status claim: navigation occurs only after the operator clicks.
+const STATEWRIGHT_HANDOFF = `
+  <section class="cc-intcat-statewright" data-id="statewright" aria-label="Statewright AI website integration">
+    <div class="cc-intcat-head"><strong>Statewright AI</strong><span class="cc-intcat-pill">Website handoff</span></div>
+    <p>View your workflow runs and transition history on Statewright's website. Statewright handles sign-in and run data. FailSafe does not read Statewright history or enforce Statewright workflows.</p>
+    <div class="cc-intcat-actions">
+      <a class="cc-intcat-web-link" href="https://statewright.ai/runs" target="_blank" rel="noopener noreferrer">Open Statewright Run History</a>
+    </div>
+  </section>`;
