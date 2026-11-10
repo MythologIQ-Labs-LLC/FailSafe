@@ -114,6 +114,11 @@ suite('IntegrationCatalogRenderer (GH #167, jsdom structural)', () => {
       await new IntegrationCatalogRenderer('integrations').render();
       assert.ok(ctx.doc.querySelector('.cc-intcat'));
       assert.ok(/Could not load integrations/.test(ctx.doc.body.innerHTML));
+      // #652: the provider-owned browser experience remains accessible even when
+      // FailSafe's local catalog endpoint fails. No automatic provider requests.
+      const handoff = ctx.doc.querySelector('.cc-intcat-statewright[data-id="statewright"]');
+      assert.ok(handoff, 'Statewright website handoff survives catalog failure');
+      assert.equal(handoff!.querySelector('a.cc-intcat-web-link')?.getAttribute('href'), 'https://statewright.ai/runs');
     } finally { ctx.cleanup(); }
   });
 });
