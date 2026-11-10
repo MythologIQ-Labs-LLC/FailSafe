@@ -36052,3 +36052,43 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: BOUNDED-DELTA AUDIT ACCEPTED for PR #646 (G4 release-mode enforcement, #638): PASS #934 extends to final source cf8dd879308c54d9935614978dee3d4c4213aa4c. 0063b2d2->2e846092 records only; 2e846092->aec5730e is a non-forced merge of main 42f61921 (the normal merge of PR #644) whose tree equals its first parent, adding no content; aec5730e->cf8dd879 changes one test (g4ReleaseBinding same-size swap: adds git update-index --assume-unchanged and asserts git status is blind before expecting REFUSED RELEASE_TREE_MISMATCH), after Linux CI run 42886339390 showed Git still noticing the mtime-restored change and the verifier returning BLOCKED RELEASE_TREE_DIRTY (fail-closed either way). Production code byte-identical to the audited source. The test is not weakened: removing the byte binding or comparing lengths only makes it fail. Auditor re-run: G4 suites 88/88; OpenSSL absent 82 skipped with reason, 0 fail; 42 mutants, 36 killed, survivor set identical to #934; razor clean. CI on cf8dd879: 13 of 13 checks pass; PR Full Test 42888118970 (ubuntu-24.04) 1053 pass, 0 fail, 33 skipped (one G4 skip: the Windows-PowerShell-only TPM signer test; all 23 release-mode tests ran). Governor's Windows run: 88/88. Non-blocking: the pure mtime-restored construction without an index flag is no longer asserted by a test (restore it platform-neutrally: either refusal, never PASS). G4 remains not operationally qualified; no owner approval is implied.
 
 ---
+
+### Entry #936: GATE TRIBUNAL - plan-v6013-636-g4-postseal-checkpoint-exception (iteration 1) - VETO
+
+**Timestamp**: 2026-11-10T21:56:45Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2144-75f601`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-636-g4-postseal-checkpoint-exception.md`
+**Report**: `.agent/staging/AUDIT_REPORT-650.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2144-75f601/audit.json`
+
+**Content Hash**: `fddeb1a6c4a7ffd3841d93e5fadb7117a3f749a217a3223e3dbebb32afaa28c3`
+**Previous Hash**: `7620e39e1d4a75e03d6219fa2d7615d978460af0f9e43eaaea9d7000dc226a94`
+**Chain Hash (Merkle seal)**: `bd30fb7a11185ff7071e8fafa93146f9878b481d96c16b20462b24a5067dd48c`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-636-g4-postseal-checkpoint-exception.md iteration 1 (plan sha256 e88952bfb6569dda2a7830e9bb62623702c46a40358975c4194c07d9e07f5458; candidate 6922f7b8, pushed head b9a1557c, on main 6a7eced4; draft PR #650). Independent Option B audit by a fresh auditor, L3, with 55 synthetic repositories and real signed test checkpoints. The additive-only rule, executed literally, catches rewrites, deletions, renames, type changes, extra, split, nested, symlink, gitlink and executable entries, post-seal trust or product changes (via the all-paths rule), and merges; a diagnostic PASS cannot substitute for a release PASS; a genuine five-file checkpoint is admissible; H and M verification is correctly placed. Blocking B1 (security-l3, infrastructure-mismatch): the printed command uses C^, which cmd.exe strips, so the commit is diffed against itself and prints nothing with exit 0, the same as a clean result. Blocking B2 (coverage-gap, specification-drift): nothing binds the verified checkpoint to this release's seal; a release PASS was obtained with no new checkpoint (previous head supplied) and with a new checkpoint attesting a pre-seal commit; 'seal commit' is also used differently from G4_WITNESS_OPERATIONS.md. Non-blocking N1-N9 in the report (unscoped command, ancestry and merge commands, acceptance items are criteria without retained fixtures, verifier ignores extra paths and chain-file edits so the Git checks are the sole control). No key created, no TSA contacted.
+
+---
+
+### Entry #937: GATE TRIBUNAL - plan-v6013-636-g4-postseal-checkpoint-exception (iteration 2) - PASS
+
+**Timestamp**: 2026-11-10T22:10:36Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2144-75f601`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-636-g4-postseal-checkpoint-exception.md`
+**Report**: `.agent/staging/AUDIT_REPORT-650-iter2.md` (Content Hash = SHA256, LF-normalized); VETO #936 report preserved
+**Gate**: `.qor/gates/2026-11-10T2144-75f601/audit.json`
+
+**Content Hash**: `601a2b992f66a5b150d6aa67edf9b59b4200947c074edf73a854755647f3a530`
+**Previous Hash**: `bd30fb7a11185ff7071e8fafa93146f9878b481d96c16b20462b24a5067dd48c`
+**Chain Hash (Merkle seal)**: `692f7677d25f49cc3b6024e2bf1c5fd3f36d84433203445e583bc973683f77d4`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-636-g4-postseal-checkpoint-exception.md iteration 2 (plan sha256 a085bed5608229a4943a92ba1030b5a12422acb4ea7450ac2a74b43663cc1360; candidate 4dae836468dc18fc52ca696251f7344f96216941; draft PR #650), after VETO #936. Independent audit, L3. B1 closed: the per-commit command now uses C~1 and prints the tampering line in Git Bash, PowerShell 5.1 and cmd.exe alike; a range with no checkpoint lines is refused, so empty output is not a pass. B2 closed: with S, R (seal-record commit) and K defined, checks 5 and 7 refuse a missing new checkpoint, a checkpoint attesting S, a pre-seal commit or a commit after R, two checkpoints, K before R and a rewritten S; a genuine checkpoint attesting R passes on H and on M. Synthetic matrix: 64 repositories, 61 refused, 3 allowed (the genuine cases). The verifier alone still returns a release PASS in six constructions; the documented attested-commit line and Git checks are what refuse them. Nothing in the text authorizes a key, TSA or checkpoint. Non-blocking: no printed test that R is the first commit containing the seal entry; genesis and RC-promotion wording; 'when G4 applies' is an owner scope decision. This PASS covers the operator procedure only; it is not a release GO or an approval of any owner decision.
+
+---

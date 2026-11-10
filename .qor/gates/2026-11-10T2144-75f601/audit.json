@@ -1,0 +1,28 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2144-75f601",
+  "ts": "2026-11-10T22:10:36Z",
+  "target": ".failsafe/governance/plans/plan-v6013-636-g4-postseal-checkpoint-exception.md",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT-650-iter2.md",
+  "risk_grade": "L3",
+  "findings_categories": [],
+  "target_content_hash": "a085bed5608229a4943a92ba1030b5a12422acb4ea7450ac2a74b43663cc1360",
+  "report_content_hash": "601a2b992f66a5b150d6aa67edf9b59b4200947c074edf73a854755647f3a530",
+  "iteration": 2,
+  "ledger_entry": 937,
+  "ledger_chain_hash": "692f7677d25f49cc3b6024e2bf1c5fd3f36d84433203445e583bc973683f77d4",
+  "audited_candidate": "4dae8364",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [],
+  "release_gate_pending": "procedure only; G4 operations and release scope remain owner decisions",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "pass",
+    "ts": "2026-11-10T22:10:36Z"
+  }
+}
