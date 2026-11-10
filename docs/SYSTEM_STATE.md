@@ -4,7 +4,7 @@
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
-**Current Release:** v6.0.12 (2026-11-09): release commit `c1fcaa23` qualified and sealed (ledger #919 audit PASS, #920 G4 disposition accepted, #921 implementation, #922 seal); not tagged or published pending the owner's publication approval. Latest published release: v6.0.11 (2026-10-30; VS Code Marketplace, Open VSX and GitHub Release, tag `v6.0.11` on `73eca5b4`, release run 40993501172).
+**Current Release:** v6.0.12 (2026-11-10): sealed (#922; #634 runner correction sealed #925) for release through the tag-triggered workflow from the sealed `main` commit (publication is confirmed only by the post-publication record); see the 2026-11-10 entry. Previous published release: v6.0.11. Latest published release: v6.0.11 (2026-10-30; VS Code Marketplace, Open VSX and GitHub Release, tag `v6.0.11` on `73eca5b4`, release run 40993501172).
 **Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
@@ -14,7 +14,12 @@
 
 ---
 
-## 2026-11-09 — v6.0.12 release commit qualified and sealed (not published)
+## 2026-11-10 — v6.0.12 release recovery (#634)
+
+- The first tag run (42742575394, tag object `ff833f5c` on `45c1957c`) failed before packaging: `ubuntu-latest` now resolves to `ubuntu-26.04`, where Playwright 1.58.1 cannot install chromium. Nothing was published (0 artifacts; no GitHub Release; Marketplace and Open VSX at 6.0.11).
+- #634 pins the five `release.yml` jobs to `ubuntu-24.04` and dates v6.0.12 2026-11-10; no product-source change (audit PASS #923, implementation #924, seal #925). The unpublished `v6.0.12` tag is replaced once, by owner exception, on the sealed `main` commit. Other workflows on `ubuntu-latest`: #635.
+
+## 2026-11-09 — v6.0.12 release commit qualified and sealed (superseded by the 2026-11-10 recovery)
 
 - Release commit `c1fcaa231bd3eddee4304d3a469f4c9ca434a45a` on `fix/475-no-uncontained-agent-execution-v6012-20261108-no-ci` (PR #633, draft): both READMEs mark v6.0.12 as the current release, CHANGELOG `[6.0.12]` dated 2026-11-09. Extension tree `1d49f88a`.
 - Governance: retrospective release-plan audit VETO #917, VETO #918, PASS #919; G4 witness deferred to v6.0.13 (expires at v6.0.13 or 2026-12-09) by owner decision `docs/releases/V6_0_12_G4_DISPOSITION.md` (sha256 15db8964…118b), accepted #920; implementation #921; seal #922.

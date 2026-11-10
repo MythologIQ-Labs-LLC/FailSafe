@@ -1,0 +1,46 @@
+{
+  "phase": "implement",
+  "session_id": "2026-11-10T1500-49ff26",
+  "ts": "2026-11-10T15:14:17Z",
+  "files_touched": [
+    ".failsafe/governance/plans/plan-v6012-634-release-runner-pin.md",
+    ".github/workflows/release.yml",
+    ".qor/gates/2026-11-10T1500-49ff26/plan-iter1.json",
+    ".qor/gates/2026-11-10T1500-49ff26/plan-iter1.provenance",
+    ".qor/gates/2026-11-10T1500-49ff26/plan.json",
+    ".qor/gates/2026-11-10T1500-49ff26/plan.provenance",
+    ".qor/session/current",
+    "CHANGELOG.md",
+    "FailSafe/extension/CHANGELOG.md",
+    "FailSafe/extension/README.md",
+    "docs/SYSTEM_STATE.md"
+  ],
+  "commits": [
+    "64422177",
+    "531dd0b7",
+    "3f1b2ccd"
+  ],
+  "change_commit": "64422177",
+  "plan_pass": "ledger #923",
+  "test_summary": {
+    "source": "requalification on 3f1b2ccd (ext tree 3b817791); product source identical to seal #922",
+    "validate_ps1": "pass",
+    "validate_vsix_source_only": "pass (v6.0.12, 2026-11-10)",
+    "release_preflight": "pass",
+    "test_node": "run 1: 979/1 (ArchitectureLinks event-loop lag 101 ms); run 2: 979/1 (T13(h) pythonResolution); run 3: 980/0; both files 3/3 in isolation; no test or source change since 45c1957c",
+    "package_all_targets": "8/8 validated",
+    "release_notes_pdf": "generated",
+    "verify_set": "pass",
+    "installed_vsix_475_1_122_1": "19/19",
+    "installed_vsix_475_1_145_2": "19/19",
+    "not_rerun": "VS Code host suites and Playwright (no code change; CI test:all runs them on ubuntu-24.04 before publish)"
+  },
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-10T15:14:17Z"
+  }
+}

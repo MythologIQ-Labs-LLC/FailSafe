@@ -1,0 +1,39 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-11-10T1500-49ff26",
+  "ts": "2026-11-10T15:14:17Z",
+  "verdict": "PASS",
+  "merkle_seal": "cfb6d35dc81e2f26a3d4740f47e5fd0ae4735d48be05f278cd34be61da47545c",
+  "content_hash": "9b8d356238d761878661f11f51f79ace034044a4df0d85577680dd1ff752bb4c",
+  "ledger_entry": 925,
+  "reality_check": {
+    "missing": [],
+    "unplanned": [],
+    "matches": 5
+  },
+  "change_commit": "64422177",
+  "builds_on_seal": 922,
+  "extension_tree": "3b8177919117ba0629acd901650cbf09007ab3f8",
+  "local_sha256sums_sha256": "c8bc3877550b531351b0c5d07cee31d99010f6063cbec5bd1ffd452752da04ea",
+  "g4_disposition_sha256": "15db89647f398b84b4ea536bf70c2d96e27147a7a2eb94ed204ee75df0b6118b",
+  "governance_refs": {
+    "audit_pass": 923,
+    "g4_accept": 920,
+    "implementation": 924,
+    "release_seal": 922
+  },
+  "tag_exception": {
+    "old_tag_object": "ff833f5c410d9418291303d31702c4075846b1a0",
+    "old_target": "45c1957c21b3151c9ac0b3944b99d1e09f6f3b33",
+    "authorized": "owner 2026-11-10, #634"
+  },
+  "publication": "not authorized; requires owner approval of exact-commit GO evidence",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "pass",
+    "ts": "2026-11-10T15:14:17Z"
+  }
+}

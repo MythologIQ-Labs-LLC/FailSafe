@@ -35792,3 +35792,63 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: SESSION SEAL for the v6.0.12 release, plan-v6012-release-governance.md iteration 3 (content hash = the audited plan, sha256 13539396f256c9972dd4f8b85fbd0acf828c57afe4398caecd9e9152f8385475; retrospective PASS #919 after VETOs #917 and #918). Reality = Promise, with disclosures. Sealed scope: v6.0.11..c1fcaa231bd3eddee4304d3a469f4c9ca434a45a, the artifact-producing release commit; extension tree 1d49f88af3081f5b96b42b6e5c6e1b44453207ce. Every planned group exists and was qualified on that exact commit (gates in #921). Local qualification set SHA256SUMS.txt sha256 b0c9bb25c3ef84c485e566857e91362dfb9694652cdfd2db352eca51821312be (8 target VSIXs + FailSafe-v6.0.12-Release-Notes.pdf 304ae34d...); VSIX and PDF builds are not byte-reproducible, so the tag-triggered workflow builds, validates and publishes its own set from a commit whose FailSafe/extension tree must equal 1d49f88a. Bound governance state: G4 disposition docs/releases/V6_0_12_G4_DISPOSITION.md sha256 15db89647f398b84b4ea536bf70c2d96e27147a7a2eb94ed204ee75df0b6118b accepted at #920 (v6.0.12 only; expires at v6.0.13 or 2026-12-09, strict reading); #916 PASS for #633; #919 PASS for the release plan. Disclosures: the RC1 delta and #619 were implemented before audit (declared ordering inversion; retrospective review only); disclosed v6.0.11 razor debt accepted; G4 not implemented; frozen Qor-logic 15/19 conformance, tested-against stays 0.169.0; #476 neutral advisory only; #505 observes editor saves, does not prevent them; a git worktree is not an OS sandbox (Aider/Continue refused); historical breaks at #340 and #382 and older numbering residue; October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED. Not a release GO: publication requires the owner's approval of the exact-commit GO evidence. No merge, tag or publication.
 
 ---
+
+### Entry #923: GATE TRIBUNAL - plan-v6012-634-release-runner-pin (iteration 1) - PASS
+
+**Timestamp**: 2026-11-10T15:05:38Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1500-49ff26`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6012-634-release-runner-pin.md`
+**Report**: `.agent/staging/AUDIT_REPORT-634.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1500-49ff26/audit.json`
+
+**Content Hash**: `d61dd35fa18666a341291f755aa4c3d6abfb4890e8ff94d79d4e29231d8765f2`
+**Previous Hash**: `c269ea2446ad035940a1e927effe765f482eb553de07c3475aed8bf4520689ef`
+**Chain Hash (Merkle seal)**: `7965ef8f15ce64867130fabee127c23a025ca06410b5292c89c238f55c420bd0`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6012-634-release-runner-pin.md iteration 1 (plan sha256 9b8d356238d761878661f11f51f79ace034044a4df0d85577680dd1ff752bb4c; candidate 3f1b2ccd, change 64422177 on 45c1957c). Independent Option B audit of an owner-approved protected-workflow correction (#634). Verified: the diff is exactly five release.yml runs-on ubuntu-latest -> ubuntu-24.04 lines plus the [6.0.12] date 2026-11-09 -> 2026-11-10 in both CHANGELOGs and the extension README; no trigger, permission, secret, environment, concurrency, timeout, step or product-source change. No publication of 6.0.12 anywhere: run 42742575394 (ubuntu-26.04, Playwright chromium unsupported) has 0 artifacts and skipped publish jobs; no GitHub Release; Open VSX and Marketplace latest 6.0.11. v6.0.11 run 40993501172 succeeded on ubuntu-24.04. Dates consistent and before the G4 expiry 2026-12-09. One-time unpublished-tag replacement ruled sound (the duplicate-publish guard is not weakened). Requalification scope acceptable (CI test:all re-runs host and Playwright suites before publication). Non-blocking: update SYSTEM_STATE; record old tag ff833f5c -> 45c1957c and the new tag in the seal; cite the G4 decision sha256 15db8964...118b in the seal; do not re-run run 42742575394. Seal #922, PASS #919, #920 and all VETOs unchanged.
+
+---
+
+### Entry #924: IMPLEMENTATION - plan-v6012-634-release-runner-pin
+
+**Timestamp**: 2026-11-10T15:14:17Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-11-10T1500-49ff26`
+**Risk Grade**: L2
+**Verdict**: N/A
+**Target**: `64422177` (release.yml runner pin + 2026-11-10 date)
+**Report**: `.qor/gates/2026-11-10T1500-49ff26/implement.json` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1500-49ff26/implement.json`
+
+**Content Hash**: `da9674a7d5fd0439d04f06a54b8beef807e41fca49a7a9a74ddc0c534e3430d7`
+**Previous Hash**: `7965ef8f15ce64867130fabee127c23a025ca06410b5292c89c238f55c420bd0`
+**Chain Hash (Merkle seal)**: `6dc985d96e1aed503e1a4ed2caae4a9e8c8fb7a5bbde191d4c52c62a07fb8c65`
+
+**Decision**: IMPLEMENTATION of plan-v6012-634-release-runner-pin.md (PASS #923). Commit 64422177 on main 45c1957c: the five release.yml jobs run on ubuntu-24.04; v6.0.12 dated 2026-11-10 in both CHANGELOGs and the extension README. No product source, version, Playwright or other workflow change; extension tree 1d49f88a -> 3b8177919117ba0629acd901650cbf09007ab3f8 (two date lines only). Requalification on 3f1b2ccd: validate.ps1, validate-vsix source (v6.0.12 2026-11-10), release preflight, 8/8 target VSIXs, PDF, verify-set, installed-VSIX #475 19/19 on VS Code 1.122.1 and 1.145.2 all pass. test:node full runs: 979/1 (ArchitectureLinks event-loop lag 101 ms), 979/1 (T13(h) pythonResolution), then 980/0; each failing file passes 3/3 alone and neither file nor any source changed since seal #922 (980/0); disclosed as timing sensitivity under full-suite load. Host suites and Playwright not re-run locally (no code change); the tag build runs test:all on ubuntu-24.04 before any publish job.
+
+---
+
+### Entry #925: SESSION SEAL - plan-v6012-634-release-runner-pin (v6.0.12 release recovery)
+
+**Timestamp**: 2026-11-10T15:14:18Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-11-10T1500-49ff26`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise)
+**Target**: `.failsafe/governance/plans/plan-v6012-634-release-runner-pin.md`
+**Report**: plan (Content Hash = SHA256 of the audited plan, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1500-49ff26/substantiate.json`
+
+**Content Hash**: `9b8d356238d761878661f11f51f79ace034044a4df0d85577680dd1ff752bb4c`
+**Previous Hash**: `6dc985d96e1aed503e1a4ed2caae4a9e8c8fb7a5bbde191d4c52c62a07fb8c65`
+**Chain Hash (Merkle seal)**: `cfb6d35dc81e2f26a3d4740f47e5fd0ae4735d48be05f278cd34be61da47545c`
+
+**Decision**: SESSION SEAL for #634 (plan-v6012-634-release-runner-pin.md, content hash = the audited plan, sha256 9b8d356238d761878661f11f51f79ace034044a4df0d85577680dd1ff752bb4c; PASS #923). Reality = Promise. Builds on seal #922 (v6.0.12 release, Merkle c269ea24...): product source unchanged; the sealed v6.0.12 extension tree is now 3b8177919117ba0629acd901650cbf09007ab3f8 (seal #922 tree 1d49f88a plus the 2026-11-10 date lines); release.yml pins ubuntu-24.04. The commit carrying this entry is the v6.0.12 release commit to be tagged; its FailSafe/extension tree must equal 3b817791. Local requalification SHA256SUMS.txt sha256 c8bc3877550b531351b0c5d07cee31d99010f6063cbec5bd1ffd452752da04ea (not byte-reproducible; the tag workflow builds and publishes its own set, whose checksums are recorded after publication). G4 disposition docs/releases/V6_0_12_G4_DISPOSITION.md sha256 15db89647f398b84b4ea536bf70c2d96e27147a7a2eb94ed204ee75df0b6118b accepted #920 (expires at v6.0.13 or 2026-12-09); publication on 2026-11-10 is inside it. One-time unpublished-tag replacement, owner exception of 2026-11-10 (#634): old annotated tag v6.0.12 object ff833f5c410d9418291303d31702c4075846b1a0 -> commit 45c1957c21b3151c9ac0b3944b99d1e09f6f3b33 (tagger Knapp-Kevin 1794277482 -0500), whose only run 42742575394 failed before packaging with 0 artifacts and no publication (verified twice; re-checked immediately before replacement). The new tag object and its run are recorded in the post-publication entry. Seal #922, audits #919 and #923, #920 and VETOs #915, #917, #918 unchanged. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED.
+
+---
