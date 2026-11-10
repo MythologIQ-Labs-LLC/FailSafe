@@ -1,0 +1,49 @@
+{
+ "theme": "dark",
+ "size": [
+  1600,
+  900
+ ],
+ "shots": [],
+ "dialogs": [],
+ "app": {
+  "version": "0.9.1",
+  "root": "C:\\LocalAI\\Voice\\Chatterbox\\demo-v091\\app\\Sonic Rift",
+  "python": "C:\\LocalAI\\Voice\\Chatterbox\\demo-v091\\app\\Sonic Rift\\.venv\\Scripts\\python.exe",
+  "profile": "C:\\dev\\mythologiq\\failsafe\\_work\\v6012-film\\profiles\\sonic-rift-male-samples"
+ },
+ "phase": "samples",
+ "samples": [
+  {
+   "voice": "narrator-male-1",
+   "design_clip": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-1.wav",
+   "sample": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-1-sample.wav"
+  },
+  {
+   "voice": "narrator-male-2",
+   "design_clip": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-2.wav",
+   "sample": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-2-sample.wav"
+  },
+  {
+   "voice": "narrator-male-3",
+   "design_clip": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-3.wav",
+   "sample": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-3-sample.wav"
+  },
+  {
+   "voice": "narrator-male-4",
+   "design_clip": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-4.wav",
+   "sample": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-4-sample.wav"
+  }
+ ],
+ "sample_text": "Meet FailSafe.\n\nA development companion that helps solo developers keep their work visible, understand potential risks, and maintain a record of important decisions.",
+ "finishing": {
+  "speed": 1.0,
+  "pitch_semitones": 0.0,
+  "paragraph_pause": 0.6,
+  "even_volume": true,
+  "trim_silence": true,
+  "output_format": "WAV",
+  "save_subtitles": false,
+  "subtitle_format": "SRT"
+ }
+}

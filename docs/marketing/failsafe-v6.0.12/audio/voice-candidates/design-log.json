@@ -1,0 +1,49 @@
+{
+ "theme": "dark",
+ "size": [
+  1600,
+  900
+ ],
+ "shots": [],
+ "dialogs": [],
+ "app": {
+  "version": "0.9.1",
+  "root": "C:\\LocalAI\\Voice\\Chatterbox\\demo-v091\\app\\Sonic Rift",
+  "python": "C:\\LocalAI\\Voice\\Chatterbox\\demo-v091\\app\\Sonic Rift\\.venv\\Scripts\\python.exe",
+  "profile": "C:\\dev\\mythologiq\\failsafe\\_work\\v6012-film\\profiles\\sonic-rift-male-design"
+ },
+ "phase": "design",
+ "design": {
+  "engine": "Qwen3 voice design",
+  "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+  "license": "apache-2.0",
+  "description": "A calm, confident adult man in his thirties speaking natural North American English. A relaxed, lower-mid voice with an even, unhurried pace, like an experienced software developer walking a colleague through a product he knows well. Cool and understated, friendly but never salesy, clear articulation, no announcer energy and no drama.",
+  "passage": "Would you hand me the yellow measuring cup before the soup boils over? The quick thinker judged each chance, then sighed with real pleasure.",
+  "takes": [
+   {
+    "file": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-1.wav",
+    "label": "Design 1",
+    "says": "Would you hand me the yellow measuring cup before the soup boils over? The quick thinker judged each chance, then sighed with real pleasure.",
+    "seconds": 8.4
+   },
+   {
+    "file": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-2.wav",
+    "label": "Design 2",
+    "says": "Would you hand me the yellow measuring cup before the soup boils over? The quick thinker judged each chance, then sighed with real pleasure.",
+    "seconds": 7.76
+   },
+   {
+    "file": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-3.wav",
+    "label": "Design 3",
+    "says": "Would you hand me the yellow measuring cup before the soup boils over? The quick thinker judged each chance, then sighed with real pleasure.",
+    "seconds": 7.52
+   },
+   {
+    "file": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\voice-candidates\\narrator-male-4.wav",
+    "label": "Design 4",
+    "says": "Would you hand me the yellow measuring cup before the soup boils over? The quick thinker judged each chance, then sighed with real pleasure.",
+    "seconds": 9.36
+   }
+  ]
+ }
+}

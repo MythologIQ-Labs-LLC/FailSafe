@@ -2,210 +2,210 @@
  "cues": [
   {
    "start": 1,
-   "end": 3.457417,
+   "end": 3.253583,
    "text": "AI can help you write code faster."
   },
   {
-   "start": 4.053042,
-   "end": 7.274367364485982,
+   "start": 4.0305420000000005,
+   "end": 7.032040859813084,
    "text": "But when something changes, how do you know what happened,"
   },
   {
-   "start": 7.314367364485982,
-   "end": 10.319625,
+   "start": 7.072040859813084,
+   "end": 9.891583,
    "text": "what it affects, and whether it's ready to ship?"
   },
   {
    "start": 11.2,
-   "end": 12.675708,
+   "end": 12.672125,
    "text": "Meet FailSafe."
   },
   {
-   "start": 13.274375,
-   "end": 17.72340587248322,
+   "start": 13.444167,
+   "end": 17.72975424832215,
    "text": "A development companion that helps solo developers keep their work visible,"
   },
   {
-   "start": 17.76340587248322,
-   "end": 22.442583,
+   "start": 17.769754248322148,
+   "end": 22.287667,
    "text": "understand potential risks, and maintain a record of important decisions."
   },
   {
    "start": 23.2,
-   "end": 25.322457999999997,
+   "end": 25.253458,
    "text": "Setup starts in the Console."
   },
   {
-   "start": 25.917541999999997,
-   "end": 27.882642078651685,
+   "start": 26.083042,
+   "end": 27.90306061797753,
    "text": "Install the Qor-Logic skills,"
   },
   {
-   "start": 27.922642078651684,
-   "end": 32.321124999999995,
+   "start": 27.94306061797753,
+   "end": 32.041375,
    "text": "approve the request in VS Code, and the workspace is ready."
   },
   {
    "start": 33.7,
-   "end": 37.32107431914894,
+   "end": 37.151622191489366,
    "text": "With version 6.0.12, the Console, Monitor,"
   },
   {
-   "start": 37.36107431914894,
-   "end": 42.143833,
+   "start": 37.191622191489365,
+   "end": 41.764583,
    "text": "and SRE views share a consistent visual experience."
   },
   {
-   "start": 42.714583000000005,
-   "end": 45.989292000000006,
+   "start": 42.505458000000004,
+   "end": 45.265292,
    "text": "Change your theme, and your workspace follows."
   },
   {
-   "start": 46.558208,
-   "end": 50.364833000000004,
+   "start": 46.16054200000001,
+   "end": 49.335083000000004,
    "text": "The information stays familiar, wherever you're working."
   },
   {
    "start": 51.1,
-   "end": 54.005458000000004,
+   "end": 53.75775,
    "text": "Now imagine a small but important bug."
   },
   {
-   "start": 54.549417,
-   "end": 58.021875,
+   "start": 54.492583,
+   "end": 57.649583,
    "text": "A date validator accepts a day that doesn't exist."
   },
   {
-   "start": 58.603833,
-   "end": 64.357417,
+   "start": 58.324917,
+   "end": 63.723333000000004,
    "text": "We document the issue, write a regression test, and see the failure for ourselves."
   },
   {
    "start": 65.1,
-   "end": 67.730083,
+   "end": 67.384,
    "text": "Fixing the code is only part of the job."
   },
   {
-   "start": 68.37216699999999,
-   "end": 72.64496888281249,
+   "start": 68.15104199999999,
+   "end": 72.38940442968749,
    "text": "FailSafe helps surface the risks and governance requirements around a change,"
   },
   {
-   "start": 72.6849688828125,
-   "end": 75.7915,
+   "start": 72.4294044296875,
+   "end": 75.513125,
    "text": "so the developer knows what still needs attention."
   },
   {
    "start": 76.5,
-   "end": 79.408625,
+   "end": 79.397458,
    "text": "The corrected validator passes its tests."
   },
   {
-   "start": 79.937667,
-   "end": 83.38714287719297,
+   "start": 80.162375,
+   "end": 83.45531854385965,
    "text": "We can inspect the difference, see the recorded decisions,"
   },
   {
-   "start": 83.42714287719298,
-   "end": 87.046292,
+   "start": 83.49531854385965,
+   "end": 86.963333,
    "text": "and compare the result with what we intended to change."
   },
   {
    "start": 87.7,
-   "end": 89.703708,
+   "end": 89.52279200000001,
    "text": "Every change has a story."
   },
   {
-   "start": 90.290875,
-   "end": 95.775833,
+   "start": 90.25883300000001,
+   "end": 95.854292,
    "text": "What we set out to do, what we changed, what we checked, and what still needs review."
   },
   {
-   "start": 96.33095800000001,
-   "end": 99.621125,
+   "start": 96.5875,
+   "end": 99.771167,
    "text": "FailSafe helps make that story easier to follow."
   },
   {
    "start": 100.4,
-   "end": 103.212708,
+   "end": 103.149,
    "text": "Move faster without losing sight of the work."
   },
   {
-   "start": 103.803292,
-   "end": 104.739542,
+   "start": 103.905708,
+   "end": 104.74275,
    "text": "FailSafe."
   },
   {
-   "start": 105.32112500000001,
-   "end": 106.557125,
+   "start": 105.51462500000001,
+   "end": 106.90112500000001,
    "text": "Build with AI."
   },
   {
-   "start": 107.09845800000001,
-   "end": 108.457417,
+   "start": 107.60608300000001,
+   "end": 108.748833,
    "text": "Know what changed."
   }
  ],
  "report": [
   {
    "scene": "S01",
-   "take": "VO_S01_r2-take1.wav",
+   "take": "VO_S01_m3-take1.wav",
    "sentences": 2,
    "pauses_found": 1,
    "method": "measured pauses"
   },
   {
    "scene": "S02",
-   "take": "VO_S02_r2-take1.wav",
+   "take": "VO_S02_m3-take3.wav",
    "sentences": 2,
    "pauses_found": 1,
    "method": "measured pauses"
   },
   {
    "scene": "S02B",
-   "take": "VO_S02B_r2-take2.wav",
+   "take": "VO_S02B_m3-take2.wav",
    "sentences": 2,
    "pauses_found": 1,
    "method": "measured pauses"
   },
   {
    "scene": "S03",
-   "take": "VO_S03_r2-take1.wav",
+   "take": "VO_S03_m3-take2.wav",
    "sentences": 3,
    "pauses_found": 2,
    "method": "measured pauses"
   },
   {
    "scene": "S04",
-   "take": "VO_S04_r2-take3.wav",
+   "take": "VO_S04_m3-take1.wav",
    "sentences": 3,
    "pauses_found": 2,
    "method": "measured pauses"
   },
   {
    "scene": "S05",
-   "take": "VO_S05_r2-take3.wav",
+   "take": "VO_S05_m3-take2.wav",
    "sentences": 2,
    "pauses_found": 1,
    "method": "measured pauses"
   },
   {
    "scene": "S06",
-   "take": "VO_S06_r2-take2.wav",
+   "take": "VO_S06_m3-take2.wav",
    "sentences": 2,
    "pauses_found": 1,
    "method": "measured pauses"
   },
   {
    "scene": "S07",
-   "take": "VO_S07_r2-take2.wav",
+   "take": "VO_S07_m3-take1.wav",
    "sentences": 3,
    "pauses_found": 2,
    "method": "measured pauses"
   },
   {
    "scene": "S08",
-   "take": "VO_S08_r2-take3.wav",
+   "take": "VO_S08_m3-take2.wav",
    "sentences": 4,
    "pauses_found": 3,
    "method": "measured pauses"

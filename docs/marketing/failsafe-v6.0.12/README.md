@@ -59,8 +59,8 @@ Do not add install counts, "blocks", "prevents", "certified" or "verified delive
 
 ## Owner review checklist
 
-1. Watch and listen to the whole film: pronunciation of FailSafe, "S R E", "six point zero point twelve", "Core Logic"; pace; any jump between takes. No person has listened yet.
-2. Approve or replace the narrator: the synthetic "Guide" voice was approved for the Sonic Rift film, not yet for FailSafe.
+1. Watch and listen to the whole film: pronunciation of FailSafe, "S R E", "six point zero point twelve", "Core Logic"; pace (about 146 words per minute); any jump between takes. Nobody has listened to this rebuilt cut yet.
+2. Confirm the narrator across the whole film: you chose the male voice (candidate 3) from a single sample line on 2026-11-10, after rejecting the first cut's voice. Its pitch varies a little from line to line.
 3. Accept the added setup scene and its line (scene 2b), and the film running without music.
 4. Decide whether the "override.approved" row at 1:36 and the empty SRE state at 0:39 are acceptable on screen.
 5. Confirm the end-card wording and the Marketplace / Open VSX / GitHub references.

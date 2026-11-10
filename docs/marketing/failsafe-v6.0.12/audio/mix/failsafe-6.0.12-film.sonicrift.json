@@ -1,19 +1,19 @@
 {
-  "id": "a2d4b9e867eb463da1e60fbf02bc5799",
+  "id": "9fdb846786d14c748b2534ceccd02688",
   "title": "FailSafe 6.0.12: From Change to Confidence",
   "sample_rate": 48000,
   "tracks": [
     {
-      "id": "07f71ac1b1db4fc7ba9ac9729c11e587",
+      "id": "e86c837f061d44889d44ddbf3b0a4aa1",
       "kind": "voice",
       "name": "Narration (Guide)",
       "clips": [
         {
-          "id": "3e1940ea774346b4b5f293bed676bf1d",
+          "id": "51641c0eda0a4e779bd92b9c6d0748b9",
           "kind": "voice",
           "start_frame": 48000,
-          "frame_count": 435342,
-          "asset_id": "voice_1d6678ae7f5c5abdcea2542ef355daa725a4b71e2558b35da37a7582ef7d4abc",
+          "frame_count": 414796,
+          "asset_id": "voice_01df7e9befd69d77bea5a03369660e984bcf88d278a8706e8d3b225dfe418cb3",
           "text": "AI can help you write code faster. But when something changes, how do you know what happened, what it affects, and whether it's ready to ship?",
           "voice_id": "",
           "gain_db": 0.0,
@@ -22,11 +22,11 @@
           "loop": false
         },
         {
-          "id": "d9b35338d1a44258a9ba15d566467795",
+          "id": "664e398996b840d0b5e7c214261c09b4",
           "kind": "voice",
           "start_frame": 537600,
-          "frame_count": 527644,
-          "asset_id": "voice_daa35ff56b9ecd2ce96c68188b542ff280a015a219c1d0df64c4b0493c259610",
+          "frame_count": 520208,
+          "asset_id": "voice_bb6c9a6d1cfeda5a3912eed036608759b5987f22a5d54bab350cb734f1562460",
           "text": "Meet FailSafe. A development companion that helps solo developers keep their work visible, understand potential risks, and maintain a record of important decisions.",
           "voice_id": "",
           "gain_db": 0.0,
@@ -35,11 +35,11 @@
           "loop": false
         },
         {
-          "id": "9ba5771e0c1341bc8821f6fc0e1edf10",
+          "id": "0b0fc1ede4d34df2bbefcc37190d745b",
           "kind": "voice",
           "start_frame": 1113600,
-          "frame_count": 425814,
-          "asset_id": "voice_5d77caa599530de551aab501ca69b2a3d6a4349153f9e0e3503314de59a54b18",
+          "frame_count": 412386,
+          "asset_id": "voice_42f9d2b1a58296c4c26e81b2518036f73ad13b0bbce3bf82399ddf3f38fca52b",
           "text": "Setup starts in the Console. Install the Qor-Logic skills, approve the request in VS Code, and the workspace is ready.",
           "voice_id": "",
           "gain_db": 0.0,
@@ -48,11 +48,11 @@
           "loop": false
         },
         {
-          "id": "cd59dadea2544bd087f491552a0ea42b",
+          "id": "0d110ea1ad844598943b2eec8470ffca",
           "kind": "voice",
           "start_frame": 1617600,
-          "frame_count": 787912,
-          "asset_id": "voice_3f74dbbdc6e38f0a27d07ed10c708d0ddf5ef591fdbf40488ad0bf3b76dc7084",
+          "frame_count": 738484,
+          "asset_id": "voice_120826a503127d1468132402da96ca0d311b0cb7743ac7dc1910fc6a9a826334",
           "text": "With version 6.0.12, the Console, Monitor, and SRE views share a consistent visual experience. Change your theme, and your workspace follows. The information stays familiar, wherever you're working.",
           "voice_id": "",
           "gain_db": 0.0,
@@ -61,11 +61,11 @@
           "loop": false
         },
         {
-          "id": "2883532f32ff47598eb43d6a5603f759",
+          "id": "1d1e5d2bcddd4f65b7bbc99574c208fa",
           "kind": "voice",
           "start_frame": 2452800,
-          "frame_count": 624356,
-          "asset_id": "voice_c5d4c3119061d8ca574a44eaa1b081c91f2f65362bb2ac7ab389a7f0a01297e8",
+          "frame_count": 593920,
+          "asset_id": "voice_79bea39d29cdad313b56d7f7528797fe20fbdf96c3762222d50fa5db32564ecf",
           "text": "Now imagine a small but important bug. A date validator accepts a day that doesn't exist. We document the issue, write a regression test, and see the failure for ourselves.",
           "voice_id": "",
           "gain_db": 0.0,
@@ -74,11 +74,11 @@
           "loop": false
         },
         {
-          "id": "1eb04861a6a241abb23a9c621e57dbb8",
+          "id": "6ff748aee05348ca9f4cdadac51e7315",
           "kind": "voice",
           "start_frame": 3124800,
-          "frame_count": 501192,
-          "asset_id": "voice_bfb55966ba72b4607f487adcb36b9b25233aaa0869b38ee5da47a136f54377c8",
+          "frame_count": 487830,
+          "asset_id": "voice_6e9d235814ef27848ca93f6e01aaeff6d9754ccef2469b5a5d84eb8938f4b2ca",
           "text": "Fixing the code is only part of the job. FailSafe helps surface the risks and governance requirements around a change, so the developer knows what still needs attention.",
           "voice_id": "",
           "gain_db": 0.0,
@@ -87,11 +87,11 @@
           "loop": false
         },
         {
-          "id": "33dd79dacb954e4f8676dbbbebfd2402",
+          "id": "4eaa7dc1eda9437ca8100a4806b0c78f",
           "kind": "voice",
           "start_frame": 3672000,
-          "frame_count": 494222,
-          "asset_id": "voice_94aeec5163181800983bdb15a5079919bef6141966fbaa4d5ebc8412561f250d",
+          "frame_count": 490240,
+          "asset_id": "voice_755f404861717969c182743c93c757e14936367f1150e928f322b40ece30cecd",
           "text": "The corrected validator passes its tests. We can inspect the difference, see the recorded decisions, and compare the result with what we intended to change.",
           "voice_id": "",
           "gain_db": 0.0,
@@ -100,11 +100,11 @@
           "loop": false
         },
         {
-          "id": "7aee60cbaead40eaadde003f6731d7ef",
+          "id": "10c9e67450f742d481c7294fc0c8abbf",
           "kind": "voice",
           "start_frame": 4209600,
-          "frame_count": 560214,
-          "asset_id": "voice_e323cc7d830a25e4888152b510e2c594a844716698eb406f00e2f42132cc517f",
+          "frame_count": 567416,
+          "asset_id": "voice_2925a320a691fc64d0bb3bf70150f824ae6cb9991ca7982c819c54655edaf647",
           "text": "Every change has a story. What we set out to do, what we changed, what we checked, and what still needs review. FailSafe helps make that story easier to follow.",
           "voice_id": "",
           "gain_db": 0.0,
@@ -113,11 +113,11 @@
           "loop": false
         },
         {
-          "id": "0ad3597674e04efba781074980b2d026",
+          "id": "926b35489bd8441f96d2eee5d4232393",
           "kind": "voice",
           "start_frame": 4819200,
-          "frame_count": 374756,
-          "asset_id": "voice_295ad6b83a87ea18c1f6850db9657c82081a212ba0eff0275d0359ee71a1f21c",
+          "frame_count": 388744,
+          "asset_id": "voice_fa73daac412ea82164923bfabbf30d1d0642a2fb23b64f3a83339b8bf443051c",
           "text": "Move faster without losing sight of the work. FailSafe. Build with AI. Know what changed.",
           "voice_id": "",
           "gain_db": 0.0,

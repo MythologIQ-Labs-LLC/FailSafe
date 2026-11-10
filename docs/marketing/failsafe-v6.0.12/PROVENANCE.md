@@ -2,7 +2,7 @@
 
 Recorded and assembled 2026-11-10 on the owner's Windows workstation (Windows 11 Pro 10.0.26300, RTX 5070 Ti). Tracking: FailSafe #645 (media), #589 (earlier media brief), Studio website `Knapp-Kevin/MythologIQ` #175.
 
-**Approval status: PENDING OWNER REVIEW.** Nothing here has been watched or listened to by a person. The checks below are automated (ffprobe, loudness meters, speech-to-text, frame inspection by the producing agent).
+**Approval status: PENDING OWNER REVIEW.** The owner listened to the first cut and rejected its narrator, then chose the current voice from four samples. The rebuilt film with that voice has not been watched or listened to by a person yet. The checks below are automated (ffprobe, loudness meters, speech-to-text, frame inspection by the producing agent).
 
 ## 1. What was filmed
 
@@ -64,15 +64,15 @@ Earlier runs (`rehearsal`, `take1`) used the same scripts and are not in the fil
 | Item | Value |
 |---|---|
 | Tool | **Sonic Rift 0.9.1**, the installed build at `C:\LocalAI\Voice\Chatterbox\demo-v091\app\Sonic Rift`, run with its own Python. All speech generated locally on this machine. |
-| Method | `source/tools/failsafe_narration.py` drives the real app window off-screen (the same harness the Sonic Rift, B.O.B. and Sojourner films used; the app has no command-line speech entry point). Voices › New voice › Clone with the Guide design clip, saved as a voice; then Speech with **Qwen3 voice cloning** (`Qwen/Qwen3-TTS-12Hz-1.7B-Base`, Apache-2.0). |
-| Voice | "Guide": a synthetic voice designed from a written description with Qwen3 voice design, owner-picked 2026-10-30 for the Sonic Rift film. Reference clip `source/narration/guide-voice-design.wav` (SHA-256 `91e8e930abddadc0ae3280e4f56f1fdebb2bdee045b4682b50a8aa6fd4922b11`). Not a clone of any real person. **Its reuse for FailSafe has not been approved yet.** |
-| Settings | Round 2: Speed 0.92, paragraph pause 0.6 s, even volume on, trim silence on, AI watermark on (app default). Seeds are random per take. |
-| Takes | Round 1: 4 takes × 8 lines at speed 1.0, rejected as too fast (about 174 words per minute); kept in `audio/narration-takes/round1-rejected-pace/`. Round 2: 3 takes × 9 lines; about 143 words per minute including pauses. |
-| Selection | By measurement, not by ear: every round-2 take is word-accurate (Sonic Rift's Whisper transcriber); picks favour voice consistency and pitch close to the other lines (`audio/narration-takes/scores-r2.json`). Picked: S01 t1, S02 t1, S02B t2, S03 t1, S04 t3, S05 t3, S06 t2, S07 t2, S08 t3. |
+| Method | The real app window is driven off-screen (the same harness the Sonic Rift, B.O.B. and Sojourner films used; the app has no command-line speech entry point). Voice: `source/tools/failsafe_voice_design.py`, Voices › New voice › Design with **Qwen3 voice design** (`Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign`). Lines: `source/tools/failsafe_narration.py`, Voices › New voice › Clone with the chosen design clip, then Speech with **Qwen3 voice cloning** (`Qwen/Qwen3-TTS-12Hz-1.7B-Base`, Apache-2.0). |
+| Voice | A new synthetic male narrator, designed from this written description: "A calm, confident adult man in his thirties speaking natural North American English. A relaxed, lower-mid voice with an even, unhurried pace, like an experienced software developer walking a colleague through a product he knows well. Cool and understated, friendly but never salesy, clear articulation, no announcer energy and no drama." Four candidates were generated (`audio/voice-candidates/`); **the owner listened to the four samples and chose candidate 3** on 2026-11-10. Design clip: `audio/voice-candidates/narrator-male-3.wav`. Not a clone of any real person. |
+| Settings | Speed 0.85, paragraph pause 0.7 s, even volume on, trim silence on, AI watermark on (app default). Seeds are random per take. |
+| Takes | Final: 3 takes × 9 lines in the chosen voice (`VO_*_m3-take*.wav`); about 146 words per minute including pauses. Earlier, with the "Guide" voice from the Sonic Rift film: round 1 (4 × 8 lines, speed 1.0, too fast at about 174 wpm) and round 2 (3 × 9 lines, speed 0.92). The first cut of the film used round 2; **the owner rejected that voice after listening** and asked for a calm male product voice. All earlier takes are kept in `audio/narration-takes/`; the first cut's Studio project is `audio/mix/v1-guide-voice.sonicrift.json`. |
+| Selection | By measurement, not by ear: every final take is word-accurate (Sonic Rift's Whisper transcriber); picks favour similarity to the design clip, consistency with the other lines and a median pitch near the others (`audio/narration-takes/scores-m3.json`). Picked: S01 t1, S02 t3, S02B t2, S03 t2, S04 t1, S05 t2, S06 t2, S07 t1, S08 t2. Median pitch still ranges from about 126 Hz (S08) to 152 Hz (S01) between lines; listen for that. |
 | Pronunciation | Respelled in the spoken script only: "S R E", "six point zero point twelve", "Core Logic". Captions and transcript keep SRE, 6.0.12, Qor-Logic. |
 | Mix | `source/tools/mix_narration.py` places the nine takes on a Sonic Rift Studio timeline (`audio/mix/failsafe-6.0.12-film.sonicrift.json`) and exports with the app's own engine: −16 LUFS target, normalized and peak limited. No music, no ambience, no sting; the film ends on a picture fade. |
-| Measured (ffmpeg `ebur128`) | Final MP4 audio: **−16.0 LUFS** integrated, **−1.3 dBFS** true peak, LRA 4.0 LU. No clipping. |
-| Wording check | Speech-to-text of the final mix matches the script word for word (228 of 228; `audio/mix/qa-transcription.json`). |
+| Measured (ffmpeg `ebur128`) | Final MP4 audio: **−16.0 LUFS** integrated, **−1.1 dBFS** true peak, LRA 5.1 LU. No clipping. |
+| Wording check | Speech-to-text of the final mix contains every script word in order (228 of 228; `audio/mix/qa-transcription.json`). The transcriber also printed "Thank you." at the very end; the last five seconds of the mix are digital silence (`silencedetect`), so that is the transcriber inventing words over silence, not audio in the film. |
 
 ## 6. Checks run
 
@@ -87,7 +87,7 @@ Earlier runs (`rehearsal`, `take1`) used the same scripts and are not in the fil
 | Private information | Frames inspected: fictional repo, fictional author, `C:\demo\…` paths, no account names, no notifications from other apps. The Config page's audio device lists are never opened. |
 | Checksums | `manifest.json` lists SHA-256 for every file; verified after writing. |
 
-Not done: no person has watched or listened; no check on a phone or in the website layout; no second-machine reproduction.
+Not done: no person has watched or listened to the rebuilt film; no check on a phone or in the website layout; no second-machine reproduction.
 
 ## 7. Claims this film must not be used to support
 

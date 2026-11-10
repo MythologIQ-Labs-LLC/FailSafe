@@ -4,62 +4,62 @@
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S01.wav",
   "start": 1,
   "text": "AI can help you write code faster. But when something changes, how do you know what happened, what it affects, and whether it's ready to ship?",
-  "take": "VO_S01_r2-take1.wav"
+  "take": "VO_S01_m3-take1.wav"
  },
  {
   "scene": "S02",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S02.wav",
   "start": 11.2,
   "text": "Meet FailSafe. A development companion that helps solo developers keep their work visible, understand potential risks, and maintain a record of important decisions.",
-  "take": "VO_S02_r2-take1.wav"
+  "take": "VO_S02_m3-take3.wav"
  },
  {
   "scene": "S02B",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S02B.wav",
   "start": 23.2,
   "text": "Setup starts in the Console. Install the Qor-Logic skills, approve the request in VS Code, and the workspace is ready.",
-  "take": "VO_S02B_r2-take2.wav"
+  "take": "VO_S02B_m3-take2.wav"
  },
  {
   "scene": "S03",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S03.wav",
   "start": 33.7,
   "text": "With version 6.0.12, the Console, Monitor, and SRE views share a consistent visual experience. Change your theme, and your workspace follows. The information stays familiar, wherever you're working.",
-  "take": "VO_S03_r2-take1.wav"
+  "take": "VO_S03_m3-take2.wav"
  },
  {
   "scene": "S04",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S04.wav",
   "start": 51.1,
   "text": "Now imagine a small but important bug. A date validator accepts a day that doesn't exist. We document the issue, write a regression test, and see the failure for ourselves.",
-  "take": "VO_S04_r2-take3.wav"
+  "take": "VO_S04_m3-take1.wav"
  },
  {
   "scene": "S05",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S05.wav",
   "start": 65.1,
   "text": "Fixing the code is only part of the job. FailSafe helps surface the risks and governance requirements around a change, so the developer knows what still needs attention.",
-  "take": "VO_S05_r2-take3.wav"
+  "take": "VO_S05_m3-take2.wav"
  },
  {
   "scene": "S06",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S06.wav",
   "start": 76.5,
   "text": "The corrected validator passes its tests. We can inspect the difference, see the recorded decisions, and compare the result with what we intended to change.",
-  "take": "VO_S06_r2-take2.wav"
+  "take": "VO_S06_m3-take2.wav"
  },
  {
   "scene": "S07",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S07.wav",
   "start": 87.7,
   "text": "Every change has a story. What we set out to do, what we changed, what we checked, and what still needs review. FailSafe helps make that story easier to follow.",
-  "take": "VO_S07_r2-take2.wav"
+  "take": "VO_S07_m3-take1.wav"
  },
  {
   "scene": "S08",
   "file": "C:/dev/mythologiq/failsafe/docs/marketing/failsafe-v6.0.12/audio/narration/VO_S08.wav",
   "start": 100.4,
   "text": "Move faster without losing sight of the work. FailSafe. Build with AI. Know what changed.",
-  "take": "VO_S08_r2-take3.wav"
+  "take": "VO_S08_m3-take2.wav"
  }
 ]

@@ -3,134 +3,134 @@ WEBVTT
 NOTE FailSafe: From Change to Confidence (v6.0.12). Narration: synthetic voice, generated locally in Sonic Rift.
 
 1
-00:00:01.000 --> 00:00:03.457
+00:00:01.000 --> 00:00:03.254
 AI can help you write code faster.
 
 2
-00:00:04.053 --> 00:00:07.274
+00:00:04.031 --> 00:00:07.032
 But when something changes,
 how do you know what happened,
 
 3
-00:00:07.314 --> 00:00:10.320
+00:00:07.072 --> 00:00:09.892
 what it affects, and
 whether it's ready to ship?
 
 4
-00:00:11.200 --> 00:00:12.676
+00:00:11.200 --> 00:00:12.672
 Meet FailSafe.
 
 5
-00:00:13.274 --> 00:00:17.723
+00:00:13.444 --> 00:00:17.730
 A development companion that helps solo
 developers keep their work visible,
 
 6
-00:00:17.763 --> 00:00:22.443
+00:00:17.770 --> 00:00:22.288
 understand potential risks, and maintain
 a record of important decisions.
 
 7
-00:00:23.200 --> 00:00:25.322
+00:00:23.200 --> 00:00:25.253
 Setup starts in the Console.
 
 8
-00:00:25.918 --> 00:00:27.883
+00:00:26.083 --> 00:00:27.903
 Install the Qor-Logic skills,
 
 9
-00:00:27.923 --> 00:00:32.321
+00:00:27.943 --> 00:00:32.041
 approve the request in VS Code,
 and the workspace is ready.
 
 10
-00:00:33.700 --> 00:00:37.321
+00:00:33.700 --> 00:00:37.152
 With version 6.0.12, the Console, Monitor,
 
 11
-00:00:37.361 --> 00:00:42.144
+00:00:37.192 --> 00:00:41.765
 and SRE views share a
 consistent visual experience.
 
 12
-00:00:42.715 --> 00:00:45.989
+00:00:42.505 --> 00:00:45.265
 Change your theme, and
 your workspace follows.
 
 13
-00:00:46.558 --> 00:00:50.365
+00:00:46.161 --> 00:00:49.335
 The information stays familiar,
 wherever you're working.
 
 14
-00:00:51.100 --> 00:00:54.005
+00:00:51.100 --> 00:00:53.758
 Now imagine a small but important bug.
 
 15
-00:00:54.549 --> 00:00:58.022
+00:00:54.493 --> 00:00:57.650
 A date validator accepts
 a day that doesn't exist.
 
 16
-00:00:58.604 --> 00:01:04.357
+00:00:58.325 --> 00:01:03.723
 We document the issue, write a regression
 test, and see the failure for ourselves.
 
 17
-00:01:05.100 --> 00:01:07.730
+00:01:05.100 --> 00:01:07.384
 Fixing the code is only part of the job.
 
 18
-00:01:08.372 --> 00:01:12.645
+00:01:08.151 --> 00:01:12.389
 FailSafe helps surface the risks and
 governance requirements around a change,
 
 19
-00:01:12.685 --> 00:01:15.792
+00:01:12.429 --> 00:01:15.513
 so the developer knows what
 still needs attention.
 
 20
-00:01:16.500 --> 00:01:19.409
+00:01:16.500 --> 00:01:19.397
 The corrected validator passes its tests.
 
 21
-00:01:19.938 --> 00:01:23.387
+00:01:20.162 --> 00:01:23.455
 We can inspect the difference,
 see the recorded decisions,
 
 22
-00:01:23.427 --> 00:01:27.046
+00:01:23.495 --> 00:01:26.963
 and compare the result with
 what we intended to change.
 
 23
-00:01:27.700 --> 00:01:29.704
+00:01:27.700 --> 00:01:29.523
 Every change has a story.
 
 24
-00:01:30.291 --> 00:01:35.776
+00:01:30.259 --> 00:01:35.854
 What we set out to do, what we changed, what
 we checked, and what still needs review.
 
 25
-00:01:36.331 --> 00:01:39.621
+00:01:36.588 --> 00:01:39.771
 FailSafe helps make that
 story easier to follow.
 
 26
-00:01:40.400 --> 00:01:43.213
+00:01:40.400 --> 00:01:43.149
 Move faster without
 losing sight of the work.
 
 27
-00:01:43.803 --> 00:01:44.740
+00:01:43.906 --> 00:01:44.743
 FailSafe.
 
 28
-00:01:45.321 --> 00:01:46.557
+00:01:45.515 --> 00:01:46.901
 Build with AI.
 
 29
-00:01:47.098 --> 00:01:48.457
+00:01:47.606 --> 00:01:48.749
 Know what changed.
