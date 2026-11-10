@@ -122,3 +122,18 @@ it("M23: a token that verifies for the imprint bytes but uses SHA3-256, not SHA-
   S.commitAll(dir, "sha3 token");
   refused(S.verify(dir), "TOKEN_INVALID", /token hash is sha3-256/);
 });
+
+it("M22a: a first checkpoint that does not carry the genesis marker (claims a previous ledger) is GENESIS_MISPLACED", async () => {
+  const dir = path.join(base.work, "misplaced-genesis");
+  fs.mkdirSync(dir);
+  S.initRepo(dir, base.tsa, base.signer);
+  const commit = S.git(dir, "rev-parse", "HEAD");
+  const m = JSON.parse(buildManifestBytes({ repoRoot: dir, commit, repository: "test/failsafe-g4", sequence: 1,
+    previous: null, keyFingerprint: base.signer.fingerprint }).toString("utf8"));
+  m.previousLedger = { commit, byteLength: 0, sha256: "4".repeat(64), prefixOfNew: { byteLength: 0, sha256: "4".repeat(64) } };
+  await writeSignedCheckpoint({ checkpointsDir: path.join(dir, layout.CHECKPOINTS_DIR), id: "g4-000001",
+    manifestBytes: Buffer.from(JSON.stringify(m, null, 2) + "\n"), signer: base.signer,
+    certInfo: loadCertificate(base.signer.certificateDer), tsa: base.tsa });
+  S.commitAll(dir, "misplaced genesis");
+  refused(S.verify(dir), "GENESIS_MISPLACED");
+});

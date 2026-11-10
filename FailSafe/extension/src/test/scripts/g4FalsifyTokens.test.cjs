@@ -58,6 +58,12 @@ it("replayed token: cp1's valid token presented for cp2", () => {
   refused(S.verify(dir), "TOKEN_IMPRINT_MISMATCH");
 });
 
+it("M10: replayed token copied together with its own matching query file: the stored .tsq is never trusted", () => {
+  const dir = S.copyRepo(base);
+  for (const f of [layout.FILES.token, layout.FILES.chain, layout.FILES.query]) fs.copyFileSync(cpFile(dir, "g4-000001", f), cpFile(dir, "g4-000002", f));
+  refused(S.verify(dir), "TOKEN_IMPRINT_MISMATCH");
+});
+
 it("unknown TSA: a valid token for the right imprint from a TSA outside the policy", async () => {
   const dir = S.copyRepo(base);
   const rogue = createLocalTsa(found.bin, path.join(base.work, "rogue-tsa"));

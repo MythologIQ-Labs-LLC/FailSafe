@@ -153,3 +153,25 @@ it("a validly signed checkpoint naming a ledger digest that the commit does not 
   await S.forgeNext(dir, base, { mutate: (m) => { m.ledger.sha256 = "0".repeat(64); } });
   refused(S.verify(dir), "LEDGER_MISMATCH");
 });
+
+it("M01: broken prefix where prefixOfNew honestly states the real (different) prefix digest: PREFIX_BROKEN", async () => {
+  const dir = S.copyRepo(base);
+  editLedger(dir, (t) => t.replace("**Verdict**: PUBLISHED", "**Verdict**: VETOED") + S.entryText(928));
+  S.commitAll(dir, "edit + append");
+  const buf = fs.readFileSync(ledgerPath(dir));
+  await S.forgeNext(dir, base, { mutate: (m) => {
+    m.previousLedger.prefixOfNew.sha256 = sha256(buf.subarray(0, m.previousLedger.byteLength));
+  } });
+  refused(S.verify(dir), "PREFIX_BROKEN");
+  assert.match(S.verify(dir).detail, /first \d+ bytes differ/);
+});
+
+it("M02b: intact prefix but a false prefixOfNew digest in a validly signed manifest: PREFIX_BROKEN", async () => {
+  const dir = S.copyRepo(base);
+  S.appendEntry(dir, 928);
+  S.commitAll(dir, "append 928");
+  await S.forgeNext(dir, base, { mutate: (m) => { m.previousLedger.prefixOfNew.sha256 = "3".repeat(64); } });
+  const r = S.verify(dir);
+  refused(r, "PREFIX_BROKEN");
+  assert.match(r.detail, /prefixOfNew evidence/);
+});
