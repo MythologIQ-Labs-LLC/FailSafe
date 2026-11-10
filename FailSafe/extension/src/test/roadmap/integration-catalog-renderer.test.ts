@@ -48,6 +48,31 @@ suite('IntegrationCatalogRenderer (GH #167, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
+  test('#652 Statewright website-first card uses fixed safe external URL without a provider connection claim', async () => {
+    const requests: string[] = [];
+    const ctx = setupDom(async (url) => {
+      requests.push(url);
+      return { ok: true, json: async () => CATALOG };
+    });
+    try {
+      await new IntegrationCatalogRenderer('integrations').render();
+      const handoff = ctx.doc.querySelector('.cc-intcat-statewright[data-id="statewright"]');
+      assert.ok(handoff, 'first-class Statewright card rendered');
+      assert.match(handoff!.textContent ?? '', /Statewright handles sign-in and run data/);
+      assert.match(handoff!.textContent ?? '', /FailSafe does not read Statewright history or enforce Statewright workflows/);
+      const link = handoff!.querySelector('a.cc-intcat-web-link') as HTMLAnchorElement;
+      assert.ok(link);
+      assert.equal(link.getAttribute('href'), 'https://statewright.ai/runs');
+      assert.equal(link.getAttribute('target'), '_blank');
+      assert.deepEqual((link.getAttribute('rel') || '').split(' ').sort(), ['noopener', 'noreferrer']);
+      assert.equal(new URL(link.href).search, '', 'no workspace or tracking query');
+      assert.equal(handoff!.querySelector('.cc-intcat-pill-connected'), null);
+      assert.equal(handoff!.querySelector('.cc-intcat-configure'), null);
+      assert.equal(ctx.doc.querySelectorAll('.cc-intcat-card').length, CATALOG.integrations.length, 'handoff does not inflate adapter/catalog counts');
+      assert.deepEqual(requests, ['/api/v1/integrations/catalog'], 'rendering makes only the existing same-origin catalog request');
+    } finally { ctx.cleanup(); }
+  });
+
   test('needs-config card lists the missing key (name only, no secret value)', async () => {
     const ctx = setupDom(async () => ({ ok: true, json: async () => CATALOG }));
     try {
