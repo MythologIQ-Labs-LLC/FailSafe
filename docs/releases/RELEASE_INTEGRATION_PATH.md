@@ -28,27 +28,42 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
 
 ## Compliant release path (no bypass)
 
-1. **Release PR.** The release candidate branch (for example `release/v6.0.13-rc*`) is opened as a PR to `main`. It carries the release commit and the governance records. A seal binds the exact **tree** of the release candidate:
-   - the seal records the repository tree hash and the `FailSafe/extension` subtree hash, as well as the release-candidate commit;
-   - it does not assume that a PR merge preserves the commit SHA.
-2. **Checks.** Every required check passes on the PR head: the PR Full Test, CodeQL and code quality. A missing or skipped check is not a pass.
-3. **Merge.** Use the **merge-commit** method (`gh pr merge <n> --merge`), never `--admin`.
-   - When `main` is an ancestor of the PR head, the merge commit's tree equals the PR head's tree.
-   - Squash and rebase rewrite commits and can change content under conflict resolution. They are not used for release PRs.
-4. **Post-merge verification, before any tag:**
-   - `git rev-parse <merge>^{tree}` equals the sealed tree, and `git rev-parse <merge>:FailSafe/extension` equals the sealed extension subtree. Any difference is a hard stop.
-   - The merge's rule suite (`GET /repos/{owner}/{repo}/rulesets/rule-suites?ref=refs/heads/main`) reports **`result=pass`**. A `bypass` result is a hard stop that is reported, not hidden.
-5. **Tag.** Create an annotated `vX.Y.Z` on the verified merge commit. Its message is GitHub's merge message, which carries no `[skip ci]`, so the tag-triggered release workflow runs. The tag is never moved after any publication has started.
-6. **Post-publication record.** Ledger and SYSTEM_STATE updates go through a normal PR, not a direct push.
+**Governance paths:** `docs/META_LEDGER.md`, `docs/SHADOW_GENOME.md`, `docs/SYSTEM_STATE.md`, `.agent/staging/**`, `.qor/gates/**`, `.qor/session/current`, `.failsafe/governance/**` and `docs/releases/**`.
+
+1. **Release PR and seal.** The release-candidate branch (for example `release/vX.Y.Z-rc*`) is opened as a PR to `main`.
+   - The seal is created on that branch at sealed commit **S**. It binds S's `FailSafe/extension` subtree hash, which identifies the packaged product source, as well as S itself.
+   - Commits after S (the seal record, gate artifacts, SYSTEM_STATE) may touch **governance paths only**. Any other change voids the seal.
+2. **Before merging:**
+   - Every required check passes on the final PR head **H**: the PR Full Test, CodeQL and code quality. A missing or skipped check is not a pass.
+   - H's commit message has no CI-skip marker (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`, `skip-checks: true`), so the PR Full Test runs on H.
+   - **Ancestry.** `origin/main` is an ancestor of H. If `main` moved after S, the release branch is updated and the seal is redone on the new base before merging. A stale seal is never merged.
+   - **Seal scope.** `git diff --name-only S H` lists only governance paths, and `git rev-parse H:FailSafe/extension` equals S's sealed subtree.
+3. **Merge.** Use the **merge-commit** method only (`gh pr merge <n> --merge --match-head-commit <H>`). Squash and rebase rewrite commits and are not used for release PRs. The PR title carries no CI-skip marker, because GitHub puts the title into the merge commit message.
+4. **After merging, before any tag**, all of the following are checked. Any failure is a hard stop that is reported, not overridden.
+   - The merge commit **M** has parents (previous `main`, H), and `M^{tree}` equals `H^{tree}`.
+   - `M:FailSafe/extension` equals the sealed subtree.
+   - M's message has no CI-skip marker.
+   - The rule suite for the push to `main` (`GET /repos/{owner}/{repo}/rulesets/rule-suites?ref=refs/heads/main`) reports **`result=pass`**, meaning no rule was bypassed.
+5. **Tag.** Create an annotated `vX.Y.Z` on M, so the tag-triggered release workflow runs from M. M is the artifact-producing commit. Once any publication has started, the tag is never moved.
+6. **Post-publication record (through a PR).** The record binds:
+   - the merge commit M;
+   - `M^{tree}` and the `FailSafe/extension` subtree, equal to the seal;
+   - the tag object;
+   - the release run;
+   - the rule-suite ID with `result=pass`;
+   - the published SHA256SUMS digest.
+
+**Residual risks:**
+- **Tags are unprotected.** No ruleset protects tags, so "never move a published tag" is enforced by policy and by the post-publication record, not by GitHub.
+- **Admin merges look the same.** An admin merge with every rule satisfied also records `pass`. The control proves that no rule was bypassed, not which merge flag was used.
 
 ## Break-glass (emergency only)
 
 Owner bypass stays technically available (bypass mode `always`). It may be used only:
 - to stop an active security incident or restore a broken release pipeline when the PR path is unavailable;
-- with a written owner authorization naming the exact push (before → after SHA) and an expiry of that push alone;
-- with the rule-suite ID and `result=bypass` recorded in the ledger and the release notes or SYSTEM_STATE within 24 hours.
+- with a written owner authorization that states concretely **why the PR path is unavailable** and names the exact push (before → after SHA). The authorization covers that push only.
 
-Routine releases never use it.
+Within 24 hours, the rule-suite ID and `result=bypass` are recorded in the ledger and in the release notes or SYSTEM_STATE. Each bypass then gets an **independent after-the-fact review**, also recorded in the ledger. Routine releases never use it.
 
 ## Acceptance test (non-release)
 
@@ -57,7 +72,7 @@ PR #640 (#635, CI runner pin) is merged through steps 2–4 on a non-release cha
 - its rule suite reports `result=pass` for the Production Block evaluation;
 - the merge commit's tree equals the PR head's tree.
 
-This proves that the ruleset accepts the intended path for the owner's account without a bypass. A `bypass` result fails the test, and the path is redesigned before v6.0.13.
+This proves that the ruleset accepts the intended path for the owner's account with no rule bypassed. A `bypass` result fails the test, and the path is redesigned before v6.0.13.
 
 ## Not changed
 

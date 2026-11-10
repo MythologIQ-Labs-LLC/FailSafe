@@ -35892,3 +35892,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-ci-635-runner-compatibility.md iteration 1 (plan sha256 e4c8ce8eef72e4e7fb3e1cf344d33a81c8d267ac238f2871ab2e4b66e9958d5a; candidate 9c3414c9 on main f923fffb; PR #640). Independent Option B audit, RETROSPECTIVE: the two runner pins were implemented before the plan (disclosed). Verified: the workflow diff is exactly pr-full-test.yml full-test and native-vsix-qualification.yml package-all runs-on -> ubuntu-24.04; no trigger, permission, secret, environment, concurrency or step change; the 7-entry native smoke matrix unchanged; no commit carries a CI-skip marker. Native qualification sequenced to the first release/v6.0.13-rc* push ruled sound (the published-version guard fails by design on 6.0.12); all 7 smoke legs must pass there before any v6.0.13 tag. Merge obligations: completed successful PR Full Test on the final head; normal PR merge with rule-suite result=pass recorded (stop rather than bypass); protected-workflow owner approval recorded (owner instruction 2026-11-10). After this audit the plan's checklist was updated per auditor notes N2/N6 (wording only). Non-blocking: #639's run finished successfully after it closed; its CI-skip reason stands.
 
 ---
+
+### Entry #928: GATE TRIBUNAL - plan-v6013-636-release-integration-path (iteration 1) - VETO
+
+**Timestamp**: 2026-11-10T16:52:12Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1647-d432f4`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-636-release-integration-path.md`
+**Report**: `.agent/staging/AUDIT_REPORT-636.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1647-d432f4/audit.json`
+
+**Content Hash**: `f5006beeff38a1207b223fd28f6dc2c09020e757bfa717302de837c3ac199425`
+**Previous Hash**: `0ba3561f271ffd5ef2e180e0a1676f127d9ceddadd26ce75a493afe54fec6246`
+**Chain Hash (Merkle seal)**: `396eda43ca5e7f65f5816119621b0300ece52a0e30c3fcb91dbe13f4841e6dc2`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-636-release-integration-path.md iteration 1 (plan sha256 89f5a131248e1a2b5e2176ba18829af3d861bd5bb8fbd4a91f36e41c33d2301e; local candidate 46fcfdc4 on main e7549b42). Independent Option B audit; risk raised to L3. Verified: ruleset 16423247 facts; four v6.0.12 rule suites result=bypass; acceptance rule suite 5025516418 (f923fffb->e7549b42) result=pass, all five rules passing; PR #640 merge tree equals head tree; release.yml accepts a tag on a merge commit. Blocking B1 (security): the local commit force-added the session HMAC key .qor/session/keys/2026-11-10T1647-d432f4.key (gitignored; public repo); it was never pushed and the commit was rebuilt without it; the same defect in the G4 lane's unpushed commit 5519fa66 was also removed (rebuilt as 3d92d88f). Blocking B2 (specification-drift): the path required the merge's full tree to equal the sealed tree while also placing the seal inside the release PR, which no compliant release can satisfy. Non-blocking N1-N6: pre-merge ancestry check, mechanical CI-skip check on the merge message and final head, post-publication binding chain, unprotected tags as residual risk, tighter break-glass, 'no rule bypassed' wording.
+
+---
