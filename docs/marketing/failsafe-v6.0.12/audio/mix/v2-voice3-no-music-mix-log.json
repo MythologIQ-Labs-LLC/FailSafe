@@ -1,0 +1,90 @@
+{
+ "sonic_rift_version": "0.9.1",
+ "app": "C:/LocalAI/Voice/Chatterbox/demo-v091/app/Sonic Rift",
+ "project": "failsafe-6.0.12-film.sonicrift.json",
+ "export": "audio\\mix\\export",
+ "cues": [
+  {
+   "scene": "S01",
+   "take": "VO_S01.wav",
+   "source_rate": 24000,
+   "seconds": 8.642,
+   "start": 1,
+   "end": 9.642,
+   "asset_id": "voice_01df7e9befd69d77bea5a03369660e984bcf88d278a8706e8d3b225dfe418cb3"
+  },
+  {
+   "scene": "S02",
+   "take": "VO_S02.wav",
+   "source_rate": 24000,
+   "seconds": 10.838,
+   "start": 11.2,
+   "end": 22.038,
+   "asset_id": "voice_bb6c9a6d1cfeda5a3912eed036608759b5987f22a5d54bab350cb734f1562460"
+  },
+  {
+   "scene": "S02B",
+   "take": "VO_S02B.wav",
+   "source_rate": 24000,
+   "seconds": 8.591,
+   "start": 23.2,
+   "end": 31.791,
+   "asset_id": "voice_42f9d2b1a58296c4c26e81b2518036f73ad13b0bbce3bf82399ddf3f38fca52b"
+  },
+  {
+   "scene": "S03",
+   "take": "VO_S03.wav",
+   "source_rate": 24000,
+   "seconds": 15.385,
+   "start": 33.7,
+   "end": 49.085,
+   "asset_id": "voice_120826a503127d1468132402da96ca0d311b0cb7743ac7dc1910fc6a9a826334"
+  },
+  {
+   "scene": "S04",
+   "take": "VO_S04.wav",
+   "source_rate": 24000,
+   "seconds": 12.373,
+   "start": 51.1,
+   "end": 63.473,
+   "asset_id": "voice_79bea39d29cdad313b56d7f7528797fe20fbdf96c3762222d50fa5db32564ecf"
+  },
+  {
+   "scene": "S05",
+   "take": "VO_S05.wav",
+   "source_rate": 24000,
+   "seconds": 10.163,
+   "start": 65.1,
+   "end": 75.263,
+   "asset_id": "voice_6e9d235814ef27848ca93f6e01aaeff6d9754ccef2469b5a5d84eb8938f4b2ca"
+  },
+  {
+   "scene": "S06",
+   "take": "VO_S06.wav",
+   "source_rate": 24000,
+   "seconds": 10.213,
+   "start": 76.5,
+   "end": 86.713,
+   "asset_id": "voice_755f404861717969c182743c93c757e14936367f1150e928f322b40ece30cecd"
+  },
+  {
+   "scene": "S07",
+   "take": "VO_S07.wav",
+   "source_rate": 24000,
+   "seconds": 11.821,
+   "start": 87.7,
+   "end": 99.521,
+   "asset_id": "voice_2925a320a691fc64d0bb3bf70150f824ae6cb9991ca7982c819c54655edaf647"
+  },
+  {
+   "scene": "S08",
+   "take": "VO_S08.wav",
+   "source_rate": 24000,
+   "seconds": 8.099,
+   "start": 100.4,
+   "end": 108.499,
+   "asset_id": "voice_fa73daac412ea82164923bfabbf30d1d0642a2fb23b64f3a83339b8bf443051c"
+  }
+ ],
+ "export_result": "audio\\mix\\export\\manifest.json"
+}

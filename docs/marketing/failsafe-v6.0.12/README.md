@@ -13,10 +13,10 @@ Everything between the title card and the end card is a real screen recording of
 |---|---|
 | `video/` | The narrated film, a silent captioned variant, poster (PNG, JPG), WebVTT captions |
 | `screenshots/full/` | Full-resolution PNGs from the recordings; `web/` 1600×900 WebP and JPG; `thumbnails/` 480×270 JPG; `source-frames/` the unedited frames the two composites were built from |
-| `audio/` | `narration/` the nine selected takes (unprocessed WAV); `narration-takes/` every take and the scores; `mix/` the Sonic Rift project, its export (master, stem) and QA; the final film mix WAV |
+| `audio/` | `narration/` the nine selected takes (unprocessed WAV); `narration-takes/` every take and the scores; `voice-candidates/` and `music-candidates/` what the owner chose from; `mix/` the Sonic Rift project, its export (master, stem) and QA; the final film mix WAV |
 | `source/` | `captures/` raw window recordings and event logs; `capture-rig/` the capture scripts and fixture bundle; `tools/` narration, mix, edit and caption scripts; `edit/` the cut list and cards; `narration/` the script and the voice design clip |
 
-**Large files and Git.** The repository has no LFS and ignores `docs/`. Following the 6.0.11 media precedent, the media branch carries the deliverables (video, poster, captions, screenshots, selected narration takes, scripts, documents; about 41 MB, added with `git add -f`). The raw captures, all narration takes and the WAV masters (about 447 MB) stay on the workstation at `C:\dev\mythologiq\failsafe\docs\marketing\failsafe-v6.0.12\`; `manifest.json` lists each with its SHA-256 and `"in_git": false`. The media branch is not meant to be merged into `main`.
+**Large files and Git.** The repository has no LFS and ignores `docs/`. Following the 6.0.11 media precedent, the media branch carries the deliverables (video, poster, captions, screenshots, selected narration takes, scripts, documents; about 44 MB, added with `git add -f`). The raw captures, all narration takes and the WAV masters (about 582 MB) stay on the workstation at `C:\dev\mythologiq\failsafe\docs\marketing\failsafe-v6.0.12\`; `manifest.json` lists each with its SHA-256 and `"in_git": false`. The media branch is not meant to be merged into `main`.
 
 ## Website placement (Studio #175, Stage B)
 
@@ -59,9 +59,9 @@ Do not add install counts, "blocks", "prevents", "certified" or "verified delive
 
 ## Owner review checklist
 
-1. Watch and listen to the whole film: pronunciation of FailSafe, "S R E", "six point zero point twelve", "Core Logic"; pace (about 146 words per minute); any jump between takes. Nobody has listened to this rebuilt cut yet.
+1. Watch and listen to the whole film: pronunciation of FailSafe, "S R E", "six point zero point twelve", "Core Logic"; pace (about 146 words per minute); any jump between takes. Nobody has listened to the finished cut end to end yet.
 2. Confirm the narrator across the whole film: you chose the male voice (candidate 3) from a single sample line on 2026-11-10, after rejecting the first cut's voice. Its pitch varies a little from line to line.
-3. Accept the added setup scene and its line (scene 2b), and the film running without music.
+3. Accept the added setup scene and its line (scene 2b), and the music: you chose bed C from a 36-second preview and have not heard it under the whole film. Check its level against the voice and the fade over the end card.
 4. Decide whether the "override.approved" row at 1:36 and the empty SRE state at 0:39 are acceptable on screen.
 5. Confirm the end-card wording and the Marketplace / Open VSX / GitHub references.
-6. Decide where the 447 MB of sources should live long term, and whether the media branch may be pushed.
+6. Decide where the 582 MB of sources should live long term, and whether the media branch may be pushed.

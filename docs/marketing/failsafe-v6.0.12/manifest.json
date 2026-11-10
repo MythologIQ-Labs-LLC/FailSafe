@@ -17,9 +17,9 @@
   "fps": 30,
   "video": "H.264 High, yuv420p",
   "audio": "AAC-LC 48 kHz stereo",
-  "integrated_lufs": -16,
+  "integrated_lufs": -16.1,
   "true_peak_dbfs": -1.1,
-  "loudness_range_lu": 5.1
+  "loudness_range_lu": 4.9
  },
  "provenance": {
   "product_package": {
@@ -34,14 +34,15 @@
   "fixture": "fictional Tasklet repository, failsafe-demo-workspace@demo-baseline (86c12f875d632dd9e21ca46e5afa83e7e8035060) + docs/CONCEPT.md",
   "capture": "ffmpeg 9.0.1 gfxcapture (Windows.Graphics.Capture), two windows, lossless",
   "narration": "Sonic Rift 0.9.1: synthetic male narrator from Qwen3 voice design (owner-chosen candidate 3), lines by Qwen3 voice cloning, generated locally",
-  "mix": "Sonic Rift Studio export engine, -16 LUFS target; no music",
+  "music": "Sonic Rift 0.9.1 Music page (ACE-Step 1.5, MIT), original instrumental, owner-chosen take C",
+  "mix": "Sonic Rift Studio export engine: music bed ducked under narration, -16 LUFS target",
   "data_classification": "fictional demo data; no personal data",
   "rights": "first-party capture and branding; synthetic narration; DM Sans under OFL",
   "details": "PROVENANCE.md"
  },
  "storage": {
-  "in_git_bytes": 40705496,
-  "local_only_bytes": 446573564,
+  "in_git_bytes": 44232925,
+  "local_only_bytes": 582366566,
   "local_only_location": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12 (owner workstation)"
  },
  "files": [
@@ -54,22 +55,22 @@
   },
   {
    "path": "PROVENANCE.md",
-   "bytes": 15021,
-   "sha256": "39a03965dcf969118837260d2a2c54f4102f516e2d426b697c22721c2a4e5148",
+   "bytes": 15894,
+   "sha256": "21366e0e163e7b730ce301a7a6bbb31209a9fac73d68e52c0cb4ba17881eb0a5",
    "role": "document / production input",
    "in_git": true
   },
   {
    "path": "README.md",
-   "bytes": 7001,
-   "sha256": "87ce8e1a542e713fa2d71450fed0e9621936e8cbb4fe26daec4cda9abf40e96a",
+   "bytes": 7213,
+   "sha256": "3dd75f25e83480bdfd1d5f6a9759703a2c01da68602fb273a85af9f0ba496dff",
    "role": "document / production input",
    "in_git": true
   },
   {
    "path": "audio/failsafe-6.0.12-from-change-to-confidence-mix.wav",
    "bytes": 32688102,
-   "sha256": "5c538fc153653b5f74a91bead9bec42056e698ce0a0f1aa9e585adea88ccb2c8",
+   "sha256": "1bf65e702abad4eedf053c0055a854bd00d320b99b60f232d22c04a612d1a601",
    "role": "final mixed audio (film length)",
    "in_git": false
   },
@@ -89,43 +90,50 @@
   },
   {
    "path": "audio/mix/export/manifest.json",
-   "bytes": 1471,
-   "sha256": "944ae0502e2c3fc039bb16142e2aa5c54f61b62a644ce7c1ad875a725b6bfc84",
+   "bytes": 1625,
+   "sha256": "f9c986cc2911d1adfaed0c6c2f030d126940f9b7dff02e72664b26f919deb069",
    "role": "document / production input",
    "in_git": false
   },
   {
    "path": "audio/mix/export/master.wav",
-   "bytes": 31247708,
-   "sha256": "429ce0d85623f107051b216fe11512aed619cf71f85f0950f0ef8888ae7f5a5c",
+   "bytes": 32688044,
+   "sha256": "5ef27c5844304a2b1c348eb290eba89b40738eb0fe35eeaabb2b77db026f0433",
    "role": "Sonic Rift Studio export: master",
    "in_git": false
   },
   {
-   "path": "audio/mix/export/stems/track_001_75538a4d136f.wav",
-   "bytes": 31247708,
-   "sha256": "8e8dc987d2bdd9fb897334a3a118631dd723391e11eeb58951fe51e6da4bd9b4",
+   "path": "audio/mix/export/stems/track_001_20448b03a538.wav",
+   "bytes": 32688044,
+   "sha256": "dae14d84d1012f5557b7e6f1eb3848826467c02a43c20da665a73da7feb08dd5",
+   "role": "Sonic Rift Studio export: stem",
+   "in_git": false
+  },
+  {
+   "path": "audio/mix/export/stems/track_002_b8a6d199fe4f.wav",
+   "bytes": 32688044,
+   "sha256": "4eed7d710476f79ceb8a884a6b3f35a735e2751996d256731f6f2e8b4eb921d1",
    "role": "Sonic Rift Studio export: stem",
    "in_git": false
   },
   {
    "path": "audio/mix/failsafe-6.0.12-film.sonicrift.json",
-   "bytes": 5554,
-   "sha256": "7a6ed706575b516a90cf1e0e527f8eea8410ee2f6f489cecc40e6f795ee81c13",
+   "bytes": 6122,
+   "sha256": "2e1f76d8535baa4b5f2d7d8bba228736b6bbc007d693942113bdd4b9c6e517bb",
    "role": "document / production input",
    "in_git": true
   },
   {
    "path": "audio/mix/mix-log.json",
-   "bytes": 2353,
-   "sha256": "c43b998826ea5a4b6544ddabae70a992569cf59a298be17707a3f16ab01226d8",
+   "bytes": 2545,
+   "sha256": "e3754ec3e578a3c641a7f86123323cbd70f05c75ba4a034fe76b6773c68c0261",
    "role": "document / production input",
    "in_git": true
   },
   {
    "path": "audio/mix/qa-transcription.json",
-   "bytes": 1492,
-   "sha256": "14dfa1c15bb5eb92dd7a5073b1b543c1b778fa652f8b2701b227af5b1b0b4810",
+   "bytes": 1467,
+   "sha256": "0812fa526fbd6adc2bc7bcc30a61e17285ee761c5a3b1dfd4f406e7370c4cc89",
    "role": "document / production input",
    "in_git": true
   },
@@ -141,6 +149,76 @@
    "bytes": 5554,
    "sha256": "5e79535f9e9ff16998f8e741bf4709d51da5e97ce399fdfb29aad64466ab5f08",
    "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/mix/v2-voice3-no-music-mix-log.json",
+   "bytes": 2353,
+   "sha256": "c43b998826ea5a4b6544ddabae70a992569cf59a298be17707a3f16ab01226d8",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/mix/v2-voice3-no-music.sonicrift.json",
+   "bytes": 5554,
+   "sha256": "7a6ed706575b516a90cf1e0e527f8eea8410ee2f6f489cecc40e6f795ee81c13",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/music-candidates/MUSIC_bed_takeA.wav",
+   "bytes": 33408044,
+   "sha256": "119ac5250dd0870b1d859e23248ef24f4402d7a7fdbf971dc6cac1958d13ec07",
+   "role": "music bed candidate (take C is used)",
+   "in_git": false
+  },
+  {
+   "path": "audio/music-candidates/MUSIC_bed_takeB.wav",
+   "bytes": 33408044,
+   "sha256": "38fc526cc239ef5834d71bbcbc02a70c6218fd6fa5786e8fdfb8b10c17ee86ce",
+   "role": "music bed candidate (take C is used)",
+   "in_git": false
+  },
+  {
+   "path": "audio/music-candidates/MUSIC_bed_takeC.wav",
+   "bytes": 33408044,
+   "sha256": "a3079284d3bae7254281026fae678f71239f67aaf03d8ed54be66fd2940d5282",
+   "role": "music bed candidate (take C is used)",
+   "in_git": false
+  },
+  {
+   "path": "audio/music-candidates/log_dark.json",
+   "bytes": 4958,
+   "sha256": "1c7409ca1656073cb34b2f522da4f9e9ae212f6869e206ecb36afda2ed509313",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/music-candidates/music_page.png",
+   "bytes": 238952,
+   "sha256": "9948b28eafdcaf4a450dfbf4ebbd1834690dbbb26bf19931dd9c1235f6642ad4",
+   "role": "document / production input",
+   "in_git": true
+  },
+  {
+   "path": "audio/music-candidates/previews/bed-A-with-narration-0-36s.mp3",
+   "bytes": 865196,
+   "sha256": "1ccd712e913c789829d802bbea3083bd3861dcc400fb21316bdfd456f348a2e9",
+   "role": "music bed candidate: 36 s preview under narration",
+   "in_git": true
+  },
+  {
+   "path": "audio/music-candidates/previews/bed-B-with-narration-0-36s.mp3",
+   "bytes": 865196,
+   "sha256": "ba46d8c9bc404333e6157b45b49f6d599b25554ecb04a1b959db72d0ac4fb053",
+   "role": "music bed candidate: 36 s preview under narration",
+   "in_git": true
+  },
+  {
+   "path": "audio/music-candidates/previews/bed-C-with-narration-0-36s.mp3",
+   "bytes": 865196,
+   "sha256": "dcc466ecd89aa5befa39e93c5635b5499d5f4fc5069a44a2e72618844ab92768",
+   "role": "music bed candidate: 36 s preview under narration",
    "in_git": true
   },
   {
@@ -1733,6 +1811,13 @@
    "in_git": true
   },
   {
+   "path": "source/tools/failsafe_music.py",
+   "bytes": 4124,
+   "sha256": "edc69df6f881037198450bccc4095265c3e60ba2852cc86d87189c13c8df5c97",
+   "role": "production script",
+   "in_git": true
+  },
+  {
    "path": "source/tools/failsafe_narration.py",
    "bytes": 4298,
    "sha256": "45a989ec16de959d90729449488f2f9689150f2edd02f994dc1d239a34e700c4",
@@ -1755,15 +1840,15 @@
   },
   {
    "path": "source/tools/make_manifest.cjs",
-   "bytes": 5772,
-   "sha256": "8067ae1a652a22dbbc95aa14de691d19f2425fb63f89bf7f101aad7413f9bfeb",
+   "bytes": 6151,
+   "sha256": "a2d7094216c86a6ebd78587b8eaa156a24c59ed6e8a6965ba4f5a0e0922ee0b4",
    "role": "production script",
    "in_git": true
   },
   {
    "path": "source/tools/mix_narration.py",
-   "bytes": 2902,
-   "sha256": "13b1fac8362911fd0fedaab05ecb3270b0efa86d0371025f68de2f4f50c2518d",
+   "bytes": 5198,
+   "sha256": "3215e16171add009e69ba2caa93024db7a94d2c912a527e6906ff32695915b63",
    "role": "production script",
    "in_git": true
   },
@@ -1790,8 +1875,8 @@
   },
   {
    "path": "transcript.md",
-   "bytes": 6334,
-   "sha256": "50bbb0331db95707436a58d0d82e2027d06f78ed1adac58c0207d01c1a9b6f83",
+   "bytes": 6450,
+   "sha256": "2e04c63a6dd9698ebb5ebe358ea7fdda222d3d57efc5058fd467c82fb9263b14",
    "role": "document / production input",
    "in_git": true
   },
@@ -1825,8 +1910,8 @@
   },
   {
    "path": "video/failsafe-6.0.12-from-change-to-confidence.mp4",
-   "bytes": 12843596,
-   "sha256": "f4b053c15b570ae229e86392b161ecc3480c93084f631ac60bd6d9be916dacf4",
+   "bytes": 13514885,
+   "sha256": "0215ff71cecdd880f9f844324a18581c41167419c4ef9bb6453dcfe2fcb45f30",
    "role": "primary narrated film",
    "in_git": true
   }

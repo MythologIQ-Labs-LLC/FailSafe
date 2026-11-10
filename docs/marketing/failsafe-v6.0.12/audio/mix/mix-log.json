@@ -2,7 +2,7 @@
  "sonic_rift_version": "0.9.1",
  "app": "C:/LocalAI/Voice/Chatterbox/demo-v091/app/Sonic Rift",
  "project": "failsafe-6.0.12-film.sonicrift.json",
- "export": "audio\\mix\\export",
+ "export": "export",
  "cues": [
   {
    "scene": "S01",
@@ -86,5 +86,14 @@
    "asset_id": "voice_fa73daac412ea82164923bfabbf30d1d0642a2fb23b64f3a83339b8bf443051c"
   }
  ],
+ "music": {
+  "take": "MUSIC_bed_takeC.wav",
+  "sound_library_asset": "e1dd90afd942",
+  "track_gain_db": -12.0,
+  "duck_db": -9.0,
+  "seconds": 113.5,
+  "fade_in_s": 1.5,
+  "fade_out_s": 4.0
+ },
  "export_result": "audio\\mix\\export\\manifest.json"
 }

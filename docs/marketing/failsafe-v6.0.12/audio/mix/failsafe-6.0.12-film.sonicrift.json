@@ -1,15 +1,15 @@
 {
-  "id": "9fdb846786d14c748b2534ceccd02688",
+  "id": "3788e53dd6024bd89ae3e5b23d6315ce",
   "title": "FailSafe 6.0.12: From Change to Confidence",
   "sample_rate": 48000,
   "tracks": [
     {
-      "id": "e86c837f061d44889d44ddbf3b0a4aa1",
+      "id": "b9ce7d1a52c3496e9c4d6ecff4f89049",
       "kind": "voice",
-      "name": "Narration (Guide)",
+      "name": "Narration",
       "clips": [
         {
-          "id": "51641c0eda0a4e779bd92b9c6d0748b9",
+          "id": "d325f7fffd594e77aa85f9e46ba3433a",
           "kind": "voice",
           "start_frame": 48000,
           "frame_count": 414796,
@@ -22,7 +22,7 @@
           "loop": false
         },
         {
-          "id": "664e398996b840d0b5e7c214261c09b4",
+          "id": "456450029e4a42ecb5e2ad5736d2d773",
           "kind": "voice",
           "start_frame": 537600,
           "frame_count": 520208,
@@ -35,7 +35,7 @@
           "loop": false
         },
         {
-          "id": "0b0fc1ede4d34df2bbefcc37190d745b",
+          "id": "6048183551e54e2c939cf2c078647646",
           "kind": "voice",
           "start_frame": 1113600,
           "frame_count": 412386,
@@ -48,7 +48,7 @@
           "loop": false
         },
         {
-          "id": "0d110ea1ad844598943b2eec8470ffca",
+          "id": "22091fd27dca4120a09a9822fe083f59",
           "kind": "voice",
           "start_frame": 1617600,
           "frame_count": 738484,
@@ -61,7 +61,7 @@
           "loop": false
         },
         {
-          "id": "1d1e5d2bcddd4f65b7bbc99574c208fa",
+          "id": "e9bd5ce990d34fbfa17755e1217abb02",
           "kind": "voice",
           "start_frame": 2452800,
           "frame_count": 593920,
@@ -74,7 +74,7 @@
           "loop": false
         },
         {
-          "id": "6ff748aee05348ca9f4cdadac51e7315",
+          "id": "6820502478934fadbd627bdb09319706",
           "kind": "voice",
           "start_frame": 3124800,
           "frame_count": 487830,
@@ -87,7 +87,7 @@
           "loop": false
         },
         {
-          "id": "4eaa7dc1eda9437ca8100a4806b0c78f",
+          "id": "fc6c7d8357404c478a4fb42c36167c45",
           "kind": "voice",
           "start_frame": 3672000,
           "frame_count": 490240,
@@ -100,7 +100,7 @@
           "loop": false
         },
         {
-          "id": "10c9e67450f742d481c7294fc0c8abbf",
+          "id": "f4c6c39bf3dd4ec79448e25c57851df0",
           "kind": "voice",
           "start_frame": 4209600,
           "frame_count": 567416,
@@ -113,7 +113,7 @@
           "loop": false
         },
         {
-          "id": "926b35489bd8441f96d2eee5d4232393",
+          "id": "c939c1b223e742fe9cb0fe3df96b7ec7",
           "kind": "voice",
           "start_frame": 4819200,
           "frame_count": 388744,
@@ -128,8 +128,31 @@
       ],
       "muted": false,
       "gain_db": 0.0
+    },
+    {
+      "id": "36c32bee3c69466593eddc868ffca4cf",
+      "kind": "sound",
+      "name": "Music bed",
+      "clips": [
+        {
+          "id": "1e136bcb484547a1869638436fdd0ed0",
+          "kind": "sound",
+          "start_frame": 0,
+          "frame_count": 5448000,
+          "asset_id": "sound_e1dd90afd942",
+          "text": "",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 72000,
+          "fade_out_frames": 192000,
+          "loop": false
+        }
+      ],
+      "muted": false,
+      "gain_db": -12.0
     }
   ],
   "schema_version": 1,
-  "revision": 0
+  "revision": 0,
+  "duck_db": -9.0
 }

@@ -2,7 +2,7 @@
 
 Recorded and assembled 2026-11-10 on the owner's Windows workstation (Windows 11 Pro 10.0.26300, RTX 5070 Ti). Tracking: FailSafe #645 (media), #589 (earlier media brief), Studio website `Knapp-Kevin/MythologIQ` #175.
 
-**Approval status: PENDING OWNER REVIEW.** The owner listened to the first cut and rejected its narrator, then chose the current voice from four samples. The rebuilt film with that voice has not been watched or listened to by a person yet. The checks below are automated (ffprobe, loudness meters, speech-to-text, frame inspection by the producing agent).
+**Approval status: PENDING OWNER REVIEW.** The owner listened to the first cut and rejected its narrator, then chose the current voice from four samples and the music bed from three previews. The finished film with that voice and music has not been watched or listened to end to end by a person yet. The checks below are automated (ffprobe, loudness meters, speech-to-text, frame inspection by the producing agent).
 
 ## 1. What was filmed
 
@@ -70,9 +70,10 @@ Earlier runs (`rehearsal`, `take1`) used the same scripts and are not in the fil
 | Takes | Final: 3 takes × 9 lines in the chosen voice (`VO_*_m3-take*.wav`); about 146 words per minute including pauses. Earlier, with the "Guide" voice from the Sonic Rift film: round 1 (4 × 8 lines, speed 1.0, too fast at about 174 wpm) and round 2 (3 × 9 lines, speed 0.92). The first cut of the film used round 2; **the owner rejected that voice after listening** and asked for a calm male product voice. All earlier takes are kept in `audio/narration-takes/`; the first cut's Studio project is `audio/mix/v1-guide-voice.sonicrift.json`. |
 | Selection | By measurement, not by ear: every final take is word-accurate (Sonic Rift's Whisper transcriber); picks favour similarity to the design clip, consistency with the other lines and a median pitch near the others (`audio/narration-takes/scores-m3.json`). Picked: S01 t1, S02 t3, S02B t2, S03 t2, S04 t1, S05 t2, S06 t2, S07 t1, S08 t2. Median pitch still ranges from about 126 Hz (S08) to 152 Hz (S01) between lines; listen for that. |
 | Pronunciation | Respelled in the spoken script only: "S R E", "six point zero point twelve", "Core Logic". Captions and transcript keep SRE, 6.0.12, Qor-Logic. |
-| Mix | `source/tools/mix_narration.py` places the nine takes on a Sonic Rift Studio timeline (`audio/mix/failsafe-6.0.12-film.sonicrift.json`) and exports with the app's own engine: −16 LUFS target, normalized and peak limited. No music, no ambience, no sting; the film ends on a picture fade. |
-| Measured (ffmpeg `ebur128`) | Final MP4 audio: **−16.0 LUFS** integrated, **−1.1 dBFS** true peak, LRA 5.1 LU. No clipping. |
-| Wording check | Speech-to-text of the final mix contains every script word in order (228 of 228; `audio/mix/qa-transcription.json`). The transcriber also printed "Thank you." at the very end; the last five seconds of the mix are digital silence (`silencedetect`), so that is the transcriber inventing words over silence, not audio in the film. |
+| Music | An original instrumental bed made on Sonic Rift's Music page (**ACE-Step 1.5**, 2B turbo, MIT licence), driven by `source/tools/failsafe_music.py`. Brief: "Calm, modern instrumental underscore for a software product walkthrough. Warm synth pads, a gentle plucked motif, a light muted pulse, subtle sub bass. Steady, confident and minimal, with room for a spoken voice. Resolves softly. No vocals, big drums, swells or drops." 116 s, 84 BPM, D major, seed 20261110, three takes (`audio/music-candidates/`). **The owner listened to 36-second previews under the narration and chose take C** on 2026-11-10. No third-party or commercial music. The model's authors state its training data is licensed; that is their statement, not something verified here. |
+| Mix | `source/tools/mix_narration.py` places the nine takes and the music bed on a Sonic Rift Studio timeline (`audio/mix/failsafe-6.0.12-film.sonicrift.json`) and exports with the app's own engine: music track at −12 dB, ducked a further 9 dB while the voice speaks, 1.5 s fade in, 4 s fade out over the end card; −16 LUFS target, normalized and peak limited. Stems before mastering: narration −18.8 LUFS, music −33.2 LUFS. Earlier mixes are kept as `v1-guide-voice` and `v2-voice3-no-music` project files. |
+| Measured (ffmpeg `ebur128`) | Final MP4 audio: **−16.1 LUFS** integrated, **−1.1 dBFS** true peak, LRA 4.9 LU. No clipping. |
+| Wording check | Speech-to-text of the final mix, music included, matches the script word for word (228 of 228, nothing extra; `audio/mix/qa-transcription.json`). |
 
 ## 6. Checks run
 
@@ -87,7 +88,7 @@ Earlier runs (`rehearsal`, `take1`) used the same scripts and are not in the fil
 | Private information | Frames inspected: fictional repo, fictional author, `C:\demo\…` paths, no account names, no notifications from other apps. The Config page's audio device lists are never opened. |
 | Checksums | `manifest.json` lists SHA-256 for every file; verified after writing. |
 
-Not done: no person has watched or listened to the rebuilt film; no check on a phone or in the website layout; no second-machine reproduction.
+Not done: no person has watched or listened to the finished film end to end; no check on a phone or in the website layout; no second-machine reproduction.
 
 ## 7. Claims this film must not be used to support
 
