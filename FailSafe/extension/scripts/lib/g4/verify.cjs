@@ -3,7 +3,8 @@
  * G4 (#638) verifier: walk every checkpoint from genesis to head.
  *
  * Fails closed at the first problem. The result is
- *   { verdict: "PASS"|"REFUSED"|"BLOCKED", code, detail, checkpoints, limitations }.
+ *   { verdict: "PASS"|"REFUSED"|"BLOCKED", code, mode: "release"|"diagnostic", detail,
+ *     checkpoints, limitations }.
  * A PASS without an externally trusted head is reported as such: deletion of
  * the newest checkpoints together with the newest ledger tail is not
  * detectable from the repository alone.
@@ -136,6 +137,7 @@ function summarize(s) {
 function verifyCheckpoints(o) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "g4-verify-"));
   const done = [];
+  const mode = o.release ? "release" : "diagnostic";
   try {
     const ctx = buildContext(o, tmpDir);
     const entries = layout.listCheckpoints(ctx.checkpointsDir);
@@ -146,10 +148,10 @@ function verifyCheckpoints(o) {
       done.push(summarize(prev));
     }
     const limitations = checkHead(ctx, prev, o);
-    return { verdict: "PASS", code: "OK", detail: `${done.length} checkpoint(s) verified to ${prev.id}`, checkpoints: done, limitations };
+    return { verdict: "PASS", code: "OK", mode, detail: `${done.length} checkpoint(s) verified to ${prev.id}`, checkpoints: done, limitations };
   } catch (err) {
     const r = err instanceof G4Refusal ? err : block("INTERNAL_ERROR", firstLine(err));
-    return { verdict: r.verdict, code: r.code, detail: r.detail, checkpoints: done, limitations: [] };
+    return { verdict: r.verdict, code: r.code, mode, detail: r.detail, checkpoints: done, limitations: [] };
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

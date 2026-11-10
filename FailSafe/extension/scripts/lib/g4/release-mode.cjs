@@ -5,7 +5,10 @@
  * qualified commit, reading the repository's own checkpoints and TSA policy.
  * Anything missing is BLOCKED: it is never downgraded to a limitation.
  */
-const { git } = require("./git.cjs");
+const fs = require("node:fs");
+const path = require("node:path");
+const { git, requireBlob } = require("./git.cjs");
+const layout = require("./layout.cjs");
 const { block, refuse } = require("./bytes.cjs");
 
 const G4_DIR = "tools/g4";
@@ -40,7 +43,7 @@ function assertNoOverrides(o) {
 }
 
 function porcelain(repoRoot, args) {
-  const res = git(repoRoot, ["status", "--porcelain", "--untracked-files=all", ...args]);
+  const res = git(repoRoot, ["status", "--porcelain", "--untracked-files=all", "--ignore-submodules=none", ...args]);
   if (res.status !== 0) throw block("REPO_UNREADABLE", "git status failed for the release checkout");
   return res.stdout.split(/\r?\n/).filter(Boolean);
 }
@@ -50,6 +53,31 @@ function assertCleanCheckout(repoRoot) {
   const dirty = [...porcelain(repoRoot, []), ...porcelain(repoRoot, ["--ignored", "--", G4_DIR])];
   if (dirty.length) {
     throw block("RELEASE_TREE_DIRTY", `the checkout is not clean (${dirty.length} path(s)); first: ${dirty[0].trim()}`);
+  }
+}
+
+function readOrNull(file) {
+  try {
+    return fs.readFileSync(file);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The verifier reads checkpoints and certificates from the checkout. `git
+ * status` can be told to look away (skip-worktree, assume-unchanged, a
+ * same-size swap with the mtime restored), so each such file is compared, byte
+ * for byte, with its committed blob at HEAD.
+ */
+function assertEvidenceMatchesHead(repoRoot, head) {
+  const res = git(repoRoot, ["ls-tree", "-r", "--name-only", "-z", head, "--", layout.CHECKPOINTS_DIR, layout.KEYS_DIR]);
+  if (res.status !== 0) throw block("REPO_UNREADABLE", "git ls-tree failed for the release checkout");
+  for (const rel of res.stdout.split("\0").filter(Boolean)) {
+    const disk = readOrNull(path.join(repoRoot, rel));
+    if (!disk || !disk.equals(requireBlob(repoRoot, head, rel, "RELEASE_TREE_MISMATCH"))) {
+      throw refuse("RELEASE_TREE_MISMATCH", `${rel} in the checkout is not the blob committed at ${head}`);
+    }
   }
 }
 
@@ -67,6 +95,7 @@ function assertReleasePreconditions(o, repoRoot, head) {
     throw refuse("RELEASE_COMMIT_MISMATCH", `checkout is at ${head}, but the qualified commit is ${o.expectedCommit}`);
   }
   assertCleanCheckout(repoRoot);
+  assertEvidenceMatchesHead(repoRoot, head);
 }
 
 module.exports = { assertReleasePreconditions };

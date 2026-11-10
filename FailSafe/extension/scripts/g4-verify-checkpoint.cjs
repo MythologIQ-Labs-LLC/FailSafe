@@ -42,12 +42,21 @@ const FLAGS = {
   "--commit": "expectedCommit",
 };
 
+/** The value after flag `i`. A missing value or another flag is an error, never a value. */
+function valueOf(argv, i) {
+  const v = argv[i + 1];
+  if (v === undefined || v.startsWith("--")) throw new Error(`${argv[i]} needs a value`);
+  return v;
+}
+
+const MODE_LINE = { release: "release", diagnostic: "diagnostic (NOT release evidence)" };
+
 function parseArgs(argv) {
   const o = { repoRoot: path.resolve(__dirname, "..", "..", ".."), json: false };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--json") o.json = true;
     else if (argv[i] === "--release") o.release = true;
-    else if (FLAGS[argv[i]] && argv[i + 1] !== undefined) o[FLAGS[argv[i]]] = argv[++i];
+    else if (FLAGS[argv[i]]) o[FLAGS[argv[i]]] = valueOf(argv, i++);
     else throw new Error(`unknown or incomplete argument: ${argv[i]}`);
   }
   return o;
@@ -65,6 +74,7 @@ function main(argv) {
   if (o.json) process.stdout.write(JSON.stringify(r, null, 2) + "\n");
   else {
     for (const c of r.checkpoints) process.stdout.write(`[g4-verify] ok ${c.id} commit ${c.commit.slice(0, 12)} ledger ${c.ledgerBytes} B token ${c.genTime} (${c.revocation})\n`);
+    process.stdout.write(`[g4-verify] mode: ${MODE_LINE[r.mode]}\n`);
     for (const l of r.limitations) process.stdout.write(`[g4-verify] limitation: ${l}\n`);
     process.stdout.write(`[g4-verify] ${r.verdict} ${r.code}: ${r.detail}\n`);
   }

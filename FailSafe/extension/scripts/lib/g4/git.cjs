@@ -7,7 +7,8 @@ const { spawnSync } = require("node:child_process");
 const { refuse } = require("./bytes.cjs");
 
 function git(repoRoot, args, opts = {}) {
-  const res = spawnSync("git", ["-C", repoRoot, ...args], {
+  // --no-replace-objects: a replace ref must never substitute an object read here.
+  const res = spawnSync("git", ["--no-replace-objects", "-C", repoRoot, ...args], {
     encoding: opts.encoding === "buffer" ? "buffer" : "utf8",
     maxBuffer: 256 * 1024 * 1024,
     windowsHide: true,

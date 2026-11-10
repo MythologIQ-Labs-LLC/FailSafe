@@ -69,6 +69,6 @@ it("N4: an unexpected error is BLOCKED INTERNAL_ERROR (exit 2), one line, no sta
   const notADir = path.join(base.repo, layout.REGISTRY_PATH);
   const r = spawnSync(process.execPath, [CLI, "--repo-root", base.repo, "--checkpoints", notADir], { encoding: "utf8" });
   assert.equal(r.status, 2, r.stdout + r.stderr);
-  assert.match(r.stdout, /^\[g4-verify\] BLOCKED INTERNAL_ERROR: unexpected error: [^\n]+\n$/);
+  assert.match(r.stdout, /^\[g4-verify\] mode: diagnostic \(NOT release evidence\)\n\[g4-verify\] BLOCKED INTERNAL_ERROR: unexpected error: [^\n]+\n$/);
   assert.doesNotMatch(r.stdout + r.stderr, /\n\s+at /);
 });
