@@ -62,7 +62,7 @@ it("N3: --tsa-ca is reported as a non-release override, and --release refuses it
   assert.equal(r.verdict, "PASS", r.detail);
   assert.match(r.limitations.join("\n"), /NOT a release verification/);
   refused(S.verify(base.repo, { tsaCaFile: caFile, release: true }), "TSA_OVERRIDE_NOT_RELEASE", "BLOCKED");
-  assert.equal(S.verify(base.repo, { release: true }).verdict, "PASS");
+  refused(S.verify(base.repo, { release: true }), "RELEASE_INPUT_MISSING", "BLOCKED");
 });
 
 it("N4: an unexpected error is BLOCKED INTERNAL_ERROR (exit 2), one line, no stack trace", () => {

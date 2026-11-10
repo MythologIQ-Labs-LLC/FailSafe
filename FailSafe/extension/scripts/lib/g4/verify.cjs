@@ -21,6 +21,7 @@ const registry = require("./registry.cjs");
 const ts = require("./timestamp.cjs");
 const { verifyWitness } = require("./verify-witness.cjs");
 const { verifyLedger } = require("./verify-ledger.cjs");
+const { assertReleasePreconditions } = require("./release-mode.cjs");
 
 const POLICY_SCHEMA = "failsafe-g4-tsa-policy/v1";
 
@@ -55,12 +56,10 @@ function loadAnyCert(pem) {
 }
 
 function buildContext(o, tmpDir) {
-  if (o.release && o.tsaCaFile) {
-    throw block("TSA_OVERRIDE_NOT_RELEASE", "--tsa-ca bypasses the committed TSA root pin; a release verification must use tools/g4/tsa-policy.json");
-  }
   const repoRoot = path.resolve(o.repoRoot);
   const head = resolveCommit(repoRoot, "HEAD");
   if (!head) throw block("REPO_UNREADABLE", `${repoRoot} has no HEAD commit`);
+  assertReleasePreconditions(o, repoRoot, head);
   const currentRegistry = requireBlob(repoRoot, head, layout.REGISTRY_PATH, "REGISTRY_MISSING");
   registry.parse(currentRegistry);
   registry.assertGitHistoryMonotonic(repoRoot, layout.REGISTRY_PATH);
@@ -131,7 +130,8 @@ function summarize(s) {
 
 /**
  * @param {{repoRoot:string, checkpointsDir?:string, trustFingerprint?:string,
- *   trustedHead?:string, tsaCaFile?:string, repository?:string, release?:boolean}} o
+ *   trustedHead?:string, tsaCaFile?:string, repository?:string, release?:boolean,
+ *   expectedCommit?:string}} o
  */
 function verifyCheckpoints(o) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "g4-verify-"));

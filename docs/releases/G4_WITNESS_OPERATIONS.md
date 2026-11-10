@@ -112,11 +112,27 @@ node FailSafe/extension/scripts/g4-verify-checkpoint.cjs \
 
 Exit 0 is `PASS`, 1 is `REFUSED`, 2 is `BLOCKED`. Without `--trusted-head`, a PASS carries the limitation "checkpoint head is not externally anchored". Without `--trust-fingerprint`, any key whose certificate is committed under `tools/g4/keys/` can start a chain (see the limitations).
 
-A **release verification** runs on a clean checkout of the exact release commit (`git clone` or `git worktree add`, with no local changes or untracked files under `tools/g4/`), and adds `--release`:
+A **release verification** is the only mode that counts as release evidence. It adds `--release`, and the verifier itself enforces the conditions below. Any unmet condition is `BLOCKED` or `REFUSED`, never a limitation on a PASS.
 
 ```bash
-node FailSafe/extension/scripts/g4-verify-checkpoint.cjs --release   --repository MythologIQ-Labs-LLC/FailSafe --trust-fingerprint <fp> --trusted-head <id>:<sha256>
+node FailSafe/extension/scripts/g4-verify-checkpoint.cjs --release \
+  --repository MythologIQ-Labs-LLC/FailSafe \
+  --commit <the exact qualified release commit, 40 hex> \
+  --trust-fingerprint <owner fingerprint, obtained out of band> \
+  --trusted-head <g4-NNNNNN>:<manifest sha256, obtained out of band>
 ```
+
+| Condition | Result when unmet |
+|---|---|
+| `--trust-fingerprint`, `--trusted-head`, `--repository` and `--commit` are all given | `BLOCKED RELEASE_INPUT_MISSING` (names the missing inputs) |
+| each of those is well formed | `BLOCKED RELEASE_INPUT_MALFORMED` |
+| `HEAD` is exactly `--commit` | `REFUSED RELEASE_COMMIT_MISMATCH` |
+| the checkout is clean: no modified or untracked file anywhere, and no git-ignored file under `tools/g4/` | `BLOCKED RELEASE_TREE_DIRTY` |
+| no `--tsa-ca` override | `BLOCKED TSA_OVERRIDE_NOT_RELEASE` |
+| no `--checkpoints` override | `BLOCKED RELEASE_OVERRIDE_REFUSED` |
+| the pinned fingerprint, external head and repository match the chain | `REFUSED KEY_UNTRUSTED`, `HEAD_MISMATCH` or `REPOSITORY_MISMATCH` |
+
+Run it from a fresh `git clone` or `git worktree add` of the release commit. Because the checkout must be clean and at `--commit`, the checkpoint and certificate files read from the working tree are exactly the ones committed at that commit.
 
 Other options:
 - `--repository <owner/name>`: every checkpoint must name this repository. Without it, every checkpoint must name the genesis checkpoint's repository (`REPOSITORY_MISMATCH`).

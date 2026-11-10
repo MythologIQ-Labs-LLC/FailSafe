@@ -6,11 +6,18 @@
  *     [--trust-fingerprint <sha256 of the owner certificate, pinned out of band>]
  *     [--trusted-head <g4-NNNNNN>:<manifest sha256, retained out of band>]
  *     [--tsa-ca <PEM file of trusted TSA roots; overrides tools/g4/tsa-policy.json>]
- *     [--repository <owner/name>] [--checkpoints <dir>] [--release] [--json]
+ *     [--repository <owner/name>] [--commit <qualified commit sha>]
+ *     [--checkpoints <dir>] [--release] [--json]
+ *
+ * --release is the only mode that counts as release evidence. It is BLOCKED
+ * unless --trust-fingerprint, --trusted-head, --repository and --commit are all
+ * given and well formed, HEAD is exactly --commit, and the checkout is clean
+ * (no modified or untracked file; no ignored file under tools/g4). It refuses
+ * the --tsa-ca and --checkpoints overrides.
  *
  * --tsa-ca is a test/diagnostic override: a PASS under it carries the
- * limitation "NOT a release verification", and --release refuses it (BLOCKED
- * TSA_OVERRIDE_NOT_RELEASE). Unexpected errors are BLOCKED INTERNAL_ERROR.
+ * limitation "NOT a release verification". Unexpected errors are BLOCKED
+ * INTERNAL_ERROR.
  *
  * Walks tools/g4/checkpoints from genesis to head and checks, for each:
  * manifest bytes and schema; signature against the committed certificate;
@@ -32,6 +39,7 @@ const FLAGS = {
   "--trusted-head": "trustedHead",
   "--tsa-ca": "tsaCaFile",
   "--repository": "repository",
+  "--commit": "expectedCommit",
 };
 
 function parseArgs(argv) {
