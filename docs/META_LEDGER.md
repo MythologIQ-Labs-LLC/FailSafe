@@ -36012,3 +36012,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-release-mode.md iteration 1 (plan sha256 6f38a060aec4173f5ac8376e212c3c1c5de1c790e720748cadb1e045fbe78712; candidate abaa5b31 on 6022d7ef; draft PR #646 stacked on #644). Independent Option B audit by a fresh auditor, L3. The ordinary release-mode cases are enforced, fail closed and run before working-tree content is read. Blocking: B1 (security-l3, specification-drift) cleanliness was decided by git status while checkpoints and certificates are read from the checkout, so update-index --skip-worktree, --assume-unchanged or a same-size swap with restored mtime still gave a release PASS over bytes that differ from the commit; B2 (security-l3) '--commit --release' swallowed the flag and produced a diagnostic PASS indistinguishable from a release PASS; B3 (specification-drift) a stale operations-doc line. Coverage gaps: four of 23 auditor mutants survived. Non-blocking: replace refs, submodule status, gate high_risk_target wording. Report preserved verbatim.
 
 ---
+
+### Entry #934: GATE TRIBUNAL - plan-v6013-638-g4-release-mode (iteration 2) - PASS
+
+**Timestamp**: 2026-11-10T19:27:28Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1844-963204`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-release-mode.md`
+**Report**: `.agent/staging/AUDIT_REPORT-638-release-mode-iter2.md` (Content Hash = SHA256, LF-normalized); iteration-1 VETO report preserved
+**Gate**: `.qor/gates/2026-11-10T1844-963204/audit.json`
+
+**Content Hash**: `9a4714574f9d7208fc57d699452337b77f851bf0b97e49668a1c1c34965740ee`
+**Previous Hash**: `1ca30d5d4642a27beefeb1978cdaabad0ee66159e86b46b2f60f2f1593069c03`
+**Chain Hash (Merkle seal)**: `c2a9d96833988902d302da30754b74d597db3433f64708feb981ecf4c22bcb74`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-release-mode.md iteration 2 (plan sha256 aedaa1d9c763581e334dba1ba2d82993d54aaa61edcc393284c97dfa5587fea2; candidate 0063b2d2fc8b749fff5b8a0189d189783b0db5f7; remediation 55b61840; draft PR #646 stacked on #644), after VETO #933. Independent audit, L3. B1 closed: in --release every file under tools/g4/checkpoints and tools/g4/keys (the only files the verifier reads from the checkout) must equal its blob at HEAD; the auditor's skip-worktree, assume-unchanged, same-size-swap, deleted-file and junction constructions are all REFUSED RELEASE_TREE_MISMATCH. B2 closed: a flag is never taken as a value (exit 2) and results and CLI output carry mode release|diagnostic. B3 closed. Replace refs and dirty submodules no longer pass. No remaining --release PASS with a condition unmet was found. Mutations: 42, 36 killed; survivors non-blocking (git status / ls-tree failure branches, missing disk file tolerated, --ignore-submodules removal, missing flag value, one equivalent mutant). G4 suites 88/88; OpenSSL absent 82 skipped with reason, 0 fail; full test:node 1068 pass, 0 fail; razor clean; no session key tracked. Non-blocking: a diagnostic PASS still exits 0, so evidence consumers must check mode: release; enumerate the two evidence directories on disk; one doc sentence. Implementation PASS only: G4 is not operationally qualified until owner key enrollment, TSA selection and a genesis checkpoint verified in --release mode.
+
+---
