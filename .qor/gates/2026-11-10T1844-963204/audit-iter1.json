@@ -1,0 +1,48 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T1844-963204",
+  "ts": "2026-11-10T19:11:04Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-release-mode.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-638-release-mode.md",
+  "risk_grade": "L3",
+  "findings_categories": [
+    "security-l3",
+    "specification-drift",
+    "coverage-gap"
+  ],
+  "target_content_hash": "6f38a060aec4173f5ac8376e212c3c1c5de1c790e720748cadb1e045fbe78712",
+  "report_content_hash": "51dd549bcf51f192ba55a1e4b7af73de3025ef97d4276b921b5f869e96f27f43",
+  "iteration": 1,
+  "ledger_entry": 933,
+  "ledger_chain_hash": "1ca30d5d4642a27beefeb1978cdaabad0ee66159e86b46b2f60f2f1593069c03",
+  "audited_candidate": "abaa5b31",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "security-l3",
+      "detail": "release cleanliness judged by git status; working-tree evidence not bound to HEAD blobs"
+    },
+    {
+      "id": "B2",
+      "category": "security-l3",
+      "detail": "--commit --release swallowed the release flag; no mode marker"
+    },
+    {
+      "id": "B3",
+      "category": "specification-drift",
+      "detail": "stale ops-doc line"
+    }
+  ],
+  "merge_obligations": "PR Full Test success on final head; rule-suite pass; native qualification on first v6.0.13 RC",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-10T19:11:04Z"
+  }
+}

@@ -3,7 +3,8 @@
  * G4 (#638) verifier: walk every checkpoint from genesis to head.
  *
  * Fails closed at the first problem. The result is
- *   { verdict: "PASS"|"REFUSED"|"BLOCKED", code, detail, checkpoints, limitations }.
+ *   { verdict: "PASS"|"REFUSED"|"BLOCKED", code, mode: "release"|"diagnostic", detail,
+ *     checkpoints, limitations }.
  * A PASS without an externally trusted head is reported as such: deletion of
  * the newest checkpoints together with the newest ledger tail is not
  * detectable from the repository alone.
@@ -21,6 +22,7 @@ const registry = require("./registry.cjs");
 const ts = require("./timestamp.cjs");
 const { verifyWitness } = require("./verify-witness.cjs");
 const { verifyLedger } = require("./verify-ledger.cjs");
+const { assertReleasePreconditions } = require("./release-mode.cjs");
 
 const POLICY_SCHEMA = "failsafe-g4-tsa-policy/v1";
 
@@ -55,12 +57,10 @@ function loadAnyCert(pem) {
 }
 
 function buildContext(o, tmpDir) {
-  if (o.release && o.tsaCaFile) {
-    throw block("TSA_OVERRIDE_NOT_RELEASE", "--tsa-ca bypasses the committed TSA root pin; a release verification must use tools/g4/tsa-policy.json");
-  }
   const repoRoot = path.resolve(o.repoRoot);
   const head = resolveCommit(repoRoot, "HEAD");
   if (!head) throw block("REPO_UNREADABLE", `${repoRoot} has no HEAD commit`);
+  assertReleasePreconditions(o, repoRoot, head);
   const currentRegistry = requireBlob(repoRoot, head, layout.REGISTRY_PATH, "REGISTRY_MISSING");
   registry.parse(currentRegistry);
   registry.assertGitHistoryMonotonic(repoRoot, layout.REGISTRY_PATH);
@@ -131,11 +131,13 @@ function summarize(s) {
 
 /**
  * @param {{repoRoot:string, checkpointsDir?:string, trustFingerprint?:string,
- *   trustedHead?:string, tsaCaFile?:string, repository?:string, release?:boolean}} o
+ *   trustedHead?:string, tsaCaFile?:string, repository?:string, release?:boolean,
+ *   expectedCommit?:string}} o
  */
 function verifyCheckpoints(o) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "g4-verify-"));
   const done = [];
+  const mode = o.release ? "release" : "diagnostic";
   try {
     const ctx = buildContext(o, tmpDir);
     const entries = layout.listCheckpoints(ctx.checkpointsDir);
@@ -146,10 +148,10 @@ function verifyCheckpoints(o) {
       done.push(summarize(prev));
     }
     const limitations = checkHead(ctx, prev, o);
-    return { verdict: "PASS", code: "OK", detail: `${done.length} checkpoint(s) verified to ${prev.id}`, checkpoints: done, limitations };
+    return { verdict: "PASS", code: "OK", mode, detail: `${done.length} checkpoint(s) verified to ${prev.id}`, checkpoints: done, limitations };
   } catch (err) {
     const r = err instanceof G4Refusal ? err : block("INTERNAL_ERROR", firstLine(err));
-    return { verdict: r.verdict, code: r.code, detail: r.detail, checkpoints: done, limitations: [] };
+    return { verdict: r.verdict, code: r.code, mode, detail: r.detail, checkpoints: done, limitations: [] };
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

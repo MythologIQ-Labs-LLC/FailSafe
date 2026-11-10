@@ -1,0 +1,47 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-10T1844-963204",
+  "ts": "2026-11-10T18:44:15Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-release-mode.md",
+  "iteration": 1,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "feat/638-g4-witness-v6013-r2",
+  "originating_remediation": "GH #638",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - enforce release-mode preconditions in the G4 verifier, test-first (audit #931 N-b, N5)"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Head deletion and re-genesis undetectable without an external head or pinned fingerprint"
+    ],
+    "non_goals": [
+      "No VSIX change",
+      "No ledger history change"
+    ],
+    "exclusions": [
+      "No TPM key or TSA engagement without owner approval"
+    ]
+  },
+  "ci_commands": [
+    "node --test src/test/scripts/g4*.test.cjs",
+    "npm run test:node"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "6f38a060aec4173f5ac8376e212c3c1c5de1c790e720748cadb1e045fbe78712",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-10T18:44:15Z"
+  }
+}

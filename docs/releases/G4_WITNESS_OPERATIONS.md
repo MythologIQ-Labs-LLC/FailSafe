@@ -112,11 +112,30 @@ node FailSafe/extension/scripts/g4-verify-checkpoint.cjs \
 
 Exit 0 is `PASS`, 1 is `REFUSED`, 2 is `BLOCKED`. Without `--trusted-head`, a PASS carries the limitation "checkpoint head is not externally anchored". Without `--trust-fingerprint`, any key whose certificate is committed under `tools/g4/keys/` can start a chain (see the limitations).
 
-A **release verification** runs on a clean checkout of the exact release commit (`git clone` or `git worktree add`, with no local changes or untracked files under `tools/g4/`), and adds `--release`:
+A **release verification** is the only mode that counts as release evidence. It adds `--release`, and the verifier itself enforces the conditions below. Any unmet condition is `BLOCKED` or `REFUSED`, never a limitation on a PASS.
 
 ```bash
-node FailSafe/extension/scripts/g4-verify-checkpoint.cjs --release   --repository MythologIQ-Labs-LLC/FailSafe --trust-fingerprint <fp> --trusted-head <id>:<sha256>
+node FailSafe/extension/scripts/g4-verify-checkpoint.cjs --release \
+  --repository MythologIQ-Labs-LLC/FailSafe \
+  --commit <the exact qualified release commit, 40 hex> \
+  --trust-fingerprint <owner fingerprint, obtained out of band> \
+  --trusted-head <g4-NNNNNN>:<manifest sha256, obtained out of band>
 ```
+
+| Condition | Result when unmet |
+|---|---|
+| `--trust-fingerprint`, `--trusted-head`, `--repository` and `--commit` are all given | `BLOCKED RELEASE_INPUT_MISSING` (names the missing inputs) |
+| each of those is well formed | `BLOCKED RELEASE_INPUT_MALFORMED` |
+| `HEAD` is exactly `--commit` | `REFUSED RELEASE_COMMIT_MISMATCH` |
+| the checkout is clean: no modified or untracked file anywhere, and no git-ignored file under `tools/g4/` | `BLOCKED RELEASE_TREE_DIRTY` |
+| no `--tsa-ca` override | `BLOCKED TSA_OVERRIDE_NOT_RELEASE` |
+| no `--checkpoints` override | `BLOCKED RELEASE_OVERRIDE_REFUSED` |
+| every file under `tools/g4/checkpoints/` and `tools/g4/keys/` equals its blob committed at HEAD | `REFUSED RELEASE_TREE_MISMATCH` |
+| the pinned fingerprint, external head and repository match the chain | `REFUSED KEY_UNTRUSTED`, `HEAD_MISMATCH` or `REPOSITORY_MISMATCH` |
+
+The output states the mode: `[g4-verify] mode: release`, or `mode: diagnostic (NOT release evidence)`. A flag is never accepted as another flag's value, so `--commit --release` is an argument error (exit 2), not a diagnostic run.
+
+Run it from a fresh `git clone` or `git worktree add` of the release commit. Because the checkout must be clean and at `--commit`, the checkpoint and certificate files read from the working tree are exactly the ones committed at that commit.
 
 Other options:
 - `--repository <owner/name>`: every checkpoint must name this repository. Without it, every checkpoint must name the genesis checkpoint's repository (`REPOSITORY_MISMATCH`).
@@ -206,6 +225,6 @@ A TPM clear, motherboard replacement or Windows reinstall destroys the key, unre
 - **Time checks.** The verifier refuses `createdUtc` more than 5 minutes after the token time, or more than 24 hours before it.
 - **TSA certificate expiry (owner decision).** `openssl ts -verify` validates the TSA chain at the current time, not at the token time. When the TSA signer certificate expires, verification of old checkpoints will REFUSE. This fails closed, but it makes old checkpoints unverifiable. The alternative is `-attime <genTime>`, which validates at the token time. It is a long-term-validation policy, and it needs the owner's decision (and, ideally, archived revocation status for the TSA chain). It is not implemented.
 - **Registry Git history.** The Git-history layer uses `git log -- tools/g4/revocations.json`, which follows Git's default history simplification. A merge whose registry equals an older side hides the newer version from that layer. The checkpoint anchors still catch such a rollback: the bound version is compared checkpoint to checkpoint and checkpoint to HEAD (`REGISTRY_ROLLBACK`, tested). A rollback that happens before any checkpoint binds the newer version is not detectable.
-- **Working tree (owner decision for release use).** Certificates and checkpoint files are read from the checked-out tree. Ledger, registry, gap statement and TSA policy are read from Git objects. A PASS on a dirty tree can reflect uncommitted checkpoint or certificate files. A release PASS therefore counts only when it is run on a clean checkout of the exact commit (see "Verification"). The verifier does not itself check that the tree is clean.
+- **Working tree.** Certificates and checkpoint files are read from the checked-out tree. Ledger, registry, gap statement and TSA policy are read from Git objects (with replace refs disabled). In a diagnostic run, a PASS on a dirty tree can reflect uncommitted checkpoint or certificate files. In `--release` mode the verifier enforces this itself: the checkout must be clean and at `--commit`, and every file under `tools/g4/checkpoints/` and `tools/g4/keys/` is compared byte for byte with its blob committed at HEAD, so `git update-index --skip-worktree`, `--assume-unchanged` or a same-size swap cannot substitute evidence. Only a `mode: release` PASS is release evidence.
 - **Token status.** A non-granted token is refused (`TOKEN_INVALID`). In practice `openssl ts -verify` already rejects a response that carries no token, so this check is defence in depth.
 - **History.** G4 does not re-verify history at or below #914, does not repair the pre-anchor break at #382, and does not resolve the October VETOs #610 to #612 or event `7126134e`, which remain UNKNOWN/UNRESOLVED.

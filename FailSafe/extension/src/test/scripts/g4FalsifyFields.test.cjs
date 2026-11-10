@@ -62,13 +62,13 @@ it("N3: --tsa-ca is reported as a non-release override, and --release refuses it
   assert.equal(r.verdict, "PASS", r.detail);
   assert.match(r.limitations.join("\n"), /NOT a release verification/);
   refused(S.verify(base.repo, { tsaCaFile: caFile, release: true }), "TSA_OVERRIDE_NOT_RELEASE", "BLOCKED");
-  assert.equal(S.verify(base.repo, { release: true }).verdict, "PASS");
+  refused(S.verify(base.repo, { release: true }), "RELEASE_INPUT_MISSING", "BLOCKED");
 });
 
 it("N4: an unexpected error is BLOCKED INTERNAL_ERROR (exit 2), one line, no stack trace", () => {
   const notADir = path.join(base.repo, layout.REGISTRY_PATH);
   const r = spawnSync(process.execPath, [CLI, "--repo-root", base.repo, "--checkpoints", notADir], { encoding: "utf8" });
   assert.equal(r.status, 2, r.stdout + r.stderr);
-  assert.match(r.stdout, /^\[g4-verify\] BLOCKED INTERNAL_ERROR: unexpected error: [^\n]+\n$/);
+  assert.match(r.stdout, /^\[g4-verify\] mode: diagnostic \(NOT release evidence\)\n\[g4-verify\] BLOCKED INTERNAL_ERROR: unexpected error: [^\n]+\n$/);
   assert.doesNotMatch(r.stdout + r.stderr, /\n\s+at /);
 });
