@@ -55,6 +55,9 @@ function loadAnyCert(pem) {
 }
 
 function buildContext(o, tmpDir) {
+  if (o.release && o.tsaCaFile) {
+    throw block("TSA_OVERRIDE_NOT_RELEASE", "--tsa-ca bypasses the committed TSA root pin; a release verification must use tools/g4/tsa-policy.json");
+  }
   const repoRoot = path.resolve(o.repoRoot);
   const head = resolveCommit(repoRoot, "HEAD");
   if (!head) throw block("REPO_UNREADABLE", `${repoRoot} has no HEAD commit`);
@@ -67,6 +70,7 @@ function buildContext(o, tmpDir) {
     currentRegistry,
     checkpointsDir: o.checkpointsDir || path.join(repoRoot, layout.CHECKPOINTS_DIR),
     trustFingerprint: o.trustFingerprint || null,
+    expectedRepository: o.repository || null,
     openssl: ts.requireOpenssl(),
     caFile: o.tsaCaFile || policyCaFile(repoRoot, head, tmpDir),
   };
@@ -77,6 +81,8 @@ function verifyOne(ctx, entry, prev) {
   if (!files.manifestBytes || !files.signatureBytes) throw refuse("CHECKPOINT_INCOMPLETE", `${entry.id}: manifest or signature missing`);
   const m = parseManifest(files.manifestBytes);
   if (m.checkpointId !== entry.id) throw refuse("MANIFEST_ID_MISMATCH", `${entry.id} holds manifest ${m.checkpointId}`);
+  const repo = prev ? prev.manifest.repository : ctx.expectedRepository;
+  if (repo && m.repository !== repo) throw refuse("REPOSITORY_MISMATCH", `${entry.id} names repository ${m.repository}, expected ${repo}`);
   const w = verifyWitness(ctx, m, files, prev);
   const l = verifyLedger(ctx, m, prev);
   return { id: m.checkpointId, manifest: m, manifestBytes: files.manifestBytes, ...w, ...l };
@@ -98,15 +104,25 @@ function checkHeadLedger(ctx, last) {
   }
 }
 
+const UNANCHORED = "checkpoint head is not externally anchored; truncation of the newest checkpoints and ledger tail is undetectable";
+const OVERRIDE = "--tsa-ca override in use: TSA trust did not come from the committed policy; NOT a release verification";
+
 function checkHead(ctx, last, o) {
   registry.assertMonotonic(last.registryBytes, ctx.currentRegistry, `${last.id} -> HEAD registry`);
   checkHeadLedger(ctx, last);
-  if (!o.trustedHead) return ["checkpoint head is not externally anchored; truncation of the newest checkpoints and ledger tail is undetectable"];
+  const notes = o.tsaCaFile ? [OVERRIDE] : [];
+  if (!o.trustedHead) return [...notes, UNANCHORED];
   const [id, digest] = o.trustedHead.split(":");
   if (last.id !== id || sha256(last.manifestBytes) !== digest) {
     throw refuse("HEAD_MISMATCH", `trusted head ${o.trustedHead} but repository head is ${last.id}:${sha256(last.manifestBytes)}`);
   }
-  return [];
+  return notes;
+}
+
+/** Unexpected errors are BLOCKED with a one-line reason, never a stack trace. */
+function firstLine(err) {
+  const msg = err && err.message ? err.message : String(err);
+  return `unexpected error: ${msg.split(/\r?\n/)[0]}`;
 }
 
 function summarize(s) {
@@ -115,7 +131,7 @@ function summarize(s) {
 
 /**
  * @param {{repoRoot:string, checkpointsDir?:string, trustFingerprint?:string,
- *   trustedHead?:string, tsaCaFile?:string}} o
+ *   trustedHead?:string, tsaCaFile?:string, repository?:string, release?:boolean}} o
  */
 function verifyCheckpoints(o) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "g4-verify-"));
@@ -132,8 +148,8 @@ function verifyCheckpoints(o) {
     const limitations = checkHead(ctx, prev, o);
     return { verdict: "PASS", code: "OK", detail: `${done.length} checkpoint(s) verified to ${prev.id}`, checkpoints: done, limitations };
   } catch (err) {
-    if (!(err instanceof G4Refusal)) throw err;
-    return { verdict: err.verdict, code: err.code, detail: err.detail, checkpoints: done, limitations: [] };
+    const r = err instanceof G4Refusal ? err : block("INTERNAL_ERROR", firstLine(err));
+    return { verdict: r.verdict, code: r.code, detail: r.detail, checkpoints: done, limitations: [] };
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

@@ -112,6 +112,18 @@ node FailSafe/extension/scripts/g4-verify-checkpoint.cjs \
 
 Exit 0 is `PASS`, 1 is `REFUSED`, 2 is `BLOCKED`. Without `--trusted-head`, a PASS carries the limitation "checkpoint head is not externally anchored". Without `--trust-fingerprint`, any key whose certificate is committed under `tools/g4/keys/` can start a chain (see the limitations).
 
+A **release verification** runs on a clean checkout of the exact release commit (`git clone` or `git worktree add`, with no local changes or untracked files under `tools/g4/`), and adds `--release`:
+
+```bash
+node FailSafe/extension/scripts/g4-verify-checkpoint.cjs --release   --repository MythologIQ-Labs-LLC/FailSafe --trust-fingerprint <fp> --trusted-head <id>:<sha256>
+```
+
+Other options:
+- `--repository <owner/name>`: every checkpoint must name this repository. Without it, every checkpoint must name the genesis checkpoint's repository (`REPOSITORY_MISMATCH`).
+- `--tsa-ca <PEM>`: a **test and diagnostic override only**. It replaces the committed TSA root pin in `tools/g4/tsa-policy.json` with any CA file. A PASS under it carries the limitation "--tsa-ca override in use: ... NOT a release verification". With `--release` it is `BLOCKED TSA_OVERRIDE_NOT_RELEASE`.
+
+An unexpected error (not a G4 refusal) is `BLOCKED INTERNAL_ERROR` with a one-line reason, and exits 2.
+
 For each checkpoint, in order, the verifier checks:
 1. contiguous sequence;
 2. manifest bytes: UTF-8 and schema;
@@ -192,5 +204,8 @@ A TPM clear, motherboard replacement or Windows reinstall destroys the key, unre
   - the key-transition record and cross-chain continuity are not implemented (key changes fail closed);
   - the trusted head is not published anywhere automatically.
 - **Time checks.** The verifier refuses `createdUtc` more than 5 minutes after the token time, or more than 24 hours before it.
-- **Working tree.** Certificates and checkpoint files are read from the checked-out tree. Ledger, registry, gap statement and TSA policy are read from Git objects.
+- **TSA certificate expiry (owner decision).** `openssl ts -verify` validates the TSA chain at the current time, not at the token time. When the TSA signer certificate expires, verification of old checkpoints will REFUSE. This fails closed, but it makes old checkpoints unverifiable. The alternative is `-attime <genTime>`, which validates at the token time. It is a long-term-validation policy, and it needs the owner's decision (and, ideally, archived revocation status for the TSA chain). It is not implemented.
+- **Registry Git history.** The Git-history layer uses `git log -- tools/g4/revocations.json`, which follows Git's default history simplification. A merge whose registry equals an older side hides the newer version from that layer. The checkpoint anchors still catch such a rollback: the bound version is compared checkpoint to checkpoint and checkpoint to HEAD (`REGISTRY_ROLLBACK`, tested). A rollback that happens before any checkpoint binds the newer version is not detectable.
+- **Working tree (owner decision for release use).** Certificates and checkpoint files are read from the checked-out tree. Ledger, registry, gap statement and TSA policy are read from Git objects. A PASS on a dirty tree can reflect uncommitted checkpoint or certificate files. A release PASS therefore counts only when it is run on a clean checkout of the exact commit (see "Verification"). The verifier does not itself check that the tree is clean.
+- **Token status.** A non-granted token is refused (`TOKEN_INVALID`). In practice `openssl ts -verify` already rejects a response that carries no token, so this check is defence in depth.
 - **History.** G4 does not re-verify history at or below #914, does not repair the pre-anchor break at #382, and does not resolve the October VETOs #610 to #612 or event `7126134e`, which remain UNKNOWN/UNRESOLVED.

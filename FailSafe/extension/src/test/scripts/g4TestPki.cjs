@@ -32,7 +32,7 @@ function tsaConfig(dir) {
   return [
     "[tsa]", "default_tsa = tsa1", "[tsa1]", `dir = ${d}`, "serial = $dir/tsaserial",
     "crypto_device = builtin", "signer_cert = $dir/tsa.crt", "certs = $dir/tsa.crt", "signer_key = $dir/tsa.key",
-    "signer_digest = sha256", "default_policy = 1.3.6.1.4.1.99999.638.1", "digests = sha256, sha384, sha512",
+    "signer_digest = sha256", "default_policy = 1.3.6.1.4.1.99999.638.1", "digests = sha256, sha384, sha512, sha3-256",
     "accuracy = secs:1", "ordering = yes", "tsa_name = yes", "ess_cert_id_chain = no", "ess_cert_id_alg = sha256", "",
   ].join("\n");
 }

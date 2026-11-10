@@ -96,6 +96,8 @@ function parseManifest(bytes) {
   requireShape(m.revocationRegistry && isHex64(m.revocationRegistry.sha256), "registry fields");
   requireShape(m.historicalGapStatement && isHex64(m.historicalGapStatement.sha256), "gap statement fields");
   requireShape(m.key && isHex64(m.key.fingerprintSha256), "key fingerprint");
+  requireShape(m.key.algorithm === "ECDSA-P256-SHA256" && m.key.signatureEncoding === "ieee-p1363", "key algorithm/encoding");
+  requireShape(typeof m.repository === "string" && m.repository.length > 0, "repository");
   requireShape(!Number.isNaN(Date.parse(m.createdUtc)), "createdUtc");
   requireShape(m.previousCheckpoint && typeof m.previousCheckpoint === "object", "previousCheckpoint");
   return m;

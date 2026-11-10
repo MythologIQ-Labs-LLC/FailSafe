@@ -46,6 +46,7 @@ function checkToken(ctx, m, files) {
     throw refuse(code, `${m.checkpointId}: openssl ts -verify: ${r.out.split(/\r?\n/).slice(-2).join(" | ")}`);
   }
   const info = ts.tokenInfo(ctx.openssl, files.tokenPath);
+  if (!info.granted) throw refuse("TOKEN_INVALID", `${m.checkpointId}: token status is not granted`);
   if (info.hashAlgorithm !== "sha256") throw refuse("TOKEN_INVALID", `${m.checkpointId}: token hash is ${info.hashAlgorithm}`);
   if (!info.genTime) throw refuse("TOKEN_INVALID", `${m.checkpointId}: token time unreadable`);
   return { imprint, genTime: info.genTime };

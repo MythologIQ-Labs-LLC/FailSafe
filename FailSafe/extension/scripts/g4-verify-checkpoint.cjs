@@ -6,7 +6,11 @@
  *     [--trust-fingerprint <sha256 of the owner certificate, pinned out of band>]
  *     [--trusted-head <g4-NNNNNN>:<manifest sha256, retained out of band>]
  *     [--tsa-ca <PEM file of trusted TSA roots; overrides tools/g4/tsa-policy.json>]
- *     [--checkpoints <dir>] [--json]
+ *     [--repository <owner/name>] [--checkpoints <dir>] [--release] [--json]
+ *
+ * --tsa-ca is a test/diagnostic override: a PASS under it carries the
+ * limitation "NOT a release verification", and --release refuses it (BLOCKED
+ * TSA_OVERRIDE_NOT_RELEASE). Unexpected errors are BLOCKED INTERNAL_ERROR.
  *
  * Walks tools/g4/checkpoints from genesis to head and checks, for each:
  * manifest bytes and schema; signature against the committed certificate;
@@ -27,12 +31,14 @@ const FLAGS = {
   "--trust-fingerprint": "trustFingerprint",
   "--trusted-head": "trustedHead",
   "--tsa-ca": "tsaCaFile",
+  "--repository": "repository",
 };
 
 function parseArgs(argv) {
   const o = { repoRoot: path.resolve(__dirname, "..", "..", ".."), json: false };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--json") o.json = true;
+    else if (argv[i] === "--release") o.release = true;
     else if (FLAGS[argv[i]] && argv[i + 1] !== undefined) o[FLAGS[argv[i]]] = argv[++i];
     else throw new Error(`unknown or incomplete argument: ${argv[i]}`);
   }

@@ -16,6 +16,7 @@ const { ledgerFacts } = require("../../../scripts/lib/g4/manifest.cjs");
 const { loadCertificate } = require("../../../scripts/lib/g4/signer.cjs");
 const { verifyCheckpoints, POLICY_SCHEMA } = require("../../../scripts/lib/g4/verify.cjs");
 const { sha256, witnessImprint } = require("../../../scripts/lib/g4/bytes.cjs");
+const tsLib = require("../../../scripts/lib/g4/timestamp.cjs");
 const { createLocalTsa, createTestSigner } = require("./g4TestPki.cjs");
 
 const REAL_REPO = path.resolve(__dirname, "..", "..", "..", "..", "..");
@@ -56,10 +57,10 @@ function appendEntry(dir, n) {
   fs.appendFileSync(path.join(dir, layout.LEDGER_PATH), entryText(n));
 }
 
-function initRepo(dir, tsa, signer) {
+function initRepo(dir, tsa, signer, { ledger = (b) => b } = {}) {
   git(dir, "init", "-q");
   for (const [k, v] of [["core.autocrlf", "false"], ["user.name", "g4-test"], ["user.email", "g4-test@invalid"], ["commit.gpgsign", "false"]]) git(dir, "config", k, v);
-  write(dir, layout.LEDGER_PATH, realLedgerBlob());
+  write(dir, layout.LEDGER_PATH, ledger(realLedgerBlob()));
   write(dir, layout.REGISTRY_PATH, registryBytes(1));
   write(dir, layout.GAP_STATEMENT_PATH, Buffer.from("TEST historical gap statement\n"));
   write(dir, ROOT_PEM_PATH, tsa.rootPem);
@@ -133,6 +134,32 @@ async function forgeNext(dir, base, { signer = base.signer, mutate } = {}) {
   return r;
 }
 
+/**
+ * Write an RFC 3161 token for `imprintHex` from `tsa` into checkpoint dir `cp`.
+ * `digestFlag` lets a test request a token over a non-SHA-256 algorithm.
+ */
+async function stampToken(base, cp, imprintHex, digestFlag = "-sha256") {
+  const tsq = path.join(cp, layout.FILES.query);
+  const r = tsLib.run(base.bin, ["ts", "-query", "-digest", imprintHex, digestFlag, "-cert", "-out", tsq]);
+  if (!r.ok) throw new Error(r.out);
+  fs.writeFileSync(path.join(cp, layout.FILES.token), await base.tsa.request(fs.readFileSync(tsq)));
+  tsLib.extractChain(base.bin, path.join(cp, layout.FILES.token), path.join(cp, layout.FILES.chain));
+}
+
+/** Write manifest+signature for a forged next checkpoint, without a token yet. */
+function writeUnstamped(dir, signer, mutate) {
+  const checkpointsDir = path.join(dir, layout.CHECKPOINTS_DIR);
+  const m = forgedManifest(dir, loadPrevious(checkpointsDir).previous, signer);
+  if (mutate) mutate(m);
+  const bytes = Buffer.from(JSON.stringify(m, null, 2) + "\n");
+  const sig = signer.sign(bytes);
+  const cp = path.join(checkpointsDir, m.checkpointId);
+  fs.mkdirSync(cp, { recursive: true });
+  fs.writeFileSync(path.join(cp, layout.FILES.manifest), bytes);
+  fs.writeFileSync(path.join(cp, layout.FILES.signature), sig);
+  return { cp, imprint: witnessImprint(bytes, sig) };
+}
+
 let copies = 0;
 /** A disposable copy of the base repository. */
 function copyRepo(base) {
@@ -146,5 +173,5 @@ const verify = (dir, opts = {}) => verifyCheckpoints({ repoRoot: dir, ...opts })
 const cpDir = (dir, id) => path.join(dir, layout.CHECKPOINTS_DIR, id);
 
 module.exports = {
-  git, write, commitAll, appendEntry, entryText, registryBytes, addKey, checkpoint, forgeNext, initRepo, buildBase, copyRepo, verify, cpDir,
+  git, write, commitAll, appendEntry, entryText, registryBytes, addKey, checkpoint, forgeNext, initRepo, stampToken, writeUnstamped, buildBase, copyRepo, verify, cpDir,
 };
