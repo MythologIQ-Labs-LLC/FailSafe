@@ -35752,3 +35752,43 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: G4 RELEASE DISPOSITION ACCEPTED by the independent Judge for v6.0.12 only. Owner decision of 2026-11-09 (responsible owner Knapp-Kevin): defer the TPM-backed checkpoint signing and RFC 3161 independent witness (#467, G4) to v6.0.13; the deferral expires at the v6.0.13 release or on 2026-12-09, whichever comes first, read strictly: it cannot cover any v6.0.12 publication dated 2026-12-09 or later in any time zone and never covers another release. Decision record docs/releases/V6_0_12_G4_DISPOSITION.md at 13d92f26, SHA-256 of the committed file 15db89647f398b84b4ea536bf70c2d96e27147a7a2eb94ed204ee75df0b6118b (4806 bytes); RC1 checklist item 81 (PR #631) amended to cite it, original obligation retained. Review .agent/staging/G4_DISPOSITION_REVIEW.md (this entry's Content Hash). Conditions: the release seal cites the same decision SHA-256; any change to the decision file voids this acceptance until re-reviewed; every preserved ledger-verification and release gate still applies on the exact release commit; this acceptance is not a release GO. Residual risk accepted: no independent witness of the complete ledger bytes (owner-controlled chain and Git history only). No TPM key, TSA or G4 code exists. Historical limits unchanged: disclosed breaks at #340 and #382 and older numbering residue; October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED. Audit PASS #919 and VETOs #915, #917, #918 unchanged.
 
 ---
+
+### Entry #921: IMPLEMENTATION - plan-v6012-release-governance (v6.0.12 release commit)
+
+**Timestamp**: 2026-11-10T00:10:13Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-11-09T1958-754dfc`
+**Risk Grade**: L3
+**Verdict**: N/A
+**Target**: `c1fcaa231bd3eddee4304d3a469f4c9ca434a45a` (release commit)
+**Report**: `.qor/gates/2026-11-09T1958-754dfc/implement.json` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-09T1958-754dfc/implement.json`
+
+**Content Hash**: `46b0104de0e384ca0514830419ddda7e1fcb9d9f1b4dad6d99efc99c32802c99`
+**Previous Hash**: `cdf02922dc0890a77a8c5d65c8bb97bccf73848439c0bbf78af58e211ecc12fa`
+**Chain Hash (Merkle seal)**: `fd9d2ba7e81f1d7d74c96847d6d7e16f119ad5a03c140187414d79fb515dd471`
+
+**Decision**: IMPLEMENTATION of plan-v6012-release-governance.md (PASS #919) for the v6.0.12 release. Release commit c1fcaa231bd3eddee4304d3a469f4c9ca434a45a: both READMEs mark v6.0.12 current, CHANGELOG [6.0.12] dated 2026-11-09, the G4 Known Limitation cites the accepted disposition (#920). Implementation commits since VETO #917 (c88181b1): 362ad28e c8fb4dde d15cb4af c8419fc9 689f2682 4425059d 5a7b55ff 3dc230ce f5a72e73 13d92f26 7efa58df c1fcaa23 (43 files; list in the gate). No source change after the audited candidate 3dc230ce other than the extension README and CHANGELOG. Exact-commit gates on c1fcaa23: validate.ps1, npm ci, compile, lint 0 errors/136 warnings, runner coverage, citation parity, test:node 980/0 (18 skipped), VS Code 1.122.1 and 1.145.2 6131+17 passing/0 failing each, Playwright 253/0 (4 skipped), production npm audit 0, validate-vsix source (v6.0.12 2026-11-09), release preflight, 8/8 target VSIXs validated, release-notes PDF, verify-set, installed-VSIX #475 19/19 on both hosts; tree clean after; ~/.failsafe unchanged. #463 code unchanged since its e2e 30/30 evidence (74aab814). Content Hash = the implement gate artifact.
+
+---
+
+### Entry #922: SESSION SEAL - plan-v6012-release-governance (v6.0.12 release)
+
+**Timestamp**: 2026-11-10T00:10:25Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-11-09T1958-754dfc`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Target**: `.failsafe/governance/plans/plan-v6012-release-governance.md` (iteration 3)
+**Report**: plan (Content Hash = SHA256 of the audited plan, LF-normalized)
+**Gate**: `.qor/gates/2026-11-09T1958-754dfc/substantiate.json`
+
+**Content Hash**: `13539396f256c9972dd4f8b85fbd0acf828c57afe4398caecd9e9152f8385475`
+**Previous Hash**: `fd9d2ba7e81f1d7d74c96847d6d7e16f119ad5a03c140187414d79fb515dd471`
+**Chain Hash (Merkle seal)**: `c269ea2446ad035940a1e927effe765f482eb553de07c3475aed8bf4520689ef`
+
+**Decision**: SESSION SEAL for the v6.0.12 release, plan-v6012-release-governance.md iteration 3 (content hash = the audited plan, sha256 13539396f256c9972dd4f8b85fbd0acf828c57afe4398caecd9e9152f8385475; retrospective PASS #919 after VETOs #917 and #918). Reality = Promise, with disclosures. Sealed scope: v6.0.11..c1fcaa231bd3eddee4304d3a469f4c9ca434a45a, the artifact-producing release commit; extension tree 1d49f88af3081f5b96b42b6e5c6e1b44453207ce. Every planned group exists and was qualified on that exact commit (gates in #921). Local qualification set SHA256SUMS.txt sha256 b0c9bb25c3ef84c485e566857e91362dfb9694652cdfd2db352eca51821312be (8 target VSIXs + FailSafe-v6.0.12-Release-Notes.pdf 304ae34d...); VSIX and PDF builds are not byte-reproducible, so the tag-triggered workflow builds, validates and publishes its own set from a commit whose FailSafe/extension tree must equal 1d49f88a. Bound governance state: G4 disposition docs/releases/V6_0_12_G4_DISPOSITION.md sha256 15db89647f398b84b4ea536bf70c2d96e27147a7a2eb94ed204ee75df0b6118b accepted at #920 (v6.0.12 only; expires at v6.0.13 or 2026-12-09, strict reading); #916 PASS for #633; #919 PASS for the release plan. Disclosures: the RC1 delta and #619 were implemented before audit (declared ordering inversion; retrospective review only); disclosed v6.0.11 razor debt accepted; G4 not implemented; frozen Qor-logic 15/19 conformance, tested-against stays 0.169.0; #476 neutral advisory only; #505 observes editor saves, does not prevent them; a git worktree is not an OS sandbox (Aider/Continue refused); historical breaks at #340 and #382 and older numbering residue; October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED. Not a release GO: publication requires the owner's approval of the exact-commit GO evidence. No merge, tag or publication.
+
+---
