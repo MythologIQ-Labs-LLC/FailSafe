@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-10T1643-b038e8",
-  "ts": "2026-11-10T16:43:39Z",
+  "ts": "2026-11-10T17:46:20Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-witness.md",
-  "iteration": 1,
+  "iteration": 2,
   "change_class": "feature",
   "doc_tier": "standard",
   "pr_target": "main",
@@ -38,13 +38,13 @@
   "open_questions": [
     "Owner decisions in docs/releases/V6_0_13_G4_OWNER_DECISIONS.md"
   ],
-  "plan_content_hash": "73d670915b7c18087db17e311aad6392ca06a16e4c61a323f425708960ee8051",
+  "plan_content_hash": "6e3ffd98fe24f5d31b6cc3e2491e5623fe8b6aee22bd6bfc15e955caa0fff7d1",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "absent",
-    "ts": "2026-11-10T16:43:39Z"
+    "ts": "2026-11-10T17:46:20Z"
   }
 }

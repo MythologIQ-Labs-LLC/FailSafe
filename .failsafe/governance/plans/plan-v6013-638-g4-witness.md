@@ -1,6 +1,6 @@
 # Plan: v6.0.13 G4 independently witnessed ledger checkpoints (#638)
 
-**iteration**: 1
+**iteration**: 2 (after the independent audit VETO; ledger entry recorded once ledger order allows)
 **change_class**: feature (release-governance tooling; not packaged in the VSIX)
 **risk_grade (proposed)**: L3 (governance integrity, cryptographic verification)
 **pr_target**: `main` via draft PR #641
@@ -65,6 +65,18 @@ These are listed in `V6_0_13_G4_OWNER_DECISIONS.md`:
 - cadence and seal wiring;
 - the key-transition format;
 - whether revocation-notice timestamps must be verified.
+
+## Iteration 2 (audit VETO remediation)
+
+**B1.** Falsification tests now kill every mutant the audit listed: M06/M07 (registry rollback hidden by a merge, at HEAD and under a forged checkpoint), M18 (a validly signed substitute for an earlier checkpoint), M21 (a changed gap statement) and M31 (a genesis with no #914 epoch heading). They also kill M19, M20 and M23 (time skew, chain time order, token hash algorithm), plus the newly found M01, M02b and M10. Mutation re-run: 38 mutants, 37 caught. The one survivor is the token `granted` check, which `openssl ts -verify` already makes impossible to exercise; it is documented as defense in depth.
+
+**Non-blocking fixes:**
+- N3: `--release` refuses `--tsa-ca`, and `--repository` pins the expected repository.
+- N4: unexpected errors return BLOCKED `INTERNAL_ERROR`, exit 2.
+- N6: `granted`, the repository and the key algorithm are enforced.
+- N2 (validate at token time with `-attime`) and N5 (a release PASS counts only from a clean checkout with `--release`) are documented as limitations and owner decisions 9 and 10.
+
+Tests: 65/65 G4; full `test:node` 1045 passed, 0 failed.
 
 ## Not changed
 

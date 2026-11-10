@@ -1,0 +1,50 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-10T1643-b038e8",
+  "ts": "2026-11-10T17:46:20Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-witness.md",
+  "iteration": 2,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #638",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - G4 manifest, signers, RFC 3161, verifier and falsification tests (implemented before this plan; spec audited #917-#919)",
+    "Phase 2 - owner TPM enrollment and TSA selection; genesis checkpoint at the v6.0.13 seal; verifier PASS with pinned fingerprint"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Head deletion and re-genesis undetectable without an external head or pinned fingerprint"
+    ],
+    "non_goals": [
+      "No VSIX change",
+      "No ledger history change"
+    ],
+    "exclusions": [
+      "No TPM key or TSA engagement without owner approval"
+    ]
+  },
+  "ci_commands": [
+    "npm run test:node (g4Witness, g4FalsifyLedger, g4FalsifyKeys, g4FalsifyTokens)",
+    "node scripts/g4-verify-checkpoint.cjs --trust-fingerprint <fp>"
+  ],
+  "open_questions": [
+    "Owner decisions in docs/releases/V6_0_13_G4_OWNER_DECISIONS.md"
+  ],
+  "plan_content_hash": "6e3ffd98fe24f5d31b6cc3e2491e5623fe8b6aee22bd6bfc15e955caa0fff7d1",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-10T17:46:20Z"
+  }
+}
