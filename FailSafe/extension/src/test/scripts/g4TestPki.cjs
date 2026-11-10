@@ -67,6 +67,33 @@ function createLocalTsa(bin, dir) {
   };
 }
 
+/** OpenSSL `ca` configuration and database for one self-signed test certificate. */
+function selfSignCaConfig(dir, keyPath) {
+  const dbDir = path.join(dir, "local-ca-db");
+  const issuedDir = path.join(dbDir, "issued");
+  fs.mkdirSync(issuedDir, { recursive: true });
+  fs.writeFileSync(path.join(dbDir, "index.txt"), "");
+  fs.writeFileSync(path.join(dbDir, "serial"), "1000\n");
+  const quoted = (v) => {
+    if (/[\r\n\0]/.test(v)) throw new Error("unsafe path in G4 test CA configuration");
+    const normalized = v.split(path.sep).join("/");
+    // OpenSSL config treats backslash as an escape. Escape it BEFORE quotes.
+    return '"' + normalized.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+  };
+  return [
+    "[ca]", "default_ca = local_signer_ca", "[local_signer_ca]",
+    "new_certs_dir = " + quoted(issuedDir),
+    "database = " + quoted(path.join(dbDir, "index.txt")),
+    "serial = " + quoted(path.join(dbDir, "serial")),
+    "private_key = " + quoted(keyPath),
+    "default_md = sha256", "policy = policy_any",
+    "x509_extensions = signer_extensions",
+    "[policy_any]", "commonName = supplied",
+    "[signer_extensions]", "basicConstraints = critical,CA:FALSE",
+    "keyUsage = critical,digitalSignature", "",
+  ].join("\n");
+}
+
 /**
  * TEST ONLY: ephemeral P-256 signer. Validity defaults to [now-1h, now+1d];
  * pass `notAfterMs` in the past to model an expired key window.
@@ -80,29 +107,7 @@ function createTestSigner(bin, dir, name, { notBeforeMs, notAfterMs } = {}) {
   fs.writeFileSync(keyPath, privateKey.export({ type: "pkcs8", format: "pem" }));
   // OpenSSL req -x509 does not accept -not_before / -not_after on supported
   // CI OpenSSL versions. Use ca -selfsign with a throwaway local CA database.
-  const dbDir = path.join(dir, "local-ca-db");
-  const issuedDir = path.join(dbDir, "issued");
-  fs.mkdirSync(issuedDir, { recursive: true });
-  fs.writeFileSync(path.join(dbDir, "index.txt"), "");
-  fs.writeFileSync(path.join(dbDir, "serial"), "1000\n");
-  const quoted = (v) => {
-    if (/[\r\n\0]/.test(v)) throw new Error("unsafe path in G4 test CA configuration");
-    const normalized = v.split(path.sep).join("/");
-    // OpenSSL config treats backslash as an escape. Escape it BEFORE quotes.
-    return '"' + normalized.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
-  };
-  const caConfig = [
-    "[ca]", "default_ca = local_signer_ca", "[local_signer_ca]",
-    "new_certs_dir = " + quoted(issuedDir),
-    "database = " + quoted(path.join(dbDir, "index.txt")),
-    "serial = " + quoted(path.join(dbDir, "serial")),
-    "private_key = " + quoted(keyPath),
-    "default_md = sha256", "policy = policy_any",
-    "x509_extensions = signer_extensions",
-    "[policy_any]", "commonName = supplied",
-    "[signer_extensions]", "basicConstraints = critical,CA:FALSE",
-    "keyUsage = critical,digitalSignature", "",
-  ].join("\n");
+  const caConfig = selfSignCaConfig(dir, keyPath);
   const configPath = path.join(dir, "ca.cnf");
   const csrPath = path.join(dir, name + ".test-only.csr");
   const pemPath = path.join(dir, name + ".test-only.crt.pem");
