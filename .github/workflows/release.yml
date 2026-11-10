@@ -35,7 +35,7 @@ concurrency:
 jobs:
   validate:
     name: SemVer 2.0.0 Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,7 +58,7 @@ jobs:
   build:
     name: Build & Test
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # The one-set guard reads this tag's Actions history (a job-level block
     # replaces the workflow default, so contents: read is listed again).
     permissions:
@@ -147,7 +147,7 @@ jobs:
   publish-vscode:
     name: Publish to VS Code Marketplace
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Gate: requires a reviewer to approve the `production` environment before
     # publish fires. Configure required reviewers under
     # Repository Settings → Environments → production.
@@ -200,7 +200,7 @@ jobs:
   publish-openvsx:
     name: Publish to Open VSX
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Same manual-approval gate as publish-vscode. Both publish jobs sit
     # behind the `production` environment so a reviewer must approve before
     # either marketplace receives the new VSIX.
@@ -265,7 +265,7 @@ jobs:
   github-release:
     name: Create GitHub Release
     needs: [publish-vscode, publish-openvsx]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     concurrency:

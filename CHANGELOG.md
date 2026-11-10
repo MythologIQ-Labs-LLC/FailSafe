@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.12] - 2026-11-09
+## [6.0.12] - 2026-11-10
 
 ### Added
 - Saved recordings can now be managed from the Console: a new opt-in control and Manage/Delete interface support local audio-vault storage. Each recording needs separate approval in VS Code before it is saved. Storage is limited to 256 MiB; recordings do not have an automatic retention deadline, so delete ones you no longer need (#465).

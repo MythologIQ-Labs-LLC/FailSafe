@@ -82,7 +82,7 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 
 ---
 
-**Current Release**: v6.0.12 (2026-11-09)
+**Current Release**: v6.0.12 (2026-11-10)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
