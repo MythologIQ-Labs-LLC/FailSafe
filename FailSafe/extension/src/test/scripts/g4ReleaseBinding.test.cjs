@@ -68,8 +68,12 @@ it("--release refuses a same-size swap of a checkpoint file with its mtime resto
   const dir = S.copyRepo(base);
   const inputs = releaseInputs(dir);
   S.git(dir, "status", "--porcelain");
-  const { abs, stat } = corruptToken(dir);
+  const { rel, abs, stat } = corruptToken(dir);
   fs.utimesSync(abs, stat.atime, stat.mtime);
+  // Timestamp restoration can still be detected by git on other platforms.
+  // Hide the modified tracked blob deliberately to exercise byte binding.
+  S.git(dir, "update-index", "--assume-unchanged", rel);
+  assert.equal(S.git(dir, "status", "--porcelain"), "", "test requires git status to be blind");
   expectVerdict(S.verify(dir, inputs), "REFUSED", "RELEASE_TREE_MISMATCH");
 });
 
