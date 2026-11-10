@@ -4,7 +4,7 @@
  *
  * - a local RFC 3161 TSA (`openssl ts -reply`) under a throwaway test CA;
  * - ephemeral software P-256 signer keys (Node `crypto`) with self-signed
- *   certificates made by `openssl req -x509`.
+ *   certificates made by `openssl ca -selfsign` (exact UTC validity windows).
  *
  * Everything lives in a temp directory the caller deletes. None of these keys
  * or certificates is, or may become, a FailSafe owner key or trusted TSA.
@@ -78,11 +78,37 @@ function createTestSigner(bin, dir, name, { notBeforeMs, notAfterMs } = {}) {
   const cerPath = path.join(dir, `${name}.test-only.cer`);
   fs.writeFileSync(path.join(dir, "req.cnf"), REQ_CNF);
   fs.writeFileSync(keyPath, privateKey.export({ type: "pkcs8", format: "pem" }));
+  // OpenSSL req -x509 does not accept -not_before / -not_after on supported
+  // CI OpenSSL versions. Use ca -selfsign with a throwaway local CA database.
+  const dbDir = path.join(dir, "local-ca-db");
+  const issuedDir = path.join(dbDir, "issued");
+  fs.mkdirSync(issuedDir, { recursive: true });
+  fs.writeFileSync(path.join(dbDir, "index.txt"), "");
+  fs.writeFileSync(path.join(dbDir, "serial"), "1000\n");
+  const quoted = (v) => '"' + v.split(path.sep).join("/").replace(/"/g, '\\"') + '"';
+  const caConfig = [
+    "[ca]", "default_ca = local_signer_ca", "[local_signer_ca]",
+    "new_certs_dir = " + quoted(issuedDir),
+    "database = " + quoted(path.join(dbDir, "index.txt")),
+    "serial = " + quoted(path.join(dbDir, "serial")),
+    "private_key = " + quoted(keyPath),
+    "default_md = sha256", "policy = policy_any",
+    "x509_extensions = signer_extensions",
+    "[policy_any]", "commonName = supplied",
+    "[signer_extensions]", "basicConstraints = critical,CA:FALSE",
+    "keyUsage = critical,digitalSignature", "",
+  ].join("\n");
+  const configPath = path.join(dir, "ca.cnf");
+  const csrPath = path.join(dir, name + ".test-only.csr");
+  const pemPath = path.join(dir, name + ".test-only.crt.pem");
+  fs.writeFileSync(configPath, caConfig);
+  sh(bin, ["req", "-config", path.join(dir, "req.cnf"), "-new", "-key", keyPath,
+    "-subj", "/CN=G4 TEST ONLY signer " + name, "-out", csrPath]);
   const now = Date.now();
-  sh(bin, ["req", "-config", path.join(dir, "req.cnf"), "-x509", "-new", "-key", keyPath, "-sha256",
-    "-subj", `/CN=G4 TEST ONLY signer ${name}`, "-not_before", utcStamp(notBeforeMs ?? now - 3600e3),
-    "-not_after", utcStamp(notAfterMs ?? now + 86400e3), "-addext", "keyUsage=critical,digitalSignature",
-    "-outform", "DER", "-out", cerPath]);
+  sh(bin, ["ca", "-selfsign", "-config", configPath, "-in", csrPath, "-out", pemPath,
+    "-startdate", utcStamp(notBeforeMs ?? now - 3600e3),
+    "-enddate", utcStamp(notAfterMs ?? now + 86400e3), "-batch"]);
+  sh(bin, ["x509", "-in", pemPath, "-outform", "DER", "-out", cerPath]);
   return createSoftwareTestSigner({ privateKey, certificateDer: fs.readFileSync(cerPath) });
 }
 
