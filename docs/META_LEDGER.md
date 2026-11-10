@@ -35932,3 +35932,43 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-636-release-integration-path.md iteration 2 (plan sha256 fe26b2c66c9bff4323a339ac971cf6e234171b900543c2da460d8e4ec1295e6a; candidate 506262f6 on main e7549b42), after VETO #928. Independent Option B audit, L3. B1 closed: no session key is tracked on the branch, the former commits 46fcfdc4 and 5519fa66 are unreachable from every local and remote ref (GitHub returns 422 for both), and no remote ref ever held a key; the G4 lane 3d92d88f is key-free. B2 closed: the seal binds the sealed commit S and its FailSafe/extension subtree; S->final head may touch listed governance paths only; merge tree equals final-head tree and merge extension subtree equals the seal; all mechanical. N1-N6 addressed. Post-audit wording applied per auditor notes: ancestry checked immediately before merge and recovery stated; rule suite selected by after_sha/before_sha; cited decision files excluded from the governance allow-list; merge-commit-only recorded as policy; acceptance wording 'no rule bypassed'; the acceptance result paragraph (PR #640, rule suite 5025516418 result=pass), lost from the working copy during a failed local rebase, restored with the audited facts.
 
 ---
+
+### Entry #930: GATE TRIBUNAL - plan-v6013-638-g4-witness (iteration 1) - VETO
+
+**Timestamp**: 2026-11-10T18:11:17Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1643-b038e8`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-witness.md`
+**Report**: iteration-1 audit report (SHA-256 as reported by the auditor; text not preserved, see Decision)
+**Gate**: `.qor/gates/2026-11-10T1643-b038e8/audit.json`
+
+**Content Hash**: `aa111433480a441be1b33cab023e44ce69b8c5821243686b83852af3babff4bf`
+**Previous Hash**: `7616aa5eb52f547cb89ba171151aee3e0f92a1e5ec81b0dc0f16ca5c9ce5ade8`
+**Chain Hash (Merkle seal)**: `9b0775093550000522027e391ee7c776ea03e281e6802991869e445c492370b0`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-witness.md iteration 1 (plan sha256 73d670915b7c18087db17e311aad6392ca06a16e4c61a323f425708960ee8051; candidate 3d92d88f, code 1d557ce9/d664ce03 on main f923fffb; draft PR #641). Independent Option B audit, L3, retrospective (implementation preceded the plan; specification audited at #917-#919). The verifier matches the audited G4 design and has no fail-open path; razor, lint, owner-only boundaries (no key, no TSA) and BLOCKED behaviour on the real repository confirmed. Blocking B1 (coverage-gap): 31 auditor mutations, six verifier checks survived with all 47 tests passing (registry rollback anchored to checkpoints M06/M07, previous-checkpoint link M18, gap-statement digest M21, genesis epoch heading M31; time and hash-algorithm checks M19/M20/M23 non-blocking). Content Hash is the SHA-256 of the iteration-1 report as reported by the auditor; that report was an untracked staging file and was overwritten by the iteration-2 report, so its text is not preserved. Recorded at #930 after #929 to keep ledger order.
+
+---
+
+### Entry #931: GATE TRIBUNAL - plan-v6013-638-g4-witness (iteration 2) - PASS
+
+**Timestamp**: 2026-11-10T18:11:17Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1643-b038e8`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-witness.md`
+**Report**: `.agent/staging/AUDIT_REPORT-638.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1643-b038e8/audit.json`
+
+**Content Hash**: `f7cb4f69de5444681655a394f6e809b033f6c6827054798975c86d61dab2bd47`
+**Previous Hash**: `9b0775093550000522027e391ee7c776ea03e281e6802991869e445c492370b0`
+**Chain Hash (Merkle seal)**: `b70b68152c1b8f1cd4c1332cc6fa932b4365c5ddc1b4314f05e6ace3a695ca2b`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-witness.md iteration 2 (plan sha256 6e3ffd98fe24f5d31b6cc3e2491e5623fe8b6aee22bd6bfc15e955caa0fff7d1; candidate 41d39e2e, remediation 94499d9d/f5f43a8e; rebased onto main 9dacd662 without content change). Independent audit re-applied its own 32 original mutations on a fresh clone: all caught by 65 G4 tests, including M06/M07 (merge-hidden registry rollback at HEAD and under a forged checkpoint), M18, M21, M31, M19, M20, M23, M01, M02b, M10; new remediation mutants M33-M37 caught; the token 'granted' check survives as defence in depth (openssl ts -verify rejects non-granted responses; grantedWithMods fails closed). No fail-open path; test:node 1045/0; razor and lint clean; no session key tracked. G4 is NOT yet qualified for v6.0.13: the verifier reports BLOCKED TSA_POLICY_UNSELECTED until the owner approves TPM enrollment, selects a TSA, a genesis checkpoint is made at the v6.0.13 seal and --release verification passes. Non-blocking: grantedWithMods policy, --release should enforce trust inputs and a clean tree, -attime and working-tree reads are owner decisions 9/10, M06/M07 test labels swapped.
+
+---

@@ -3127,3 +3127,30 @@ Bind a seal to the sealed commit and its product subtree. Then restrict the diff
 ### Remediation
 
 Both commits were rebuilt key-free. The release path's iteration 2 (PASS #929) binds the seal to S and the extension subtree, and enforces a governance-path allow-list from S to the final head.
+
+## SG Event 2026-11-10: A falsification suite that passed with six verifier checks deleted (plan-v6013-638 G4 iter 1, ledger #930)
+
+**Date**: 2026-11-10
+**Verdict ID**: Entry #930 - GATE TRIBUNAL - VETO (session `2026-11-10T1643-b038e8`)
+**Failure Mode**: COVERAGE_GAP
+
+### What Failed
+
+The G4 verifier correctly implemented the audited design: prefix continuity, a monotonic revocation registry, a pinned TSA root, and no fail-open path. Even so, deleting any of six checks left all 47 tests passing. The deletable checks were:
+- the checkpoint-anchored registry rollback checks;
+- the previous-checkpoint link;
+- the gap-statement digest;
+- the genesis epoch heading;
+- and, non-blocking, the time and hash-algorithm checks.
+
+### Why It Failed
+
+The tests asserted end-to-end refusals, but each attack was also caught by an earlier, broader check. That masked whether the dedicated check worked at all. A merge-hidden registry rollback, for example, was only ever exercised through the Git-history layer.
+
+### Pattern to Avoid
+
+For security verifiers, accept a check only when a mutation that deletes it makes a dedicated test fail. Build each attack so that only the check under test can fire, and assert the specific refusal code.
+
+### Remediation
+
+Iteration 2 (PASS #931) adds isolated attacks for every surviving check. The auditor's own 32 mutations are now all caught. The only survivor is the token `granted` check, which `openssl ts -verify` already makes impossible to exercise; it is documented as defense in depth.
