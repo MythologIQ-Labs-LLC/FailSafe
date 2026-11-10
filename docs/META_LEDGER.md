@@ -35872,3 +35872,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: RELEASE PUBLISHED: FailSafe v6.0.12, 2026-11-10. Content Hash = the published SHA256SUMS.txt (LF-normalized). Tag v6.0.12: new annotated object e949f270479c2524924ab438689f2f3a8e9eab39 -> commit 0e70e53956e893cda40c7eea01722dfc25db7cf0 (main; seal #925; extension tree 3b8177919117ba0629acd901650cbf09007ab3f8), replacing the unpublished object ff833f5c410d9418291303d31702c4075846b1a0 -> 45c1957c once under the owner exception (#634), after a no-publication re-check at 2026-11-10T15:14Z. Release run 42842387243 (single tag-triggered run, ubuntu-24.04, checkout 0e70e539): SemVer gate, Build & Test (test:all: host 6139+17 passing, node 967/0, Playwright 253 passed; 8 target VSIXs; PDF; verify-set), Publish to VS Code Marketplace, Publish to Open VSX, Create GitHub Release: all success. Production approved after verifying the CI artifact set: SHA256SUMS verified; every VSIX version 6.0.12 with its target, package.json identical to the tag, README/CHANGELOG markers 2026-11-10; contents identical entry-for-entry (EOL-normalized) to the locally qualified packages. Published artifact identities (SHA256SUMS.txt sha256 fadb1be668ef537d29873a656d06e0f054518f8b1e60b6b017f73d1790c5e85c): win32-x64 c247052b, win32-arm64 e4a6ba1b, linux-x64 678cd323, linux-arm64 985e32d3, alpine-x64 f4ca3e9f, alpine-arm64 00651e72, darwin-x64 96cd4a54, darwin-arm64 15a68828, FailSafe-v6.0.12-Release-Notes.pdf f29f551f. These are CI-built identities, distinct from the local qualification sets recorded in #922 and #925 (builds are not byte-reproducible). Post-publication: GitHub Release https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.12 (not draft, 10 assets, checksums equal the CI set); verify-release-provenance: VS Code Marketplace and Open VSX each serve all 8 targets byte-identical to SHA256SUMS; listings show 6.0.12. G4 deferral (#920) used within its expiry. October VETOs #610-#612 and event 7126134e remain UNKNOWN/UNRESOLVED.
 
 ---
+
+### Entry #927: GATE TRIBUNAL - plan-v6013-ci-635-runner-compatibility (iteration 1) - PASS
+
+**Timestamp**: 2026-11-10T16:24:47Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1620-7f3ffb`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-ci-635-runner-compatibility.md`
+**Report**: `.agent/staging/AUDIT_REPORT-635.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1620-7f3ffb/audit.json`
+
+**Content Hash**: `87063353c229b212740cb92a4d8de645a3bfd4c92f80acdc548e8d040d17aca1`
+**Previous Hash**: `71b46e4091cff6597310b602cd67559e04a4033df9ec49006a067f61c9e49074`
+**Chain Hash (Merkle seal)**: `0ba3561f271ffd5ef2e180e0a1676f127d9ceddadd26ce75a493afe54fec6246`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-ci-635-runner-compatibility.md iteration 1 (plan sha256 e4c8ce8eef72e4e7fb3e1cf344d33a81c8d267ac238f2871ab2e4b66e9958d5a; candidate 9c3414c9 on main f923fffb; PR #640). Independent Option B audit, RETROSPECTIVE: the two runner pins were implemented before the plan (disclosed). Verified: the workflow diff is exactly pr-full-test.yml full-test and native-vsix-qualification.yml package-all runs-on -> ubuntu-24.04; no trigger, permission, secret, environment, concurrency or step change; the 7-entry native smoke matrix unchanged; no commit carries a CI-skip marker. Native qualification sequenced to the first release/v6.0.13-rc* push ruled sound (the published-version guard fails by design on 6.0.12); all 7 smoke legs must pass there before any v6.0.13 tag. Merge obligations: completed successful PR Full Test on the final head; normal PR merge with rule-suite result=pass recorded (stop rather than bypass); protected-workflow owner approval recorded (owner instruction 2026-11-10). After this audit the plan's checklist was updated per auditor notes N2/N6 (wording only). Non-blocking: #639's run finished successfully after it closed; its CI-skip reason stands.
+
+---

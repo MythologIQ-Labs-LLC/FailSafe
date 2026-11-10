@@ -1,0 +1,28 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T1620-7f3ffb",
+  "ts": "2026-11-10T16:24:48Z",
+  "target": ".failsafe/governance/plans/plan-v6013-ci-635-runner-compatibility.md",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT-635.md",
+  "risk_grade": "L3",
+  "findings_categories": [],
+  "target_content_hash": "ad67dbdf0ee5058f34f39acc8598f909fdb1b45bb6d43cec53fa9c1254c4219f",
+  "report_content_hash": "87063353c229b212740cb92a4d8de645a3bfd4c92f80acdc548e8d040d17aca1",
+  "iteration": 1,
+  "ledger_entry": 927,
+  "ledger_chain_hash": "0ba3561f271ffd5ef2e180e0a1676f127d9ceddadd26ce75a493afe54fec6246",
+  "audited_candidate": "9c3414c9",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [],
+  "merge_obligations": "PR Full Test success on final head; rule-suite pass; native qualification on first v6.0.13 RC",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "pass",
+    "ts": "2026-11-10T16:24:48Z"
+  }
+}

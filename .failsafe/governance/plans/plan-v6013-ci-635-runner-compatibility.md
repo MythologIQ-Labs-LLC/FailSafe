@@ -32,8 +32,8 @@ This replacement branch uses commit messages **without** `[skip ci]` on every ch
 
 ## Acceptance evidence
 
-- [ ] Exact diff restricted to the two named runner declarations plus this governance plan.
-- [ ] Independent plan/audit PASS and protected workflow owner approval recorded.
+- [x] Exact diff restricted to the two named runner declarations plus this governance plan and its `.qor` gate artifacts and session pointer (audit #927).
+- [x] Independent plan/audit PASS (ledger #927). Protected-workflow owner approval: the owner instruction of 2026-11-10 (v6.0.13 execution brief, Priority 1) directs this change and its merge through the normal protected-branch PR process after mandatory checks and audit PASS.
 - [ ] `pr-full-test.yml` runs on a real pull request and completes its Playwright install and `test:all` (no skipped workflow).
 - [ ] `native-vsix-qualification.yml` runs on the first actual v6.0.13 release-candidate branch push (`release/v6.0.13-rc*`), with a complete package/PDF/release rehearsal and the native smoke matrix. **Sequencing (2026-11-10):** this workflow's "published lookups" step fails by design for an already-published version. On any branch still at 6.0.12, including this PR's branch or a manual dispatch of it, the run stops before the artifact upload, so the smoke matrix cannot run. A throwaway branch with a fake version bump would violate the CI budget rule against branches opened only to trigger CI. The native qualification is therefore taken on the real v6.0.13 RC branch, cut from `main` after this PR merges, before any v6.0.13 tag. A failure there is fixed forward under its own gate and blocks the v6.0.13 release, not this merge. The pin itself is the same one already proven by release run 42842387243 (Playwright chromium installed and the PDF built on `ubuntu-24.04`).
 - [ ] No weakening of release workflow, secrets, permissions, tests, checksums or protected-main rules.
