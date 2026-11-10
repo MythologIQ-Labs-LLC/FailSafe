@@ -85,7 +85,12 @@ function createTestSigner(bin, dir, name, { notBeforeMs, notAfterMs } = {}) {
   fs.mkdirSync(issuedDir, { recursive: true });
   fs.writeFileSync(path.join(dbDir, "index.txt"), "");
   fs.writeFileSync(path.join(dbDir, "serial"), "1000\n");
-  const quoted = (v) => '"' + v.split(path.sep).join("/").replace(/"/g, '\\"') + '"';
+  const quoted = (v) => {
+    if (/[\r\n\0]/.test(v)) throw new Error("unsafe path in G4 test CA configuration");
+    const normalized = v.split(path.sep).join("/");
+    // OpenSSL config treats backslash as an escape. Escape it BEFORE quotes.
+    return '"' + normalized.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+  };
   const caConfig = [
     "[ca]", "default_ca = local_signer_ca", "[local_signer_ca]",
     "new_certs_dir = " + quoted(issuedDir),
