@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-10T1844-963204",
-  "ts": "2026-11-10T18:44:15Z",
+  "ts": "2026-11-10T19:11:04Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-release-mode.md",
-  "iteration": 1,
+  "iteration": 2,
   "change_class": "feature",
   "doc_tier": "standard",
   "pr_target": "feat/638-g4-witness-v6013-r2",
@@ -35,13 +35,13 @@
     "npm run test:node"
   ],
   "open_questions": [],
-  "plan_content_hash": "6f38a060aec4173f5ac8376e212c3c1c5de1c790e720748cadb1e045fbe78712",
+  "plan_content_hash": "aedaa1d9c763581e334dba1ba2d82993d54aaa61edcc393284c97dfa5587fea2",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "absent",
-    "ts": "2026-11-10T18:44:15Z"
+    "ts": "2026-11-10T19:11:04Z"
   }
 }

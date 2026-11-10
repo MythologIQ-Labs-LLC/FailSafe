@@ -35992,3 +35992,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: BOUNDED-DELTA AUDIT ACCEPTED for PR #644 (G4 witness, #638): PASS #931 extends to final source 6022d7ef0bf125917cba2a669830eb3dbaede492. Delta 20255f25..6022d7ef is one test-helper file (g4TestPki.cjs: test signer certificates via openssl req + ca -selfsign with exact validity windows for CI OpenSSL compatibility, quoted config paths, and a razor extraction selfSignCaConfig); the audited verifier, library, CLI, tools/g4 and docs are byte-identical. Independent re-run of the auditor's own mutation set on a fresh clone: 37 of 38 caught, only the known token 'granted' defence-in-depth check survives; key-window mutant killed by both window tests that depend on the changed helper. G4 suites 65/65; OpenSSL absent: 59 skipped with reason, 0 fail; razor and eslint clean; no session key tracked. Auditor's single full test:node run: 1044 pass, 1 fail (ArchitectureLinks event-loop lag 121 ms, pre-existing timing flake, 12/12 in isolation); the governor's run on the same tree: 1045 pass, 0 fail; CI PR Full Test 42876997189 and CodeQL 42876985475 pass on 6022d7ef. Non-blocking: quote tsaConfig dir the same way (D1). G4 remains NOT operationally qualified: verifier BLOCKED TSA_POLICY_UNSELECTED until owner key enrollment and TSA selection.
 
 ---
+
+### Entry #933: GATE TRIBUNAL - plan-v6013-638-g4-release-mode (iteration 1) - VETO
+
+**Timestamp**: 2026-11-10T19:11:04Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1844-963204`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-release-mode.md`
+**Report**: `.agent/staging/AUDIT_REPORT-638-release-mode.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T1844-963204/audit.json`
+
+**Content Hash**: `51dd549bcf51f192ba55a1e4b7af73de3025ef97d4276b921b5f869e96f27f43`
+**Previous Hash**: `5a385e46c5e37723ddbc91ca96c66f1c6e0971c2c7df0c308ce25875f8e617d3`
+**Chain Hash (Merkle seal)**: `1ca30d5d4642a27beefeb1978cdaabad0ee66159e86b46b2f60f2f1593069c03`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-release-mode.md iteration 1 (plan sha256 6f38a060aec4173f5ac8376e212c3c1c5de1c790e720748cadb1e045fbe78712; candidate abaa5b31 on 6022d7ef; draft PR #646 stacked on #644). Independent Option B audit by a fresh auditor, L3. The ordinary release-mode cases are enforced, fail closed and run before working-tree content is read. Blocking: B1 (security-l3, specification-drift) cleanliness was decided by git status while checkpoints and certificates are read from the checkout, so update-index --skip-worktree, --assume-unchanged or a same-size swap with restored mtime still gave a release PASS over bytes that differ from the commit; B2 (security-l3) '--commit --release' swallowed the flag and produced a diagnostic PASS indistinguishable from a release PASS; B3 (specification-drift) a stale operations-doc line. Coverage gaps: four of 23 auditor mutants survived. Non-blocking: replace refs, submodule status, gate high_risk_target wording. Report preserved verbatim.
+
+---
