@@ -37,13 +37,13 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
    - Every required check passes on the final PR head **H**: the PR Full Test, CodeQL and code quality. A missing or skipped check is not a pass.
    - H's commit message has no CI-skip marker (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`, `skip-checks: true`), so the PR Full Test runs on H.
    - **Ancestry**, checked immediately before `gh pr merge`: `origin/main` is an ancestor of H. If `main` moved after S, the release branch is updated and the seal is redone on the new base before merging. A stale seal is never merged.
-   - **Seal scope.** Inspect **every** post-seal commit's diff (not just the net S→H diff) against the governance-path list and permitted new G4 evidence (see exception). The S→H history must be linear, with no intervening merge; otherwise re-seal on the new base. `git rev-parse H:FailSafe/extension` equals S's sealed subtree. Every post-seal checkpoint must have a clean-HEAD `mode: release` `PASS OK` verification using the owner-held fingerprint and latest external head before merge; absence of an approved TSA or owner key remains NO-GO.
+   - **Seal scope.** `git merge-base --is-ancestor S H` exits 0 and `git rev-list --merges S..H` prints nothing; otherwise re-seal on the new base. Every post-seal commit C is inspected with `git diff-tree --no-renames -r --name-status C~1 C` (run in Git Bash or PowerShell, not `cmd.exe`): each path is a governance path or, when G4 applies, part of the one permitted checkpoint addition (see the exception, checks 1 to 7). `git rev-parse H:FailSafe/extension` equals S's sealed subtree. When G4 applies, a release-mode verification on a clean H must pass as check 7 defines; a missing owner key or approved TSA is NO-GO.
 3. **Merge.** Use the **merge-commit** method only (`gh pr merge <n> --merge --match-head-commit <H>`). Squash and rebase rewrite commits and are not used for release PRs. The PR title carries no CI-skip marker, because GitHub puts the title into the merge commit message.
 4. **After merging, before any tag**, all of the following are checked. Any failure is a hard stop that is reported, not overridden.
    - The merge commit **M** has parents (previous `main`, H), and `M^{tree}` equals `H^{tree}`.
    - `M:FailSafe/extension` equals the sealed subtree.
    - M's message has no CI-skip marker.
-   - If G4 applies, independently verify on a clean checkout of **M**, using `--release --commit M`, `--repository`, the owner-held fingerprint and externally retained trusted checkpoint head. Require `mode: release` and `PASS OK` without limitations before any tag; a diagnostic PASS never counts.
+   - If G4 applies, verify on a clean checkout of **M** with `--release --commit M`, `--repository`, the owner-held fingerprint and the new checkpoint's externally retained head. Require `mode: release`, the `ok g4-NNNNNN commit <R>` line for this release's seal-record commit, and `PASS OK` without limitations before any tag; a diagnostic PASS never counts.
    - The rule suite for the push to `main` reports **`result=pass`**, meaning no rule was bypassed. It is selected by `after_sha == M` and `before_sha ==` the previous `main` (`GET /repos/{owner}/{repo}/rulesets/rule-suites?ref=refs/heads/main`).
    - **Recovery if any check fails:** do not tag. Fix forward through a new PR and re-seal. The failed merge and its rule suite are recorded.
 5. **Tag.** Create an annotated `vX.Y.Z` on M, so the tag-triggered release workflow runs from M. M is the artifact-producing commit. Once any publication has started, the tag is never moved.
@@ -62,16 +62,38 @@ GitHub authorization (rulesets, PR merge) and the native Qor-logic audit/seal ar
 
 ## Strict G4 post-seal checkpoint exception (#638)
 
-A checkpoint attests a **previously committed** seal or RC-promotion commit, so it cannot be included in that same commit. The signed/timestamped witness must therefore be added after S but before the final qualified PR head H. The G4 exception is **additive evidence only**, not a general expansion of mutable post-seal source.
+A G4 checkpoint attests a commit that already exists, so it cannot be part of that commit. It is therefore added after the seal and before the final qualified PR head H. The exception admits **new checkpoint evidence only**. It does not widen what else may change after the seal.
 
-- Allowed path shape: `tools/g4/checkpoints/g4-NNNNNN/{manifest.json,manifest.sig,timestamp.tsq,timestamp.tsr,tsa-chain.pem}`. All five named files must be added together under a **new** `g4-NNNNNN` directory; file contents remain byte-identical after first commit. No other file type, symlink, extra path, deletion, modification or rename is allowed under `tools/g4/checkpoints/`.
-- `tools/g4/keys/**`, `tools/g4/tsa-roots/**`, `tools/g4/tsa-policy.json`, `tools/g4/revocations.json`, and G4 product scripts are **not** added to the post-seal allow-list. Trust selection and public owner certificates must be committed and qualified **before** S. This exception cannot retroactively authorize them.
-- The operator requires a **linear chain of commits S→H**, no merge commits after S. A moved main or intervening merge means re-seal. For **each** post-seal commit C in order, run `git diff-tree --no-renames -r --name-status C^ C -- tools/g4/checkpoints` and apply the same name-status check to all paths. All G4 changes must be **A** only, in an entirely new numbered checkpoint directory, with five exact filenames. An added checkpoint file can never be changed, deleted or replaced in a later commit. A single net `git diff S H` is inadequate: it can hide intermediate add-then-rewrite tampering. Inspect `git ls-tree -r H -- tools/g4/checkpoints` to require mode `100644` on every checkpoint evidence file (no symlinks, submodules or executables), complete five-file directories and no extra paths. The original governance-path rules apply to every other file; sealed SHA-256 decision files must be unchanged.
-- A complete G4 checkpoint is not sufficient on its own. Before merging, the owner must already have an independently retained certificate fingerprint and latest checkpoint head. On a clean checkout of H, run `g4-verify-checkpoint.cjs --release` with `--commit H`, the correct repository, fingerprint and trusted head; require `mode: release` and `PASS OK`. The externally retained head is recorded at creation, **before** any later GitHub Release body exists; the release body is a subsequent publication of the already retained pin.
-- Immediately after the merge-commit M, re-run the same **release** verification with `--commit M` on a clean checkout. Verify the no-bypass rule-suite receipt and sealed extension subtree as above **before tagging**. If S's provenance, G4 signatures, RFC 3161 token, external pins, ancestry, CI or ruleset gate fails, stop and correct through a new audited PR/re-seal. No administrative bypass, unsigned checkpoint, diagnostic PASS or silently altered seal is permitted.
-- A new RC promotion requiring another checkpoint repeats the additive-only and exact-commit verification process. A provider outage or missing owner decision is a release block, not permission to weaken the rule.
+**Terms.** **S** is the sealed commit (step 1). **R** is the seal-record commit: the first commit after S whose `docs/META_LEDGER.md` contains this release's `SESSION SEAL` entry. `G4_WITNESS_OPERATIONS.md` calls R "the seal commit". **K** is the checkpoint commit. The order is S, then R, then K, then H (K may be H).
 
-These are required operator checks, not proof that CI already enforces the allow-list. No live checkpoint is authorized or created by this documentation amendment. Any future executable preflight requires its own tests and independent audit.
+**Shell.** Run every command below in Git Bash or PowerShell, never in `cmd.exe`. `cmd.exe` strips `^`, which turns a parent reference into the commit itself and prints an empty, clean-looking result. For the same reason the commands use `C~1`, not `C^`. An empty result is never accepted as proof by itself: the expected lines must be seen.
+
+**What may be added.** Exactly one new directory `tools/g4/checkpoints/g4-NNNNNN/`, numbered one above the previous checkpoint, with exactly these five files, all added in the single commit K: `manifest.json`, `manifest.sig`, `timestamp.tsq`, `timestamp.tsr`, `tsa-chain.pem`. Nothing under `tools/g4/checkpoints/` may be modified, deleted, renamed or replaced, in any commit.
+
+**What stays pre-seal.** `tools/g4/keys/**`, `tools/g4/tsa-roots/**`, `tools/g4/tsa-policy.json`, `tools/g4/revocations.json`, the G4 scripts and all product source are not on the post-seal list. Key, root, policy, revocation and archive changes are committed and qualified before S.
+
+**Checks before merging** (all must hold; any failure means re-seal or NO-GO):
+
+1. **S is an ancestor of H, and the history is linear.** `git merge-base --is-ancestor S H` exits 0, and `git rev-list --merges S..H` prints nothing. A moved base or a merge after S means re-sealing.
+2. **Every post-seal commit, all paths.** For each commit C in `git rev-list --reverse S..H`, run `git diff-tree --no-renames -r --name-status C~1 C` with no path filter. Every listed path must be a governance path (as defined above), or, in commit K only, one of the five checkpoint files with status `A`. Any other path or status voids the seal. The net `git diff S H` is not enough: it hides an add followed by a rewrite.
+3. **Commit K shows its five lines.** The step 2 output for K contains exactly five `A` lines under one new `tools/g4/checkpoints/g4-NNNNNN/`, and no other checkpoint line appears in any other commit.
+4. **Tree entries at H.** `git ls-tree -r H -- tools/g4/checkpoints` shows mode `100644` for every entry (no symlink `120000`, gitlink `160000` or executable `100755`), five files per directory, and no other path.
+5. **The checkpoint attests this release's seal.** The new checkpoint's `manifest.json` names `"commit"` equal to R, and `git show R:docs/META_LEDGER.md` contains this release's `SESSION SEAL` entry. A checkpoint that attests any other commit, or an S..H range with no new checkpoint, does not satisfy the exception when G4 applies.
+6. **Product bytes.** `git rev-parse H:FailSafe/extension` equals S's sealed subtree, and every decision file cited by SHA-256 in the seal is unchanged.
+7. **Release verification on H.** The owner already holds, outside Git, the certificate fingerprint and the head of the **new** checkpoint, written down when it was created and before it was committed. On a clean checkout of H, run `g4-verify-checkpoint.cjs --release --repository <owner/name> --commit H --trust-fingerprint <pin> --trusted-head g4-NNNNNN:<pin>`. Require all of:
+   - `[g4-verify] mode: release`;
+   - an `ok g4-NNNNNN commit <first 12 hex of R>` line for the new checkpoint;
+   - `PASS OK` with no limitation line.
+
+   The previous checkpoint's head is not an acceptable `--trusted-head`. The exit code alone is never evidence, and a diagnostic PASS never counts.
+
+**After the merge commit M, before any tag:** repeat check 7 on a clean checkout of M with `--commit M`, and require the same three lines, including the `ok g4-NNNNNN commit <R>` line. Then verify the sealed extension subtree and the no-bypass rule-suite receipt as in step 4 of the release path.
+
+**On any failure** (S's provenance, signature, token, pins, the attested commit, ancestry, CI or the ruleset gate): stop, and correct through a new audited PR and a re-seal. No administrative bypass, unsigned checkpoint, diagnostic PASS or altered seal. A provider outage or a missing owner decision blocks the release; it is not permission to weaken a check. A later RC promotion that needs another checkpoint repeats all of the above.
+
+**Why the Git checks matter.** The verifier does not reject extra paths under `tools/g4/checkpoints/`, a missing `timestamp.tsq` or an edited `tsa-chain.pem`. Checks 2 to 4 are the only control for those.
+
+**Status of these checks.** They are operator checks, not CI enforcement, and the #640 acceptance test did not exercise them. Their only evidence so far is the independent audits of this section, which ran them against synthetic repositories and real test checkpoints. No live checkpoint is authorized or created by this document. An executable preflight needs its own tests and audit.
 
 ## Break-glass (emergency only)
 

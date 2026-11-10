@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-10T2144-75f601",
-  "ts": "2026-11-10T21:44:08Z",
+  "ts": "2026-11-10T21:57:33Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-636-g4-postseal-checkpoint-exception.md",
-  "iteration": 1,
+  "iteration": 2,
   "change_class": "governance",
   "doc_tier": "standard",
   "pr_target": "main",
@@ -35,13 +35,13 @@
     "g4-verify-checkpoint.cjs --release on H and M"
   ],
   "open_questions": [],
-  "plan_content_hash": "e88952bfb6569dda2a7830e9bb62623702c46a40358975c4194c07d9e07f5458",
+  "plan_content_hash": "a085bed5608229a4943a92ba1030b5a12422acb4ea7450ac2a74b43663cc1360",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "absent",
-    "ts": "2026-11-10T21:44:08Z"
+    "ts": "2026-11-10T21:57:33Z"
   }
 }

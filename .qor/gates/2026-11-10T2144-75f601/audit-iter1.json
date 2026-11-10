@@ -1,0 +1,44 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2144-75f601",
+  "ts": "2026-11-10T21:56:45Z",
+  "target": ".failsafe/governance/plans/plan-v6013-636-g4-postseal-checkpoint-exception.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-650.md",
+  "risk_grade": "L3",
+  "findings_categories": [
+    "security-l3",
+    "infrastructure-mismatch",
+    "coverage-gap",
+    "specification-drift"
+  ],
+  "target_content_hash": "e88952bfb6569dda2a7830e9bb62623702c46a40358975c4194c07d9e07f5458",
+  "report_content_hash": "fddeb1a6c4a7ffd3841d93e5fadb7117a3f749a217a3223e3dbebb32afaa28c3",
+  "iteration": 1,
+  "ledger_entry": 936,
+  "ledger_chain_hash": "bd30fb7a11185ff7071e8fafa93146f9878b481d96c16b20462b24a5067dd48c",
+  "audited_candidate": "6922f7b8",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "security-l3",
+      "detail": "documented C^ command fails open in cmd.exe (empty output, exit 0)"
+    },
+    {
+      "id": "B2",
+      "category": "coverage-gap",
+      "detail": "verified checkpoint not bound to this release seal; stale head or pre-seal attestation passes"
+    }
+  ],
+  "merge_obligations": "PR Full Test success on final head; rule-suite pass; native qualification on first v6.0.13 RC",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-10T21:56:45Z"
+  }
+}

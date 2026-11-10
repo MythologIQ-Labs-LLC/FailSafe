@@ -1,6 +1,6 @@
 # Plan: v6.0.13 G4 post-seal checkpoint exception (#636, #638)
 
-**Iteration:** 1 (awaiting independent `/qor-plan` and `/qor-audit`)
+**Iteration:** 2 (after independent VETO #936)
 **Change class:** release governance documentation only
 **Risk grade:** L3, exact-commit seal and independent witness integrity
 **Base:** `main` `6a7eced4de4c2bf540430b440379ee3ef29af8a3`
@@ -29,6 +29,15 @@ The release-path policy approved by audit PASS #929 permits only enumerated gove
 3. Missing/bad TPM signature, TSA token, owner trust fingerprint, external head, wrong `--commit`, dirty tree, or mismatched checkout bytes blocks/refuses as defined by the merged G4 verifier (#644/#646); no claim of live operational proof until owner enrollment and TSA selection.
 4. On merge, M's tree must equal H and M's extension subtree must equal S. Re-verification on M requires `mode: release` `PASS OK` before tag.
 5. Existing PASS #929 / rule-suite `result=pass` merge path remains unchanged and never becomes bypass authority.
+
+## Iteration 2 (VETO #936 remediation)
+
+- **B1.** The printed command used `C^`, which `cmd.exe` strips, so the commit was compared with itself and printed nothing. The document now uses `C~1`, names the shells allowed (Git Bash or PowerShell), and requires the checkpoint commit to show its five `A` lines, so an empty result is never proof.
+- **B2.** Nothing tied the verified checkpoint to this release's seal. The document now defines S (sealed commit), R (seal-record commit, the "seal commit" of `G4_WITNESS_OPERATIONS.md`) and K (checkpoint commit). It requires exactly one new checkpoint in S..H whose manifest attests R, a trusted head for that new checkpoint (never the previous one), and the `ok g4-NNNNNN commit <R>` line on both the H and the M verification.
+- **Notes folded in:** the per-commit command is unscoped, so it covers every path (N1); `merge-base --is-ancestor S H` and `rev-list --merges S..H` are stated (N2); the document says the checks' only evidence is the independent audits, and that the #640 test did not cover them (N3, N8); the verifier's blind spots that make the Git checks the sole control are stated (N6); archive, revocation and root changes are pre-seal (N9).
+- **Not changed:** symlinks and executables inside governance paths (N5, #929 scope) and the long-path limit of `git show` on Windows (N7, fails closed) are left as they are.
+
+Acceptance items 1, 2 and 4 above are criteria. Their evidence is the audit's synthetic-repository runs, not a retained fixture.
 
 ## Boundaries
 
