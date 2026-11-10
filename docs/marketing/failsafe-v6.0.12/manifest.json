@@ -40,7 +40,7 @@
   "details": "PROVENANCE.md"
  },
  "storage": {
-  "in_git_bytes": 38317783,
+  "in_git_bytes": 37351165,
   "local_only_bytes": 432118424,
   "local_only_location": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12 (owner workstation)"
  },
@@ -1503,8 +1503,8 @@
   },
   {
    "path": "video/failsafe-6.0.12-from-change-to-confidence-silent-captioned.mp4",
-   "bytes": 10221763,
-   "sha256": "de50bf0820c67aee9cc6c867e364bc8611fdd4f9b6c70f0ed0aba583d436d80f",
+   "bytes": 9255145,
+   "sha256": "5cee21f815a61868babdf96e9c99f2c4341d9a229a0e5b4bd89ddabaaaf20902",
    "role": "silent captioned variant",
    "in_git": true
   },
