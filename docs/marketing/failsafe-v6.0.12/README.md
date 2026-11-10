@@ -3,7 +3,7 @@
 **FailSafe: From Change to Confidence** · *Build with AI. Know what changed.*
 1 min 53.5 s · 1920×1080 · 30 fps · H.264 / AAC · narrated, English captions
 
-**Status: review copy, PENDING OWNER REVIEW.** Do not publish, deploy or replace the 6.0.11 media until the owner has watched and listened to the film and approved it. Tracking: FailSafe #645 (and #589); website `Knapp-Kevin/MythologIQ` #175, Stage B.
+**Status: review copy. The owner has accepted the narration and music (2026-11-10); publication is still pending.** Do not publish, deploy or replace the 6.0.11 media until the owner approves publication. Tracking: FailSafe #645 (and #589); website `Knapp-Kevin/MythologIQ` #175, Stage B.
 
 Everything between the title card and the end card is a real screen recording of the published FailSafe 6.0.12 on a fictional repository. How it was made, what is scripted, and what the film must not be used to claim: [PROVENANCE.md](PROVENANCE.md). Words and scene description: [transcript.md](transcript.md). Checksums: [manifest.json](manifest.json).
 
@@ -59,9 +59,11 @@ Do not add install counts, "blocks", "prevents", "certified" or "verified delive
 
 ## Owner review checklist
 
-1. Watch and listen to the whole film: pronunciation of FailSafe, "S R E", "six point zero point twelve", "Core Logic"; pace (about 146 words per minute); any jump between takes. Nobody has listened to the finished cut end to end yet.
-2. Confirm the narrator across the whole film: you chose the male voice (candidate 3) from a single sample line on 2026-11-10, after rejecting the first cut's voice. Its pitch varies a little from line to line.
-3. Accept the added setup scene and its line (scene 2b), and the music: you chose bed C from a 36-second preview and have not heard it under the whole film. Check its level against the voice and the fade over the end card.
-4. Decide whether the "override.approved" row at 1:36 and the empty SRE state at 0:39 are acceptable on screen.
-5. Confirm the end-card wording and the Marketplace / Open VSX / GitHub references.
-6. Decide where the 582 MB of sources should live long term, and whether the media branch may be pushed.
+Done on 2026-11-10: narrator chosen (male voice, candidate 3), music chosen (bed C), finished cut reviewed and accepted with the music at this level.
+
+Still open:
+
+1. Decide whether the "override.approved" row at 1:36 and the empty SRE state at 0:39 are acceptable on screen.
+2. Confirm the added setup scene (2b), the end-card wording and the Marketplace / Open VSX / GitHub references.
+3. Decide where the local-only sources should live long term (sizes in `manifest.json`), and whether the media branch may be pushed.
+4. Approve publication and the website integration (#175).

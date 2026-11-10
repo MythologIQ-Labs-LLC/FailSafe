@@ -3,7 +3,7 @@
  "tagline": "Build with AI. Know what changed.",
  "product_version": "6.0.12",
  "produced": "2026-11-10",
- "approval_status": "PENDING OWNER REVIEW",
+ "approval_status": "Narration and music accepted by the owner 2026-11-10; publication approval pending",
  "tracking": [
   "MythologIQ-Labs-LLC/FailSafe#645",
   "MythologIQ-Labs-LLC/FailSafe#589",
@@ -41,7 +41,7 @@
   "details": "PROVENANCE.md"
  },
  "storage": {
-  "in_git_bytes": 44232925,
+  "in_git_bytes": 44232841,
   "local_only_bytes": 582366566,
   "local_only_location": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12 (owner workstation)"
  },
@@ -55,15 +55,15 @@
   },
   {
    "path": "PROVENANCE.md",
-   "bytes": 15894,
-   "sha256": "21366e0e163e7b730ce301a7a6bbb31209a9fac73d68e52c0cb4ba17881eb0a5",
+   "bytes": 16097,
+   "sha256": "4f376ccab58f8e0026cab262e20bed645bc356c5335f970d444a4ef0d6c8c3a5",
    "role": "document / production input",
    "in_git": true
   },
   {
    "path": "README.md",
-   "bytes": 7213,
-   "sha256": "3dd75f25e83480bdfd1d5f6a9759703a2c01da68602fb273a85af9f0ba496dff",
+   "bytes": 6860,
+   "sha256": "7e82ef0c994fc5880be36216dad54a6b24de1b5fcb31494a4f662ff116b89ab8",
    "role": "document / production input",
    "in_git": true
   },
@@ -1840,8 +1840,8 @@
   },
   {
    "path": "source/tools/make_manifest.cjs",
-   "bytes": 6151,
-   "sha256": "a2d7094216c86a6ebd78587b8eaa156a24c59ed6e8a6965ba4f5a0e0922ee0b4",
+   "bytes": 6213,
+   "sha256": "f8042676dbc2cd3421757e23864dfbe59efdfbbd47bdfec6047bf0e9f21fdc8f",
    "role": "production script",
    "in_git": true
   },
@@ -1875,8 +1875,8 @@
   },
   {
    "path": "transcript.md",
-   "bytes": 6450,
-   "sha256": "2e04c63a6dd9698ebb5ebe358ea7fdda222d3d57efc5058fd467c82fb9263b14",
+   "bytes": 6454,
+   "sha256": "5089e714621c24116d47142bf160f2e8e2b43a892306bd7b253afc5b079176e3",
    "role": "document / production input",
    "in_git": true
   },

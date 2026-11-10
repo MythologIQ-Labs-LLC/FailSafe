@@ -2,7 +2,7 @@
 
 Recorded and assembled 2026-11-10 on the owner's Windows workstation (Windows 11 Pro 10.0.26300, RTX 5070 Ti). Tracking: FailSafe #645 (media), #589 (earlier media brief), Studio website `Knapp-Kevin/MythologIQ` #175.
 
-**Approval status: PENDING OWNER REVIEW.** The owner listened to the first cut and rejected its narrator, then chose the current voice from four samples and the music bed from three previews. The finished film with that voice and music has not been watched or listened to end to end by a person yet. The checks below are automated (ffprobe, loudness meters, speech-to-text, frame inspection by the producing agent).
+**Approval status: narration and music accepted by the owner; publication still pending.** On 2026-11-10 the owner listened to the first cut and rejected its narrator, chose the current voice from four samples and the music bed from three previews, then reviewed the finished cut and confirmed it works with the music at this level. That is acceptance of the voice and the mix, not approval to publish: the open items in the README checklist (on-screen details, end-card wording, storage, pushing the branch) and the website integration have not been decided. The technical checks below are automated (ffprobe, loudness meters, speech-to-text, frame inspection by the producing agent).
 
 ## 1. What was filmed
 
@@ -88,7 +88,7 @@ Earlier runs (`rehearsal`, `take1`) used the same scripts and are not in the fil
 | Private information | Frames inspected: fictional repo, fictional author, `C:\demo\…` paths, no account names, no notifications from other apps. The Config page's audio device lists are never opened. |
 | Checksums | `manifest.json` lists SHA-256 for every file; verified after writing. |
 
-Not done: no person has watched or listened to the finished film end to end; no check on a phone or in the website layout; no second-machine reproduction.
+Not done: no check on a phone or in the website layout; no second-machine reproduction.
 
 ## 7. Claims this film must not be used to support
 

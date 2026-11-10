@@ -2,7 +2,7 @@
 
 **Film:** `video/failsafe-6.0.12-from-change-to-confidence.mp4` · 1 min 53.5 s · 1920×1080, 30 fps · narrated (English)
 **Captions:** `video/failsafe-6.0.12-from-change-to-confidence.en.vtt`
-**Status:** review copy. Not approved for publication until the owner has watched and listened to it.
+**Status:** review copy. The owner has accepted the narration and music; publication is not yet approved.
 
 The narration is a synthetic voice and the music is an original instrumental, both generated locally in Sonic Rift 0.9.1. The music is a quiet bed with no lyrics; it carries no information. The picture is a real screen recording of FailSafe 6.0.12 running in VS Code 1.145.2 on a fictional repository ("Tasklet"). Editor actions were performed by script; no AI agent made the changes. FailSafe's responses on screen are its own.
 

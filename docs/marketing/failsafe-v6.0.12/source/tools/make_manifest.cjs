@@ -44,7 +44,7 @@ const rows = files.map((r) => ({ path: r, bytes: fs.statSync(path.join(P, r)).si
 const sum = (f) => rows.filter(f).reduce((n, r) => n + r.bytes, 0);
 const manifest = {
   title: 'FailSafe: From Change to Confidence', tagline: 'Build with AI. Know what changed.', product_version: '6.0.12', produced: '2026-11-10',
-  approval_status: 'PENDING OWNER REVIEW', tracking: ['MythologIQ-Labs-LLC/FailSafe#645', 'MythologIQ-Labs-LLC/FailSafe#589', 'Knapp-Kevin/MythologIQ#175'],
+  approval_status: 'Narration and music accepted by the owner 2026-11-10; publication approval pending', tracking: ['MythologIQ-Labs-LLC/FailSafe#645', 'MythologIQ-Labs-LLC/FailSafe#589', 'Knapp-Kevin/MythologIQ#175'],
   film: { file: 'video/failsafe-6.0.12-from-change-to-confidence.mp4', seconds: 113.5, width: 1920, height: 1080, fps: 30, video: 'H.264 High, yuv420p', audio: 'AAC-LC 48 kHz stereo',
     integrated_lufs: -16.1, true_peak_dbfs: -1.1, loudness_range_lu: 4.9 },
   provenance: {
