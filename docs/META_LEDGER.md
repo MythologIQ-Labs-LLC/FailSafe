@@ -35972,3 +35972,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-witness.md iteration 2 (plan sha256 6e3ffd98fe24f5d31b6cc3e2491e5623fe8b6aee22bd6bfc15e955caa0fff7d1; candidate 41d39e2e, remediation 94499d9d/f5f43a8e; rebased onto main 9dacd662 without content change). Independent audit re-applied its own 32 original mutations on a fresh clone: all caught by 65 G4 tests, including M06/M07 (merge-hidden registry rollback at HEAD and under a forged checkpoint), M18, M21, M31, M19, M20, M23, M01, M02b, M10; new remediation mutants M33-M37 caught; the token 'granted' check survives as defence in depth (openssl ts -verify rejects non-granted responses; grantedWithMods fails closed). No fail-open path; test:node 1045/0; razor and lint clean; no session key tracked. G4 is NOT yet qualified for v6.0.13: the verifier reports BLOCKED TSA_POLICY_UNSELECTED until the owner approves TPM enrollment, selects a TSA, a genesis checkpoint is made at the v6.0.13 seal and --release verification passes. Non-blocking: grantedWithMods policy, --release should enforce trust inputs and a clean tree, -attime and working-tree reads are owner decisions 9/10, M06/M07 test labels swapped.
 
 ---
+
+### Entry #932: GATE TRIBUNAL - plan-v6013-638-g4-witness (bounded delta to 6022d7ef) - ACCEPT
+
+**Timestamp**: 2026-11-10T19:02:59Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T1643-b038e8`
+**Risk Grade**: L3
+**Verdict**: ACCEPT (PASS #931 extends)
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-witness.md`
+**Report**: `.agent/staging/AUDIT_REPORT-638-delta1.md` (Content Hash = SHA256, LF-normalized); iteration-2 report preserved as `AUDIT_REPORT-638.md`
+**Gate**: `.qor/gates/2026-11-10T1643-b038e8/audit.json`
+
+**Content Hash**: `40c9fd1eb6ebb565a1ed48bc063b691688df6dd66f5d7c8a2b809165513c87cd`
+**Previous Hash**: `b70b68152c1b8f1cd4c1332cc6fa932b4365c5ddc1b4314f05e6ace3a695ca2b`
+**Chain Hash (Merkle seal)**: `5a385e46c5e37723ddbc91ca96c66f1c6e0971c2c7df0c308ce25875f8e617d3`
+
+**Decision**: BOUNDED-DELTA AUDIT ACCEPTED for PR #644 (G4 witness, #638): PASS #931 extends to final source 6022d7ef0bf125917cba2a669830eb3dbaede492. Delta 20255f25..6022d7ef is one test-helper file (g4TestPki.cjs: test signer certificates via openssl req + ca -selfsign with exact validity windows for CI OpenSSL compatibility, quoted config paths, and a razor extraction selfSignCaConfig); the audited verifier, library, CLI, tools/g4 and docs are byte-identical. Independent re-run of the auditor's own mutation set on a fresh clone: 37 of 38 caught, only the known token 'granted' defence-in-depth check survives; key-window mutant killed by both window tests that depend on the changed helper. G4 suites 65/65; OpenSSL absent: 59 skipped with reason, 0 fail; razor and eslint clean; no session key tracked. Auditor's single full test:node run: 1044 pass, 1 fail (ArchitectureLinks event-loop lag 121 ms, pre-existing timing flake, 12/12 in isolation); the governor's run on the same tree: 1045 pass, 0 fail; CI PR Full Test 42876997189 and CodeQL 42876985475 pass on 6022d7ef. Non-blocking: quote tsaConfig dir the same way (D1). G4 remains NOT operationally qualified: verifier BLOCKED TSA_POLICY_UNSELECTED until owner key enrollment and TSA selection.
+
+---
