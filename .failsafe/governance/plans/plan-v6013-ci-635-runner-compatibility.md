@@ -18,6 +18,10 @@
 
 **Ordering disclosure**: The two runner-label edits were staged on a dedicated branch before this plan draft was committed. This is not a claim of prospective audit PASS. Native `/qor-plan` and independent `/qor-audit` remain required before integration into protected `main`.
 
+## PR trigger check
+
+The two runner-change commits were authored with `[skip ci]` in their messages, and at initial draft-PR inspection only CodeQL/standards checks were visible; the `PR Full Test` check had not been observed. This follow-up documentation commit deliberately omits `[skip ci]` and triggers a new PR synchronization event. **No CI pass is claimed.** The owner/independent reviewer must inspect the actual GitHub workflow run and refuse merge if the full-suite check is missing or skipped.
+
 ## Threats and negative controls
 
 1. The PR workflow must not silently skip the test suite because of a commit `[skip ci]`; on the final PR head verify GitHub Actions actually starts and completes tests.
