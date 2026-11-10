@@ -1,6 +1,6 @@
 # Plan: v6.0.13 CI Playwright runner compatibility (#635)
 
-**iteration**: 1 (working draft; native Qor-logic plan/audit not run in this session)
+**iteration**: 1 (submitted for native `/qor-plan` gate and independent `/qor-audit`; implementation preceded audit, disclosed below)
 **change_class**: infrastructure
 **risk_grade (proposed)**: L3 (protected CI workflow configuration)
 **pr_target**: `fix/ci-635-playwright-ubuntu24-qualifiable-20261110` -> `main`
@@ -35,9 +35,9 @@ This replacement branch uses commit messages **without** `[skip ci]` on every ch
 - [ ] Exact diff restricted to the two named runner declarations plus this governance plan.
 - [ ] Independent plan/audit PASS and protected workflow owner approval recorded.
 - [ ] `pr-full-test.yml` runs on a real pull request and completes its Playwright install and `test:all` (no skipped workflow).
-- [ ] `native-vsix-qualification.yml` runs on an actual v6.0.13 release-candidate branch or authorized manual dispatch; complete package/PDF/release rehearsal and native smoke matrix.
+- [ ] `native-vsix-qualification.yml` runs on the first actual v6.0.13 release-candidate branch push (`release/v6.0.13-rc*`), with a complete package/PDF/release rehearsal and the native smoke matrix. **Sequencing (2026-11-10):** this workflow's "published lookups" step fails by design for an already-published version. On any branch still at 6.0.12, including this PR's branch or a manual dispatch of it, the run stops before the artifact upload, so the smoke matrix cannot run. A throwaway branch with a fake version bump would violate the CI budget rule against branches opened only to trigger CI. The native qualification is therefore taken on the real v6.0.13 RC branch, cut from `main` after this PR merges, before any v6.0.13 tag. A failure there is fixed forward under its own gate and blocks the v6.0.13 release, not this merge. The pin itself is the same one already proven by release run 42842387243 (Playwright chromium installed and the PDF built on `ubuntu-24.04`).
 - [ ] No weakening of release workflow, secrets, permissions, tests, checksums or protected-main rules.
-- [ ] Record exact passing commit SHA and workflow run IDs; do not merge before evidence.
+- [ ] Record exact passing commit SHA and workflow run IDs; do not merge before the PR Full Test evidence and audit PASS. The merge goes through the normal PR merge (no bypass), and GitHub rule-suite evaluation for the merge must report `pass`, not `bypass` (#636 acceptance evidence).
 
 ## Non-goals
 

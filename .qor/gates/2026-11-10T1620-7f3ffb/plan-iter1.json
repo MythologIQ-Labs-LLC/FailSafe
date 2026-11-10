@@ -1,0 +1,49 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-10T1620-7f3ffb",
+  "ts": "2026-11-10T16:21:04Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-ci-635-runner-compatibility.md",
+  "iteration": 1,
+  "change_class": "governance",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #635",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - pin pr-full-test full-test and native-vsix package-all jobs to ubuntu-24.04 (implemented before audit; disclosed)",
+    "Phase 2 - PR Full Test on the PR head; normal PR merge with rule-suite pass; native qualification on the first v6.0.13 RC push"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Native workflow qualified only on a 6.0.13 RC (published-version guard)"
+    ],
+    "non_goals": [
+      "No Playwright upgrade",
+      "No version change",
+      "No product source change"
+    ],
+    "exclusions": [
+      "No owner bypass of the Production Block ruleset"
+    ]
+  },
+  "ci_commands": [
+    "pr-full-test.yml (GitHub, PR head)",
+    "native-vsix-qualification.yml (first release/v6.0.13-rc* push)"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "e4c8ce8eef72e4e7fb3e1cf344d33a81c8d267ac238f2871ab2e4b66e9958d5a",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-10T16:21:04Z"
+  }
+}
