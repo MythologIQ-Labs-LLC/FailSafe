@@ -1,32 +1,27 @@
 {
   "phase": "audit",
   "session_id": "2026-11-10T2349-6c3050",
-  "ts": "2026-11-11T05:33:34Z",
+  "ts": "2026-11-11T07:02:58Z",
   "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
   "verdict": "VETO",
-  "report_path": ".agent/staging/AUDIT_REPORT-653-iter5.md",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter6-confirmation.md",
   "risk_grade": "L2",
   "findings_categories": [
-    "coverage-gap"
+    "specification-drift"
   ],
-  "target_content_hash": "3f900467333bcbe172ecb7c73ed4e303863eac0145760ef42cf4443f08200f7a",
-  "report_content_hash": "b7550e12396d10ac0e6491b3dece11bc3e54d4a61cfe606729712222eb804b20",
-  "iteration": 5,
-  "ledger_entry": 942,
-  "ledger_chain_hash": "88ba7ac4b105e2ab0867f6427d93e2746f7e5ccbb886a8de3433d253465a94c5",
-  "audited_candidate": "54f676468aeb14a5d8edc027e737949cc14eef76",
+  "target_content_hash": "476a2e41137dcf7b35e5f72336a3aa1d6032214c827b378b2f5f9bbe060e4bb4",
+  "report_content_hash": "80658bcabd1631b2be1b8300909563a515271e943623bcd1799bba9252139cae",
+  "iteration": 6,
+  "ledger_entry": 944,
+  "ledger_chain_hash": "2a1cd4a3ea37bd847c3b478c4865b1943b73d880b30a69836fc7e3e4502d4c46",
+  "audited_candidate": "2132e5931d36a57bab8604efd00beae213fd5e8b",
   "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
-  "mode": "solo; Option B fresh-context independent auditor",
+  "mode": "solo; bounded confirmation check by a fresh-context independent reviewer (not an open-ended audit)",
   "violations": [
     {
       "id": "B1",
-      "category": "coverage-gap",
-      "detail": "the readability check scrolls clipped boxes before measuring and compares only with the element, card and viewport, so text cut off by the card is reported visible"
-    },
-    {
-      "id": "B2",
-      "category": "coverage-gap",
-      "detail": "boundary call: a shared rule conditional on an unsampled view hides the disclaimer with all tests passing"
+      "category": "specification-drift",
+      "detail": "bounded confirmation check: closed-list item 1 added clipping ancestors to the frames but removed the card box, so text moved outside the card is reported readable by the browser test"
     }
   ],
   "merge_obligations": "apply the fifth auditor's closed list; confirmation check of that list; new independent audit on corrected source",
@@ -36,6 +31,6 @@
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "veto",
-    "ts": "2026-11-11T05:33:34Z"
+    "ts": "2026-11-11T07:02:58Z"
   }
 }

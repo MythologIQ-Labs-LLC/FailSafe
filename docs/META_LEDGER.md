@@ -36212,3 +36212,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: CORRECTION of the Decision paragraphs of Entries #940 and #941. Those two paragraphs repeat the text of Entry #939 word for word and so describe the second audit, not the third and the fourth. Their titles, verdicts, report paths, content hashes, chain hashes and gate files are correct, and both entries are left exactly as sealed: nothing is edited, removed or re-hashed. The correct Decision text for each, the cause (an entry-preparation script whose replacement pattern did not match and whose check compared only the first thirty characters) and the prevention are in the cited correction file, whose hash this entry seals. In short: Entry #940 records the third independent audit of source 45a78c4d, VETO on B1 (the disclaimer could be made unreadable because style values were not pinned) and B2 as a boundary call (a Configure click activating the Statewright link), with a fixed three-item remediation list; Entry #941 records the fourth independent audit of source b883f814, VETO on B1 (a shared rule in the renderer style sheet could clip or wash out the disclaimer), with a closed three-item list. The error was found by the fifth independent audit (Entry #942, note N1). This entry is a record correction, not an audit verdict.
 
 ---
+
+### Entry #944: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 6, bounded confirmation check) - VETO
+
+**Timestamp**: 2026-11-11T07:02:58Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter6-confirmation.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `80658bcabd1631b2be1b8300909563a515271e943623bcd1799bba9252139cae`
+**Previous Hash**: `8bf00fafed7b6a2c2bbe27036876e1117fd89fee43a3218c8261538d603bc2a4`
+**Chain Hash (Merkle seal)**: `2a1cd4a3ea37bd847c3b478c4865b1943b73d880b30a69836fc7e3e4502d4c46`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 6 (plan hash recorded in plan-iter6.json; exact source 2132e5931d36a57bab8604efd00beae213fd5e8b on main 9f16548d; draft PR #653, issue #652; CI 13 of 13 on that commit). This entry records a BOUNDED CONFIRMATION CHECK, not an open-ended audit: it was commissioned by the implementer on the recommendation of the fifth auditor (Entry #942) and tested only whether that audit's closed list is implemented and effective, whether anything regressed, and whether the records are true. Sixth independent reviewer, risk grade L2, 184 earlier mutants re-run with the auditors' own definitions: 170 killed, 14 carried survivors, none moved from killed to survived, 34 moved from survived to killed. Item 2 (the renderer style sheet pinned by digest) is implemented and effective; item 3 (records) is done, Entries #940 and #941 are unaltered and Entries #942 and #943 are true; the shipped files are byte-identical to dd766c15 and no defect was found in them; no razor breach; no flake in 225 Playwright runs. Blocking B1 (specification-drift): item 1 said to add the clipping ancestors to the frames that every rendered line is compared with; the implementation added them and also removed the card's own box, which earlier audits required and recorded as effective. With a rule that moves the link and the address outside the card without clipping them, the browser test now reports them readable; the mutant is killed only by the style-sheet pin, and the same rule placed in a second constant passes all 48 tests. The plan sentence that lines must lie inside the card is false at this commit. Fix: include the card in the frames. The reviewer notes the verdict rests on reading the item as the frames growing, and that no required negative lost coverage. Observations for the owner, outside the verdict: the pin covers the style constant but not the line that composes the style element; plan and evidence wording leftovers; the evidence scripts run without a network guard, so mutants that contact the provider may have attempted real connections during the implementer's local runs; defects inherited from main (Pegasus title contrast, layout cut below about 525 px). The reviewer's opinion: the bounded scope was not used to avoid a real problem, and after B1 and the pin boundary are settled the remaining risk is appropriately carried by code review and the owner. No request reached the provider during this review.
+
+---

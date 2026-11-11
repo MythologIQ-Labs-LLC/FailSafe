@@ -1,0 +1,36 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T07:02:58Z",
+  "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter6-confirmation.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "specification-drift"
+  ],
+  "target_content_hash": "476a2e41137dcf7b35e5f72336a3aa1d6032214c827b378b2f5f9bbe060e4bb4",
+  "report_content_hash": "80658bcabd1631b2be1b8300909563a515271e943623bcd1799bba9252139cae",
+  "iteration": 6,
+  "ledger_entry": 944,
+  "ledger_chain_hash": "2a1cd4a3ea37bd847c3b478c4865b1943b73d880b30a69836fc7e3e4502d4c46",
+  "audited_candidate": "2132e5931d36a57bab8604efd00beae213fd5e8b",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; bounded confirmation check by a fresh-context independent reviewer (not an open-ended audit)",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "specification-drift",
+      "detail": "bounded confirmation check: closed-list item 1 added clipping ancestors to the frames but removed the card box, so text moved outside the card is reported readable by the browser test"
+    }
+  ],
+  "merge_obligations": "apply the fifth auditor's closed list; confirmation check of that list; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-11T07:02:58Z"
+  }
+}
