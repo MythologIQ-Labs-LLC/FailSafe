@@ -36092,3 +36092,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-636-g4-postseal-checkpoint-exception.md iteration 2 (plan sha256 a085bed5608229a4943a92ba1030b5a12422acb4ea7450ac2a74b43663cc1360; candidate 4dae836468dc18fc52ca696251f7344f96216941; draft PR #650), after VETO #936. Independent audit, L3. B1 closed: the per-commit command now uses C~1 and prints the tampering line in Git Bash, PowerShell 5.1 and cmd.exe alike; a range with no checkpoint lines is refused, so empty output is not a pass. B2 closed: with S, R (seal-record commit) and K defined, checks 5 and 7 refuse a missing new checkpoint, a checkpoint attesting S, a pre-seal commit or a commit after R, two checkpoints, K before R and a rewritten S; a genuine checkpoint attesting R passes on H and on M. Synthetic matrix: 64 repositories, 61 refused, 3 allowed (the genuine cases). The verifier alone still returns a release PASS in six constructions; the documented attested-commit line and Git checks are what refuse them. Nothing in the text authorizes a key, TSA or checkpoint. Non-blocking: no printed test that R is the first commit containing the seal entry; genesis and RC-promotion wording; 'when G4 applies' is an owner scope decision. This PASS covers the operator procedure only; it is not a release GO or an approval of any owner decision.
 
 ---
+
+### Entry #938: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 1) - VETO
+
+**Timestamp**: 2026-11-11T00:09:16Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `56527ea722ed90273945800c2b876eea531c16e26cc6c6b4ec83b865dce1482b`
+**Previous Hash**: `692f7677d25f49cc3b6024e2bf1c5fd3f36d84433203445e583bc973683f77d4`
+**Chain Hash (Merkle seal)**: `b49981d78cf44dd233766a01483abab774f9be5d3a3e4aeb83ee80bc0c8cfadb`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 1 (plan sha256 0528de90e9d6fa2de1a0b0637d2a8c832295b738f98e06dd12766baa64c8be27; exact source 1fd4a557466b10b990264c5543fda1077233da03 on main 9f16548d; draft PR #653, issue #652, owner-approved Option A website-first scope). Independent Option B audit by a fresh auditor, risk grade L2, with 22 source mutations run against the jsdom and Playwright suites. Sound: scope matches the plan, the markup is static, rel noopener noreferrer and the fixed URL are enforced by both suites, the link survives every catalog failure mode, packaging ships the renderer, no adapter, credential or dependency was added. Blocking B1 (razor-overage): integration-catalog-renderer.js is 264 lines against the 250-line cap (243 on main). Blocking B2 (coverage-gap): the plan item that navigation must not begin without an operator click has no failing test; window.open on render, a delayed auto-click, a preconnect link and a ping attribute all survive, because the Playwright spec listens at page level only. Blocking B3 (coverage-gap): the plan item that the card must not claim a connection has no failing test; an extra Connected pill, false partner and sign-in copy and a Connect button survive, because the negative assertion targets a class that does not exist. Ten of 22 mutants survived. Non-blocking N1-N9 in the report (dead click if the Console is opened by hand in Simple Browser, untested empty-catalog, keyboard and loading states, card placement shift, no changelog entry, implementation before audit, provider destination not verified by the auditor). The auditor made no request to the provider.
+
+---
