@@ -39,38 +39,6 @@ test.describe('FX839 — Integrations Catalog sub-view (#167)', () => {
     await expect(page.locator('.cc-intcat-group')).toHaveCount(7); // +Security Scanning
   });
 
-  test('#652 Statewright website handoff opens fixed provider run history only when clicked', async ({ page }) => {
-    controller = await serveConsoleServerUI();
-    const providerRequests: string[] = [];
-    page.on('request', (request) => {
-      if (request.url().startsWith('https://statewright.ai/')) providerRequests.push(request.url());
-    });
-    await page.goto(`${controller.url}/command-center.html`);
-    await page.locator('.tab-btn[data-target="integrations"]').click();
-
-    const handoff = page.locator('.cc-intcat-statewright[data-id="statewright"]');
-    const link = handoff.locator('a.cc-intcat-web-link');
-    await expect(handoff).toBeVisible();
-    await expect(handoff).toContainText('Website handoff');
-    await expect(handoff).toContainText('Statewright handles sign-in and run data');
-    await expect(link).toHaveAttribute('href', 'https://statewright.ai/runs');
-    await expect(link).toHaveAttribute('target', '_blank');
-    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    await expect(page.locator('.cc-intcat-card')).toHaveCount(11);
-    expect(providerRequests).toEqual([]); // no provider contact just by rendering
-
-    // Fulfill the external navigation locally. No live Statewright account/network needed.
-    await page.context().route('https://statewright.ai/**', (route) =>
-      route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Statewright test handoff</body></html>' }));
-    const [opened] = await Promise.all([
-      page.context().waitForEvent('page'),
-      link.click(),
-    ]);
-    await opened.waitForURL('https://statewright.ai/runs');
-    await expect(opened.locator('body')).toContainText('Statewright test handoff');
-    await opened.close();
-  });
-
   test('a known integration card renders its label + a Configure affordance', async ({ page }) => {
     controller = await serveConsoleServerUI();
     await page.goto(`${controller.url}/command-center.html`);

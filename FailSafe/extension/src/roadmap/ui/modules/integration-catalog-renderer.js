@@ -16,6 +16,7 @@
  */
 
 import { escapeHtml } from './brainstorm-templates.js';
+import { STATEWRIGHT_HANDOFF, STATEWRIGHT_STYLES } from './statewright-handoff.js';
 const STYLE_ID = 'cc-intcat-style';
 const STYLE = `
 .cc-intcat { display:flex; flex-direction:column; gap:12px; }
@@ -191,13 +192,13 @@ export class IntegrationCatalogRenderer {
   async render() {
     if (!this.container) return;
     this.ensureStyle();
-    this.container.innerHTML = `<div class="cc-intcat"><h3>Integration Catalog</h3>${STATEWRIGHT_HANDOFF}<p class="cc-intcat-sub">Loading…</p></div>`;
+    this.container.innerHTML = `<div class="cc-intcat"><h3>Integration Catalog</h3><p class="cc-intcat-sub">Loading…</p>${STATEWRIGHT_HANDOFF}</div>`;
     let data;
     try {
       const res = await fetch('/api/v1/integrations/catalog');
       data = await res.json();
     } catch (err) {
-      this.container.innerHTML = `<div class="cc-intcat"><h3>Integration Catalog</h3>${STATEWRIGHT_HANDOFF}<p class="cc-intcat-sub">Could not load integrations: ${esc(err)}</p></div>`;
+      this.container.innerHTML = `<div class="cc-intcat"><h3>Integration Catalog</h3><p class="cc-intcat-sub">Could not load integrations: ${esc(err)}</p>${STATEWRIGHT_HANDOFF}</div>`;
       return;
     }
     const integrations = (data && data.integrations) || [];
@@ -242,23 +243,3 @@ export class IntegrationCatalogRenderer {
   // config changes. Accept + ignore events for TabGroup parity.
   onEvent() {}
 }
-
-// Keep additive handoff constants after the existing renderer to preserve
-// source-location anchors enforced by FX1003 integration contracts.
-const STATEWRIGHT_STYLES = `
-.cc-intcat-statewright { background:linear-gradient(180deg,#182332,#111a25); border:1px solid #425168; border-radius:10px; padding:14px; }
-.cc-intcat-statewright p { color:#a9b8cb; margin:0 0 10px; font-size:.88rem; }
-.cc-intcat-web-link { display:inline-block; background:#141a22; color:#f1efe7; border:1px solid #5fb0d8; border-radius:8px; padding:7px 14px; font:inherit; text-decoration:none; }
-.cc-intcat-web-link:hover, .cc-intcat-web-link:focus-visible { border-color:#9fdcff; color:#fff; text-decoration:underline; }
-`;
-
-// #652: Statewright website-first handoff. No adapter, credential, provider data,
-// or connection-status claim: navigation occurs only after the operator clicks.
-const STATEWRIGHT_HANDOFF = `
-  <section class="cc-intcat-statewright" data-id="statewright" aria-label="Statewright AI website integration">
-    <div class="cc-intcat-head"><strong>Statewright AI</strong><span class="cc-intcat-pill">Website handoff</span></div>
-    <p>View your workflow runs and transition history on Statewright's website. Statewright handles sign-in and run data. FailSafe does not read Statewright history or enforce Statewright workflows.</p>
-    <div class="cc-intcat-actions">
-      <a class="cc-intcat-web-link" href="https://statewright.ai/runs" target="_blank" rel="noopener noreferrer">Open Statewright Run History</a>
-    </div>
-  </section>`;
