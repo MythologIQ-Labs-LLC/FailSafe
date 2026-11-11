@@ -1,41 +1,36 @@
 {
   "phase": "audit",
   "session_id": "2026-11-10T2349-6c3050",
-  "ts": "2026-11-11T02:47:19Z",
+  "ts": "2026-11-11T04:03:57Z",
   "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
   "verdict": "VETO",
-  "report_path": ".agent/staging/AUDIT_REPORT-653-iter3.md",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter4.md",
   "risk_grade": "L2",
   "findings_categories": [
     "coverage-gap"
   ],
-  "target_content_hash": "db68d80907cf6e787f28690984a50eca200105c11758e5fe21aadef99ef8644f",
-  "report_content_hash": "1cf54f0986a5110998b1f00924c0b94f26c00a5b5139eefda9381707c4417ba1",
-  "iteration": 3,
-  "ledger_entry": 940,
-  "ledger_chain_hash": "0837b99da8bd5663b1421e6375cc912241bd67e9ee4cfbe9b1d4a8886ed11297",
-  "audited_candidate": "45a78c4da50ad9ed22a7976f58533df7c2625981",
+  "target_content_hash": "4c5035d77e152e0f9118ba5deb819f460efc1f49229fd308710c1e8a86456fd0",
+  "report_content_hash": "077afc9dfe8055d4eb322a2bf5ea48f4996aab21b5d8a79c7b54187cda68a6ca",
+  "iteration": 4,
+  "ledger_entry": 941,
+  "ledger_chain_hash": "9e81f79e70d32eb4d03d79b5204026ec7bc681012be005615f26b4bd202e971f",
+  "audited_candidate": "b883f81449d888a11edb90a2151a3864d13ede54",
   "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
   "mode": "solo; Option B fresh-context independent auditor",
   "violations": [
     {
       "id": "B1",
       "category": "coverage-gap",
-      "detail": "the disclaimer can be made unreadable (font-size typo, text colour equal to background) with every suite passing; style values are not pinned"
-    },
-    {
-      "id": "B2",
-      "category": "coverage-gap",
-      "detail": "boundary call: a Configure click that activates the Statewright link survives every suite"
+      "detail": "a shared rule in the renderer style sheet clips or washes out the disclaimer with every suite passing; readability measures the box against constant backdrops at one viewport and theme"
     }
   ],
-  "merge_obligations": "apply the auditor's fixed three-item remediation list; new independent audit on corrected source",
+  "merge_obligations": "apply the fourth auditor's closed three-item remediation list; new independent audit on corrected source",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "veto",
-    "ts": "2026-11-11T02:47:20Z"
+    "ts": "2026-11-11T04:03:57Z"
   }
 }
