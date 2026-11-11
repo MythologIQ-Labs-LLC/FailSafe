@@ -1,6 +1,6 @@
 # Plan: v6.0.13 Statewright website-first handoff (#652)
 
-**Iteration:** 2 (after independent VETO #938)
+**Iteration:** 3 (after independent VETOs #938 and #939)
 **Change class:** narrow product UI / external navigation
 **Risk:** L2 planned (externally navigable UX; no credential or data egress except user-initiated browser navigation); independent governance auditor may increase grade
 **Base:** main `9f16548d83116e2d8ee7f9010545963c06e5c93a`
@@ -30,16 +30,48 @@ An operator can access the existing Statewright Run History website from the cur
 
 ## Iteration 2 (VETO #938 remediation)
 
-- **B1 (file over 250 lines).** The card markup and styles move to a new sibling module, `src/roadmap/ui/modules/statewright-handoff.js`. The renderer is 245 lines (243 on `main`) and imports the two constants. The cited catalog fetch moves from line 196 to 198, inside the three-line tolerance of the integration contract citations.
+- **B1 (file over 250 lines).** The card markup and styles move to a new sibling module, `src/roadmap/ui/modules/statewright-handoff.js`. The renderer is 245 lines (243 on `main`) and imports the two constants. The catalog fetch was at line 197 on `main` and is at 198 now; the contract documents cite line 196, which stays inside their three-line tolerance.
 - **B2 (no failing test for navigation without a click).** New `src/test/roadmap/statewright-handoff.test.ts` asserts, for six catalog states (loaded, empty, HTTP 500, non-JSON, rejected, still loading), that rendering makes only the same-origin catalog request, calls no `window.open`, schedules no timer, triggers no click, and leaves no other element in the page that refers to Statewright. The Playwright test now observes provider traffic for the whole browser context, requires one page and zero provider requests after an idle wait, activates the link from the keyboard, and then requires exactly one provider request with no referrer.
 - **B3 (no failing test for a false connection claim).** The same jsdom test requires the exact reviewed card text, exactly one pill with no status class, exactly one link with exactly four attributes, and no button, input, form or loadable element in the card.
 - **Mutation evidence.** The ten mutants that survived the audit, and two more (a query string on the URL, a visible address that differs from the link), are each killed by at least one suite.
 - **Non-blocking notes taken.** The card now follows the status line in every state (N5). The address is also shown as selectable text, for surfaces that cannot open a new tab (N1). Empty-catalog, loading and keyboard cases are tested (N2, N3, N4). A changelog entry is added under Unreleased (N6).
 - **Not changed.** The Console server's missing CSP and Referrer-Policy headers and `render()` on a malformed `integrations` value predate this change (N9). Portfolio and contract documents are not extended, because the card is a link and not an integration adapter.
 
-## Installed-host evidence (exact source 1fd4a557, before remediation)
+## Iteration 3 (VETO #939 remediation)
 
-A VSIX built from the audited source was installed in an isolated VS Code 1.145.2 profile, and a clean-profile Chrome loaded the Console from that installed extension with no interception: 14 of 14 checks passed. The click opened `https://statewright.ai/runs` with no referrer, cookie or opener, and a signed-out browser was sent by Statewright to `https://statewright.ai/login?redirect=/runs`. The signed-in view was not exercised (it needs the owner's Statewright account). Cursor is not installed on the qualification machine. The run is repeated on the remediated source.
+The second independent audit (source `dd766c15`) found the three findings of #938 closed and no defect in the shipped source. It vetoed on test strength: seven new mutants that break a required negative passed both suites. This iteration changes tests and this plan only. The shipped files (`integration-catalog-renderer.js`, `statewright-handoff.js`) are byte-identical to `dd766c15`.
+
+- **R1 (contact or navigation without a click; a workspace value in the address).**
+  - New `src/test/roadmap/statewright-handoff-source.test.ts` pins the source: the renderer has exactly one listener (the existing Configure click), exactly one request (the same-origin catalog fetch), names Statewright only to import and place the card, and uses nothing that reaches a network, opens or moves a window, or runs later (sockets, beacons, timers, schedulers, observers, navigation). The handoff module is three constants and no code.
+  - The jsdom suite dispatches pointer and key events at the card, the link and the container and requires that nothing changes.
+  - The Playwright spec hovers the card and the link before the idle check, refuses and records any WebSocket to the provider, and activates the link by keyboard and, separately, by mouse, each time requiring exactly one request to the fixed address.
+- **R2 (a false Connected status).**
+  - The source test requires the card to equal the reviewed markup character for character, and the card styles to be a closed list of five selectors and twelve presentational properties, with no generated content, hiding rule or remote resource.
+  - The jsdom suite requires that no element inside the card carries a `title`, `aria-label` or other attribute, that no text outside the card names Statewright, that the catalog container holds only the heading, one status line, the card and the catalog groups and cards, and that the status line is one of the catalog's four own messages.
+  - The Playwright spec requires no generated `::before` or `::after` text in the card and a visible disclaimer.
+- **Mutation evidence.** 26 mutants: the twelve of iteration 2, the auditor's nine Statewright-related survivors and five new ones. All are killed.
+- **Non-blocking notes taken.** `integration-catalog-renderer.test.ts` is restored to its `main` content, which removes the vacuous assertion and the growth of its suite callback (N1, N2); the new suites cover the same cases. Global timers in the jsdom harness are counted and still run, so a timer owned by the test host is not lost (N8). The two line-number and evidence statements in this plan are corrected (N7).
+- **Not changed.** Restyling or relabelling of other integrations' cards (auditor's X15, X16) is unchanged code outside this change. A source pin cannot prove the absence of every possible behaviour; it makes any new behaviour in these two files fail a named test and require review.
+
+## Installed-host evidence
+
+Both runs used an isolated VS Code 1.145.2 profile with a VSIX built from the exact commit, and a clean-profile Chrome that loaded the Console from the installed extension with no interception.
+
+| Source | VSIX SHA-256 | Result |
+|---|---|---|
+| `1fd4a557` (first audited) | `f4b097ee33333a42f0b086c23d00a9a7e0fcf9211e67b3322f680ec1dcd0e8c7` | 14 of 14 |
+| `dd766c15` (shipped files identical to this iteration) | `da6120e3403bbba7e8c17b61bc56109d833fb1102d3b535d0d09b5d2d5019252` | 14 of 14 |
+
+- Before any click there were zero requests to the `statewright.ai` host.
+- The click opened `https://statewright.ai/runs` in a new tab with no referrer, cookie or opener, and the Console tab stayed where it was.
+- Statewright sent the signed-out browser to `https://statewright.ai/login?redirect=/runs`. FailSafe shows no sign-in state.
+- With the catalog endpoint unavailable the error was shown and the link was still present.
+
+**Open acceptance items:**
+- The signed-in Run History view was not exercised; it needs the owner's Statewright account.
+- Cursor is not installed on the qualification machine.
+- VS Code 1.122.1 could not start there while a pending VS Code update held the installer mutex.
+- CI results belong to the commit they ran on; the 13 checks recorded for `1fd4a557` do not cover later commits.
 
 ## Not in scope
 
