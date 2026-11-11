@@ -196,7 +196,20 @@ test('describe: a read that never settles gives "not checked (timeout)" within t
   assert.deepEqual([d.state, d.lines], ['timeout', ['Architecture authority not checked (timeout).']]);
 });
 
-test('describe: bounded I/O - no git, no sync fs, no child process; the event loop stays responsive (5,000 rows, a pathological cell)', async () => {
+/**
+ * #651: one bounded-I/O measurement of describeAffectedArchitecture over the 5,000-row index with a
+ * pathological cell.
+ *
+ * `busyLag` is the longest event-loop turn this process itself kept busy: for each 10 ms timer
+ * turn, the smaller of the wall-clock gap and the CPU time the process used in that gap. A turn the
+ * runner descheduled (another process had the core) has a long wall gap and little CPU, so it does
+ * not count; a turn spent in synchronous JavaScript uses CPU for its whole length, so it does. A
+ * turn blocked off the CPU (sync fs, a child process, Atomics.wait) uses no CPU either, so each of
+ * those calls is counted instead and any count fails. `wallLag` is the plain wall-clock gap, kept
+ * for the failure message only.
+ */
+const LAG_LIMIT_MS = 100;
+async function measureBoundedDescribe(opts = {}) {
   const rows = [SELF];
   for (let i = 0; i < 5000; i += 1) {
     rows.push(row(`r${i}`, `domain ${i}`, `[D${i}](architecture/D${i}.md)`, 'canonical', { contract: `\`src/m${i}/index.ts\`` }));
@@ -218,23 +231,98 @@ test('describe: bounded I/O - no git, no sync fs, no child process; the event lo
   for (const name of Object.keys(fs)) if (name.endsWith('Sync')) wrap(fs, name, `fs.${name}`);
   wrap(fs.realpathSync, 'native', 'fs.realpathSync.native');
   for (const name of Object.keys(childProcess)) wrap(childProcess, name, `child_process.${name}`);
-  let maxGap = 0;
-  let last = Date.now();
-  const timer = setInterval(() => { const now = Date.now(); maxGap = Math.max(maxGap, now - last); last = now; }, 10);
+  wrap(Atomics, 'wait', 'Atomics.wait');
+  const cpuMs = (since) => { const u = process.cpuUsage(since); return (u.user + u.system) / 1000; };
+  let busyLag = 0;
+  let wallLag = 0;
+  let last = performance.now();
+  let lastCpu = process.cpuUsage();
+  const mark = () => {
+    const wall = performance.now() - last;
+    busyLag = Math.max(busyLag, Math.min(wall, cpuMs(lastCpu)));
+    wallLag = Math.max(wallLag, wall);
+    last = performance.now();
+    lastCpu = process.cpuUsage();
+  };
+  const timer = setInterval(mark, 10);
   let d;
   try {
-    last = Date.now();
-    d = await affected.describeAffectedArchitecture({ workspaceRoot: root, git: stubGit }, ['src/m4999/index.ts', 'src/none.ts']);
+    last = performance.now();
+    lastCpu = process.cpuUsage();
+    d = await affected.describeAffectedArchitecture({ workspaceRoot: root, git: stubGit }, ['src/m4999/index.ts', 'src/none.ts'], opts);
     await new Promise((r) => setTimeout(r, 30));
   } finally {
     clearInterval(timer);
     for (const r of restore.reverse()) r();
   }
-  assert.equal(stubCalls, 0, 'the git runner is never called');
-  assert.deepEqual([...counts.entries()].filter(([, n]) => n > 0), [], 'no sync fs and no child process during describe');
-  assert.ok(maxGap < 100, `event loop lag ${maxGap} ms`);
-  assert.ok(d.lines.some((l) => l.startsWith('src/m4999/index.ts: r4999 ')), d.lines.join('\n'));
-  assert.ok(d.lines.includes('1 registry cell(s) over 4 KiB not checked (cell too long).'), d.lines.join('\n'));
+  return { d, stubCalls, blocking: [...counts.entries()].filter(([, n]) => n > 0), busyLag, wallLag };
+}
+
+/**
+ * #651: the bounded-I/O verdict over up to LAG_ATTEMPTS measurements. Runner load only ever adds to
+ * a measured lag (CPU time itself stretches when cores are shared), so the smallest busy lag seen
+ * is the closest estimate of what describe costs on its own; measuring stops at the first attempt
+ * under the limit. Work that really holds the event loop for the limit does so on every attempt
+ * and still fails, which the next test proves. The blocking-call and git counts are exact, not
+ * estimates: they are summed over every attempt and one call fails.
+ */
+const LAG_ATTEMPTS = 5;
+async function boundedDescribe(opts) {
+  const runs = [];
+  do {
+    runs.push(await measureBoundedDescribe(opts));
+  } while (runs[runs.length - 1].busyLag >= LAG_LIMIT_MS && runs.length < LAG_ATTEMPTS);
+  const blocking = new Map();
+  for (const r of runs) for (const [label, n] of r.blocking) blocking.set(label, (blocking.get(label) ?? 0) + n);
+  return {
+    d: runs[runs.length - 1].d,
+    attempts: runs.length,
+    stubCalls: runs.reduce((n, r) => n + r.stubCalls, 0),
+    blocking: [...blocking.entries()],
+    busyLag: Math.min(...runs.map((r) => r.busyLag)),
+    wallLag: Math.max(...runs.map((r) => r.wallLag)),
+    detail: runs.map((r) => `${r.busyLag.toFixed(1)} busy / ${r.wallLag.toFixed(1)} wall`).join('; '),
+  };
+}
+
+test('describe: bounded I/O - no git, no sync fs, no child process; the event loop stays responsive (5,000 rows, a pathological cell)', async () => {
+  const m = await boundedDescribe();
+  assert.equal(m.stubCalls, 0, 'the git runner is never called');
+  assert.deepEqual(m.blocking, [], 'no sync fs, no child process and no Atomics.wait during describe');
+  assert.ok(m.busyLag < LAG_LIMIT_MS, `event loop busy for ${LAG_LIMIT_MS} ms or more in one turn on every attempt (ms: ${m.detail})`);
+  assert.ok(m.d.lines.some((l) => l.startsWith('src/m4999/index.ts: r4999 ')), m.d.lines.join('\n'));
+  assert.ok(m.d.lines.includes('1 registry cell(s) over 4 KiB not checked (cell too long).'), m.d.lines.join('\n'));
+});
+
+test('describe: the bounded-I/O verdict fails on a synchronous stall, a sync fs call and an off-CPU wait (#651)', async () => {
+  // Each seam does the real read after one deliberate violation, so describe still answers.
+  const stall = await boundedDescribe({
+    budgetMs: 5000,
+    readIndex: (root, rel) => {
+      const from = process.cpuUsage();
+      const used = () => { const u = process.cpuUsage(from); return (u.user + u.system) / 1000; };
+      while (used() < LAG_LIMIT_MS * 1.5) { /* synchronous work on the event loop */ }
+      return affected.readIndexAsync(root, rel);
+    },
+  });
+  assert.equal(stall.d.state, 'ok');
+  assert.equal(stall.attempts, LAG_ATTEMPTS, 'no attempt came in under the limit');
+  assert.ok(stall.busyLag >= LAG_LIMIT_MS, `a 150 ms synchronous stall measured as (ms: ${stall.detail})`);
+
+  const syncFs = await boundedDescribe({
+    readIndex: (root, rel) => { fs.statSync(root); return affected.readIndexAsync(root, rel); },
+  });
+  assert.deepEqual(syncFs.blocking, [['fs.statSync', syncFs.attempts]]);
+
+  const parked = await boundedDescribe({
+    budgetMs: 5000,
+    readIndex: (root, rel) => {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LAG_LIMIT_MS * 1.5);
+      return affected.readIndexAsync(root, rel);
+    },
+  });
+  assert.deepEqual(parked.blocking, [['Atomics.wait', parked.attempts]]);
+  assert.ok(parked.wallLag >= LAG_LIMIT_MS, `the off-CPU wait was real (ms: ${parked.detail})`);
 });
 
 // ---------------------------------------------------------------- registry links (GET)
