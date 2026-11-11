@@ -1,6 +1,6 @@
 # Plan: v6.0.13 Statewright website-first handoff (#652)
 
-**Iteration:** 4 (after independent VETOs #938, #939 and #940)
+**Iteration:** 5 (after independent VETOs #938, #939, #940 and #941)
 **Change class:** narrow product UI / external navigation
 **Risk:** L2 planned (externally navigable UX; no credential or data egress except user-initiated browser navigation); independent governance auditor may increase grade
 **Base:** main `9f16548d83116e2d8ee7f9010545963c06e5c93a`
@@ -51,7 +51,7 @@ The second independent audit (source `dd766c15`) found the three findings of #93
   - The Playwright spec requires no generated `::before` or `::after` text in the card and a visible disclaimer.
 - **Mutation evidence.** 26 mutants: the twelve of iteration 2, the auditor's nine Statewright-related survivors and five new ones. All are killed; the list and results are in `.agent/staging/MUTATION_EVIDENCE-653.md`.
 - **Non-blocking notes taken.** `integration-catalog-renderer.test.ts` is restored to its `main` content, which removes the vacuous assertion and the growth of its suite callback (N1, N2); the new suites cover the same cases. Global timers in the jsdom harness are counted and still run, so a timer owned by the test host is not lost (N8). The two line-number and evidence statements in this plan are corrected (N7).
-- **Not changed.** Restyling or relabelling of other integrations' cards (auditor's X15, X16) is unchanged code outside this change. A source pin cannot prove the absence of every possible behaviour; it makes any new behaviour in these two files fail a named test and require review.
+- **Not changed.** Restyling or relabelling of other integrations' cards (auditor's X15, X16) is unchanged code outside this change. A source pin cannot prove the absence of every possible behaviour. It makes a new listener, request, scanned word or Statewright mention in these two files fail a named test; it does not catch every edit (see iteration 4, accepted limits).
 
 ## Iteration 4 (VETO #940 remediation)
 
@@ -59,13 +59,27 @@ The third independent audit (source `45a78c4d`) found R1 and R2 closed, no defec
 
 - **B1 (the disclaimer could be made unreadable with every suite passing).**
   - Item 1 of the list: `STATEWRIGHT_STYLES` must equal the reviewed rules character for character, values included. The handoff module as a whole must equal its header comment plus the three constants, so nothing can run when it is imported.
-  - Item 2: a Playwright test measures what is rendered for the disclaimer, the link and the address: full opacity through every ancestor, a font size and box height of at least 12 px, a WCAG contrast of at least 4.5 against the backdrop, and a position on screen.
+  - Item 2: a Playwright test measures what is rendered for the disclaimer, the link and the address: full opacity through every ancestor, a font size and box height of at least 12 px, a WCAG contrast of at least 4.5, and a position on screen. In iteration 4 the backdrop was a constant and only the element box was measured; iteration 5 corrects both.
 - **B2 (boundary: another control could activate the Statewright link).**
   - Item 3: with the provider watch active, a Playwright test clicks another integration's Configure, sends four hub events, returns to the Catalog six times, hovers, scrolls and right-clicks the link, and then requires no provider contact, one page, and an unchanged link, pill, heading and page title.
   - The generated-text check now covers the whole Integrations tab, not only the card.
-- **Mutation evidence.** The 26 earlier mutants and 14 from the third audit (its three blocking mutants, the three with the same cause, six of its plain survivors and two colour variants) are all killed; `.agent/staging/MUTATION_EVIDENCE-653.md` lists them with per-suite results.
+- **Mutation evidence.** The 26 earlier mutants were killed. Of 14 taken from the third audit, the fourth audit found that one (a hub event that sets the pill text, Y48) was recorded as killed but survived under the auditor's own definition: the test read the pill only after re-rendering had repaired it. Iteration 5 fixes the test and the record.
 - **Accepted limits, as the third auditor classified them.** Obfuscated mutants (mixed-case inline handlers, `setAttribute('on...')`, aliased listeners, delays that outlast the idle wait, a soft hyphen inside the name) and deliberate edits whose intent is plain in a diff are not excluded by tests; code review is the control for those. Sending a workspace value to a host other than Statewright is outside this change; the Console has no Content-Security-Policy, which is a separate, pre-existing gap. Focus on the link is lost when the Catalog re-renders, as for every catalog control.
 - **Maintenance note.** The source contract fails on harmless edits to the renderer that add a listener, a request or one of the scanned words. That is intended: such an edit must be reviewed against this plan.
+
+## Iteration 5 (VETO #941 remediation)
+
+The fourth independent audit (source `b883f814`, 141 mutants) found the #940 list implemented, no defect in the shipped source, no limit breach, no flaky test and no false refusal, and said the result would be a PASS against that list as written. It vetoed on one gap and gave a closed list. This iteration implements that list and changes tests and this plan only. The shipped files are still byte-identical to `dd766c15`.
+
+- **B1 (a shared rule in the renderer's own style sheet could clip or wash out the disclaimer).**
+  - Item 1: every rendered line of the disclaimer, the link and the address must lie inside its element, the card and the viewport. A line clamp, a height cap or a truncation fails.
+  - Item 2: contrast is measured against the background that is actually rendered behind the text (the nearest painted colour or gradient stops), the text colour must be opaque, and the check runs in five views: the default theme at 1280 and 600 px, the default theme under a light colour scheme, and the Pegasus light theme at 1280 and 600 px.
+  - Item 3: the pill text and the link are read immediately after a hub event that reaches the catalog without a render, before the re-render loop.
+- **Mutation evidence.** `.agent/staging/MUTATION_EVIDENCE-653.md` is rewritten with one identifier per mutant: the author's set (A), and the mutants taken from the second, third and fourth audits under the auditors' identifiers. One variant written for this iteration (translucent text through `.cc-intcat p`) is equivalent: the card's own later rule overrides it, and the rendered disclaimer does not change.
+- **Found by the fourth audit, not fixed here.**
+  - The card title `Statewright AI` is unreadable in the Pegasus light theme (dark text on the dark card). All eleven existing catalog cards on `main` have the same defect, so it is not introduced by this change. The pill, disclaimer, link and address are readable in that theme and are now tested there. Fixing the title means changing the shared catalog styles and belongs in its own issue.
+  - A future render state added to `render()` (for example a 404 branch) could omit the card; the three existing states are tested.
+- **Where the audit stands.** Four independent audits found no defect in the shipped files after iteration 2. Each veto concerned how far the tests exclude hypothetical future edits, and two auditors noted that a rule based on any surviving mutant has no natural end. The pass bar for this change is the owner's to set if a further audit vetoes on the same kind of finding.
 
 ## Installed-host evidence
 

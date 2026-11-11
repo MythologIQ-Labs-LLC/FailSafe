@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-10T2349-6c3050",
-  "ts": "2026-11-11T03:13:45Z",
+  "ts": "2026-11-11T04:35:52Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
-  "iteration": 4,
+  "iteration": 5,
   "change_class": "feature",
   "doc_tier": "standard",
   "pr_target": "main",
@@ -34,13 +34,13 @@
     "npx playwright test src/test/ui/integrations-catalog.spec.ts"
   ],
   "open_questions": [],
-  "plan_content_hash": "4c5035d77e152e0f9118ba5deb819f460efc1f49229fd308710c1e8a86456fd0",
+  "plan_content_hash": "3f900467333bcbe172ecb7c73ed4e303863eac0145760ef42cf4443f08200f7a",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "absent",
-    "ts": "2026-11-11T03:13:45Z"
+    "ts": "2026-11-11T04:35:52Z"
   }
 }

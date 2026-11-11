@@ -93,45 +93,82 @@ test('#652 Statewright handoff: a mouse click opens the same fixed address once'
   expect(context.pages()).toHaveLength(2);
 });
 
-/** What a reader can actually see: size, opacity through every ancestor, contrast with the backdrop, and position. */
-async function readability(target: Locator, backdrops: string[]): Promise<{ fontPx: number; opacity: number; contrast: number; onScreen: boolean; height: number }> {
+interface Legible { fontPx: number; opacity: number; textAlpha: number; contrast: number; clipped: number; lines: number }
+
+/**
+ * What a reader can actually see (audit VETO #941 B1): every line of text must
+ * be painted inside its element, the card and the viewport, and the contrast is
+ * measured against the background that is really rendered behind it.
+ */
+async function readability(target: Locator): Promise<Legible> {
   await target.scrollIntoViewIfNeeded();
-  return target.evaluate((el, colours) => {
-    const lum = (rgb: number[]) => rgb.map((v) => v / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-      .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
-    const parse = (c: string) => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
-    const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return target.evaluate((el) => {
+    const nums = (c: string) => (c.match(/[\d.]+/g) || []).map(Number);
+    const lum = (c: string) => nums(c).slice(0, 3).map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const alpha = (c: string) => (nums(c).length > 3 ? nums(c)[3] : 1);
+    const chain: Element[] = [];
+    for (let n: Element | null = el; n; n = n.parentElement) chain.push(n);
+    // The backdrop is the nearest painted background: a gradient's colour stops, or a colour that is not transparent.
+    const painted = chain.map((n) => getComputedStyle(n)).map((st) => st.backgroundImage.match(/rgba?\([^)]+\)/g) || (alpha(st.backgroundColor) > 0 ? [st.backgroundColor] : []));
+    const backdrop = painted.find((stops) => stops.length) || ['rgb(255, 255, 255)'];
     const style = getComputedStyle(el);
-    const text = lum(parse(style.color));
-    const ratio = (bg: number) => (Math.max(text, bg) + 0.05) / (Math.min(text, bg) + 0.05);
-    let opacity = 1;
-    for (let n: Element | null = el; n; n = n.parentElement) opacity *= Number(getComputedStyle(n).opacity);
-    const box = el.getBoundingClientRect();
-    const onScreen = box.left >= 0 && box.top >= 0 && box.right <= window.innerWidth && box.bottom <= window.innerHeight && style.visibility === 'visible';
-    return { fontPx: parseFloat(style.fontSize), opacity, contrast: Math.min(...colours.map((c) => ratio(lum(hex(c))))), onScreen, height: box.height };
-  }, backdrops);
+    const ratio = (bg: string) => (Math.max(lum(style.color), lum(bg)) + 0.05) / (Math.min(lum(style.color), lum(bg)) + 0.05);
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const lines = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
+    const frames = [el.getBoundingClientRect(), el.closest('.cc-intcat-statewright')!.getBoundingClientRect(), new DOMRect(0, 0, window.innerWidth, window.innerHeight)];
+    const inside = (r: DOMRect, f: DOMRect) => r.left >= f.left - 1 && r.top >= f.top - 1 && r.right <= f.right + 1 && r.bottom <= f.bottom + 1;
+    return {
+      fontPx: parseFloat(style.fontSize), textAlpha: alpha(style.color), contrast: Math.min(...backdrop.map(ratio)),
+      opacity: chain.reduce((o, n) => o * Number(getComputedStyle(n).opacity), style.visibility === 'visible' ? 1 : 0),
+      clipped: lines.filter((r) => !frames.every((f) => inside(r, f))).length, lines: lines.length,
+    };
+  });
 }
 
-test('#652 Statewright handoff: the disclaimer, the link and the address are readable as rendered', async ({ page, context }) => {
-  const { handoff, link } = await openCard(page, context);
-  const card = ['#182332', '#111a25']; // the two stops of the card background
-  for (const [target, backdrops] of [[handoff.locator('p'), card], [link, ['#141a22']], [handoff.locator('.cc-intcat-web-url'), card]] as Array<[Locator, string[]]>) {
-    await expect.poll(async () => (await readability(target, backdrops)).opacity).toBe(1); // after the tab's fade-in
-    const seen = await readability(target, backdrops);
+/** The disclaimer, the link and the address can each be read in full. */
+async function expectReadable(handoff: Locator): Promise<void> {
+  for (const target of [handoff.locator('p'), handoff.locator('a.cc-intcat-web-link'), handoff.locator('.cc-intcat-web-url')]) {
+    await expect.poll(async () => (await readability(target)).opacity).toBe(1); // after the tab's fade-in
+    const seen = await readability(target);
+    expect(seen.lines).toBeGreaterThanOrEqual(1);
+    expect(seen.clipped).toBe(0); // no line is cut off, clamped or pushed outside the card or the screen
     expect(seen.fontPx).toBeGreaterThanOrEqual(12);
-    expect(seen.height).toBeGreaterThanOrEqual(12);
-    expect(seen.contrast).toBeGreaterThanOrEqual(4.5); // WCAG AA for body text
-    expect(seen.onScreen).toBe(true);
+    expect(seen.textAlpha).toBe(1);
+    expect(seen.contrast).toBeGreaterThanOrEqual(4.5); // WCAG AA for body text, against the rendered backdrop
   }
   await expect(handoff.locator('p')).toHaveText(/FailSafe does not read Statewright history or enforce Statewright workflows\.$/);
-});
+}
+
+const VIEWS: Array<{ name: string; width: number; theme: string | null; scheme: 'dark' | 'light' }> = [
+  { name: 'default theme, wide', width: 1280, theme: null, scheme: 'dark' },
+  { name: 'default theme, narrow', width: 600, theme: null, scheme: 'dark' },
+  { name: 'default theme, light colour scheme', width: 1280, theme: null, scheme: 'light' },
+  { name: 'light theme (Pegasus)', width: 1280, theme: 'pegasus', scheme: 'light' },
+  { name: 'light theme (Pegasus), narrow', width: 600, theme: 'pegasus', scheme: 'light' },
+];
+for (const view of VIEWS) {
+  test(`#652 Statewright handoff: the disclaimer, the link and the address are readable as rendered (${view.name})`, async ({ page, context }) => {
+    await page.setViewportSize({ width: view.width, height: 900 });
+    await page.emulateMedia({ colorScheme: view.scheme });
+    const { handoff } = await openCard(page, context);
+    if (view.theme) await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), view.theme);
+    await expectReadable(handoff);
+  });
+}
 
 test('#652 Statewright handoff: other controls, hub events and repeated renders never reach the provider', async ({ page, context }) => {
   const { provider, handoff, link } = await openCard(page, context);
   const title = await page.title();
   await page.locator('.cc-intcat-configure').first().click(); // another integration's Configure
   await page.locator('.tab-btn[data-target="integrations"]').click();
-  for (const type of ['init', 'hub.refresh', 'verdict', 'integration.health']) controller.broadcast({ type, payload: {} });
+  for (const type of ['init', 'hub.refresh', 'verdict']) controller.broadcast({ type, payload: {} });
+  await page.waitForTimeout(500);
+  controller.broadcast({ type: 'integration.health', payload: {} }); // reaches the catalog's onEvent without a render
+  await page.waitForTimeout(500);
+  await expect(handoff.locator('.cc-intcat-pill')).toHaveText('Website handoff'); // read before any re-render can repair it
+  await expect(link).toHaveAttribute('href', RUNS);
   const pills = page.locator('#integrations .cc-subview-bar .cc-pill');
   for (let i = 0; i < 6; i += 1) { // each return to the Catalog renders it again
     await pills.nth(1).click();
