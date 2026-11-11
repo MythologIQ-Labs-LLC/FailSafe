@@ -66,11 +66,11 @@ it("--release refuses a nested path and a directory that is not g4-NNNNNN", () =
   const nested = S.copyRepo(base);
   S.write(nested, inCp2("sub/manifest.json"), Buffer.from("{}\n"));
   S.commitAll(nested, "nested");
-  expectLayoutRefusal(nested, /sub\/manifest\.json/);
+  expectLayoutRefusal(nested, /g4-000002\/sub/);
   const other = S.copyRepo(base);
   S.write(other, path.posix.join(layout.CHECKPOINTS_DIR, "g4-3", layout.FILES.manifest), Buffer.from("{}\n"));
   S.commitAll(other, "odd directory");
-  expectLayoutRefusal(other, /g4-3\/manifest\.json/);
+  expectLayoutRefusal(other, /checkpoints\/g4-3"/);
 });
 
 it("--release refuses a checkpoint whose timestamp query was removed", () => {
