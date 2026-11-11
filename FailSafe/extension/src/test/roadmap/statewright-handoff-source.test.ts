@@ -5,6 +5,7 @@
 // mention Statewright only to place that card.
 
 import { strict as assert } from 'assert';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 // @ts-expect-error untyped JS module
@@ -66,6 +67,16 @@ suite('#652 Statewright website handoff: renderer source contract', () => {
     assert.equal(count(src, /STATEWRIGHT_STYLES/g), 2, 'the import and the style sheet');
     const rest = src.replace(/STATEWRIGHT_HANDOFF|STATEWRIGHT_STYLES|\.\/statewright-handoff\.js/g, '');
     assert.equal(count(rest, /statewright/gi), 0, 'no other text, status line, address or identifier names Statewright');
+  });
+
+  test('the catalog style sheet is the reviewed one (audit VETO #942 B2)', () => {
+    const src = read('integration-catalog-renderer.js');
+    const open = 'const STYLE = `';
+    const sheet = src.slice(src.indexOf(open) + open.length, src.indexOf('`;', src.indexOf(open)));
+    // Shared catalog rules also style the Statewright card, and a rule can be conditional on a width, theme or
+    // state that no test samples. Any change to this sheet must therefore be reviewed for its effect on the card
+    // and its disclaimer; update the digest only after that review.
+    assert.equal(createHash('sha256').update(sheet).digest('hex'), 'b1c2787e452233ccc314d4fc21e76320855dd3efeaa1be6f87ad3e438c1c9197');
   });
 
   test('the renderer has one listener, one request and nothing that acts by itself', () => {

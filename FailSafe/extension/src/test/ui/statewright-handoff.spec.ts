@@ -93,15 +93,15 @@ test('#652 Statewright handoff: a mouse click opens the same fixed address once'
   expect(context.pages()).toHaveLength(2);
 });
 
-interface Legible { fontPx: number; opacity: number; textAlpha: number; contrast: number; clipped: number; lines: number }
+interface Legible { fontPx: number; opacity: number; textAlpha: number; contrast: number; clipped: number; lines: number; scrolled: number }
 
 /**
- * What a reader can actually see (audit VETO #941 B1): every line of text must
- * be painted inside its element, the card and the viewport, and the contrast is
- * measured against the background that is really rendered behind it.
+ * What a reader can actually see (audit VETO #941 B1, #942 B1): every line of
+ * text must be painted inside its element, every box that clips it and the
+ * viewport, and the contrast is measured against the background rendered behind
+ * it. Nothing is scrolled first: scrolling would bring cut-off text into view.
  */
 async function readability(target: Locator): Promise<Legible> {
-  await target.scrollIntoViewIfNeeded();
   return target.evaluate((el) => {
     const nums = (c: string) => (c.match(/[\d.]+/g) || []).map(Number);
     const lum = (c: string) => nums(c).slice(0, 3).map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
@@ -117,12 +117,14 @@ async function readability(target: Locator): Promise<Legible> {
     const range = document.createRange();
     range.selectNodeContents(el);
     const lines = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
-    const frames = [el.getBoundingClientRect(), el.closest('.cc-intcat-statewright')!.getBoundingClientRect(), new DOMRect(0, 0, window.innerWidth, window.innerHeight)];
+    const clips = chain.filter((n) => n === el || !/^visible( visible)?$/.test(getComputedStyle(n).overflow));
+    const frames = [...clips.map((n) => n.getBoundingClientRect()), new DOMRect(0, 0, window.innerWidth, window.innerHeight)];
     const inside = (r: DOMRect, f: DOMRect) => r.left >= f.left - 1 && r.top >= f.top - 1 && r.right <= f.right + 1 && r.bottom <= f.bottom + 1;
     return {
       fontPx: parseFloat(style.fontSize), textAlpha: alpha(style.color), contrast: Math.min(...backdrop.map(ratio)),
       opacity: chain.reduce((o, n) => o * Number(getComputedStyle(n).opacity), style.visibility === 'visible' ? 1 : 0),
       clipped: lines.filter((r) => !frames.every((f) => inside(r, f))).length, lines: lines.length,
+      scrolled: clips.filter((n) => n.scrollTop !== 0 || n.scrollLeft !== 0).length,
     };
   });
 }
@@ -133,7 +135,8 @@ async function expectReadable(handoff: Locator): Promise<void> {
     await expect.poll(async () => (await readability(target)).opacity).toBe(1); // after the tab's fade-in
     const seen = await readability(target);
     expect(seen.lines).toBeGreaterThanOrEqual(1);
-    expect(seen.clipped).toBe(0); // no line is cut off, clamped or pushed outside the card or the screen
+    expect(seen.scrolled).toBe(0); // measured as first shown, with no clipping box scrolled
+    expect(seen.clipped).toBe(0); // no line is cut off, clamped or pushed outside a clipping box or the screen
     expect(seen.fontPx).toBeGreaterThanOrEqual(12);
     expect(seen.textAlpha).toBe(1);
     expect(seen.contrast).toBeGreaterThanOrEqual(4.5); // WCAG AA for body text, against the rendered backdrop
