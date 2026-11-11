@@ -36132,3 +36132,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 2 (plan sha256 ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97; exact source dd766c159d6e5d1a64f4470d8c4f053f11821dba on main 9f16548d; draft PR #653, issue #652). Independent re-audit by a second fresh auditor, risk grade L2. The three findings of Entry #939 are closed: the renderer is 245 lines, and all 22 earlier mutants are killed. The auditor found no defect in the shipped source. It then applied the stated rule that a surviving mutant which breaks a required negative is blocking, with 32 new mutants, each survivor confirmed in Chromium. Blocking R1 (coverage-gap): the provider can be contacted or opened without a click, and a workspace value can reach it, with both suites passing: a mousedown listener that rewrites the link, a WebSocket to the provider on render, a hover listener that opens the page, and a scheduler.postTask navigation. Mouse activation is no longer tested and neither harness observes WebSockets or pointer events. Blocking R2 (coverage-gap): a false Connected status can be shown with both suites passing: generated ::after content on the pill, a claim in the status line above the card, and title or aria-label attributes on the pill. Eleven of 32 new mutants survived, seven blocking. Non-blocking N1-N10 in the report (a vacuous assertion left in the older test file, that file's suite callback grown by 30 lines, plan line-number and evidence inaccuracies, process-wide timer replacement in the new jsdom test, gaps in unchanged code for other cards). The remediated source had not been through CI when audited. The auditor made no request to the provider.
 
 ---
+
+### Entry #940: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 3) - VETO
+
+**Timestamp**: 2026-11-11T02:47:19Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `1cf54f0986a5110998b1f00924c0b94f26c00a5b5139eefda9381707c4417ba1`
+**Previous Hash**: `d1ad877f14ec40220f5cbda9d8725d7254dcf292c86b50bdaa5b1f43082f32a9`
+**Chain Hash (Merkle seal)**: `0837b99da8bd5663b1421e6375cc912241bd67e9ee4cfbe9b1d4a8886ed11297`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 2 (plan sha256 ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97; exact source dd766c159d6e5d1a64f4470d8c4f053f11821dba on main 9f16548d; draft PR #653, issue #652). Independent re-audit by a second fresh auditor, risk grade L2. The three findings of Entry #940 are closed: the renderer is 245 lines, and all 22 earlier mutants are killed. The auditor found no defect in the shipped source. It then applied the stated rule that a surviving mutant which breaks a required negative is blocking, with 32 new mutants, each survivor confirmed in Chromium. Blocking R1 (coverage-gap): the provider can be contacted or opened without a click, and a workspace value can reach it, with both suites passing: a mousedown listener that rewrites the link, a WebSocket to the provider on render, a hover listener that opens the page, and a scheduler.postTask navigation. Mouse activation is no longer tested and neither harness observes WebSockets or pointer events. Blocking R2 (coverage-gap): a false Connected status can be shown with both suites passing: generated ::after content on the pill, a claim in the status line above the card, and title or aria-label attributes on the pill. Eleven of 32 new mutants survived, seven blocking. Non-blocking N1-N10 in the report (a vacuous assertion left in the older test file, that file's suite callback grown by 30 lines, plan line-number and evidence inaccuracies, process-wide timer replacement in the new jsdom test, gaps in unchanged code for other cards). The remediated source had not been through CI when audited. The auditor made no request to the provider.
+
+---
