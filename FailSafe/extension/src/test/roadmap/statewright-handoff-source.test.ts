@@ -24,14 +24,13 @@ const CARD = `
     </div>
   </section>`;
 
-const SELECTORS = [
-  '.cc-intcat-statewright',
-  '.cc-intcat-statewright p',
-  '.cc-intcat-web-link',
-  '.cc-intcat-web-link:hover, .cc-intcat-web-link:focus-visible',
-  '.cc-intcat-web-url',
-];
-const PROPERTIES = ['background', 'border', 'border-radius', 'padding', 'color', 'margin', 'font-size', 'display', 'font', 'text-decoration', 'border-color', 'user-select'];
+const STYLES = `
+.cc-intcat-statewright { background:linear-gradient(180deg,#182332,#111a25); border:1px solid #425168; border-radius:10px; padding:14px; }
+.cc-intcat-statewright p { color:#a9b8cb; margin:0 0 10px; font-size:.88rem; }
+.cc-intcat-web-link { display:inline-block; background:#141a22; color:#f1efe7; border:1px solid #5fb0d8; border-radius:8px; padding:7px 14px; font:inherit; text-decoration:none; }
+.cc-intcat-web-link:hover, .cc-intcat-web-link:focus-visible { border-color:#9fdcff; color:#fff; text-decoration:underline; }
+.cc-intcat-web-url { color:#7f8aa0; font-size:.8rem; user-select:all; }
+`;
 
 // Anything that can reach a network, open or move a window, or run later.
 const ACTIVE = /\b(WebSocket|EventSource|sendBeacon|XMLHttpRequest|Image|Worker|serviceWorker|navigator|location|history|open|postTask|scheduler|setTimeout|setInterval|requestAnimationFrame|requestIdleCallback|queueMicrotask|MutationObserver|IntersectionObserver|eval|Function|import)\b\s*[.(]/g;
@@ -43,23 +42,20 @@ suite('#652 Statewright website handoff: card source contract', () => {
     assert.equal(handoff.STATEWRIGHT_HANDOFF, CARD, 'any change to the card, including an attribute or a word, must be reviewed here');
   });
 
-  test('the card styles are a closed list: no generated content, hiding, overlay or remote resource', () => {
-    const css: string = handoff.STATEWRIGHT_STYLES;
-    const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g)).map((m) => ({ selector: m[1].trim(), body: m[2] }));
-    assert.deepEqual(rules.map((r) => r.selector), SELECTORS, 'no pseudo-element and no selector outside the card');
-    assert.equal(css.replace(/([^{}]+)\{([^{}]*)\}/g, '').trim(), '', 'nothing outside the listed rules (no @import, @font-face or comment)');
-    const used = rules.flatMap((r) => r.body.split(';').map((d) => d.split(':')[0].trim()).filter(Boolean));
-    assert.deepEqual(used.filter((p) => !PROPERTIES.includes(p)), [], 'only presentational properties');
-    assert.ok(!/url\(|content\s*:|expression|display\s*:\s*none|font-size\s*:\s*0[^.]/i.test(css), 'nothing that hides the text or loads a resource');
+  test('the card styles are exactly the reviewed rules, values included', () => {
+    assert.equal(handoff.STATEWRIGHT_STYLES, STYLES, 'any change to a selector, property or value (size, colour, spacing) must be reviewed here');
+    assert.ok(!/::|content\s*:|url\(|@/.test(STYLES), 'the reviewed rules hold no generated content, remote resource or at-rule');
   });
 
-  test('the handoff module contains no code: three constants and nothing that runs', () => {
-    const src = read('statewright-handoff.js').replace(/\/\*[\s\S]*?\*\//, '');
-    assert.equal(count(src, /^export const /gm), 3);
-    assert.equal(count(src, /=>|\bfunction\b|\bclass\s+\w|\bnew\b|addEventListener|\bon[a-z]+\s*=/g), 0);
-    assert.equal(count(src, ACTIVE), 0);
-    assert.equal(count(src, /\$\{/g), 2, 'the only interpolation is the fixed address, twice');
-    assert.equal(count(src, /\$\{STATEWRIGHT_RUNS_URL\}/g), 2);
+  test('the handoff module is its header comment and three constants, with no other statement', () => {
+    const code = read('statewright-handoff.js').replace(/^\/\*[\s\S]*?\*\//, '').trim();
+    const placeholder = '$' + '{STATEWRIGHT_RUNS_URL}';
+    const expected = [
+      "export const STATEWRIGHT_RUNS_URL = 'https://statewright.ai/runs';",
+      'export const STATEWRIGHT_STYLES = `' + STYLES + '`;',
+      'export const STATEWRIGHT_HANDOFF = `' + CARD.split('https://statewright.ai/runs').join(placeholder) + '`;',
+    ].join('\n\n');
+    assert.equal(code, expected, 'nothing runs when the module is imported');
   });
 });
 

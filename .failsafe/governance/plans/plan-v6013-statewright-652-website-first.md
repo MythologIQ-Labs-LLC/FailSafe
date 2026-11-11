@@ -1,6 +1,6 @@
 # Plan: v6.0.13 Statewright website-first handoff (#652)
 
-**Iteration:** 3 (after independent VETOs #938 and #939)
+**Iteration:** 4 (after independent VETOs #938, #939 and #940)
 **Change class:** narrow product UI / external navigation
 **Risk:** L2 planned (externally navigable UX; no credential or data egress except user-initiated browser navigation); independent governance auditor may increase grade
 **Base:** main `9f16548d83116e2d8ee7f9010545963c06e5c93a`
@@ -46,12 +46,26 @@ The second independent audit (source `dd766c15`) found the three findings of #93
   - The jsdom suite dispatches pointer and key events at the card, the link and the container and requires that nothing changes.
   - The Playwright spec hovers the card and the link before the idle check, refuses and records any WebSocket to the provider, and activates the link by keyboard and, separately, by mouse, each time requiring exactly one request to the fixed address.
 - **R2 (a false Connected status).**
-  - The source test requires the card to equal the reviewed markup character for character, and the card styles to be a closed list of five selectors and twelve presentational properties, with no generated content, hiding rule or remote resource.
+  - The source test requires the card to equal the reviewed markup character for character, and (iteration 3) the card styles to be a closed list of five selectors and twelve property names. That list did not constrain values, so it did not exclude a hiding rule; iteration 4 replaces it with an exact pin.
   - The jsdom suite requires that no element inside the card carries a `title`, `aria-label` or other attribute, that no text outside the card names Statewright, that the catalog container holds only the heading, one status line, the card and the catalog groups and cards, and that the status line is one of the catalog's four own messages.
   - The Playwright spec requires no generated `::before` or `::after` text in the card and a visible disclaimer.
-- **Mutation evidence.** 26 mutants: the twelve of iteration 2, the auditor's nine Statewright-related survivors and five new ones. All are killed.
+- **Mutation evidence.** 26 mutants: the twelve of iteration 2, the auditor's nine Statewright-related survivors and five new ones. All are killed; the list and results are in `.agent/staging/MUTATION_EVIDENCE-653.md`.
 - **Non-blocking notes taken.** `integration-catalog-renderer.test.ts` is restored to its `main` content, which removes the vacuous assertion and the growth of its suite callback (N1, N2); the new suites cover the same cases. Global timers in the jsdom harness are counted and still run, so a timer owned by the test host is not lost (N8). The two line-number and evidence statements in this plan are corrected (N7).
 - **Not changed.** Restyling or relabelling of other integrations' cards (auditor's X15, X16) is unchanged code outside this change. A source pin cannot prove the absence of every possible behaviour; it makes any new behaviour in these two files fail a named test and require review.
+
+## Iteration 4 (VETO #940 remediation)
+
+The third independent audit (source `45a78c4d`) found R1 and R2 closed, no defect in the shipped source, no limit breach and no flaky test. It vetoed on one solid gap and one boundary case, and proposed a fixed remediation list so that the audit has a defined end. This iteration implements that list and changes tests and this plan only. The shipped files are still byte-identical to `dd766c15`.
+
+- **B1 (the disclaimer could be made unreadable with every suite passing).**
+  - Item 1 of the list: `STATEWRIGHT_STYLES` must equal the reviewed rules character for character, values included. The handoff module as a whole must equal its header comment plus the three constants, so nothing can run when it is imported.
+  - Item 2: a Playwright test measures what is rendered for the disclaimer, the link and the address: full opacity through every ancestor, a font size and box height of at least 12 px, a WCAG contrast of at least 4.5 against the backdrop, and a position on screen.
+- **B2 (boundary: another control could activate the Statewright link).**
+  - Item 3: with the provider watch active, a Playwright test clicks another integration's Configure, sends four hub events, returns to the Catalog six times, hovers, scrolls and right-clicks the link, and then requires no provider contact, one page, and an unchanged link, pill, heading and page title.
+  - The generated-text check now covers the whole Integrations tab, not only the card.
+- **Mutation evidence.** The 26 earlier mutants and 14 from the third audit (its three blocking mutants, the three with the same cause, six of its plain survivors and two colour variants) are all killed; `.agent/staging/MUTATION_EVIDENCE-653.md` lists them with per-suite results.
+- **Accepted limits, as the third auditor classified them.** Obfuscated mutants (mixed-case inline handlers, `setAttribute('on...')`, aliased listeners, delays that outlast the idle wait, a soft hyphen inside the name) and deliberate edits whose intent is plain in a diff are not excluded by tests; code review is the control for those. Sending a workspace value to a host other than Statewright is outside this change; the Console has no Content-Security-Policy, which is a separate, pre-existing gap. Focus on the link is lost when the Catalog re-renders, as for every catalog control.
+- **Maintenance note.** The source contract fails on harmless edits to the renderer that add a listener, a request or one of the scanned words. That is intended: such an edit must be reviewed against this plan.
 
 ## Installed-host evidence
 

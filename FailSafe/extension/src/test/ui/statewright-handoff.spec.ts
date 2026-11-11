@@ -62,9 +62,10 @@ test('#652 Statewright handoff: rendering, hovering and waiting reach nothing an
   await expect(link).toHaveAttribute('href', RUNS);
 
   await expect(handoff.locator('.cc-intcat-pill')).toHaveText('Website handoff');
-  const generated = await handoff.evaluate((el) => [el, ...Array.from(el.querySelectorAll('*'))]
+  const generated = await page.locator('#integrations').evaluate((el) => [el, ...Array.from(el.querySelectorAll('*'))]
     .flatMap((n) => [getComputedStyle(n, '::before').content, getComputedStyle(n, '::after').content]));
-  expect(generated.filter((c) => c !== 'none' && c !== 'normal')).toEqual([]); // no generated status text
+  expect(generated.filter((c) => c !== 'none' && c !== 'normal')).toEqual([]); // no generated text anywhere in the tab
+  expect(await page.title()).not.toMatch(/statewright|connected/i);
   await expect(handoff.locator('p')).toBeVisible(); // the disclaimer is shown
   const mentions = await page.locator('body').evaluate((b) => (b as HTMLElement).innerText.match(/statewright[^\n]*/gi));
   expect(mentions).toHaveLength(4); // heading, disclaimer, link and address: no other line names Statewright
@@ -90,6 +91,65 @@ test('#652 Statewright handoff: a mouse click opens the same fixed address once'
   expect(await opened.evaluate(() => window.opener)).toBeNull();
   expect(provider).toEqual([{ url: RUNS, referer: undefined }]);
   expect(context.pages()).toHaveLength(2);
+});
+
+/** What a reader can actually see: size, opacity through every ancestor, contrast with the backdrop, and position. */
+async function readability(target: Locator, backdrops: string[]): Promise<{ fontPx: number; opacity: number; contrast: number; onScreen: boolean; height: number }> {
+  await target.scrollIntoViewIfNeeded();
+  return target.evaluate((el, colours) => {
+    const lum = (rgb: number[]) => rgb.map((v) => v / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+      .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const parse = (c: string) => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const style = getComputedStyle(el);
+    const text = lum(parse(style.color));
+    const ratio = (bg: number) => (Math.max(text, bg) + 0.05) / (Math.min(text, bg) + 0.05);
+    let opacity = 1;
+    for (let n: Element | null = el; n; n = n.parentElement) opacity *= Number(getComputedStyle(n).opacity);
+    const box = el.getBoundingClientRect();
+    const onScreen = box.left >= 0 && box.top >= 0 && box.right <= window.innerWidth && box.bottom <= window.innerHeight && style.visibility === 'visible';
+    return { fontPx: parseFloat(style.fontSize), opacity, contrast: Math.min(...colours.map((c) => ratio(lum(hex(c))))), onScreen, height: box.height };
+  }, backdrops);
+}
+
+test('#652 Statewright handoff: the disclaimer, the link and the address are readable as rendered', async ({ page, context }) => {
+  const { handoff, link } = await openCard(page, context);
+  const card = ['#182332', '#111a25']; // the two stops of the card background
+  for (const [target, backdrops] of [[handoff.locator('p'), card], [link, ['#141a22']], [handoff.locator('.cc-intcat-web-url'), card]] as Array<[Locator, string[]]>) {
+    await expect.poll(async () => (await readability(target, backdrops)).opacity).toBe(1); // after the tab's fade-in
+    const seen = await readability(target, backdrops);
+    expect(seen.fontPx).toBeGreaterThanOrEqual(12);
+    expect(seen.height).toBeGreaterThanOrEqual(12);
+    expect(seen.contrast).toBeGreaterThanOrEqual(4.5); // WCAG AA for body text
+    expect(seen.onScreen).toBe(true);
+  }
+  await expect(handoff.locator('p')).toHaveText(/FailSafe does not read Statewright history or enforce Statewright workflows\.$/);
+});
+
+test('#652 Statewright handoff: other controls, hub events and repeated renders never reach the provider', async ({ page, context }) => {
+  const { provider, handoff, link } = await openCard(page, context);
+  const title = await page.title();
+  await page.locator('.cc-intcat-configure').first().click(); // another integration's Configure
+  await page.locator('.tab-btn[data-target="integrations"]').click();
+  for (const type of ['init', 'hub.refresh', 'verdict', 'integration.health']) controller.broadcast({ type, payload: {} });
+  const pills = page.locator('#integrations .cc-subview-bar .cc-pill');
+  for (let i = 0; i < 6; i += 1) { // each return to the Catalog renders it again
+    await pills.nth(1).click();
+    await pills.nth(0).click();
+    await expect(handoff).toHaveCount(1);
+  }
+  await handoff.hover();
+  await page.mouse.wheel(0, 400);
+  await link.click({ button: 'right' }); // a context menu is not an activation
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(1500);
+
+  expect(provider).toEqual([]);
+  expect(context.pages()).toHaveLength(1);
+  await expect(link).toHaveAttribute('href', RUNS);
+  await expect(handoff.locator('.cc-intcat-pill')).toHaveText('Website handoff');
+  await expect(page.locator('#integrations h3').first()).toHaveText('Integration Catalog');
+  expect(await page.title()).toBe(title);
 });
 
 test('#652 Statewright handoff stays available, and silent, when the local catalog cannot be loaded', async ({ page, context }) => {
