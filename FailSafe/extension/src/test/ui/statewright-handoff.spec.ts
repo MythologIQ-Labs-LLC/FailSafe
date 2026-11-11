@@ -7,6 +7,9 @@ import { test, expect, BrowserContext, Locator, Page } from '@playwright/test';
 import { serveConsoleServerUI, ConsoleServerController } from './helpers/serveConsoleServerUI';
 
 const RUNS = 'https://statewright.ai/runs';
+// No test in this file can reach the real provider, whatever the page under test does: the provider's
+// names resolve to this machine, so anything that slips past the routes below fails to connect.
+test.use({ launchOptions: { args: ['--host-resolver-rules=MAP statewright.ai 127.0.0.1, MAP *.statewright.ai 127.0.0.1'] } });
 type Seen = Array<{ url: string; referer: string | undefined }>;
 let controller: ConsoleServerController;
 
@@ -117,7 +120,8 @@ async function readability(target: Locator): Promise<Legible> {
     const range = document.createRange();
     range.selectNodeContents(el);
     const lines = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
-    const clips = chain.filter((n) => n === el || !/^visible( visible)?$/.test(getComputedStyle(n).overflow));
+    // The element, the card (text must stay inside it even where it does not clip) and every ancestor that clips.
+    const clips = chain.filter((n) => n === el || n.matches('.cc-intcat-statewright') || !/^visible( visible)?$/.test(getComputedStyle(n).overflow));
     const frames = [...clips.map((n) => n.getBoundingClientRect()), new DOMRect(0, 0, window.innerWidth, window.innerHeight)];
     const inside = (r: DOMRect, f: DOMRect) => r.left >= f.left - 1 && r.top >= f.top - 1 && r.right <= f.right + 1 && r.bottom <= f.bottom + 1;
     return {

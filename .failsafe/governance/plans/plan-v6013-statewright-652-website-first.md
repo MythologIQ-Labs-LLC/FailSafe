@@ -1,6 +1,6 @@
 # Plan: v6.0.13 Statewright website-first handoff (#652)
 
-**Iteration:** 6 (after independent VETOs #938, #939, #940, #941 and #942)
+**Iteration:** 7 (after independent VETOs #938 to #942 and the confirmation-check VETO #944)
 **Change class:** narrow product UI / external navigation
 **Risk:** L2 planned (externally navigable UX; no credential or data egress except user-initiated browser navigation); independent governance auditor may increase grade
 **Base:** main `9f16548d83116e2d8ee7f9010545963c06e5c93a`
@@ -72,14 +72,14 @@ The third independent audit (source `45a78c4d`) found R1 and R2 closed, no defec
 The fourth independent audit (source `b883f814`, 141 mutants) found the #940 list implemented, no defect in the shipped source, no limit breach, no flaky test and no false refusal, and said the result would be a PASS against that list as written. It vetoed on one gap and gave a closed list. This iteration implements that list and changes tests and this plan only. The shipped files are still byte-identical to `dd766c15`.
 
 - **B1 (a shared rule in the renderer's own style sheet could clip or wash out the disclaimer).**
-  - Item 1: every rendered line of the disclaimer, the link and the address must lie inside its element, the card and the viewport. A line clamp, a height cap or a truncation on the text element fails. (As written in iteration 5 this did not hold for a cap on the card itself, because the check scrolled first; iteration 6 corrects it.)
+  - Item 1: every rendered line of the disclaimer, the link and the address must lie inside its element, the card and the viewport. (Iteration 6 dropped the card from this comparison by mistake; iteration 7 restores it.) A line clamp, a height cap or a truncation on the text element fails. (As written in iteration 5 this did not hold for a cap on the card itself, because the check scrolled first; iteration 6 corrects it.)
   - Item 2: contrast is measured against the nearest painted background behind the text (a colour that is not fully transparent, or a gradient's stops; partial transparency of that background is not blended), the text colour must be opaque, and the check runs in five views: the default theme at 1280 and 600 px, the default theme under a light colour scheme, and the Pegasus light theme at 1280 and 600 px.
   - Item 3: the pill text and the link are read immediately after a hub event that reaches the catalog without a render, before the re-render loop.
 - **Mutation evidence.** `.agent/staging/MUTATION_EVIDENCE-653.md` is rewritten with one identifier per mutant: the author's set (A), and the mutants taken from the second, third and fourth audits under the auditors' identifiers. One variant written for this iteration (translucent text through `.cc-intcat p`) is equivalent: the card's own later rule overrides it, and the rendered disclaimer does not change.
 - **Found by the fourth audit, not fixed here.**
   - The card title `Statewright AI` is unreadable in the Pegasus light theme (dark text on the dark card). All eleven existing catalog cards on `main` have the same defect, so it is not introduced by this change. The disclaimer, link and address are readable in that theme and are now tested there; the title and the pill are not measured by the readability test. Fixing the title means changing the shared catalog styles and belongs in its own issue.
   - A future render state added to `render()` (for example a 404 branch) could omit the card; the three existing states are tested.
-- **Where the audit stands.** Five independent audits found no defect in the shipped files after iteration 2. Each veto concerned how far the tests exclude hypothetical future edits, and three auditors noted that a rule based on any surviving mutant has no natural end. The fifth recommended a confirmation check of its closed list as the next step. Whether a confirmed closed list is a sufficient pass for this change is the owner's decision.
+- **Where the audit stands.** Five independent audits found no defect in the shipped files after iteration 2. Each veto concerned how far the tests exclude hypothetical future edits, and three auditors noted that a rule based on any surviving mutant has no natural end. The fifth recommended a confirmation check of its closed list as the next step, and the sixth reviewer agreed that after its one finding and the pin boundary are settled the remaining risk is appropriately carried by code review and the owner. Whether a confirmed closed list is a sufficient pass for this change is the owner's decision.
 
 ## Iteration 6 (VETO #942 remediation)
 
@@ -87,15 +87,26 @@ The fifth independent audit (source `54f67646`, 184 mutants) found the shipped f
 
 - **B1 (the readability check scrolled clipped boxes before measuring).** The check no longer scrolls anything. It compares every rendered line with the text element, with every ancestor whose overflow is not visible, and with the viewport, and it fails if any such box has been scrolled. A height cap on the card, or on the row that holds the link, now fails in the browser test itself.
 - **B2 (boundary: a shared rule conditional on a view that no test samples).** Sampling more views cannot close this class. As the auditor proposed, the renderer's own style sheet is pinned in the source contract by a digest of its text. Any change to that sheet fails a named test and must be reviewed for its effect on the card and its disclaimer. This is a review trigger, not a proof.
-- **Records corrected.** Ledger Entry #943 corrects the Decision text of Entries #940 and #941 without altering them. The evidence file is rewritten: results are reported per suite (source contract, jsdom, Playwright), the Y48 and M12 rows are re-run, the equivalence note on A08 is limited to the Statewright card, and the scripts that define and run the mutants are committed beside it under `.agent/staging/mutation-653/`.
+- **Records corrected.** Ledger Entry #943 corrects the Decision text of Entries #940 and #941 without altering them. The evidence file is rewritten, the Y48 and M12 rows are re-run, the equivalence note on A08 is limited to the Statewright card, and the scripts that define and run the mutants are committed beside it under `.agent/staging/mutation-653/`.
 - **Accepted limits (the auditor's assessment of where the remaining risk belongs).**
   - Deliberate or obfuscated edits, style sheets outside these two files, and new render states are for code review and the owner, not for further tests.
-  - The readability check does not measure overlap by a neighbouring element, paint-level hiding (clip-path, filters, blend modes), `zoom`, hover states, the card title or the pill, and it refuses some legitimate restyles (a translucent backdrop, non-rgb colour syntax). With the style sheets pinned, each of these needs a reviewed change to a pinned sheet first.
+  - The readability check does not measure overlap by a neighbouring element, paint-level hiding (clip-path, filters, blend modes), `zoom`, hover states, the card title or the pill, and it refuses some legitimate restyles (a translucent backdrop, non-rgb colour syntax). With both style sheets and the line that installs them pinned, a style change made through this module fails a named test first. A style sheet elsewhere in the Console is not covered.
   - The address has thin margins against the thresholds: 12.8 px against a 12 px floor, and contrast 4.56 against 4.5.
 - **Inherited from `main`, not introduced or worsened here, to be tracked separately.**
   - The card title is unreadable in the Pegasus light theme for every catalog card.
   - Below about 520 px viewport width the Console layout cuts content off for every catalog card.
   - The Console server sets no Content-Security-Policy or Referrer-Policy.
+
+## Iteration 7 (confirmation check #944)
+
+The fifth auditor recommended that the next step be a confirmation of its closed list, not another open-ended audit. That bounded check was commissioned by the implementer, not by the owner, and is recorded as such in Entry #944. It re-ran 184 earlier mutants with the auditors' own definitions (170 killed, 14 carried survivors, none moved from killed to survived), confirmed the style-sheet pin and the records, found no defect in the shipped files and no flaky test, and confirmed CI 13 of 13 on the audited commit. It vetoed on one point. This iteration changes tests, this plan and the records only. The shipped files are still byte-identical to `dd766c15`.
+
+- **B1 (the card was dropped from the readability comparison).** Iteration 6 added every clipping ancestor to the boxes that each rendered line is compared with, and by mistake removed the card's own box, which does not clip. Text moved outside the card without being clipped was then reported as readable by the browser test. The card is restored: each line is compared with the text element, the card, every ancestor that clips, and the viewport.
+- **Pin boundary (the reviewer's observation O1).** The digest covered the style constant but not how the style element is built. The source contract now also requires that the constant is defined once and used once, that the module creates one style element and assigns it exactly the two reviewed sheets, and that it uses no other way of styling. The digest assertion carries a message that says what to review.
+- **Tests cannot reach the provider.** During the implementer's local mutation runs there was no network guard, so a mutant that deliberately contacts the provider could have opened a real connection carrying only synthetic test strings. The Playwright spec now maps the provider's host names to the local machine for every test in the file, and the jsdom harness records sockets and event streams without connecting.
+- **Evidence.** Every set now uses one runner that reports the source contract, the jsdom contract and Playwright separately; the labels printed by the scripts are the labels in the file; set 7 holds the confirmation check's cases.
+- **Record notes that are not corrected in place.** Entry #939's Decision text refers to its own number where it means Entry #938. Entry #943 carries the field `Author: Judge` although it is a correction written by the implementer. Both entries are sealed and are left as they are; this note is the correction.
+- **Not done.** The frames are border boxes with a one-pixel tolerance, not padding boxes. A card pushed below the first screen is refused by the no-scroll rule; that is intended for now and may need revisiting if the catalog grows above the card.
 
 ## Installed-host evidence
 

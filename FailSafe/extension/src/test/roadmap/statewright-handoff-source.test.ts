@@ -76,7 +76,14 @@ suite('#652 Statewright website handoff: renderer source contract', () => {
     // Shared catalog rules also style the Statewright card, and a rule can be conditional on a width, theme or
     // state that no test samples. Any change to this sheet must therefore be reviewed for its effect on the card
     // and its disclaimer; update the digest only after that review.
-    assert.equal(createHash('sha256').update(sheet).digest('hex'), 'b1c2787e452233ccc314d4fc21e76320855dd3efeaa1be6f87ad3e438c1c9197');
+    assert.equal(createHash('sha256').update(sheet).digest('hex'), 'b1c2787e452233ccc314d4fc21e76320855dd3efeaa1be6f87ad3e438c1c9197',
+      'the catalog style sheet changed: review its effect on the Statewright card and disclaimer, then update this digest');
+    // The pinned sheet and the pinned card rules are the only styles this module installs, in one element.
+    assert.equal(count(src, /\bSTYLE\b/g), 2, 'STYLE is defined once and used once');
+    assert.equal(count(src, /createElement\('style'\)/g), 1, 'one style element');
+    assert.equal(count(src, /\.textContent\s*=/g), 1, 'one style assignment');
+    assert.equal(count(src, /el\.textContent = STYLE \+ STATEWRIGHT_STYLES;/g), 1, 'the style element holds exactly the two reviewed sheets');
+    assert.equal(count(src, /\.replace\(|insertRule|adoptedStyleSheets|\.style\.|setAttribute\(/g), 0, 'no other way of styling is used');
   });
 
   test('the renderer has one listener, one request and nothing that acts by itself', () => {

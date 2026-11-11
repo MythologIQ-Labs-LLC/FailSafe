@@ -1,6 +1,7 @@
 'use strict';
-// Iteration 3: the mutants that survived audit #939 (X09..X30), the earlier set, and controls.
-// Usage: node mutate3.cjs <extDir>   (restores every file; exits 1 if any mutant survives)
+// PR #653 mutation set 6. Each entry is [label, mutation]; the label and this text are the definition that was run.
+// Usage: npm run compile && node set6.cjs <path to FailSafe/extension>   (restores every file; exits 1 if a mutant survives)
+// The suites cannot reach the real provider: the jsdom harness stubs sockets and fetch, and the Playwright spec maps the provider host to 127.0.0.1.
 const fs = require('fs'), path = require('path');
 const { spawnSync } = require('child_process');
 const ext = path.resolve(process.argv[2]);

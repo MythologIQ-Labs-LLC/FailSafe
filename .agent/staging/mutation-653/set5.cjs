@@ -1,6 +1,7 @@
 'use strict';
-// Iteration 3: the mutants that survived audit #939 (X09..X30), the earlier set, and controls.
-// Usage: node mutate3.cjs <extDir>   (restores every file; exits 1 if any mutant survives)
+// PR #653 mutation set 5. Each entry is [label, mutation]; the label and this text are the definition that was run.
+// Usage: npm run compile && node set5.cjs <path to FailSafe/extension>   (restores every file; exits 1 if a mutant survives)
+// The suites cannot reach the real provider: the jsdom harness stubs sockets and fetch, and the Playwright spec maps the provider host to 127.0.0.1.
 const fs = require('fs'), path = require('path');
 const { spawnSync } = require('child_process');
 const ext = path.resolve(process.argv[2]);
@@ -26,7 +27,7 @@ const M = [
   ['Z09 light colour-scheme repair lightens the card only', sub(R, RSTYLE, `${RSTYLE}@media (prefers-color-scheme: light) { .cc-intcat-card, .cc-intcat section { background:#f8fafc; } .cc-intcat-card { color:#0f172a; } }\n`)],
   ['Z34 light theme repair lightens the card only', sub(R, RSTYLE, `${RSTYLE}[data-theme="pegasus"] .cc-intcat-card, [data-theme="pegasus"] .cc-intcat section { background:#f8fafc; } [data-theme="pegasus"] .cc-intcat-card { color:#0f172a; }\n`)],
   ['Z14 shared rule truncates the address', sub(R, RSTYLE, `${RSTYLE}.cc-intcat-actions span { display:inline-block; max-width:8ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }\n`)],
-  ['Z10 shared rule makes paragraph text translucent', sub(R, RSTYLE, `${RSTYLE}.cc-intcat p { color:rgba(169,184,203,.15); }\n`)],
+  ['A08 shared rule makes paragraph text translucent', sub(R, RSTYLE, `${RSTYLE}.cc-intcat p { color:rgba(169,184,203,.15); }\n`)],
   ['Y48 hub event sets the pill to Connected', sub(R, '  onEvent() {}', "  onEvent() { const p = document.querySelector('.cc-intcat-statewright .cc-intcat-pill'); if (p) p.textContent = 'Connected'; }")],
   ['Y16 renderer style hides the disclaimer', sub(R, RSTYLE, `${RSTYLE}.cc-intcat section p { opacity:0; }\n`)],
   ['Y06 Configure click activates the Statewright link', sub(R, 'if (settingsTab) settingsTab.click();', "if (settingsTab) settingsTab.click(); document.querySelector('.cc-intcat-web-link').click();")],
@@ -35,21 +36,22 @@ const sh = (cmd) => spawnSync(cmd, { cwd: ext, shell: true, encoding: 'utf8', ma
 const restore = () => { for (const [f, s] of Object.entries(orig)) fs.writeFileSync(f, s); };
 const run = () => {
   sh('node ./scripts/copy-ui-js.cjs');
-  const j = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff.test.js out/test/roadmap/statewright-handoff-source.test.js out/test/roadmap/integration-catalog-renderer.test.js');
+  const src = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff-source.test.js');
+  const j = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff.test.js out/test/roadmap/integration-catalog-renderer.test.js');
   const p = sh('npx playwright test src/test/ui/statewright-handoff.spec.ts');
-  return { jsdom: j.status === 0 ? 'pass' : 'FAIL', playwright: p.status === 0 ? 'pass' : 'FAIL' };
+  return { source: src.status === 0 ? 'pass' : 'FAIL', jsdom: j.status === 0 ? 'pass' : 'FAIL', playwright: p.status === 0 ? 'pass' : 'FAIL' };
 };
 let survived = 0;
 try {
   const base = run();
   console.log('baseline', JSON.stringify(base));
-  if (base.jsdom !== 'pass' || base.playwright !== 'pass') throw new Error('baseline is not green');
+  if (base.source !== 'pass' || base.jsdom !== 'pass' || base.playwright !== 'pass') throw new Error('baseline is not green');
   for (const [name, apply] of M) {
     restore(); apply();
     const r = run();
-    const killed = r.jsdom === 'FAIL' || r.playwright === 'FAIL';
+    const killed = r.source === 'FAIL' || r.jsdom === 'FAIL' || r.playwright === 'FAIL';
     if (!killed) survived += 1;
-    console.log(`${name} | jsdom ${r.jsdom} | playwright ${r.playwright} | ${killed ? 'killed' : 'SURVIVED'}`);
+    console.log(`${name} | source ${r.source} | jsdom ${r.jsdom} | playwright ${r.playwright} | ${killed ? 'killed' : 'SURVIVED'}`);
   }
 } finally { restore(); sh('node ./scripts/copy-ui-js.cjs'); }
 process.exit(survived ? 1 : 0);

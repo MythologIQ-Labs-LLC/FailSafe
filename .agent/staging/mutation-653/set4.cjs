@@ -1,6 +1,7 @@
 'use strict';
-// Iteration 3: the mutants that survived audit #939 (X09..X30), the earlier set, and controls.
-// Usage: node mutate3.cjs <extDir>   (restores every file; exits 1 if any mutant survives)
+// PR #653 mutation set 4. Each entry is [label, mutation]; the label and this text are the definition that was run.
+// Usage: npm run compile && node set4.cjs <path to FailSafe/extension>   (restores every file; exits 1 if a mutant survives)
+// The suites cannot reach the real provider: the jsdom harness stubs sockets and fetch, and the Playwright spec maps the provider host to 127.0.0.1.
 const fs = require('fs'), path = require('path');
 const { spawnSync } = require('child_process');
 const ext = path.resolve(process.argv[2]);
@@ -39,21 +40,22 @@ const sh = (cmd) => spawnSync(cmd, { cwd: ext, shell: true, encoding: 'utf8', ma
 const restore = () => { for (const [f, s] of Object.entries(orig)) fs.writeFileSync(f, s); };
 const run = () => {
   sh('node ./scripts/copy-ui-js.cjs');
-  const j = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff.test.js out/test/roadmap/statewright-handoff-source.test.js out/test/roadmap/integration-catalog-renderer.test.js');
+  const src = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff-source.test.js');
+  const j = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff.test.js out/test/roadmap/integration-catalog-renderer.test.js');
   const p = sh('npx playwright test src/test/ui/statewright-handoff.spec.ts');
-  return { jsdom: j.status === 0 ? 'pass' : 'FAIL', playwright: p.status === 0 ? 'pass' : 'FAIL' };
+  return { source: src.status === 0 ? 'pass' : 'FAIL', jsdom: j.status === 0 ? 'pass' : 'FAIL', playwright: p.status === 0 ? 'pass' : 'FAIL' };
 };
 let survived = 0;
 try {
   const base = run();
   console.log('baseline', JSON.stringify(base));
-  if (base.jsdom !== 'pass' || base.playwright !== 'pass') throw new Error('baseline is not green');
+  if (base.source !== 'pass' || base.jsdom !== 'pass' || base.playwright !== 'pass') throw new Error('baseline is not green');
   for (const [name, apply] of M) {
     restore(); apply();
     const r = run();
-    const killed = r.jsdom === 'FAIL' || r.playwright === 'FAIL';
+    const killed = r.source === 'FAIL' || r.jsdom === 'FAIL' || r.playwright === 'FAIL';
     if (!killed) survived += 1;
-    console.log(`${name} | jsdom ${r.jsdom} | playwright ${r.playwright} | ${killed ? 'killed' : 'SURVIVED'}`);
+    console.log(`${name} | source ${r.source} | jsdom ${r.jsdom} | playwright ${r.playwright} | ${killed ? 'killed' : 'SURVIVED'}`);
   }
 } finally { restore(); sh('node ./scripts/copy-ui-js.cjs'); }
 process.exit(survived ? 1 : 0);

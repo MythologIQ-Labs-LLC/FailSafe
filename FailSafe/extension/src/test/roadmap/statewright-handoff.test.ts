@@ -27,7 +27,7 @@ type Globals = Record<string, unknown>;
 function setupDom(fetchImpl: FetchImpl): Ctx {
   const dom = new JSDOM('<!DOCTYPE html><html><head></head><body><div id="integrations"></div></body></html>', { url: 'http://localhost:9999/?workspace=C%3A%5Csecret' });
   const g = global as unknown as Globals;
-  const names = ['window', 'document', 'fetch', 'setTimeout', 'setInterval', 'requestAnimationFrame'];
+  const names = ['window', 'document', 'fetch', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'WebSocket', 'EventSource'];
   const prev = names.map((n) => [n, g[n]] as const);
   const activity: Activity = { fetches: [], opened: [], timers: 0, clicks: 0 };
   const timer = () => { activity.timers += 1; return 0; };
@@ -35,8 +35,11 @@ function setupDom(fetchImpl: FetchImpl): Ctx {
   const counted = (real: unknown) => (...a: unknown[]) => { activity.timers += 1; return (real as (...x: unknown[]) => unknown)(...a); };
   dom.window.open = ((...a: unknown[]) => { activity.opened.push(a); return null; }) as typeof dom.window.open;
   dom.window.HTMLElement.prototype.click = function click() { activity.clicks += 1; };
+  // Sockets and event streams are recorded as openings and never connect, so no test here can reach a real host.
+  const channel = (kind: string) => function Channel(url: unknown) { activity.opened.push([kind, String(url)]); };
   Object.assign(dom.window, { setTimeout: timer, setInterval: timer, requestAnimationFrame: timer });
   Object.assign(g, { window: dom.window, document: dom.window.document, setTimeout: counted(g.setTimeout), setInterval: counted(g.setInterval), requestAnimationFrame: timer,
+    WebSocket: channel('WebSocket'), EventSource: channel('EventSource'),
     fetch: (url: string) => { activity.fetches.push(String(url)); return fetchImpl(url); } });
   return { doc: dom.window.document as unknown as Document, activity, cleanup: () => { for (const [n, v] of prev) g[n] = v; } };
 }
