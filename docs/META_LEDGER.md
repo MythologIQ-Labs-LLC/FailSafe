@@ -36172,3 +36172,43 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 2 (plan sha256 ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97; exact source dd766c159d6e5d1a64f4470d8c4f053f11821dba on main 9f16548d; draft PR #653, issue #652). Independent re-audit by a second fresh auditor, risk grade L2. The three findings of Entry #941 are closed: the renderer is 245 lines, and all 22 earlier mutants are killed. The auditor found no defect in the shipped source. It then applied the stated rule that a surviving mutant which breaks a required negative is blocking, with 32 new mutants, each survivor confirmed in Chromium. Blocking R1 (coverage-gap): the provider can be contacted or opened without a click, and a workspace value can reach it, with both suites passing: a mousedown listener that rewrites the link, a WebSocket to the provider on render, a hover listener that opens the page, and a scheduler.postTask navigation. Mouse activation is no longer tested and neither harness observes WebSockets or pointer events. Blocking R2 (coverage-gap): a false Connected status can be shown with both suites passing: generated ::after content on the pill, a claim in the status line above the card, and title or aria-label attributes on the pill. Eleven of 32 new mutants survived, seven blocking. Non-blocking N1-N10 in the report (a vacuous assertion left in the older test file, that file's suite callback grown by 30 lines, plan line-number and evidence inaccuracies, process-wide timer replacement in the new jsdom test, gaps in unchanged code for other cards). The remediated source had not been through CI when audited. The auditor made no request to the provider.
 
 ---
+
+### Entry #942: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 5) - VETO
+
+**Timestamp**: 2026-11-11T05:33:34Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter5.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `b7550e12396d10ac0e6491b3dece11bc3e54d4a61cfe606729712222eb804b20`
+**Previous Hash**: `9e81f79e70d32eb4d03d79b5204026ec7bc681012be005615f26b4bd202e971f`
+**Chain Hash (Merkle seal)**: `88ba7ac4b105e2ab0867f6427d93e2746f7e5ccbb886a8de3433d253465a94c5`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 5 (plan hash recorded in plan-iter5.json; exact source 54f676468aeb14a5d8edc027e737949cc14eef76 on main 9f16548d; draft PR #653, issue #652). Fifth independent audit by a fifth fresh auditor, risk grade L2, 184 mutants. The shipped files are sound and byte-identical to dd766c15; every mutant named by the fourth audit is killed; items 2 and 3 of the fourth audit's closed list are implemented and effective; no mutant moved from killed to survived; no razor breach; no flake in 375 Playwright runs; no false refusal at 520 px and wider across 234 theme, scheme, width and catalog-state combinations. Blocking B1 (coverage-gap, a test defect): the readability check calls scrollIntoViewIfNeeded before measuring, which also scrolls overflow-hidden boxes including the card, and it compares line rectangles only with the element, the card and the viewport, so text cut off by the card or by an intermediate box is reported as visible; a height cap on catalog cards hides the link, the address and the last line of the disclaimer at 600 px with all 47 tests passing, and the plan sentence that a height cap fails is false for a cap on the card. The auditor notes these mutants are not plausible accidents, because such a cap visibly cuts every catalog card, and that the finding is that a closed-list item does not do what it says. Blocking B2, recorded by the auditor as a boundary call (coverage-gap): a shared rule conditional on a view that the tests do not sample, for example a one-line paragraph clamp at 1400 px and wider, hides the disclaimer with all tests passing; sampling more views cannot end this class. Closed remediation list: remove the scroll or fail on a scrolled clipping ancestor and compare against every ancestor with non-visible overflow; pin the renderer style sheet by string equality in the source contract, or record an owner decision that conditional shared rules are a code-review risk; correct the records. The auditor recommends that the next check be a confirmation of this list and not a sixth open-ended audit, and states that after these items the remaining risk belongs to code review and the owner. Non-blocking N1-N11 in the report, including a governance record error: the Decision paragraphs of Entries #940 and #941 repeat the text of Entry #939 (their headers, hashes and gate files are correct); a correction entry follows. Also recorded: the card title is unreadable in the Pegasus theme and content is cut below about 520 px viewport width, both inherited from main for every catalog card and not worsened here. No request reached the provider.
+
+---
+
+### Entry #943: CORRECTION - Decision text of Entries #940 and #941 (plan-v6013-statewright-652-website-first)
+
+**Timestamp**: 2026-11-11T05:33:34Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: CORRECTION (no verdict)
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/LEDGER_CORRECTION-940-941.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `n/a`
+
+**Content Hash**: `c8af02b0329bc4f576872a10980cd569810a991ee722abfb8181e61ff6e932dc`
+**Previous Hash**: `88ba7ac4b105e2ab0867f6427d93e2746f7e5ccbb886a8de3433d253465a94c5`
+**Chain Hash (Merkle seal)**: `8bf00fafed7b6a2c2bbe27036876e1117fd89fee43a3218c8261538d603bc2a4`
+
+**Decision**: CORRECTION of the Decision paragraphs of Entries #940 and #941. Those two paragraphs repeat the text of Entry #939 word for word and so describe the second audit, not the third and the fourth. Their titles, verdicts, report paths, content hashes, chain hashes and gate files are correct, and both entries are left exactly as sealed: nothing is edited, removed or re-hashed. The correct Decision text for each, the cause (an entry-preparation script whose replacement pattern did not match and whose check compared only the first thirty characters) and the prevention are in the cited correction file, whose hash this entry seals. In short: Entry #940 records the third independent audit of source 45a78c4d, VETO on B1 (the disclaimer could be made unreadable because style values were not pinned) and B2 as a boundary call (a Configure click activating the Statewright link), with a fixed three-item remediation list; Entry #941 records the fourth independent audit of source b883f814, VETO on B1 (a shared rule in the renderer style sheet could clip or wash out the disclaimer), with a closed three-item list. The error was found by the fifth independent audit (Entry #942, note N1). This entry is a record correction, not an audit verdict.
+
+---

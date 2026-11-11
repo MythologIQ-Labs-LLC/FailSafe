@@ -1,0 +1,41 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T05:33:34Z",
+  "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter5.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "coverage-gap"
+  ],
+  "target_content_hash": "3f900467333bcbe172ecb7c73ed4e303863eac0145760ef42cf4443f08200f7a",
+  "report_content_hash": "b7550e12396d10ac0e6491b3dece11bc3e54d4a61cfe606729712222eb804b20",
+  "iteration": 5,
+  "ledger_entry": 942,
+  "ledger_chain_hash": "88ba7ac4b105e2ab0867f6427d93e2746f7e5ccbb886a8de3433d253465a94c5",
+  "audited_candidate": "54f676468aeb14a5d8edc027e737949cc14eef76",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "coverage-gap",
+      "detail": "the readability check scrolls clipped boxes before measuring and compares only with the element, card and viewport, so text cut off by the card is reported visible"
+    },
+    {
+      "id": "B2",
+      "category": "coverage-gap",
+      "detail": "boundary call: a shared rule conditional on an unsampled view hides the disclaimer with all tests passing"
+    }
+  ],
+  "merge_obligations": "apply the fifth auditor's closed list; confirmation check of that list; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-11T05:33:34Z"
+  }
+}
