@@ -91,7 +91,7 @@ A G4 checkpoint attests a commit that already exists, so it cannot be part of th
 
 **On any failure** (S's provenance, signature, token, pins, the attested commit, ancestry, CI or the ruleset gate): stop, and correct through a new audited PR and a re-seal. No administrative bypass, unsigned checkpoint, diagnostic PASS or altered seal. A provider outage or a missing owner decision blocks the release; it is not permission to weaken a check. A later RC promotion that needs another checkpoint repeats all of the above.
 
-**Why the Git checks matter.** The verifier does not reject extra paths under `tools/g4/checkpoints/`, a missing `timestamp.tsq` or an edited `tsa-chain.pem`. Checks 2 to 4 are the only control for those.
+**Why the Git checks matter.** In release mode the verifier now refuses a committed checkpoint tree that is not exactly five regular files per `g4-NNNNNN` directory (`REFUSED RELEASE_EVIDENCE_LAYOUT`), which repeats check 4 in code. It still does not see history: a checkpoint rewritten, replaced or deleted in an intermediate commit, a second new checkpoint, or an edited `tsa-chain.pem` that still verifies. Checks 2, 3 and 5 are the only control for those, and check 4 is still run by the operator.
 
 **Status of these checks.** They are operator checks, not CI enforcement, and the #640 acceptance test did not exercise them. Their only evidence so far is the independent audits of this section, which ran them against synthetic repositories and real test checkpoints. No live checkpoint is authorized or created by this document. An executable preflight needs its own tests and audit.
 

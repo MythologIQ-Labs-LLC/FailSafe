@@ -81,6 +81,39 @@ function assertEvidenceMatchesHead(repoRoot, head) {
   }
 }
 
+const EVIDENCE_FILES = Object.values(layout.FILES);
+const EVIDENCE_PATH = new RegExp(`^${layout.CHECKPOINTS_DIR}/(g4-\\d{6})/([^/]+)$`);
+
+/** One `git ls-tree -r -z` record as { mode, type, rel }. */
+function treeEntry(record) {
+  const [meta, rel] = record.split("\t");
+  const [mode, type] = meta.split(" ");
+  return { mode, type, rel };
+}
+
+/**
+ * The committed checkpoint tree must be exactly five regular files per
+ * g4-NNNNNN directory: no extra, nested or stray path, no symbolic link,
+ * submodule or executable entry, and no missing file. The checks that follow
+ * read only the files they expect, so anything else would go unseen.
+ */
+function assertEvidenceLayout(repoRoot, head) {
+  const res = git(repoRoot, ["ls-tree", "-r", "-z", head, "--", layout.CHECKPOINTS_DIR]);
+  if (res.status !== 0) throw block("REPO_UNREADABLE", "git ls-tree failed for the release checkout");
+  const seen = new Map();
+  for (const { mode, type, rel } of res.stdout.split("\0").filter(Boolean).map(treeEntry)) {
+    const m = EVIDENCE_PATH.exec(rel);
+    if (mode !== "100644" || !m || !EVIDENCE_FILES.includes(m[2])) {
+      throw refuse("RELEASE_EVIDENCE_LAYOUT", `${mode} ${type} ${rel} at ${head} is not one of the five regular checkpoint files`);
+    }
+    seen.set(m[1], (seen.get(m[1]) || []).concat(m[2]));
+  }
+  for (const [id, files] of seen) {
+    const missing = EVIDENCE_FILES.filter((f) => !files.includes(f));
+    if (missing.length) throw refuse("RELEASE_EVIDENCE_LAYOUT", `${id} at ${head} lacks ${missing.join(", ")}`);
+  }
+}
+
 /**
  * Throws unless `o` and the checkout satisfy every release precondition.
  * @param {{release?:boolean}} o verifier options
@@ -94,6 +127,7 @@ function assertReleasePreconditions(o, repoRoot, head) {
   if (head !== o.expectedCommit) {
     throw refuse("RELEASE_COMMIT_MISMATCH", `checkout is at ${head}, but the qualified commit is ${o.expectedCommit}`);
   }
+  assertEvidenceLayout(repoRoot, head);
   assertCleanCheckout(repoRoot);
   assertEvidenceMatchesHead(repoRoot, head);
 }
