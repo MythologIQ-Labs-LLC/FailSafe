@@ -4,6 +4,8 @@
 // assertion below exists because a source mutation survived the earlier tests.
 
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as path from 'path';
 import { JSDOM } from 'jsdom';
 // @ts-expect-error untyped JS module
 import { IntegrationCatalogRenderer } from '../../../src/roadmap/ui/modules/integration-catalog-renderer.js';
@@ -27,7 +29,7 @@ type Globals = Record<string, unknown>;
 function setupDom(fetchImpl: FetchImpl): Ctx {
   const dom = new JSDOM('<!DOCTYPE html><html><head></head><body><div id="integrations"></div></body></html>', { url: 'http://localhost:9999/?workspace=C%3A%5Csecret' });
   const g = global as unknown as Globals;
-  const names = ['window', 'document', 'fetch', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'WebSocket', 'EventSource'];
+  const names = ['window', 'document', 'fetch', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'WebSocket', 'EventSource', 'XMLHttpRequest'];
   const prev = names.map((n) => [n, g[n]] as const);
   const activity: Activity = { fetches: [], opened: [], timers: 0, clicks: 0 };
   const timer = () => { activity.timers += 1; return 0; };
@@ -35,12 +37,18 @@ function setupDom(fetchImpl: FetchImpl): Ctx {
   const counted = (real: unknown) => (...a: unknown[]) => { activity.timers += 1; return (real as (...x: unknown[]) => unknown)(...a); };
   dom.window.open = ((...a: unknown[]) => { activity.opened.push(a); return null; }) as typeof dom.window.open;
   dom.window.HTMLElement.prototype.click = function click() { activity.clicks += 1; };
-  // Sockets and event streams are recorded as openings and never connect, so no test here can reach a real host.
+  // Every way out of the page is recorded and never connects, both as a Node global and on the jsdom window
+  // (audit VETO #945): sockets, event streams, XMLHttpRequest and fetch.
   const channel = (kind: string) => function Channel(url: unknown) { activity.opened.push([kind, String(url)]); };
-  Object.assign(dom.window, { setTimeout: timer, setInterval: timer, requestAnimationFrame: timer });
+  const record = (url: string) => { activity.fetches.push(String(url)); return fetchImpl(url); };
+  function Xhr(this: { open: (m: string, u: string) => void; send: () => void }) {
+    this.open = (m, u) => { activity.opened.push(['XMLHttpRequest', String(u)]); };
+    this.send = () => undefined;
+  }
+  Object.assign(dom.window, { setTimeout: timer, setInterval: timer, requestAnimationFrame: timer,
+    WebSocket: channel('WebSocket'), EventSource: channel('EventSource'), XMLHttpRequest: Xhr, fetch: record });
   Object.assign(g, { window: dom.window, document: dom.window.document, setTimeout: counted(g.setTimeout), setInterval: counted(g.setInterval), requestAnimationFrame: timer,
-    WebSocket: channel('WebSocket'), EventSource: channel('EventSource'),
-    fetch: (url: string) => { activity.fetches.push(String(url)); return fetchImpl(url); } });
+    WebSocket: channel('WebSocket'), EventSource: channel('EventSource'), XMLHttpRequest: Xhr, fetch: record });
   return { doc: dom.window.document as unknown as Document, activity, cleanup: () => { for (const [n, v] of prev) g[n] = v; } };
 }
 
@@ -103,6 +111,30 @@ function cardContract(name: string, fetchImpl: FetchImpl, settles: boolean): voi
   });
 }
 
+const MODULES = path.resolve(__dirname, '..', '..', '..', 'src', 'roadmap', 'ui', 'modules');
+const source = (name: string): string => fs.readFileSync(path.join(MODULES, name), 'utf8').replace(/\r\n/g, '\n');
+/** The text of a template-literal constant `name` in `file`, as the module defines it. */
+function constantText(file: string, name: string): string {
+  const src = source(file);
+  const open = `const ${name} = \``;
+  const start = src.indexOf(open) + open.length;
+  return src.slice(start, src.indexOf('`;', start));
+}
+
+/** The page holds one style element, and it is exactly the two reviewed sheets (audit #945, observation O1). */
+function stylesInstalled(name: string, fetchImpl: FetchImpl, settles: boolean): void {
+  test(`${name}: the only styles installed are the catalog sheet followed by the card sheet`, async () => {
+    const ctx = await renderState(fetchImpl, settles);
+    try {
+      const sheets = Array.from(ctx.doc.querySelectorAll('style'));
+      assert.equal(sheets.length, 1, 'one style element');
+      assert.equal(sheets[0].id, 'cc-intcat-style');
+      assert.equal(sheets[0].textContent, constantText('integration-catalog-renderer.js', 'STYLE') + constantText('statewright-handoff.js', 'STATEWRIGHT_STYLES'));
+      assert.equal(ctx.doc.querySelectorAll('link, [style]').length, 0, 'no linked style sheet or inline style');
+    } finally { ctx.cleanup(); }
+  });
+}
+
 function renderIsInert(name: string, fetchImpl: FetchImpl, settles: boolean): void {
   test(`${name}: rendering starts no navigation, timer, click or provider request`, async () => {
     const ctx = await renderState(fetchImpl, settles);
@@ -142,5 +174,6 @@ suite('#652 Statewright website handoff: negative contract (jsdom)', () => {
     cardContract(name, fetchImpl, settles);
     renderIsInert(name, fetchImpl, settles);
     eventsChangeNothing(name, fetchImpl, settles);
+    stylesInstalled(name, fetchImpl, settles);
   }
 });

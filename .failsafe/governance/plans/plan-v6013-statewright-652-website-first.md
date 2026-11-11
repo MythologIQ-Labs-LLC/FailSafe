@@ -1,6 +1,6 @@
 # Plan: v6.0.13 Statewright website-first handoff (#652)
 
-**Iteration:** 7 (after independent VETOs #938 to #942 and the confirmation-check VETO #944)
+**Iteration:** 8 (after independent VETOs #938 to #942 and the confirmation-check VETOs #944 and #945)
 **Change class:** narrow product UI / external navigation
 **Risk:** L2 planned (externally navigable UX; no credential or data egress except user-initiated browser navigation); independent governance auditor may increase grade
 **Base:** main `9f16548d83116e2d8ee7f9010545963c06e5c93a`
@@ -90,7 +90,7 @@ The fifth independent audit (source `54f67646`, 184 mutants) found the shipped f
 - **Records corrected.** Ledger Entry #943 corrects the Decision text of Entries #940 and #941 without altering them. The evidence file is rewritten, the Y48 and M12 rows are re-run, the equivalence note on A08 is limited to the Statewright card, and the scripts that define and run the mutants are committed beside it under `.agent/staging/mutation-653/`.
 - **Accepted limits (the auditor's assessment of where the remaining risk belongs).**
   - Deliberate or obfuscated edits, style sheets outside these two files, and new render states are for code review and the owner, not for further tests.
-  - The readability check does not measure overlap by a neighbouring element, paint-level hiding (clip-path, filters, blend modes), `zoom`, hover states, the card title or the pill, and it refuses some legitimate restyles (a translucent backdrop, non-rgb colour syntax). With both style sheets and the line that installs them pinned, a style change made through this module fails a named test first. A style sheet elsewhere in the Console is not covered.
+  - The readability check does not measure overlap by a neighbouring element, paint-level hiding (clip-path, filters, blend modes), `zoom`, hover states, the card title or the pill, and it refuses some legitimate restyles (a translucent backdrop, non-rgb colour syntax). With both style sheets and the line that installs them pinned, and (iteration 8) the installed style element checked in jsdom, a style change made through this module fails a named test first. A style sheet elsewhere in the Console is not covered.
   - The address has thin margins against the thresholds: 12.8 px against a 12 px floor, and contrast 4.56 against 4.5.
 - **Inherited from `main`, not introduced or worsened here, to be tracked separately.**
   - The card title is unreadable in the Pegasus light theme for every catalog card.
@@ -103,10 +103,20 @@ The fifth auditor recommended that the next step be a confirmation of its closed
 
 - **B1 (the card was dropped from the readability comparison).** Iteration 6 added every clipping ancestor to the boxes that each rendered line is compared with, and by mistake removed the card's own box, which does not clip. Text moved outside the card without being clipped was then reported as readable by the browser test. The card is restored: each line is compared with the text element, the card, every ancestor that clips, and the viewport.
 - **Pin boundary (the reviewer's observation O1).** The digest covered the style constant but not how the style element is built. The source contract now also requires that the constant is defined once and used once, that the module creates one style element and assigns it exactly the two reviewed sheets, and that it uses no other way of styling. The digest assertion carries a message that says what to review.
-- **Tests cannot reach the provider.** During the implementer's local mutation runs there was no network guard, so a mutant that deliberately contacts the provider could have opened a real connection carrying only synthetic test strings. The Playwright spec now maps the provider's host names to the local machine for every test in the file, and the jsdom harness records sockets and event streams without connecting.
+- **Network guard (first attempt).** During the implementer's local mutation runs there was no network guard, so a mutant that deliberately contacts the provider could have opened a real connection carrying only synthetic test strings. Iteration 7 mapped the provider's host names to the local machine in the Playwright spec, which works. It also stubbed sockets and event streams in the jsdom harness, but only as Node globals and not on the jsdom window, so the claim that the jsdom harness could not connect was false (Entry #945). Iteration 8 corrects it.
 - **Evidence.** Every set now uses one runner that reports the source contract, the jsdom contract and Playwright separately; the labels printed by the scripts are the labels in the file; set 7 holds the confirmation check's cases.
 - **Record notes that are not corrected in place.** Entry #939's Decision text refers to its own number where it means Entry #938. Entry #943 carries the field `Author: Judge` although it is a correction written by the implementer. Both entries are sealed and are left as they are; this note is the correction.
 - **Not done.** The frames are border boxes with a one-pixel tolerance, not padding boxes. A card pushed below the first screen is refused by the no-scroll rule; that is intended for now and may need revisiting if the catalog grows above the card.
+
+## Iteration 8 (confirmation check #945)
+
+The second bounded confirmation check (source `e9ff78bd`) passed six of its eight criteria: the card box is back in the readability frames and works without the style pin, the fifth audit's list holds, the composition pin works, 184 earlier mutants show no regression, the shipped files are unchanged and sound, and there is no flake. It vetoed on the network guard and the two record sentences that described it. This iteration changes tests, this plan and the records only. The shipped files are still byte-identical to `dd766c15`.
+
+- **D (the jsdom stubs missed the window).** The jsdom harness now replaces `WebSocket`, `EventSource`, `XMLHttpRequest` and `fetch` both as Node globals and on the jsdom window, records every opening, and connects nothing. A mutant that opens a socket or a request through `window` now fails the jsdom suite.
+- **Guard from outside the tests.** `.agent/staging/mutation-653/no-network.cjs` is loaded into every test process of every mutation run through `NODE_OPTIONS`. It refuses every DNS lookup and connection to a host other than this machine, before anything is sent, and the runner prints the number of refused attempts for each mutant. The unmutated baseline makes none.
+- **What the guard shows.** Under the window-socket and window-request mutants, the Statewright test file makes no attempt. The existing catalog test, which is identical to `main` and has no stubs of its own, makes eight attempts, all refused. The ordinary test commands (`npm test`, `npm run test:node`, CI) do not load this guard. The unmutated source makes no attempt there either, so this matters only for mutation runs, which always load it.
+- **Style composition (the reviewer's observation O1).** A jsdom test now requires that the page holds exactly one style element, that its text equals the renderer's style sheet followed by the card's, and that there is no linked or inline style. Appending to that element's text or adding a node to it now fails.
+- **Records.** The two false sentences are corrected here and in the evidence file. Set 7 gains the reviewer's window-socket case, a window-request case and the two appending edits.
 
 ## Installed-host evidence
 

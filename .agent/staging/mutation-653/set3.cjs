@@ -1,7 +1,7 @@
 'use strict';
 // PR #653 mutation set 3. Each entry is [label, mutation]; the label and this text are the definition that was run.
 // Usage: npm run compile && node set3.cjs <path to FailSafe/extension>   (restores every file; exits 1 if a mutant survives)
-// The suites cannot reach the real provider: the jsdom harness stubs sockets and fetch, and the Playwright spec maps the provider host to 127.0.0.1.
+// Network: every test process runs under no-network.cjs (loopback only); the Playwright spec also maps the provider host to 127.0.0.1.
 const fs = require('fs'), path = require('path');
 const { spawnSync } = require('child_process');
 const ext = path.resolve(process.argv[2]);
@@ -48,26 +48,33 @@ const M = [
   ['A04 style overlays the link invisibly', sub(H, LAST_RULE, `${LAST_RULE}.cc-intcat-web-link { opacity:0; }\n`)],
   ['A05 handoff module runs code on import', sub(H, 'export const STATEWRIGHT_STYLES', "new Image().src = 'https://statewright.ai/px';\nexport const STATEWRIGHT_STYLES")],
 ];
-const sh = (cmd) => spawnSync(cmd, { cwd: ext, shell: true, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const restore = () => { for (const [f, s] of Object.entries(orig)) fs.writeFileSync(f, s); };
+// Every test process runs under no-network.cjs (audit VETO #945): only loopback connections are allowed, and each
+// refused attempt is counted, so the table shows whether a mutant tried to reach another host.
+const GUARD = path.join(__dirname, 'no-network.cjs');
+const NETLOG = path.join(require('os').tmpdir(), `no-network-${process.pid}.log`);
+const guarded = { ...process.env, NO_NETWORK_LOG: NETLOG, NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --require ${GUARD.split(path.sep).join('/')}`.trim() };
+const sh = (cmd) => spawnSync(cmd, { cwd: ext, shell: true, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: guarded });
 const run = () => {
   sh('node ./scripts/copy-ui-js.cjs');
+  fs.rmSync(NETLOG, { force: true });
   const src = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff-source.test.js');
   const j = sh('npx mocha --ui tdd --timeout 15000 out/test/roadmap/statewright-handoff.test.js out/test/roadmap/integration-catalog-renderer.test.js');
   const p = sh('npx playwright test src/test/ui/statewright-handoff.spec.ts');
-  return { source: src.status === 0 ? 'pass' : 'FAIL', jsdom: j.status === 0 ? 'pass' : 'FAIL', playwright: p.status === 0 ? 'pass' : 'FAIL' };
+  const refused = fs.existsSync(NETLOG) ? fs.readFileSync(NETLOG, 'utf8').split('\n').filter(Boolean).length : 0;
+  return { source: src.status === 0 ? 'pass' : 'FAIL', jsdom: j.status === 0 ? 'pass' : 'FAIL', playwright: p.status === 0 ? 'pass' : 'FAIL', refused };
 };
 let survived = 0;
 try {
   const base = run();
   console.log('baseline', JSON.stringify(base));
-  if (base.source !== 'pass' || base.jsdom !== 'pass' || base.playwright !== 'pass') throw new Error('baseline is not green');
+  if (base.source !== 'pass' || base.jsdom !== 'pass' || base.playwright !== 'pass' || base.refused !== 0) throw new Error('baseline is not green');
   for (const [name, apply] of M) {
     restore(); apply();
     const r = run();
     const killed = r.source === 'FAIL' || r.jsdom === 'FAIL' || r.playwright === 'FAIL';
     if (!killed) survived += 1;
-    console.log(`${name} | source ${r.source} | jsdom ${r.jsdom} | playwright ${r.playwright} | ${killed ? 'killed' : 'SURVIVED'}`);
+    console.log(`${name} | source ${r.source} | jsdom ${r.jsdom} | playwright ${r.playwright} | network attempts refused ${r.refused} | ${killed ? 'killed' : 'SURVIVED'}`);
   }
 } finally { restore(); sh('node ./scripts/copy-ui-js.cjs'); }
 process.exit(survived ? 1 : 0);
