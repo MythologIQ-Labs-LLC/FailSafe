@@ -30,17 +30,50 @@ A reachable endpoint is not an authorization, so the published terms were read:
 
 **Finding:** DigiCert publishes **no explicit permission** for a non-subscriber to timestamp arbitrary data such as a ledger checkpoint, and **no prohibition** of it. The only stated purpose is timestamping signed code by subscribers. G4's use would be one request per release seal, which cannot burden the service. It is common practice, but it rests on DigiCert's tolerance, not on a written grant, and DigiCert could restrict the endpoint at any time. MythologIQ Labs does hold a code-signing relationship through Azure Artifact Signing, which is a Microsoft service, not a DigiCert subscription.
 
-This is an owner risk decision (item 3). Tolerated use without a written grant is **not** the proposed production choice; see the table.
+This is an owner risk decision (item 3). Tolerated use without a written grant is **not** a proposed production choice; see the comparison below and the table.
+
+### TSA candidates compared (probes and documents, 2026-11-10T23:51Z to 2026-11-11T00:15Z)
+
+Each candidate was probed with a random digest and its published terms were read. No repository content was sent. This is evidence for item 3, not a selection.
+
+| | FreeTSA `https://freetsa.org/tsr` | DigiCert `http://timestamp.digicert.com` | Sectigo | GlobalSign | Microsoft Artifact Signing TSA |
+|---|---|---|---|---|---|
+| Published terms for this use | **Expressly permitted** | Silent | Restricted to its code-signing customers | Free endpoint silent; paid service by contract | Scoped to countersigning code signatures |
+| One dedicated root can be pinned | Yes | Yes | No (needs the general USERTrust root) | Yes (Timestamping Root R45) | Yes |
+| Root DER SHA-256 | `a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc` | `552f7bdcf1a7af9e6ce672017f4f12abf77240c78e761ac203d1d9d20ac89988` | n/a | `2bcbbfd66282c680491c8cd7735fdbbab7a8079b127bec60c535976834399af7` | `5367f20c7ade0e2bca790915056d086b720c33c1fa2a2661acf787e3292e1270` |
+| Root audited and in public trust stores | **No** (self-signed, one operator) | Yes | Yes | R45 not in the stores checked | Windows store |
+| Signer certificate expires | 2040-02-02 | 2037-11-04 | 2037-06-24 | 2037-01-10 | **2027-09-14** |
+| Revocation data published | CRL (yearly) and OCSP | CRL and OCSP | CRL and OCSP | CRL and OCSP | CRL |
+| Availability commitment | Expressly none | None found | None found | "aims to provide 99%" | None found |
+
+**FreeTSA terms** (`https://freetsa.org/freetsa.html`, unversioned, `Last-Modified` 2026-11-08, copy retained with SHA-256 `7890c11764bfd43b10ffca2d1fc0ecc06389cb64b49476c15fc8e4791838e942`):
+- "Timestamps issued by FreeTSA may be used for commercial purposes. Projects and applications may incorporate FreeTSA timestamps without requiring a separate commercial licence from the service operator."
+- "a maximum of one timestamping request per second per IP address is permitted."
+- "FreeTSA is provided on a best-effort basis, without any guarantee of availability, uptime, response times, or restoration times. No Service Level Agreement (SLA) is offered".
+- It is "an independent project operated on a non-profit basis. It is not a company, partnership, or foundation". No operator name, governing law, liability term, audit or key-storage statement is published. Certificate notices are "published exclusively on the FreeTSA website".
+
+**FreeTSA limits found:**
+- The root is a private, self-signed RSA 4096 certificate (2016 to 2041) held by one unnamed individual. Nobody independent audits it or can revoke it.
+- The signer was replaced in March 2026. Tokens from the previous signer no longer pass a current-time check, so item 9 applies here too (next expiry 2040-02-02).
+- The token's signing-certificate attribute uses SHA-1 (ESSCertID v1) and its policy OID is the OpenSSL sample value `1.2.3.4.1`. The message imprint and signature are SHA-256 and ECDSA P-384 with SHA-512.
+- The site prints the hash of the PEM file. The pin is the DER hash above.
+
+**Other candidates:**
+- **Sectigo:** CPS 1.0.9 section 6.8: "The Sectigo TSAs are intended only for use in signing software when used in conjunction with a Sectigo Code-signing Certificate."
+- **Microsoft:** CPS 1.0.6 section 6.8 makes the TSA "available for use by customers of its Codes Signing Certificates", and Microsoft documents it for countersigning signatures made with the service. MythologIQ Labs is such a customer, but timestamping a standalone digest is not addressed, and the signer certificate lasts about one year, which the current-time verifier cannot carry.
+- **GlobalSign:** the Timestamping Practice Statement v1.1 defines a subscriber as an entity "contracted with GlobalSign". The paid Timestamping-as-a-Service has no public price.
+
+**Verifier compatibility (unmodified code on `main`, throwaway repositories, ephemeral test keys):** with a real FreeTSA token and only the FreeTSA root pinned, release mode returned `PASS OK`, `mode: release`, no limitation; the same evidence under a different pinned root was `REFUSED TOKEN_INVALID`. With a real DigiCert token and only DigiCert Trusted Root G4 pinned, release mode returned `PASS OK`. Neither candidate needs a verifier change or a change to trust semantics.
 
 ## 2. Proposed decisions
 
-Items 1 to 5 are indispensable: G4 cannot operate without each. Items 6, 7 and 9 can be deferred with the stated consequence. Item 8 is the release disposition. Item 10 is now enforced in code.
+**Mandatory before a v6.0.13 seal:** items 1 to 5 (G4 cannot operate without each) and item 8 (the release disposition). Items 1 to 3 must be merged to `main` before the seal; items 4 and 5 are carried out at the seal. **Optional deferrals:** items 6, 7 and 9, each with the stated consequence. Item 10 is a confirmation of behaviour already enforced in code. This is a solo-owner record: each response is the owner's decision, written by the owner.
 
 | # | Decision | Proposed | Security consequence | Owner response |
 |---|---|---|---|---|
 | 1 | TPM key enrollment | Approve `tools/g4/enroll-tpm-key.ps1` as written: key `FailSafe-G4-Ledger-Witness`, ECDSA P-256, Microsoft Platform Crypto Provider, non-exportable, signing only, current user, subject `CN=FailSafe G4 Ledger Witness, O=MythologIQ Labs LLC`, 730 days. The owner runs it personally. | The key is bound to this workstation's TPM. A TPM clear, motherboard replacement or Windows profile loss destroys it, and every later checkpoint is `REFUSED KEY_RESET` until item 6 exists. | _pending_ |
 | 2 | Fingerprint publication | Record the certificate SHA-256 first in the owner-held offline record, at enrollment. Publish it later in the body of the GitHub Release for v6.0.13 (section 3). | Without a pinned fingerprint, anyone who can commit a certificate can start a chain. A fingerprint kept only in the repository is not a pin. | _pending_ |
-| 3 | TSA selection | **Preferred, either of:** **(a)** DigiCert `http://timestamp.digicert.com` after DigiCert confirms in writing that non-subscriber RFC 3161 timestamping of arbitrary digests is permitted, with the confirmation retained by the owner; or **(b)** a TSA whose published terms expressly authorize this use, chosen and qualified by the owner. **Not proposed:** (c) using DigiCert on tolerance alone. It is available only as an explicit, recorded owner risk acceptance, never by default. One root only in `tsa-policy.json`. | The TSA is the independent witness. Under (c) the witness could be withdrawn or disputed without notice, and the release record would rest on unlicensed use. If any TSA withdraws service, new checkpoints are `BLOCKED TSA_OFFLINE` and releases stop until the owner selects another; existing checkpoints stay verifiable. Each extra root widens who can witness. | _pending_ |
+| 3 | TSA selection | **Mandatory; pick one.** **(a) DigiCert** `http://timestamp.digicert.com`, once DigiCert confirms in writing that low-volume RFC 3161 timestamping of non-code digests by a non-subscriber is permitted, with the confirmation retained by the owner. Preferred when the confirmation exists: audited, publicly trusted root. **(b) FreeTSA** `https://freetsa.org/tsr`: its published terms already permit commercial use, so it needs no further permission and can be used now. **Not proposed:** (c) DigiCert on tolerance alone; Sectigo; the Microsoft TSA. One root only in `tsa-policy.json`. | The TSA is the independent witness. **(a)** depends on a reply that may not arrive before the seal. **(b)** rests on one unaudited, self-signed root run by one unnamed individual, with no SLA, no liability terms and website-only notices: if that key or operator fails, every checkpoint must be re-witnessed under another TSA through a new reviewed decision, and an outage at seal time blocks the release (`BLOCKED TSA_OFFLINE`). Choosing (b) is an explicit owner acceptance of those risks. Under (c) the witness would rest on unlicensed use. Changing TSA later is a policy change through a reviewed PR; existing checkpoints stay verifiable only while their root stays pinned, so a switch needs its own design. | _pending_ |
 | 4 | Checkpoint-head retention | Write every head `g4-NNNNNN:<manifest sha256>` in the owner-held offline record at the moment the checkpoint is created, before it is committed or published anywhere. The GitHub Release body repeats it later (section 3). | Without an external head, deleting the newest checkpoints together with the ledger tail, or replacing the whole chain, is undetectable. A head first written into a GitHub Release is too late: release verification on H and M needs it before any release exists. | _pending_ |
 | 5 | Cadence and genesis | One checkpoint at every `/qor-substantiate` release seal and every RC promotion. The genesis checkpoint is created at the v6.0.13 seal, over a ledger that contains `Entry #914: EPOCH`. | A release without a checkpoint has no witness for its seal. | _pending_ |
 | 6 | Key transition and recovery | Defer the transition-record format to v6.0.14. | **Durability cost of deferring:** the key lives in one TPM. A TPM clear, firmware reset, motherboard or CPU replacement, or loss of the Windows profile destroys it with no backup, because it is non-exportable. From then on no checkpoint can be created, every release is blocked on G4, and the verifier refuses any new key (`KEY_RESET`). Recovery needs a new genesis under a new key, which breaks chain continuity and needs a new recorded and independently reviewed owner decision. Deferring is acceptable only while the owner accepts that a hardware failure stops releases until that decision is made. | _pending_ |
@@ -84,19 +117,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\g4\enroll-tpm-key.ps1 
 
 ### Step B: TSA policy (needs item 3)
 
-Commit the selected root PEM as `tools/g4/tsa-roots/<name>.pem` and set `tools/g4/tsa-policy.json` to `"status": "selected"` with that root's DER SHA-256, through a PR, before the seal (TSA roots and policy are pre-seal inputs). For DigiCert the root is **DigiCert Trusted Root G4**, DER SHA-256 `552f7bdcf1a7af9e6ce672017f4f12abf77240c78e761ac203d1d9d20ac89988` (to be re-derived from an independently obtained copy before committing).
+Commit the selected root PEM as `tools/g4/tsa-roots/<name>.pem` and set `tools/g4/tsa-policy.json` to `"status": "selected"` with that root's DER SHA-256, through a PR, before the seal (TSA roots and policy are pre-seal inputs). For DigiCert the root is **DigiCert Trusted Root G4**, DER SHA-256 `552f7bdcf1a7af9e6ce672017f4f12abf77240c78e761ac203d1d9d20ac89988`. For FreeTSA it is `https://freetsa.org/files/cacert.pem`, DER SHA-256 `a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc`. Either value is re-derived by the owner from an independently obtained copy before committing (`openssl x509 -in <root.pem> -outform DER | openssl dgst -sha256`).
 
 - **Failure conditions:** a root whose hash differs from the policy is `REFUSED TSA_ROOT_MISMATCH`.
 
-### Step C: genesis checkpoint (needs items 1 to 5, and the v6.0.13 seal commit `<S>`)
+### Step C: genesis checkpoint (needs items 1 to 5, and the v6.0.13 seal-record commit `<R>`)
 
 ```bash
 node FailSafe/extension/scripts/g4-create-checkpoint.cjs \
-  --cert tools/g4/keys/<fingerprint>.cer --tsa-url <selected TSA URL> --commit <S>
+  --cert tools/g4/keys/<fingerprint>.cer --tsa-url <selected TSA URL> --commit <R>
 ```
 
+`<R>` is the seal-record commit of `RELEASE_INTEGRATION_PATH.md`: the first commit after the sealed commit S whose `docs/META_LEDGER.md` contains the v6.0.13 `SESSION SEAL` entry. The checkpoint must attest R, not S: release verification requires the `ok g4-000001 commit <R>` line.
+
 - **Expected artifacts:** `tools/g4/checkpoints/g4-000001/` with `manifest.json`, `manifest.sig`, the timestamp query and token, and the TSA chain. Nothing is committed by the tool.
-- **Then:** write `g4-000001:<sha256 of manifest.json>` in the offline record before committing; commit exactly the five files in one follow-up commit `<S+1>` on the release PR, under the post-seal exception (section 5).
+- **Then:** write `g4-000001:<sha256 of manifest.json>` in the offline record before committing; commit exactly the five files in one commit K after R on the release PR, under the post-seal exception (section 5).
 - **Failure conditions:** `BLOCKED TSA_OFFLINE` or `TSA_REJECTED` (no directory is written); a signing failure from `sign-checkpoint.ps1` (no signature is written unless it self-verifies); `GENESIS_EPOCH_MISSING` if the ledger lacks entry #914.
 - **Recovery:** delete an uncommitted, incomplete `g4-000001/` and rerun. Never edit a manifest. Once committed, a checkpoint is never replaced; a mistake is corrected by the next checkpoint or by a recorded decision.
 
@@ -112,13 +147,14 @@ node FailSafe/extension/scripts/g4-verify-checkpoint.cjs --release \
 
 After the normal merge, repeat on a fresh clone at the merge commit `<M>` with `--commit <M>`, before any tag.
 
-- **Expected, both times:** `[g4-verify] mode: release` and `PASS OK`, exit 0, no limitation. Anything else is NO-GO. A diagnostic PASS never counts.
+- **Expected, both times:** `[g4-verify] mode: release`, an `ok g4-000001 commit <first 12 hex of R>` line, and `PASS OK` with no limitation line, exit 0. Anything else is NO-GO. The exit code alone is not evidence, and a diagnostic PASS never counts.
+- **Before Step D:** run checks 1 to 6 of the post-seal exception (ancestry, per-commit paths, the five `A` lines, tree modes, the attested commit, product bytes) in Git Bash or PowerShell, not `cmd.exe`.
 
-## 5. Dependency: the post-seal checkpoint exception (PR #650)
+## 5. Dependency: the post-seal checkpoint exception (merged)
 
-`docs/releases/RELEASE_INTEGRATION_PATH.md` (audit PASS #929) lets commits after the seal touch governance paths only, and a checkpoint must be committed after the seal commit it attests. PR #650 proposes the one exception: a new `tools/g4/checkpoints/g4-NNNNNN/` directory with exactly five added files, checked per commit, with `--release` verification on H and on M. Keys, TSA roots, policy and the revocation registry stay pre-seal inputs.
+PR #650 is merged (`main` `9f16548d83116e2d8ee7f9010545963c06e5c93a`; independent audit VETO #936, then PASS #937). `docs/releases/RELEASE_INTEGRATION_PATH.md` now permits exactly one new `tools/g4/checkpoints/g4-NNNNNN/` directory with five added files after the seal, in one commit, attesting the seal-record commit R, with checks 1 to 7 before merging and `--release` verification on H and again on M. Keys, TSA roots, policy and the revocation registry stay pre-seal inputs.
 
-PR #650 is under independent audit and is not merged. Steps C and D above depend on it. If its audited text differs from this section, this record follows the audited text.
+Steps C and D above follow that text. If they ever differ, `RELEASE_INTEGRATION_PATH.md` governs.
 
 ## 6. Not covered here
 
