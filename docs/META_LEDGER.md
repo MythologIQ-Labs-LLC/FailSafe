@@ -36092,3 +36092,183 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-636-g4-postseal-checkpoint-exception.md iteration 2 (plan sha256 a085bed5608229a4943a92ba1030b5a12422acb4ea7450ac2a74b43663cc1360; candidate 4dae836468dc18fc52ca696251f7344f96216941; draft PR #650), after VETO #936. Independent audit, L3. B1 closed: the per-commit command now uses C~1 and prints the tampering line in Git Bash, PowerShell 5.1 and cmd.exe alike; a range with no checkpoint lines is refused, so empty output is not a pass. B2 closed: with S, R (seal-record commit) and K defined, checks 5 and 7 refuse a missing new checkpoint, a checkpoint attesting S, a pre-seal commit or a commit after R, two checkpoints, K before R and a rewritten S; a genuine checkpoint attesting R passes on H and on M. Synthetic matrix: 64 repositories, 61 refused, 3 allowed (the genuine cases). The verifier alone still returns a release PASS in six constructions; the documented attested-commit line and Git checks are what refuse them. Nothing in the text authorizes a key, TSA or checkpoint. Non-blocking: no printed test that R is the first commit containing the seal entry; genesis and RC-promotion wording; 'when G4 applies' is an owner scope decision. This PASS covers the operator procedure only; it is not a release GO or an approval of any owner decision.
 
 ---
+
+### Entry #938: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 1) - VETO
+
+**Timestamp**: 2026-11-11T00:09:16Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `56527ea722ed90273945800c2b876eea531c16e26cc6c6b4ec83b865dce1482b`
+**Previous Hash**: `692f7677d25f49cc3b6024e2bf1c5fd3f36d84433203445e583bc973683f77d4`
+**Chain Hash (Merkle seal)**: `b49981d78cf44dd233766a01483abab774f9be5d3a3e4aeb83ee80bc0c8cfadb`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 1 (plan sha256 0528de90e9d6fa2de1a0b0637d2a8c832295b738f98e06dd12766baa64c8be27; exact source 1fd4a557466b10b990264c5543fda1077233da03 on main 9f16548d; draft PR #653, issue #652, owner-approved Option A website-first scope). Independent Option B audit by a fresh auditor, risk grade L2, with 22 source mutations run against the jsdom and Playwright suites. Sound: scope matches the plan, the markup is static, rel noopener noreferrer and the fixed URL are enforced by both suites, the link survives every catalog failure mode, packaging ships the renderer, no adapter, credential or dependency was added. Blocking B1 (razor-overage): integration-catalog-renderer.js is 264 lines against the 250-line cap (243 on main). Blocking B2 (coverage-gap): the plan item that navigation must not begin without an operator click has no failing test; window.open on render, a delayed auto-click, a preconnect link and a ping attribute all survive, because the Playwright spec listens at page level only. Blocking B3 (coverage-gap): the plan item that the card must not claim a connection has no failing test; an extra Connected pill, false partner and sign-in copy and a Connect button survive, because the negative assertion targets a class that does not exist. Ten of 22 mutants survived. Non-blocking N1-N9 in the report (dead click if the Console is opened by hand in Simple Browser, untested empty-catalog, keyboard and loading states, card placement shift, no changelog entry, implementation before audit, provider destination not verified by the auditor). The auditor made no request to the provider.
+
+---
+
+### Entry #939: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 2) - VETO
+
+**Timestamp**: 2026-11-11T01:13:25Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `4851cf12830d677ff8d1e419413d85ac297b22b0151d4e418d6748b913fd4d6a`
+**Previous Hash**: `b49981d78cf44dd233766a01483abab774f9be5d3a3e4aeb83ee80bc0c8cfadb`
+**Chain Hash (Merkle seal)**: `d1ad877f14ec40220f5cbda9d8725d7254dcf292c86b50bdaa5b1f43082f32a9`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 2 (plan sha256 ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97; exact source dd766c159d6e5d1a64f4470d8c4f053f11821dba on main 9f16548d; draft PR #653, issue #652). Independent re-audit by a second fresh auditor, risk grade L2. The three findings of Entry #939 are closed: the renderer is 245 lines, and all 22 earlier mutants are killed. The auditor found no defect in the shipped source. It then applied the stated rule that a surviving mutant which breaks a required negative is blocking, with 32 new mutants, each survivor confirmed in Chromium. Blocking R1 (coverage-gap): the provider can be contacted or opened without a click, and a workspace value can reach it, with both suites passing: a mousedown listener that rewrites the link, a WebSocket to the provider on render, a hover listener that opens the page, and a scheduler.postTask navigation. Mouse activation is no longer tested and neither harness observes WebSockets or pointer events. Blocking R2 (coverage-gap): a false Connected status can be shown with both suites passing: generated ::after content on the pill, a claim in the status line above the card, and title or aria-label attributes on the pill. Eleven of 32 new mutants survived, seven blocking. Non-blocking N1-N10 in the report (a vacuous assertion left in the older test file, that file's suite callback grown by 30 lines, plan line-number and evidence inaccuracies, process-wide timer replacement in the new jsdom test, gaps in unchanged code for other cards). The remediated source had not been through CI when audited. The auditor made no request to the provider.
+
+---
+
+### Entry #940: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 3) - VETO
+
+**Timestamp**: 2026-11-11T02:47:19Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `1cf54f0986a5110998b1f00924c0b94f26c00a5b5139eefda9381707c4417ba1`
+**Previous Hash**: `d1ad877f14ec40220f5cbda9d8725d7254dcf292c86b50bdaa5b1f43082f32a9`
+**Chain Hash (Merkle seal)**: `0837b99da8bd5663b1421e6375cc912241bd67e9ee4cfbe9b1d4a8886ed11297`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 2 (plan sha256 ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97; exact source dd766c159d6e5d1a64f4470d8c4f053f11821dba on main 9f16548d; draft PR #653, issue #652). Independent re-audit by a second fresh auditor, risk grade L2. The three findings of Entry #940 are closed: the renderer is 245 lines, and all 22 earlier mutants are killed. The auditor found no defect in the shipped source. It then applied the stated rule that a surviving mutant which breaks a required negative is blocking, with 32 new mutants, each survivor confirmed in Chromium. Blocking R1 (coverage-gap): the provider can be contacted or opened without a click, and a workspace value can reach it, with both suites passing: a mousedown listener that rewrites the link, a WebSocket to the provider on render, a hover listener that opens the page, and a scheduler.postTask navigation. Mouse activation is no longer tested and neither harness observes WebSockets or pointer events. Blocking R2 (coverage-gap): a false Connected status can be shown with both suites passing: generated ::after content on the pill, a claim in the status line above the card, and title or aria-label attributes on the pill. Eleven of 32 new mutants survived, seven blocking. Non-blocking N1-N10 in the report (a vacuous assertion left in the older test file, that file's suite callback grown by 30 lines, plan line-number and evidence inaccuracies, process-wide timer replacement in the new jsdom test, gaps in unchanged code for other cards). The remediated source had not been through CI when audited. The auditor made no request to the provider.
+
+---
+
+### Entry #941: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 4) - VETO
+
+**Timestamp**: 2026-11-11T04:03:57Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter4.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `077afc9dfe8055d4eb322a2bf5ea48f4996aab21b5d8a79c7b54187cda68a6ca`
+**Previous Hash**: `0837b99da8bd5663b1421e6375cc912241bd67e9ee4cfbe9b1d4a8886ed11297`
+**Chain Hash (Merkle seal)**: `9e81f79e70d32eb4d03d79b5204026ec7bc681012be005615f26b4bd202e971f`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 2 (plan sha256 ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97; exact source dd766c159d6e5d1a64f4470d8c4f053f11821dba on main 9f16548d; draft PR #653, issue #652). Independent re-audit by a second fresh auditor, risk grade L2. The three findings of Entry #941 are closed: the renderer is 245 lines, and all 22 earlier mutants are killed. The auditor found no defect in the shipped source. It then applied the stated rule that a surviving mutant which breaks a required negative is blocking, with 32 new mutants, each survivor confirmed in Chromium. Blocking R1 (coverage-gap): the provider can be contacted or opened without a click, and a workspace value can reach it, with both suites passing: a mousedown listener that rewrites the link, a WebSocket to the provider on render, a hover listener that opens the page, and a scheduler.postTask navigation. Mouse activation is no longer tested and neither harness observes WebSockets or pointer events. Blocking R2 (coverage-gap): a false Connected status can be shown with both suites passing: generated ::after content on the pill, a claim in the status line above the card, and title or aria-label attributes on the pill. Eleven of 32 new mutants survived, seven blocking. Non-blocking N1-N10 in the report (a vacuous assertion left in the older test file, that file's suite callback grown by 30 lines, plan line-number and evidence inaccuracies, process-wide timer replacement in the new jsdom test, gaps in unchanged code for other cards). The remediated source had not been through CI when audited. The auditor made no request to the provider.
+
+---
+
+### Entry #942: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 5) - VETO
+
+**Timestamp**: 2026-11-11T05:33:34Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter5.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `b7550e12396d10ac0e6491b3dece11bc3e54d4a61cfe606729712222eb804b20`
+**Previous Hash**: `9e81f79e70d32eb4d03d79b5204026ec7bc681012be005615f26b4bd202e971f`
+**Chain Hash (Merkle seal)**: `88ba7ac4b105e2ab0867f6427d93e2746f7e5ccbb886a8de3433d253465a94c5`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 5 (plan hash recorded in plan-iter5.json; exact source 54f676468aeb14a5d8edc027e737949cc14eef76 on main 9f16548d; draft PR #653, issue #652). Fifth independent audit by a fifth fresh auditor, risk grade L2, 184 mutants. The shipped files are sound and byte-identical to dd766c15; every mutant named by the fourth audit is killed; items 2 and 3 of the fourth audit's closed list are implemented and effective; no mutant moved from killed to survived; no razor breach; no flake in 375 Playwright runs; no false refusal at 520 px and wider across 234 theme, scheme, width and catalog-state combinations. Blocking B1 (coverage-gap, a test defect): the readability check calls scrollIntoViewIfNeeded before measuring, which also scrolls overflow-hidden boxes including the card, and it compares line rectangles only with the element, the card and the viewport, so text cut off by the card or by an intermediate box is reported as visible; a height cap on catalog cards hides the link, the address and the last line of the disclaimer at 600 px with all 47 tests passing, and the plan sentence that a height cap fails is false for a cap on the card. The auditor notes these mutants are not plausible accidents, because such a cap visibly cuts every catalog card, and that the finding is that a closed-list item does not do what it says. Blocking B2, recorded by the auditor as a boundary call (coverage-gap): a shared rule conditional on a view that the tests do not sample, for example a one-line paragraph clamp at 1400 px and wider, hides the disclaimer with all tests passing; sampling more views cannot end this class. Closed remediation list: remove the scroll or fail on a scrolled clipping ancestor and compare against every ancestor with non-visible overflow; pin the renderer style sheet by string equality in the source contract, or record an owner decision that conditional shared rules are a code-review risk; correct the records. The auditor recommends that the next check be a confirmation of this list and not a sixth open-ended audit, and states that after these items the remaining risk belongs to code review and the owner. Non-blocking N1-N11 in the report, including a governance record error: the Decision paragraphs of Entries #940 and #941 repeat the text of Entry #939 (their headers, hashes and gate files are correct); a correction entry follows. Also recorded: the card title is unreadable in the Pegasus theme and content is cut below about 520 px viewport width, both inherited from main for every catalog card and not worsened here. No request reached the provider.
+
+---
+
+### Entry #943: CORRECTION - Decision text of Entries #940 and #941 (plan-v6013-statewright-652-website-first)
+
+**Timestamp**: 2026-11-11T05:33:34Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: CORRECTION (no verdict)
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/LEDGER_CORRECTION-940-941.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `n/a`
+
+**Content Hash**: `c8af02b0329bc4f576872a10980cd569810a991ee722abfb8181e61ff6e932dc`
+**Previous Hash**: `88ba7ac4b105e2ab0867f6427d93e2746f7e5ccbb886a8de3433d253465a94c5`
+**Chain Hash (Merkle seal)**: `8bf00fafed7b6a2c2bbe27036876e1117fd89fee43a3218c8261538d603bc2a4`
+
+**Decision**: CORRECTION of the Decision paragraphs of Entries #940 and #941. Those two paragraphs repeat the text of Entry #939 word for word and so describe the second audit, not the third and the fourth. Their titles, verdicts, report paths, content hashes, chain hashes and gate files are correct, and both entries are left exactly as sealed: nothing is edited, removed or re-hashed. The correct Decision text for each, the cause (an entry-preparation script whose replacement pattern did not match and whose check compared only the first thirty characters) and the prevention are in the cited correction file, whose hash this entry seals. In short: Entry #940 records the third independent audit of source 45a78c4d, VETO on B1 (the disclaimer could be made unreadable because style values were not pinned) and B2 as a boundary call (a Configure click activating the Statewright link), with a fixed three-item remediation list; Entry #941 records the fourth independent audit of source b883f814, VETO on B1 (a shared rule in the renderer style sheet could clip or wash out the disclaimer), with a closed three-item list. The error was found by the fifth independent audit (Entry #942, note N1). This entry is a record correction, not an audit verdict.
+
+---
+
+### Entry #944: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 6, bounded confirmation check) - VETO
+
+**Timestamp**: 2026-11-11T07:02:58Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter6-confirmation.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `80658bcabd1631b2be1b8300909563a515271e943623bcd1799bba9252139cae`
+**Previous Hash**: `8bf00fafed7b6a2c2bbe27036876e1117fd89fee43a3218c8261538d603bc2a4`
+**Chain Hash (Merkle seal)**: `2a1cd4a3ea37bd847c3b478c4865b1943b73d880b30a69836fc7e3e4502d4c46`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 6 (plan hash recorded in plan-iter6.json; exact source 2132e5931d36a57bab8604efd00beae213fd5e8b on main 9f16548d; draft PR #653, issue #652; CI 13 of 13 on that commit). This entry records a BOUNDED CONFIRMATION CHECK, not an open-ended audit: it was commissioned by the implementer on the recommendation of the fifth auditor (Entry #942) and tested only whether that audit's closed list is implemented and effective, whether anything regressed, and whether the records are true. Sixth independent reviewer, risk grade L2, 184 earlier mutants re-run with the auditors' own definitions: 170 killed, 14 carried survivors, none moved from killed to survived, 34 moved from survived to killed. Item 2 (the renderer style sheet pinned by digest) is implemented and effective; item 3 (records) is done, Entries #940 and #941 are unaltered and Entries #942 and #943 are true; the shipped files are byte-identical to dd766c15 and no defect was found in them; no razor breach; no flake in 225 Playwright runs. Blocking B1 (specification-drift): item 1 said to add the clipping ancestors to the frames that every rendered line is compared with; the implementation added them and also removed the card's own box, which earlier audits required and recorded as effective. With a rule that moves the link and the address outside the card without clipping them, the browser test now reports them readable; the mutant is killed only by the style-sheet pin, and the same rule placed in a second constant passes all 48 tests. The plan sentence that lines must lie inside the card is false at this commit. Fix: include the card in the frames. The reviewer notes the verdict rests on reading the item as the frames growing, and that no required negative lost coverage. Observations for the owner, outside the verdict: the pin covers the style constant but not the line that composes the style element; plan and evidence wording leftovers; the evidence scripts run without a network guard, so mutants that contact the provider may have attempted real connections during the implementer's local runs; defects inherited from main (Pegasus title contrast, layout cut below about 525 px). The reviewer's opinion: the bounded scope was not used to avoid a real problem, and after B1 and the pin boundary are settled the remaining risk is appropriately carried by code review and the owner. No request reached the provider during this review.
+
+---
+
+### Entry #945: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 7, bounded confirmation check) - VETO
+
+**Timestamp**: 2026-11-11T16:12:19Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter7-confirmation.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `29a804f9c2257e83d01ed27e4f652cf3c0159f913cb9d3286e2536e7acdb98c9`
+**Previous Hash**: `2a1cd4a3ea37bd847c3b478c4865b1943b73d880b30a69836fc7e3e4502d4c46`
+**Chain Hash (Merkle seal)**: `b4773d479809b5a9f0b6ac1b890673e17f3d054a2571e89bca0b34e75ff21f2f`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-statewright-652-website-first.md iteration 7 (plan hash recorded in plan-iter7.json; exact source e9ff78bd26cdb6fbc3d03eed59b0c3aafec8f205 on main 9f16548d; draft PR #653, issue #652). BOUNDED CONFIRMATION CHECK, not an open-ended audit, by a seventh fresh reviewer, against eight acceptance criteria A to H set before the check. Passed: A (the card box is back among the readability frames; V14 and W02 fail the browser test with the style pin disabled; no false refusal), B (the fifth audit's closed list holds), C (the style composition pin kills W01, W02, W03), E (184 earlier mutants re-run with the auditors' own definitions: 171 killed, 13 carried survivors, none moved from killed to survived), G (hygiene, razor, no flake in 150 Playwright runs, guards), H (the shipped files are byte-identical to dd766c15 and no defect was found in them). Failed: D (network guard) and, with it, part of F (records). The jsdom recording stubs replace the Node global WebSocket and EventSource but not those on the jsdom window, so a mutant using window.WebSocket reached jsdom's real WebSocket and made 27 external DNS lookups of the provider host during mocha, which only the reviewer's own refusing preload stopped; the existing catalog test, identical to main, has no stubs at all. The plan sentence that the jsdom harness records sockets without connecting and the evidence-file sentence that the suites cannot reach the real provider are therefore false. This is a test-infrastructure defect, not a product defect: the unmutated head makes no lookup. Remediation: stub on the jsdom window as well; guard the catalog test from outside it in the evidence scripts or record it as unguarded; correct the two sentences and add the window.WebSocket mutant to the committed set, run under a DNS-refusing preload. Observations for the owner: the composition checks are text patterns and two ordinary edits (appending to the style element's text, or appending a node to it) pass them, so the plan's sentence that a style change made through this module fails a named test is overstated; inherited items unchanged. CI on that commit: 12 of 13; the Full Test Suite job failed while installing browsers because the runner could not reach its package mirror, so test:all did not run on that commit. No request reached the provider during the review.
+
+---
+
+### Entry #946: GATE TRIBUNAL - plan-v6013-statewright-652-website-first (iteration 8, bounded confirmation check) - PASS
+
+**Timestamp**: 2026-11-11T18:05:45Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-10T2349-6c3050`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-statewright-652-website-first.md`
+**Report**: `.agent/staging/AUDIT_REPORT-653-iter8-confirmation.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-10T2349-6c3050/audit.json`
+
+**Content Hash**: `7b4306a76d5623bb96cd2a510b780dbb6a1ca4dd52de310800026248e1b389e7`
+**Previous Hash**: `b4773d479809b5a9f0b6ac1b890673e17f3d054a2571e89bca0b34e75ff21f2f`
+**Chain Hash (Merkle seal)**: `1fda71ae8924526b80d60d31dfad34ce00c29e2668ecff476d7b6c792008efbe`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-statewright-652-website-first.md iteration 8 (plan hash recorded in plan-iter8.json; exact audited source b395693d174e837a7c053f4193a376d1c0a7f9ae on main 9f16548d; draft PR #653, issue #652). BOUNDED CONFIRMATION CHECK, not an open-ended audit, by an eighth fresh reviewer, executed as the owner instructed ("execute the sixth audit as a bounded confirmation of these findings ... record an independent PASS only if the defined acceptance criteria pass"), against criteria set before the check: D network guard real and truthfully described (jsdom stubs on the window and as globals, restored after each test; the window-socket mutant of Entry #945 makes no attempt from the Statewright test file; the committed external guard refuses non-loopback lookups and connections and its baselines report none; the Playwright host mapping applies to every test), F records true (Entries #938 to #945 unaltered since e475ca8f and the chain verifies; the committed scripts reproduced 36 of 36 sampled evidence rows exactly), O1 style composition (the appending edits are killed, no false refusal, not vacuous), and A, B, C, E, G, H as found by Entry #945. All hold. 184 earlier mutants re-run with the auditors' own definitions: 171 killed, the same 13 carried survivors as Entry #945, none moved from killed to survived. The shipped files are byte-identical to dd766c15 and no defect was found in them against the owner-approved scope or any required negative. No flake in 150 Playwright runs under load; guards green; razor holds. Observations recorded for the owner, outside the verdict: the plan sentence that the external guard refuses every DNS lookup is narrower in fact, because dns.resolve calls, dns.Resolver instances and UDP sends are not covered (no browser, jsdom, fetch, ws or http path uses them; only a deliberate import of Node network modules into browser code could); every test process means every Node test process, and the browser is covered by the host mapping; on the audited commit CI completed with 12 of 13 checks passing, and the Full Test Suite failed one timing test in ArchitectureLinks.test.cjs (event loop lag 112 ms against 100 ms; tracked in #651, a file this change does not touch, passing locally), so test:ui did not run in CI. Installed-host acceptance on a VSIX built from the audited commit (SHA-256 70e19874ea5a9fd2cc72adbdae8ee70b0b8a8d6f96be2eb645a963a3720a926d, unpacked contents identical to every earlier tested build) is recorded by the implementer in .agent/staging/installed-653/: 14 of 14 on VS Code 1.145.2 and 1.141.1, real destination the signed-out redirect https://statewright.ai/login?redirect=/runs; not run on VS Code 1.122.1 (blocked by a held update mutex), Cursor (not installed), or a signed-in Statewright account. This PASS is a bounded confirmation and does not authorise merge, release or publication; merge needs the owner's authority and acceptance of the open installed-host items.
+
+---

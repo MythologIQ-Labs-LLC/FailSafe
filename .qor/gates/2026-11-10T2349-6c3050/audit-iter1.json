@@ -1,0 +1,47 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T00:09:22Z",
+  "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-653.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "razor-overage",
+    "coverage-gap"
+  ],
+  "target_content_hash": "0528de90e9d6fa2de1a0b0637d2a8c832295b738f98e06dd12766baa64c8be27",
+  "report_content_hash": "56527ea722ed90273945800c2b876eea531c16e26cc6c6b4ec83b865dce1482b",
+  "iteration": 1,
+  "ledger_entry": 938,
+  "ledger_chain_hash": "b49981d78cf44dd233766a01483abab774f9be5d3a3e4aeb83ee80bc0c8cfadb",
+  "audited_candidate": "1fd4a557466b10b990264c5543fda1077233da03",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "razor-overage",
+      "detail": "integration-catalog-renderer.js is 264 lines; cap 250"
+    },
+    {
+      "id": "B2",
+      "category": "coverage-gap",
+      "detail": "no test fails on navigation without an operator click (window.open, auto-click, preconnect, ping survive)"
+    },
+    {
+      "id": "B3",
+      "category": "coverage-gap",
+      "detail": "no test fails on a false connection claim (extra pill, false copy, Connect button survive)"
+    }
+  ],
+  "merge_obligations": "remediate B1-B3; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-11T00:09:22Z"
+  }
+}

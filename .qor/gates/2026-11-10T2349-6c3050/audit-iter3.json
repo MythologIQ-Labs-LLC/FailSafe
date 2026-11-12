@@ -1,0 +1,41 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T02:47:19Z",
+  "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter3.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "coverage-gap"
+  ],
+  "target_content_hash": "db68d80907cf6e787f28690984a50eca200105c11758e5fe21aadef99ef8644f",
+  "report_content_hash": "1cf54f0986a5110998b1f00924c0b94f26c00a5b5139eefda9381707c4417ba1",
+  "iteration": 3,
+  "ledger_entry": 940,
+  "ledger_chain_hash": "0837b99da8bd5663b1421e6375cc912241bd67e9ee4cfbe9b1d4a8886ed11297",
+  "audited_candidate": "45a78c4da50ad9ed22a7976f58533df7c2625981",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "coverage-gap",
+      "detail": "the disclaimer can be made unreadable (font-size typo, text colour equal to background) with every suite passing; style values are not pinned"
+    },
+    {
+      "id": "B2",
+      "category": "coverage-gap",
+      "detail": "boundary call: a Configure click that activates the Statewright link survives every suite"
+    }
+  ],
+  "merge_obligations": "apply the auditor's fixed three-item remediation list; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-11T02:47:20Z"
+  }
+}
