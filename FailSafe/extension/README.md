@@ -2,7 +2,7 @@
 
 ## What's New in v6.0.12
 
-**Release candidate, not yet published; the published release is v6.0.11.** One theme for the whole app: the theme you pick in the Console now also applies to the Monitor sidebar and the SRE view, stays the same in the browser Console and in VS Code, and is kept across reloads and restarts in the VS Code setting `failsafe.console.theme` (#601). Includes the dependency updates merged after v6.0.11.
+**Published release: v6.0.12 (2026-11-10).** One theme for the whole app: the theme you pick in the Console now also applies to the Monitor sidebar and the SRE view, stays the same in the browser Console and in VS Code, and is kept across reloads and restarts in the VS Code setting `failsafe.console.theme` (#601). Includes the dependency updates merged after v6.0.11.
 
 - **Continue and Aider no longer start from FailSafe.** FailSafe cannot yet contain them at the operating-system level, and a git worktree is not a sandbox, so both commands refuse before any process, prompt or credential read, and the catalog shows them disabled (#475). This is a temporary restriction.
 - **Qor-logic is pinned to the frozen 0.176.1 release.** FailSafe installs it only from the verified local wheel you select, offline, with no PyPI upgrade, and reports a skill install as successful only when the CLI's file count matches a hash-verified install receipt. Selected-skill and global installs, the install preview and the skill list are unavailable with this release (#463). See the changelog for known limitations.
@@ -21,6 +21,14 @@ FailSafe runs locally in VS Code and Cursor. It monitors agent and workspace act
 - **Navigate architecture and delivery evidence.** Workspace Architecture and Delivery connect human-reviewed architecture and implementation evidence.
 
 **Where to start:** Open the FailSafe Console for workspace status and risks. Use the Governance views for decisions, and the Audit Log for evidence. [Full feature reference](../../docs/COMPONENT_HELP.md).
+
+## v6.0.12 walkthrough and screenshots
+
+[![FailSafe v6.0.12 Console and Monitor shown in matching themes, from simultaneous fictional-workspace recordings](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/screenshots/web/06-homepage-console-monitor-6.0.12.webp)](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/video/failsafe-6.0.12-from-change-to-confidence.mp4)
+
+[Watch the narrated walkthrough (1:53, MP4)](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/video/failsafe-6.0.12-from-change-to-confidence.mp4) · [English captions](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/video/failsafe-6.0.12-from-change-to-confidence.en.vtt) · [Transcript](https://github.com/Knapp-Kevin/MythologIQ/blob/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/transcript.md) · [Capture provenance](https://github.com/MythologIQ-Labs-LLC/FailSafe/blob/aa7380381a7428364816c144279652ba3bf638e3/docs/marketing/failsafe-v6.0.12/PROVENANCE.md) · [More screenshots](../../README.md#see-it-in-action)
+
+This walkthrough uses the **published** extension in VS Code and a fictional repository. The editor actions were scripted, not performed by an AI agent. The video does not demonstrate an approved intent or sealed delivery; editor-save denials are reported, not prevented. The linked media is pinned to its source revision, independent of whether the Studio website has been deployed.
 
 ## Quick Start
 
@@ -54,8 +62,8 @@ Supported agent integrations can add controlled workflows and evidence:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. On Windows, only a `cn.exe` or `cn.com` on PATH counts: Continue's npm shim `cn.cmd` cannot run without a shell, so an npm install is reported unavailable. |
-| 🔧 **Aider governed wrapper** | Run Aider (auto-commit off) in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Aider (governed)`). | Apply re-checks HEAD, the tree and the exact reviewed bytes before writing. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
+| 🤖 **Continue (`cn`) governed command (disabled)** | The `FailSafe: Run Continue (governed)` command refuses before launching Continue in v6.0.12. | A disposable git worktree is not an OS sandbox. This restriction avoids claiming agent containment that the extension cannot enforce (#475). |
+| 🔧 **Aider governed command (disabled)** | The `FailSafe: Run Aider (governed)` command refuses before launching Aider in v6.0.12. | No Aider process or credential is started or read through this command until a separately qualified containment mechanism exists (#475). |
 | 👁️ **OpenHands run import** | Import an exported OpenHands run, after you confirm, as historical evidence in the FailSafe timeline (`FailSafe: Import OpenHands Run (observe)`). Version-gated, deduplicated and signed for this install; the transparency log gets one summary line. | See what an agent run did next to your own governance events. It is a record of a past run, not live enforcement (#477). |
 | 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture: remote MCP, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
 
@@ -82,9 +90,11 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 
 ---
 
-**Current Release**: v6.0.12 (2026-11-10)
+**Current Release**: v6.0.12 (2026-11-10). [Published release notes](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.12) · [Current screenshots](../../README.md#see-it-in-action)
 
-![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+## Historical release notes
+
+The entries below record changes **as shipped at the time**. They do not supersede current v6.0.12 restrictions, including the disabled Continue and Aider commands and the observational nature of editor-save denials. For current behavior, use the v6.0.12 section above and the [integration portfolio](../../docs/architecture/INTEGRATION_PORTFOLIO.md).
 
 ## What's New in v6.0.7
 
@@ -196,7 +206,7 @@ The full release-by-release history (v5.x and earlier) lives in [CHANGELOG.md](.
 
 ## QorLogic: The Governance Layer
 
-QorLogic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
+QorLogic supplies deterministic policy evaluation for supported FailSafe workflows. It can refuse actions on integration paths that provide a real interception point, but **it cannot cancel VS Code editor saves or control arbitrary external processes**. Governance decisions are made by code rather than asking an LLM to follow rules.
 
 ### Prompt Guidelines vs. Deterministic Governance
 
@@ -240,7 +250,7 @@ When an LLM is asked to enforce safety rules, it can:
 
 QorLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis,no LLM inference required for governance decisions.
 
-**Example**: A file containing `api_key` will always trigger L3 classification. No prompt can persuade the code to ignore this trigger.
+**Example**: With a policy configured to treat `api_key` as an L3 content trigger, that term is classified by the deterministic rule. Classification does not itself prove that every write path is blocked.
 
 ## Safety Alert
 
@@ -260,7 +270,7 @@ FailSafe now supports three governance modes to match your workflow needs:
 
 | Mode        | Behavior                                                           | Best For                         |
 | ----------- | ------------------------------------------------------------------ | -------------------------------- |
-| **Enforce** | Default. Full control, intent-checked saves (denials reported, not prevented), L3 approvals. | Governed development, compliance |
+| **Enforce** | Default. Policy evaluations and approvals on supported paths; editor-save denials are reported, not prevented. | Governed development with explicit limits |
 | **Assist**  | Smart defaults, auto-intent creation, gentle prompts.              | Lighter-touch workflows          |
 | **Observe** | No blocking, just visibility and logging. Zero friction.           | Exploration, learning            |
 
@@ -292,7 +302,7 @@ FailSafe evaluates save operations against the active Intent and reports a polic
 
 ### FailSafe Monitor UI
 
-![FailSafe Monitor UI](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/media/FailSafe-Sidebar.PNG)
+![FailSafe v6.0.12 Monitor shown in the VS Code sidebar beside a fictional project](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/screenshots/web/02-monitor-vscode-dark.webp)
 
 ### 6. Command Center UX
 
