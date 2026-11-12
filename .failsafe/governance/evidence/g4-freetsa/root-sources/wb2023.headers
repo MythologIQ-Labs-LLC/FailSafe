@@ -1,0 +1,66 @@
+HTTP/1.1 302 FOUND
+Server: nginx
+Date: Thu, 12 Nov 2026 15:12:01 GMT
+Content-Type: text/plain; charset=utf-8
+Content-Length: 0
+Connection: keep-alive
+x-archive-redirect-reason: found capture at 20221206061142
+location: https://web.archive.org/web/20221206061142id_/https://freetsa.org/files/cacert.pem
+server-timing: captures_list;dur=0.379802, exclusion.robots;dur=0.030178, exclusion.robots.policy;dur=0.021036, esindex;dur=0.006816, cdx.remote;dur=52.312578, LoadShardBlock;dur=1844.771056, PetaboxLoader3.datanode;dur=1644.420586
+x-app-server: wwwb-app262-dc8
+x-ts: 302
+x-tr: 1919
+server-timing: TR;dur=0,Tw;dur=128,Tc;dur=9
+set-cookie: wb-p-SERVER=wwwb-app262; path=/
+X-location: All
+X-AS: 11776
+X-RL: 0
+X-NA: 0
+X-Page-Cache: MISS
+Server-Timing: MISS
+X-NID: Breezeline
+Referrer-Policy: no-referrer-when-downgrade
+Permissions-Policy: interest-cohort=()
+X-sd: 0
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 12 Nov 2026 15:12:02 GMT
+Content-Type: application/pem-certificate-chain
+Content-Length: 2833
+Connection: keep-alive
+x-archive-orig-server: nginx
+x-archive-orig-date: Tue, 06 Dec 2022 06:11:42 GMT
+x-archive-orig-content-length: 2833
+x-archive-orig-last-modified: Sat, 05 Dec 2020 00:11:26 GMT
+x-archive-orig-connection: keep-alive
+x-archive-orig-etag: "5fcad02e-b11"
+x-archive-orig-expires: Thu, 31 Dec 2037 23:55:55 GMT
+x-archive-orig-cache-control: max-age=315360000
+x-archive-orig-pragma: public
+x-archive-orig-cache-control: public, must-revalidate, proxy-revalidate
+x-archive-orig-accept-ranges: bytes
+cache-control: max-age=1800
+accept-ranges: bytes
+memento-datetime: Tue, 06 Dec 2022 06:11:42 GMT
+link: <https://freetsa.org/files/cacert.pem>; rel="original", <https://web.archive.org/web/timemap/link/https://freetsa.org/files/cacert.pem>; rel="timemap"; type="application/link-format", <https://web.archive.org/web/https://freetsa.org/files/cacert.pem>; rel="timegate"
+content-security-policy: default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: archive.org web.archive.org web-static.archive.org wayback-api.archive.org athena.archive.org analytics.archive.org pragma.archivelab.org wwwb-events.archive.org
+x-archive-src: CC-MAIN-2022-49-1669446711074.68-0017/CC-MAIN-20221206060908-20221206090908-00343.warc.gz
+server-timing: captures_list;dur=0.340735, exclusion.robots;dur=0.025736, exclusion.robots.policy;dur=0.017927, esindex;dur=0.006330, cdx.remote;dur=39.765740, LoadShardBlock;dur=452.380759, PetaboxLoader3.datanode;dur=209.815401, PetaboxLoader3.resolve;dur=173.359155, load_resource;dur=441.001392
+x-app-server: wwwb-app265-dc8
+x-ts: 200
+x-tr: 959
+server-timing: TR;dur=0,Tw;dur=213,Tc;dur=15
+set-cookie: wb-p-SERVER=wwwb-app265; path=/
+cache-control: private
+X-location: All
+X-AS: 11776
+X-RL: 0
+X-NA: 0
+X-Page-Cache: MISS
+Server-Timing: MISS
+X-NID: Breezeline
+Referrer-Policy: no-referrer-when-downgrade
+Permissions-Policy: interest-cohort=()
+X-sd: 0
+

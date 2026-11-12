@@ -1,0 +1,27 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T1524-662da3",
+  "ts": "2026-11-12T15:50:07Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-freetsa-root.md",
+  "verdict": "PASS",
+  "report_path": ".failsafe/governance/evidence/g4-freetsa/AUDIT_REPORT-g4-freetsa-root-iter3.md",
+  "risk_grade": "L3",
+  "target_content_hash": "d9a1e64601e7e437ebf76f31c3cc6d750679926eec3d4ecf43708e2cbc1b49fc",
+  "report_content_hash": "0583b2109eeec1b15c9590fd0969a7a69b717d22d118ea80fb6b6812719fb459",
+  "iteration": 3,
+  "ledger_entry": 958,
+  "ledger_chain_hash": "a26cb7f6d8663d3e39f336e03a499453ee231199cf0fb01d7421a97dcc399d48",
+  "audited_candidate": "9a9dc0aabe9b4aa4308d9d9ca5ec0a4a93fe0b19",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "findings_categories": [],
+  "violations": [],
+  "merge_obligations": "current-head CI; PR #647 merged first; owner authority for merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "pass",
+    "ts": "2026-11-12T15:50:07Z"
+  }
+}

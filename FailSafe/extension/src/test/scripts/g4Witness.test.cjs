@@ -62,13 +62,34 @@ test("registry monotonicity: append is allowed; rollback, silent edit and remova
   assert.equal(code(reg(2, [n1]), reg(3, [])), "REGISTRY_EDITED");
 });
 
-test("committed registry and TSA policy start empty and unselected", () => {
+test("committed revocation registry starts empty at version 1", () => {
   const reg = registry.parse(fs.readFileSync(path.join(REPO, "tools", "g4", "revocations.json")));
   assert.equal(reg.version, 1);
   assert.deepEqual(reg.revocations, []);
+});
+
+// The owner-selected FreeTSA root (2026-11-12), pinned as literals so that any
+// change to the trusted TSA root must also change this test, under review.
+const FREETSA_ROOT_DER_SHA256 = "a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc";
+const FREETSA_ROOT_PEM_SHA256 = "2151b61137ffa86bf664691ba67e7da0b19f98c758e3d228d5d8ebf27e044438";
+const FREETSA_ROOT_PATH = "tools/g4/tsa-roots/freetsa-root-ca.pem";
+
+test("committed TSA policy trusts exactly one root: the pinned FreeTSA Root CA", () => {
   const policy = JSON.parse(fs.readFileSync(path.join(REPO, "tools", "g4", "tsa-policy.json"), "utf8"));
-  assert.equal(policy.status, "pending-owner-decision");
-  assert.deepEqual(policy.trustedRoots, []);
+  assert.equal(policy.schema, "failsafe-g4-tsa-policy/v1");
+  assert.equal(policy.status, "selected");
+  assert.equal(policy.trustedRoots.length, 1, "one root only: no fallback TSA");
+  assert.equal(policy.trustedRoots[0].certificatePath, FREETSA_ROOT_PATH);
+  assert.equal(policy.trustedRoots[0].sha256, FREETSA_ROOT_DER_SHA256);
+  assert.deepEqual(fs.readdirSync(path.join(REPO, "tools", "g4", "tsa-roots")), ["freetsa-root-ca.pem"]);
+  const pem = fs.readFileSync(path.join(REPO, FREETSA_ROOT_PATH));
+  assert.equal(B.sha256(pem), FREETSA_ROOT_PEM_SHA256, "byte-identical to https://freetsa.org/files/cacert.pem");
+  const cert = new crypto.X509Certificate(pem);
+  assert.equal(B.sha256(cert.raw), FREETSA_ROOT_DER_SHA256);
+  assert.ok(cert.ca && cert.checkIssued(cert) && cert.verify(cert.publicKey), "a self-signed CA certificate");
+  assert.match(cert.subject, /O=Free TSA/);
+  assert.match(cert.subject, /OU=Root CA/);
+  assert.match(cert.subject, /CN=www\.freetsa\.org/);
 });
 
 test("the CLI never reports PASS for the real repository, which has no witness yet", { skip: found ? false : "openssl unavailable" }, () => {

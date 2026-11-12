@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 12 Nov 2026 15:11:24 GMT
+Content-Type: application/octet-stream
+Content-Length: 2273
+Last-Modified: Sun, 15 Feb 2026 21:59:18 GMT
+Connection: keep-alive
+ETag: "699241b6-8e1"
+Expires: Thu, 31 Dec 2037 23:55:55 GMT
+Cache-Control: max-age=315360000
+Pragma: public
+Cache-Control: public, must-revalidate, proxy-revalidate
+Accept-Ranges: bytes
+

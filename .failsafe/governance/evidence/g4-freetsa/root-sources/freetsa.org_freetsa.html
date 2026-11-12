@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FreeTSA — Service Information, Usage Policy and Dedicated Instances</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm 18mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; background: #fff; color: #16181d;
+    font-family: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+    font-size: 10.5pt; line-height: 1.52;
+  }
+  .sheet { max-width: 174mm; margin: 0 auto; padding: 14mm 0 8mm; }
+
+  header.doc {
+    display: flex; align-items: center; gap: 5mm;
+    padding-bottom: 4mm; margin-bottom: 7mm;
+    border-bottom: 1.6pt solid #16181d;
+  }
+  header.doc img.logo { height: 15mm; width: auto; display: block; }
+  .doc-title h1 { margin: 0; font-size: 19pt; letter-spacing: .2pt; }
+  .doc-title p  { margin: 1mm 0 0; font-size: 10pt; color: #4a4f57; }
+
+  section { margin: 0 0 6mm; }
+  h2 {
+    font-size: 11.5pt; margin: 0 0 2mm; padding-bottom: 1mm;
+    border-bottom: .6pt solid #cfd3da; break-after: avoid;
+  }
+  h2 .num { display: inline-block; min-width: 6mm; color: #4a4f57; }
+  p  { margin: 0 0 2.6mm; text-align: justify; hyphens: auto; }
+  ul { margin: 0 0 2.6mm; padding-left: 5mm; }
+  li { margin-bottom: 1.8mm; break-inside: avoid; }
+
+  footer.doc {
+    margin-top: 8mm; padding-top: 3mm;
+    border-top: .6pt solid #cfd3da;
+    font-size: 9pt; color: #4a4f57;
+    display: flex; justify-content: space-between; align-items: center; gap: 6mm;
+  }
+  .contact-line { display: flex; align-items: center; gap: 2.5mm; }
+  img.email-img { display: block; height: 6mm; width: auto; cursor: pointer; }
+  .placeholder { color: #b00020; font-size: 9pt; }
+
+  @media print {
+    .sheet { padding-top: 0; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="doc">
+    <img class="logo" src="https://freetsa.org/public/images/tsa.png" alt="FreeTSA">
+    <div class="doc-title">
+      <h1>FreeTSA</h1>
+      <p>Service Information, Usage Policy and Dedicated Instances</p>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="num">1.</span>Public Service and Usage Limits</h2>
+    <p>FreeTSA provides a publicly accessible timestamping service. To ensure fair access and protect the service from excessive load, a maximum of one timestamping request per second per IP address is permitted.</p>
+    <p>Applications requiring higher request rates or more predictable service capacity should consider a dedicated instance.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">2.</span>Availability and Service Limitations</h2>
+    <p>FreeTSA is maintained with the intention of keeping the service available at all times. In the event of technical issues or service interruptions, reasonable efforts are made to restore normal operation as quickly as possible.</p>
+    <p>However, FreeTSA is provided on a best-effort basis, without any guarantee of availability, uptime, response times, or restoration times. No Service Level Agreement (SLA) is offered, and there is no commitment to restore the service within a specific timeframe.</p>
+    <p>Users should take these limitations into account when integrating FreeTSA into their applications and workflows.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">3.</span>Commercial Use and Attribution</h2>
+    <p>Timestamps issued by FreeTSA may be used for commercial purposes. Projects and applications may incorporate FreeTSA timestamps without requiring a separate commercial licence from the service operator.</p>
+    <p>You are also welcome to mention or reference FreeTSA in your project documentation, website, or other materials. Attribution is appreciated but not required.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">4.</span>Donations and Project Status</h2>
+    <p>FreeTSA is an independent project operated on a non-profit basis. It is not a company, partnership, or foundation, and it has no profit-making purpose.</p>
+    <p>Donations are entirely voluntary and help support the continued operation, maintenance, and development of the service. You may contribute any amount at any time using the PayPal donation button available on the FreeTSA website.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">5.</span>Dedicated Private Instances</h2>
+    <p>Projects requiring greater service stability, higher request rates, or dedicated infrastructure can enquire about a private FreeTSA timestamping engine.</p>
+    <p>For a donation of &euro;500, FreeTSA will arrange and configure a dedicated VPS reserved exclusively for the donor&rsquo;s project for an initial period of one year.</p>
+    <p>The arrangement includes:</p>
+    <ul>
+      <li><b>Dedicated infrastructure:</b> The VPS is procured and configured by FreeTSA and is reserved exclusively for the donor&rsquo;s project.</li>
+      <li><b>Hosting location:</b> The instance is normally hosted in a trusted data centre selected by FreeTSA. Alternative hosting arrangements can be discussed based on the project&rsquo;s specific requirements.</li>
+      <li><b>Security and isolation:</b> For security reasons, the VPS must remain under FreeTSA&rsquo;s infrastructure and administration. It cannot be hosted within the donor&rsquo;s own infrastructure, and the donor is not granted access to the server&rsquo;s internal files. This separation helps protect the timestamping authority and its sensitive server-side data.</li>
+      <li><b>Performance:</b> The instance is designed to support approximately 100 timestamping requests per second, depending on the workload and operating conditions. Actual performance may vary.</li>
+      <li><b>System-level customisation:</b> The initial contribution includes agreed system-level configuration, such as firewall rules, SSL/TLS certificates, and service port selection.</li>
+      <li><b>Renewal:</b> The dedicated instance is provided for one year. Continued operation beyond the initial term requires a further &euro;500 donation for each additional year, subject to renewal arrangements.</li>
+      <li><b>Multiple instances:</b> Additional dedicated instances can be arranged for projects requiring separate environments or additional capacity.</li>
+    </ul>
+    <p>Dedicated instances offer greater control over capacity and deployment configuration than the public service. However, they are provided on a best-effort basis, without a formal SLA or guarantees of uninterrupted availability.</p>
+    <p>If your project requires a dedicated instance, higher request rates, or a customised deployment, please get in touch to discuss your requirements and the available options.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">6.</span>Hosting</h2>
+    <p>The data centre currently hosting the FreeTSA engine is <b>Racknerd</b>.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">7.</span>Logs and Privacy</h2>
+    <p>FreeTSA does not keep general service logs. Only the IP addresses that submit requests are recorded, and solely for the purpose of detecting and investigating abuse.</p>
+    <p>The hashes of timestamped data are not stored.</p>
+    <p>The retention period for these records is variable and depends on the volume of requests received.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">8.</span>Certificate Notifications</h2>
+    <p>Notices of certificate revocations or updates are published exclusively on the FreeTSA website.</p>
+    <p>FreeTSA does not operate social media channels, mailing lists, or any other notification channels. Users are advised to check the website periodically.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">9.</span>Contact</h2>
+    <p>For enquiries about dedicated instances, hosting arrangements, or other project-related matters, please contact FreeTSA using the contact details provided below.</p>
+  </section>
+
+  <footer class="doc">
+    <span>FreeTSA &middot; independent, non-profit project</span>
+    <span class="contact-line">
+      <span>Contact:</span>
+      <span data-email-slot class="placeholder">[address]</span>
+    </span>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var EMAIL_B64 = "YnVzaWxlemFzQGJ1c2luZHJlLmNvbQ==";
+
+  function renderEmailImage() {
+    var slot = document.querySelector('[data-email-slot]');
+    if (!slot) return;
+
+    var addr;
+    try { addr = atob(EMAIL_B64); } catch (e) { return; }
+
+    var FONT_PX = 17, PAD_X = 6;
+    var FONT = '600 ' + FONT_PX + 'px "Helvetica Neue", Helvetica, Arial, sans-serif';
+    var dpr  = Math.max(2, window.devicePixelRatio || 1);
+
+    var probe = document.createElement('canvas').getContext('2d');
+    probe.font = FONT;
+    var w = Math.ceil(probe.measureText(addr).width) + PAD_X * 2;
+    var h = Math.ceil(FONT_PX * 1.35);
+
+    var cv = document.createElement('canvas');
+    cv.width  = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    var ctx = cv.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.font = FONT;
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#16181d';
+    ctx.fillText(addr, PAD_X, h / 2 + 1);
+
+    var img = new Image();
+    img.className = 'email-img';
+    img.alt = 'Contact address (shown as image to prevent spam)';
+    img.title = 'Click to copy';
+    img.style.height = h + 'px';
+    img.onload = function () { slot.replaceWith(img); };
+    img.onclick = function () {
+      if (navigator.clipboard) navigator.clipboard.writeText(addr);
+    };
+    img.src = cv.toDataURL('image/png');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderEmailImage);
+  } else {
+    renderEmailImage();
+  }
+})();
+</script>
+</body>
+</html>

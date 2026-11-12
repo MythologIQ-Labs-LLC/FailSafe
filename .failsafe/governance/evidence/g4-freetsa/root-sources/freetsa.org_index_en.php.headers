@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 12 Nov 2026 15:11:25 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Powered-By: PHP/7.4.13
+Strict-Transport-Security: max-age=63072000; includeSubdomains; preload
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Content-Security-Policy: default-src 'unsafe-inline' 'unsafe-eval' 'self'; script-src 'self' https://oss.maxcdn.com/; img-src 'self' https://www.paypal.com https://www.paypalobjects.com; report-uri https://www.busindre.com/hpkp_violation.php
+X-Xss-Protection: 1; mode=block
+Public-Key-Pins: pin-sha256="C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=";pin-sha256="YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=";pin-sha256="sRHdihwgkaib1P1gxX8HFszlD+7/gTfNvuAybgLPNis=";pin-sha256="Vjs8r4z+80wjNcr1YKepWQboSIRi63WsWXhIMN+eWys=";max-age=2592000; report-uri="https://www.busindre.com/hpkp_violation.php"
+

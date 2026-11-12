@@ -1,0 +1,12 @@
+[
+  {
+    "subject": "O=Free TSA, OU=TSA, description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services, CN=www.freetsa.org, emailAddress=busilezas@mailbox.org, L=Wuerzburg, C=DE, ST=Bayern",
+    "sha256": "32e841a95cc1164101ffde41298ef2fc75c1c4372ef095e88a6bbd47dfb191fc",
+    "validTo": "Feb  2 19:44:22 2040 GMT"
+  },
+  {
+    "subject": "O=Free TSA, OU=Root CA, CN=www.freetsa.org, emailAddress=busilezas@gmail.com, L=Wuerzburg, ST=Bayern, C=DE",
+    "sha256": "a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc",
+    "validTo": "Mar  7 01:52:13 2041 GMT"
+  }
+]

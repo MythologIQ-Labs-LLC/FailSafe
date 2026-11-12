@@ -1,0 +1,66 @@
+HTTP/1.1 302 FOUND
+Server: nginx
+Date: Thu, 12 Nov 2026 15:11:45 GMT
+Content-Type: text/plain; charset=utf-8
+Content-Length: 0
+Connection: keep-alive
+x-archive-redirect-reason: found capture at 20160829015301
+location: https://web.archive.org/web/20160829015301id_/http://freetsa.org/files/cacert.pem
+server-timing: captures_list;dur=0.626195, exclusion.robots;dur=0.061889, exclusion.robots.policy;dur=0.049673, esindex;dur=0.007997, cdx.remote;dur=25.679148, LoadShardBlock;dur=555.226930, PetaboxLoader3.datanode;dur=164.768178
+x-app-server: wwwb-app265-dc8
+x-ts: 302
+x-tr: 609
+server-timing: TR;dur=0,Tw;dur=151,Tc;dur=11
+set-cookie: wb-p-SERVER=wwwb-app265; path=/
+X-location: All
+X-AS: 11776
+X-RL: 0
+X-NA: 0
+X-Page-Cache: MISS
+Server-Timing: MISS
+X-NID: Breezeline
+Referrer-Policy: no-referrer-when-downgrade
+Permissions-Policy: interest-cohort=()
+X-sd: 0
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 12 Nov 2026 15:11:47 GMT
+Content-Type: application/x-x509-ca-cert
+Content-Length: 8873
+Connection: keep-alive
+x-archive-orig-server: nginx
+x-archive-orig-date: Mon, 29 Aug 2016 01:53:01 GMT
+x-archive-orig-content-length: 8873
+x-archive-orig-last-modified: Sun, 13 Mar 2016 13:48:49 GMT
+x-archive-orig-connection: close
+x-archive-orig-etag: "56e56fc1-22a9"
+x-archive-orig-x-frame-options: DENY
+x-archive-orig-x-content-type-options: nosniff
+x-archive-orig-content-security-policy: default-src 'unsafe-inline' 'unsafe-eval' 'self'; script-src 'self'; report-uri http://www.freetsa.org/hpkp_violation.php
+x-archive-orig-x-xss-protection: 1; mode=block
+x-archive-orig-accept-ranges: bytes
+cache-control: max-age=1800
+accept-ranges: bytes
+memento-datetime: Mon, 29 Aug 2016 01:53:01 GMT
+link: <http://freetsa.org/files/cacert.pem>; rel="original", <https://web.archive.org/web/timemap/link/http://freetsa.org/files/cacert.pem>; rel="timemap"; type="application/link-format", <https://web.archive.org/web/http://freetsa.org/files/cacert.pem>; rel="timegate"
+content-security-policy: default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: archive.org web.archive.org web-static.archive.org wayback-api.archive.org athena.archive.org analytics.archive.org pragma.archivelab.org wwwb-events.archive.org
+x-archive-src: WIDE-20160829012909-crawl808/WIDE-20160829014537-04855.warc.gz
+server-timing: captures_list;dur=0.547562, exclusion.robots;dur=0.038018, exclusion.robots.policy;dur=0.025963, esindex;dur=0.008740, cdx.remote;dur=20.371773, LoadShardBlock;dur=146.180431, PetaboxLoader3.datanode;dur=90.717372, load_resource;dur=841.506844, PetaboxLoader3.resolve;dur=331.473307
+x-app-server: wwwb-app206-dc6
+x-ts: 200
+x-tr: 1036
+server-timing: TR;dur=0,Tw;dur=118,Tc;dur=4
+set-cookie: wb-p-SERVER=wwwb-app206; path=/
+cache-control: private
+X-location: All
+X-AS: 11776
+X-RL: 0
+X-NA: 0
+X-Page-Cache: MISS
+Server-Timing: MISS
+X-NID: Breezeline
+Referrer-Policy: no-referrer-when-downgrade
+Permissions-Policy: interest-cohort=()
+X-sd: 0
+
