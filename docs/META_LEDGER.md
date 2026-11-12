@@ -36591,3 +36591,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 4 (exact audited commit 7cfe447f51794725ce9d70f27dcb19f9d17c1648, draft PR #658, issue #638), by a fourth fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Closed and re-attacked: iteration-3 V7 (depth 1 and 2 clones, fetch --deepen, an empty planted .git/shallow, a worktree of a shallow clone and grafts in the common git directory are BLOCKED REPO_INCOMPLETE_HISTORY; per-worktree shallow or grafts files, alternates, partial clones and git replace --graft are handled), iteration-3 N1 (local log, diff and core settings no longer narrow the CRL history), V1, V5 and V6. V8 (blocking, security): the verifier reads history through Git's commit-graph, so a forged .git/objects/info/commit-graph that rewires HEAD's parent hides the commits that add and delete a revoking CRL while HEAD keeps its SHA; diagnostic and release mode returned PASS OK, including after a plain local clone that copied the graph; registry and notice history are exposed the same way. V9 (blocking, disclosure and integrity): the verifier trusts the local object store; a loose object substituted under the same object id (the revoking CRL replaced by an older valid CRL) gave release-mode PASS OK, also after a plain local clone, while git fsck --full detects it, and the operations doc overstates what is enforced. g4 suites 157 of 157 and docs 145 of 145; razor holds; the ledger only appends #959 to #961 and verifies post-anchor clean. Merge obligations: disable the commit-graph for verifier Git reads, check object integrity before reading or state the trust assumption precisely, add tests, and obtain a new independent audit. Not a release decision.
 
 ---
+
+### Entry #963: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 5) PASS
+
+**Timestamp**: 2026-11-12T17:57:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter5.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter5.json`
+
+**Content Hash**: `79437586f64c67a68958b8f164dfb4699c4f60df5c84d16cb1938ad04e71c97a`
+**Previous Hash**: `be2d24a0cb47f05258d259987317b6070e6ec559c1b87b7e93ad3af209293c5a`
+**Chain Hash (Merkle seal)**: `5b2b866c1c91fb1d389ae97445d6a29ee20202f6cdc532613bee195ab4b6bbbd`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-token-time-transitions.md iteration 5 (exact audited commit 4bb2c324bd504f679f2d387914c7b5c322ff7664, draft PR #658, branch feat/638-g4-token-time-transitions, stacked on PR #657; issue #638), by a fifth fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. No blocking violation. Iteration-4 V8 and V9 closed, reproduced by the auditor in throwaway repositories: a forged commit-graph stays REFUSED TSA_CRL_HISTORY even with core.commitGraph=true forced through GIT_CONFIG_COUNT, GIT_CONFIG_PARAMETERS or an includeIf in the repository config, and with a split graph; substituted objects are BLOCKED REPO_INTEGRITY for a loose object even with fsck.skipList and 55 fsck message-id ignores, a hand-built pack and index with valid checksums, a forged multi-pack-index offset with recomputed checksum and a corrupted pack index, with cat-file confirmed to return the substituted bytes; fsck checks the shared object store of linked worktrees and a planted shallow there is BLOCKED REPO_INCOMPLETE_HISTORY. Earlier fixes hold on spot-check (V1, V5, V6, V7). Nothing is weaker than main; the operations doc's statement of what is enforced and what is still trusted matches the code. g4 suites 159 of 159 and docs 145 of 145 passed; the verifier on the real repository returns BLOCKED NO_CHECKPOINTS in about 5 s. The ledger only appends #959 to #962 and verifies post-anchor clean. Notes for the owner: N1, a core.fsmonitor command in a repository's own .git/config runs during verification because git fsck triggers it, outside the stated model of a fresh clone from the canonical remote, suggested hardening -c core.fsmonitor=false; N2, one ops-doc line should say a worktree must come from a canonical full clone. Prior VETOs #959 to #962 remain on record. Merge obligations: exact-head CI, PRs #647 and #657 merged first, owner authority for the protected merge. This PASS qualifies the verifier change only; it is not an operational G4 PASS and not a release decision.
+
+---
