@@ -13,3 +13,4 @@
 - `test-node-windows-run1..2.txt`: summary of `npm run test:node`. The 2 failures are `bundleDeps.test.cjs`, which fails in junction-linked worktrees on unmodified main.
 - `ci-linux-run43144395889-iter2.txt`: the #651 diagnostic lines from the Linux CI Full Test job on iteration 2 (`060a09fa`): run-queue mode active; off-CPU controls held with no run-queue wait.
 - Linux: not run locally (no WSL or container runtime). The CI job on the final head is the Linux evidence for iteration 3.
+- The raw log of the failed Full Test job on `b29cd870` (run 43151479737) is at `.failsafe/governance/evidence/651/ci-43151479737-failed.log`. It was first committed here (`.agent/staging/evidence-651/`) in `888ced6f` and moved unchanged, because its test names mention the retired product and that guard exempts historical records only under `.failsafe/`.
