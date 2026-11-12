@@ -1,5 +1,51 @@
 # FailSafe × VS Code Agents Window — Compatibility Snapshot
 
+## 2026-11-12 upstream update: VS Code 1.146 (design-only, no compatibility PASS)
+
+> **Scope and authority.** Source-verified upstream and FailSafe repository review. This section updates the **research baseline**, not the installed-host acceptance matrix in §3. Every runtime row stays `unverified` until #326 records a real run. The August 19, 2026 material below is retained as historical context and must not be read as current upstream status. This is a **proposed architecture decision**, not a /qor-audit PASS, seal, implementation authorization, or claim of working integration. No change to v6.0.13 scope.
+
+### Changes since the 1.134 snapshot
+
+| Surface | Verified upstream 1.146 fact | FailSafe impact / qualified state |
+| --- | --- | --- |
+| Harness lifecycle | Copilot has been the default harness for new sessions since 1.143. Local is **deprecated** in 1.146 with removal planned for February 2027. | Stop treating extension-host/local-session access as a durable route to agents. Explicitly test Copilot, not only Local. |
+| `@failsafe` participant | The Chat Participant API is deprecated and **not supported by the Copilot harness**. It remains only for Local compatibility. | Preserve legacy support until a governed migration; do not claim `@failsafe` will work in Copilot Agent Host sessions. Map each command to skill, MCP tool, extension command, or UI. |
+| Extensions in Agents window | Agent Customizations can install/uninstall extensions and manage their Agents-window enablement independently of editor windows; unsupported views/status bars/debuggers/walkthroughs warn. Experimental. | The existing `failsafe.configureAgentsWindow` opt-in flow needs live revalidation in 1.146; installation/activation does **not** automatically expose agent-callable tools. |
+| Agent Inbox | Experimental `sessions.list.inboxEnabled` groups sessions into attention, Working, Ready to merge, On hold, Done; `sessions.list.inlineActions` adds fix-checks/review-comment actions. | VS Code owns triage, not governance eligibility. **No public API to inject arbitrary FailSafe Inbox rows was verified in this research**. Do not clone the Inbox or advertise native integration. |
+| Native skills | Extensions may contribute standards-compliant `contributes.chatSkills` paths to `SKILL.md`. Connected MCP servers may supply skills through experimental SEP-2640 with `chat.agentHost.mcpSkills.enabled`. | The FailSafe 6.0.12 manifest declares no `chatSkills`. A canonical small skill source is a plausible packaging-first slice; do not conflate skill instructions with enforcement. |
+| Plugins / hooks | Agent Plugins can bundle skills, hooks and MCP. Copilot `preToolUse` may deny a call; **timeouts can fall back to normal permissions**, and `postToolUse` cannot undo side effects. | Hook experiments are advisory until the exact harness, events, timeout/error behavior and denial coverage are falsified. No universal pre-write blocking claim. |
+| MCP issue | microsoft/vscode#317460 (extension-contributed MCP missing from Agents window) closed on 2026-11-08. | Closed upstream issue is **not** a FailSafe conformance test. FailSafe's own in-process `FailSafeMCPServer` remains inaccessible to an external client according to its canonical integration contract. B209 remains a separate proposed bridge. |
+| Host protocol / external harnesses | Agent Host and AHP manage long-lived sessions; microsoft/vscode#325827 still requests public registration of external harnesses, and #318103 still requests standard Agents-window extension-development debugging. | Keep B207 as a research/watchlist item. Do not depend on private AHP/Inbox internals for policy or attribute sessions from guessed identifiers. |
+
+**Primary upstream references (checked 2026-11-12):**
+- VS Code 1.146 release: https://code.visualstudio.com/updates/v1_146
+- Agent Skills and MCP skill trust/setting: https://code.visualstudio.com/docs/agent-customization/agent-skills
+- Extension `chatSkills` contribution contract: https://code.visualstudio.com/api/references/contribution-points#contributes.chatSkills
+- Chat Participant migration/deprecation: https://code.visualstudio.com/api/extension-guides/ai/chat
+- Copilot hooks, event fields and timeout caveat: https://code.visualstudio.com/docs/agent-customization/hooks
+- Agent Plugin architecture: https://code.visualstudio.com/docs/agent-customization/agent-plugins
+- Upstream issues: https://github.com/microsoft/vscode/issues/317460, https://github.com/microsoft/vscode/issues/325827, https://github.com/microsoft/vscode/issues/318103
+
+### Proposed architecture decision: agent-native, runtime-independent FailSafe governance
+
+**Owner-approved strategic direction (2026-11-12); technical qualification and native Qor audit pending.**
+
+- **D1 — Host owns orchestration.** Leave session lists, Inbox, worktree orchestration and merge UX with VS Code and its harnesses. FailSafe supplies governance facts, qualification outcomes and evidence links only through documented integration APIs.
+- **D2 — Governance authority is independent.** Native policy, owner decisions, intent/ledger verification and release gates remain in FailSafe; an agent skill or hook is never a source of governance authority. No agent self-attestation of PASS or approval.
+- **D3 — One canonical skill source, multiple adapters.** Evaluate three thin, discoverable workflows (`failsafe-preflight`, `failsafe-review-change`, `failsafe-release-readiness`) reusing the existing Qor/SHIELD process; validate extension `chatSkills` first, then optional Agent Plugin and MCP-skills distribution. Avoid duplicate skill implementations or a second policy engine.
+- **D4 — External invocation requires an actual bridge.** B209 is the prerequisite for external MCP tool invocation. Before making it callable, independently review authentication and authorization, subject-bound receipts, workspace root/worktree identity, local-only transport, explicit refusal/degraded states, and caller privilege. No silent local HTTP trust or agent-generated owner approval.
+- **D5 — Session evidence is conditional on trustworthy identity.** B207 and #326 should inventory **documented** session/worktree/commit identifiers and coverage boundaries, including the new Inbox categories; missing attribution remains `unobserved`, never assumed governed.
+- **D6 — Compatibility is host × harness × execution context.** Qualify VS Code 1.146 Copilot-host sessions first; test Cursor and Antigravity separately (including standalone IDE vs VS Code extension) before any public parity claims. Multi-worktree, remote, virtual, disconnected and cross-profile behavior need separate evidence.
+
+**Delivery order, all outside v6.0.13:**
+1. **#326**: execute the *existing* `FailSafe/extension/scripts/agents-window-phase-d-probe.cjs` from a terminal inside a live 1.146 Agents window; record installed FailSafe version, visible commands, chat behavior, warnings/views/status bars, worktree mode-dependent commit outcomes and exact ledger paths. Do not mark matrix rows PASS based on this desk review. The script is a collector (exit code 0), not a governance gate.
+2. **Design-only skills slice**: identify current shipped Qor skill provenance and mapping; produce a packaging contract with explicit minimum VS Code version and downgrade behavior, before code. Preserve the old `@failsafe` path only for actually supported hosts.
+3. **B209**: separate threat model, native `/qor-plan` → `/qor-audit` PASS before implementation, external-client success and negative tests (untrusted caller, stale/forged intent, absent extension, malformed request, simultaneous worktrees, transport loss, timeout, absent seal). Do not infer authorization from successful MCP connection.
+4. **B207 + Inbox**: research supported session-correlation interfaces and describe fallback behavior; avoid undocumented internals and a second session manager.
+
+**Evidence / closure rules:** Desktop compatibility remains **BLOCKED_EXTERNAL** until operator evidence is posted to #326. A documentation PR does not satisfy that gate. A valid skill discovery test must show the skill in a new Copilot session and successfully invoke a real approved workflow; existence of the Markdown file is insufficient. A live MCP test must use an **external process**, and denial tests must prove no unauthorized policy mutation. CI success does not imply production acceptance. Nothing in this proposal merges, ships, seals or publishes implementation.
+
+
 > **Snapshot as of VS Code 1.134, observed 2026-08-19** (supersedes the 1.128/2026-07-13 snapshot; deep-dive brief at META_LEDGER Entry #517, baselines #457/#466). The Agents window is still an upstream **PREVIEW** feature ("Use the Agents window (Preview)" — https://code.visualstudio.com/docs/agents/run/agents-window, observed 2026-08-19) on a weekly stable cadence. **This document goes stale fast.** Re-run the #83 revalidation when ANY trigger fires:
 > 1. The docs page drops the preview banner.
 > 2. microsoft/vscode#325827 (extension API for external agent harnesses) or #305332 (AHP customizations) ships.
