@@ -16,6 +16,7 @@
  */
 
 import { escapeHtml } from './brainstorm-templates.js';
+import { STATEWRIGHT_HANDOFF, STATEWRIGHT_STYLES } from './statewright-handoff.js';
 const STYLE_ID = 'cc-intcat-style';
 const STYLE = `
 .cc-intcat { display:flex; flex-direction:column; gap:12px; }
@@ -184,20 +185,20 @@ export class IntegrationCatalogRenderer {
     if (typeof document === 'undefined' || document.getElementById(STYLE_ID)) return;
     const el = document.createElement('style');
     el.id = STYLE_ID;
-    el.textContent = STYLE;
+    el.textContent = STYLE + STATEWRIGHT_STYLES;
     document.head.appendChild(el);
   }
 
   async render() {
     if (!this.container) return;
     this.ensureStyle();
-    this.container.innerHTML = '<div class="cc-intcat"><h3>Integration Catalog</h3><p class="cc-intcat-sub">Loading…</p></div>';
+    this.container.innerHTML = `<div class="cc-intcat"><h3>Integration Catalog</h3><p class="cc-intcat-sub">Loading…</p>${STATEWRIGHT_HANDOFF}</div>`;
     let data;
     try {
       const res = await fetch('/api/v1/integrations/catalog');
       data = await res.json();
     } catch (err) {
-      this.container.innerHTML = `<div class="cc-intcat"><h3>Integration Catalog</h3><p class="cc-intcat-sub">Could not load integrations: ${esc(err)}</p></div>`;
+      this.container.innerHTML = `<div class="cc-intcat"><h3>Integration Catalog</h3><p class="cc-intcat-sub">Could not load integrations: ${esc(err)}</p>${STATEWRIGHT_HANDOFF}</div>`;
       return;
     }
     const integrations = (data && data.integrations) || [];
@@ -221,6 +222,7 @@ export class IntegrationCatalogRenderer {
     this.container.innerHTML =
       `<div class="cc-intcat"><h3>Integration Catalog</h3>` +
       `<p class="cc-intcat-sub">${esc(sub)}</p>` +
+      STATEWRIGHT_HANDOFF +
       sections +
       `</div>`;
     this.wire();

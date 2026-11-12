@@ -1,0 +1,156 @@
+{
+  "when": "2026-11-11T17:14:10.431Z",
+  "code": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe",
+  "vsix": "C:\\Users\\krkna\\AppData\\Local\\Temp\\claude\\6405f61d9b064ac4\\b5cba55a-fbfb-453a-9069-0bb3c44a8e39\\scratchpad\\s653\\failsafe-653-b395693d.vsix",
+  "results": [
+    {
+      "name": "VSIX installs into the disposable profile",
+      "pass": true,
+      "detail": {
+        "status": 0,
+        "out": "Installing extensions...\nExtension 'failsafe-653-b395693d.vsix' was successfully installed.\n"
+      }
+    },
+    {
+      "name": "installed extension ships the renderer and the fixed Statewright link",
+      "pass": true,
+      "detail": {
+        "installed": [
+          "mythologiq.mythologiq-failsafe-6.0.12"
+        ],
+        "files": [
+          "dist\\extension\\ui\\modules\\integration-catalog-renderer.js",
+          "dist\\extension\\ui\\modules\\statewright-handoff.js"
+        ]
+      }
+    },
+    {
+      "name": "installed host started its own Console server",
+      "pass": true,
+      "detail": {
+        "before": [],
+        "mine": [
+          9376
+        ]
+      }
+    },
+    {
+      "name": "host and extension identity",
+      "note": true,
+      "detail": {
+        "hostTitle": "ws - Visual Studio Code",
+        "code": "C:\\dev\\mythologiq\\FailSafe-rc611-qual\\disposable-vscode\\VSCode-1.141.1\\Code.exe",
+        "extension": "MythologIQ.mythologiq-failsafe@6.0.12",
+        "base": "http://localhost:9376"
+      }
+    },
+    {
+      "name": "card visible in the Console served by the installed extension, link attributes exact",
+      "pass": true,
+      "detail": {
+        "href": "https://statewright.ai/runs",
+        "target": "_blank",
+        "rel": "noopener noreferrer",
+        "text": "Open Statewright Run History",
+        "ping": null,
+        "download": null
+      }
+    },
+    {
+      "name": "before any click: zero requests to the statewright.ai host",
+      "pass": true,
+      "detail": {
+        "totalRequests": 149,
+        "urlsMentioningStatewright": [
+          "http://localhost:9376/modules/statewright-handoff.js"
+        ]
+      }
+    },
+    {
+      "name": "before any click: non-local requests made by the Console page (pre-existing behaviour, any origin)",
+      "note": true,
+      "detail": [
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com"
+      ]
+    },
+    {
+      "name": "no connected/authenticated claim on the card",
+      "pass": true,
+      "detail": {
+        "pillText": [
+          "Website handoff"
+        ],
+        "text": "Statewright AI\nWEBSITE HANDOFF\n\nView your workflow runs and transition history on Statewright's website. Statewright handles sign-in and run data. FailSafe does not read Statewright history or enforce Statewright workflows.\n\nOpen Statewright Run History\nhttps://statewright.ai/runs"
+      }
+    },
+    {
+      "name": "link is keyboard focusable",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "click opens a new tab whose first navigation is exactly https://statewright.ai/runs",
+      "pass": true,
+      "detail": {
+        "url": "https://statewright.ai/runs",
+        "method": "GET"
+      }
+    },
+    {
+      "name": "navigation request carries no Referer, Cookie, Authorization or Origin",
+      "pass": true,
+      "detail": {
+        "referer": null,
+        "cookie": null,
+        "authorization": null,
+        "origin": null
+      }
+    },
+    {
+      "name": "no request to Statewright mentions the local Console origin, port, or workspace path",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "opened page has no window.opener",
+      "pass": true,
+      "detail": true
+    },
+    {
+      "name": "REAL destination as seen by a signed-out browser (no interception)",
+      "note": true,
+      "detail": {
+        "finalUrl": "https://statewright.ai/login?redirect=/runs",
+        "title": "Your workflows. Your choice of harness. | Statewright",
+        "text": "AI Solutions Pricing Docs Log in Sign up Log in Continue with Google Continue with GitHub Continue with Microsoft Continue with email ∨ Help improve Statewright? Error diagnostics run automatically. Session recording is off until you choose it. Session recording off Save preference"
+      }
+    },
+    {
+      "name": "real statewright.ai answered the navigation (HTTP 200 family)",
+      "pass": true,
+      "detail": {
+        "status": 200,
+        "finalUrl": "https://statewright.ai/login?redirect=/runs"
+      }
+    },
+    {
+      "name": "Console tab did not navigate away (handoff is a separate tab)",
+      "pass": true,
+      "detail": "http://localhost:9376/command-center.html"
+    },
+    {
+      "name": "catalog unavailable: error shown and the Statewright link is still present",
+      "pass": true,
+      "detail": "Catalog\nBicameral\nOpen Design\nMCP Catalog\nAgent Governance\nIntegration Catalog\n\nCould not load integrations: TypeError: Failed to fetch\n\nStatewright AI\nWEBSITE HANDOFF\n\nView your workflow runs and transition history on Statewright's website. Statewright handles sign-in and run data. FailSafe does no"
+    },
+    {
+      "name": "editor-tab surface frames (to see which UI the in-editor tab serves)",
+      "note": true,
+      "detail": [
+        "http://localhost:9376/?ui=compact",
+        "http://localhost:9376/?ui=compact&theme=dark"
+      ]
+    }
+  ]
+}
