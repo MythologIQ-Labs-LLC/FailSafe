@@ -36432,3 +36432,22 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-651-architecturelinks-ci-reliability.md iteration 4 (exact audited head e48d1c65c30e2dbfc8b9a3bfea1b207c4e89e8a9, PR #656, issue #651). BOUNDED, RECORDS-ONLY CONFIRMATION CHECK, not an audit of the code, by a fifth fresh reviewer, performed on 2026-11-12 (UTC). The technical qualification of the test change is Entry #952 on source fcb16f682cd06aec601baca8758438ee623c3088, whose criteria were all met; this check confirms that nothing under FailSafe/ or .github/ has changed since that source, so that qualification applies to this head. Confirmed: Entry #953 follows #952 with correct content and previous hashes, Entries #938 to #952 are unchanged, and the chain verifies; #953's quotations are verbatim apart from its disclosed ASCII substitution, and its CI facts for run 43151479737 are true; the raw failed-CI log that #953 cites was at .agent/staging/evidence-651/ when #953 was sealed and now lives unchanged (blob 88af08af) at .failsafe/governance/evidence/651/ci-43151479737-failed.log, a move disclosed in commit e48d1c65 and the evidence README, made because the log's test names tripped the pro-retirement guard, which exempts historical records under .failsafe/; no other file was edited to pass that guard. CI on the audited head: 13 of 13 checks passed; Full Test run 43154347011 ran the #651 suites on Linux in run-queue mode, the main bounded test held 74.2 ms against the 100 ms limit, and every control held from 137.0 to 232.6 ms and failed its verdict as required; test:node 1077 passed and 0 failed; test:ui 263 passed. Observation recorded for the owner: #953 says the #651 suites did not run because the job stops at the first failing step; more precisely, the test:all step chains its commands with &&, so the failing npm test prevented test:node from starting, as the report #953 seals states. This PASS qualifies the test change for the normal protected merge only; it is not a release decision.
 
 ---
+
+### Entry #955: RECORD CORRECTION - relocation of the report sealed by Entry #954 (plan-v6013-651-architecturelinks-ci-reliability)
+
+**Timestamp**: 2026-11-12T04:51:37Z
+**Phase**: RECORD
+**Author**: Implementer (record correction)
+**Session**: `2026-11-12T0251-53f40b`
+**Verdict**: CORRECTION (no verdict)
+**Target**: `.failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md`
+**Report**: `.failsafe/governance/evidence/651/RELOCATION-954-report.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `n/a (record correction)`
+
+**Content Hash**: `87e347a68bd15811ab0bcb1e7e749734827bd09d6d2d0ec151dfc61bb588ad08`
+**Previous Hash**: `65c124ced1632fbe1a530c2797d4c272eac9c24cc7ae973ebb9d57ee4b9eaddb`
+**Chain Hash (Merkle seal)**: `19d265e6b0ba16fe35fe8f35d9e6aac2e97e554fa61e24bd0755d6e53b4cc804`
+
+**Decision**: RECORD CORRECTION, not an audit verdict, written by the implementer. The report sealed by Entry #954 (content hash 798e7f494d6fa0b82b23fb64aeede4667c96e3f818dfb76a1c851395c3c3d85d) was committed at .agent/staging/AUDIT_REPORT-656-iter5-records.md in 0ebf2032 and is moved unchanged (same git blob d2610783) to .failsafe/governance/evidence/651/AUDIT_REPORT-656-iter5-records.md. The report quotes the name of a test in the pro-retirement guard, that name mentions the retired product, and the guard exempts historical records only under .failsafe/, so CI run 43156370765 on 0ebf2032 failed on it. Entry #954 is left exactly as sealed; its Report field named the original path, which was true when it was sealed. The implementer pushed 0ebf2032 without running test:node locally first, contrary to the repository's CI-budget rule; this relocation was validated locally before it was pushed. The cited file records the move.
+
+---
