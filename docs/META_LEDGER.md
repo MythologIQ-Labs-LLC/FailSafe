@@ -36531,3 +36531,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 1 (exact audited commit 59c4291e4b9e8ac374179ce252ad578f06debf71, draft PR #658, branch feat/638-g4-token-time-transitions, stacked on PR #657; issue #638), by a fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Each violation was reproduced by the auditor in scratch repositories with the test PKI. V1 (blocking, security): tsa-trust.cjs checks only the first PEM CRL of each committed .crl file and appends the raw file to the OpenSSL CAfile, so a certificate placed after the CRL becomes a trust anchor; a checkpoint from an unrelated TSA then verified PASS OK in release mode, defeating the single-root pin. V2 (blocking): a rotation is accepted although its token time is outside the old key's certificate window; an expired key handed over with verified continuity. V3 (blocking): with -attime and -crl_check OpenSSL consults only CRLs current at the token time, so a later valid CRL that lists the TSA signer as revoked before the token is ignored; the documentation claims otherwise. V4 (blocking): CRLs are read at HEAD only, so deleting a revoking CRL turns REFUSED TSA_SIGNER_REVOKED into PASS. Notes: N1, recovery compares the notice's stated effective time, not its notice token time; N2, a transition record binds the previous checkpoint by id only. Held: corrupted-signature, missing, expired and not-yet-valid CRLs fail closed; among CRLs current at the same time OpenSSL selects the newest; the genesis pin, recovery acknowledgement and limitation, notice rules and cat-file blob reads behave as stated; the committed FreeTSA CRL equals the live one and verifies against the pinned root; g4 suites 138 of 138 and docs 145 of 145; razor holds; the ledger is untouched by this PR. Merge obligations: remediate V1 to V4 with tests and obtain a new independent audit. Not a release decision.
 
 ---
+
+### Entry #960: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 2) VETO
+
+**Timestamp**: 2026-11-12T16:55:02Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter2.json`
+
+**Content Hash**: `78338a402f865669816d3838951d247b14c45c2017b492c600cca3e0eb9c793f`
+**Previous Hash**: `cc8909928a5685f92c306798f6595f40a240ace60ebd11fdeee22b8a0d754d2d`
+**Chain Hash (Merkle seal)**: `7ade031c76a2fe69415dbd48670d283858441e5292154e8477e646813603d8df`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 2 (exact audited commit ba8c1b21fdb23323966432f14c9f029beea8ef79, draft PR #658, issue #638), by a second fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Closed and re-attacked by the auditor: iteration-1 V1 (CRL trailing data, DER, two blocks, CRL plus certificate, certificate inside CRL armour, PEM headers, BOM, trailing NUL and a non-pinned issuer were all refused), V2 (key window, including a recovery signed by a not-yet-valid new key), N1 and N2. V5 (blocking, security): the archived-CRL check refuses all tokens only for key or CA compromise and judges every other revocation, including one with no reasonCode and certificateHold, by its date; RFC 3161 section 4 keeps earlier tokens valid only for reasons unspecified, affiliationChanged, superseded and cessationOfOperation, and a TSA signer revoked without a reason after the tokens verified release-mode PASS OK. V6 (blocking, security): the append-only CRL history check runs git log without -m, so an archived CRL removed only by a merge resolution, or by an older branch merged with -s ours, goes unseen; a revoking CRL dropped that way turned REFUSED TSA_SIGNER_REVOKED into release-mode PASS OK; checkpoints also do not bind the CRL set, which is undisclosed. g4 suites 149 of 149 and docs 145 of 145 passed; razor holds; the ledger only appends #959 and verifies post-anchor clean; nothing is weakened relative to main. Merge obligations: remediate V5 and V6 with tests, correct the RFC wording and disclose or close the history-rewrite limit, then obtain a new independent audit. Not a release decision.
+
+---
