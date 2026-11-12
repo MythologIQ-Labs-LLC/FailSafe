@@ -1,0 +1,44 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-11-12T2324-8d58c3",
+  "ts": "2026-11-12T23:35:26Z",
+  "verdict": "PASS",
+  "merkle_seal": "ea8c9230b102faa6074b4543bdf8a537a8a5fd977adf908660f65f0170aecc54",
+  "content_hash": "2ddb96634ef634941a41e3f9295685b0f568ee6cef26390f64deb50cc79334b8",
+  "ledger_entry": 968,
+  "reality_check": {
+    "missing": [],
+    "unplanned": [],
+    "matches": 20
+  },
+  "release_commit": "589b515734182a0b94b0713e7557eac123b0fb29",
+  "extension_tree": "6263c6d041643e1d84e0ee0fd3cab2c146327b41",
+  "local_sha256sums_sha256": "f4b3898bdc6a781667c2132e876c686689c8e7524d73a4a3650b3ebf72f19db9",
+  "governance_refs": {
+    "audit_pass": 967,
+    "g4_passes": [
+      958,
+      963,
+      965,
+      966
+    ],
+    "prior_vetos": [
+      956,
+      957,
+      959,
+      960,
+      961,
+      962,
+      964
+    ]
+  },
+  "publication": "not authorized; requires genesis (owner authorization), release verification on H and M, rule suite pass and owner release GO",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "pass",
+    "ts": "2026-11-12T23:35:26Z"
+  }
+}
