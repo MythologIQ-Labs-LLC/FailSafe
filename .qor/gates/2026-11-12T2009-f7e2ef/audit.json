@@ -1,0 +1,27 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T2009-f7e2ef",
+  "ts": "2026-11-12T20:26:29Z",
+  "target": ".failsafe/governance/plans/plan-v6013-665-g4-tpm-scripts.md",
+  "verdict": "PASS",
+  "report_path": ".failsafe/governance/evidence/665/AUDIT_REPORT-665-iter2.md",
+  "risk_grade": "L2",
+  "target_content_hash": "9b6d42b8d61f857692dc3e1a3dc572729856a50dc05de0f17eaeec31ea8c5215",
+  "report_content_hash": "cf563d084df0f249356257345c92e33093f1ecd5f4b1ad7340a991cb27e6f12d",
+  "iteration": 2,
+  "ledger_entry": 965,
+  "ledger_chain_hash": "4fb6e9eb1c2f1350e67d4500d662bfef06b054637bb49db797fd88c8087ce0fd",
+  "audited_candidate": "a6c0c7524986bf277234316ddc541333f5e8eb6c",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "findings_categories": [],
+  "violations": [],
+  "merge_obligations": "current-head CI; owner authority for merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "pass",
+    "ts": "2026-11-12T20:26:29Z"
+  }
+}

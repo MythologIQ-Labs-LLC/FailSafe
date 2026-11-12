@@ -1,6 +1,6 @@
 # G4 ledger witness: operations (v6.0.13, #638)
 
-**Status:** the tooling is implemented and tested against a throwaway local test TSA and ephemeral software test keys. **No owner key exists and no checkpoint exists.** The TSA is selected: the owner chose the FreeTSA public service on 2026-11-12, and `tools/g4/tsa-policy.json` trusts its root alone. The verifier returns `BLOCKED NO_CHECKPOINTS` on this repository until a genesis checkpoint exists. The remaining owner actions are in `docs/releases/V6_0_13_G4_OWNER_DECISIONS.md`.
+**Status:** the tooling is implemented and tested against a throwaway local test TSA and ephemeral software test keys. **The owner key `FailSafe-G4-Ledger-Witness` was enrolled on 2026-11-12; its certificate is `tools/g4/keys/a50c00715e7275a86fad338c80ceacd161da02bdf2b75c60b1082eb518265d8b.cer`, and the owner holds the fingerprint offline. No checkpoint exists.** The TSA is selected: the owner chose the FreeTSA public service on 2026-11-12, and `tools/g4/tsa-policy.json` trusts its root alone. The verifier returns `BLOCKED NO_CHECKPOINTS` on this repository until a genesis checkpoint exists. The remaining owner actions are in `docs/releases/V6_0_13_G4_OWNER_DECISIONS.md`.
 
 Design authority: the "G4: complete-ledger-byte witness" section and the Iteration 3 refinements of `.failsafe/governance/plans/plan-v6012-release-governance.md` (audits #917 to #919), and the owner decision `docs/releases/V6_0_12_G4_DISPOSITION.md`.
 
@@ -17,7 +17,7 @@ Design authority: the "G4: complete-ledger-byte witness" section and the Iterati
 | `FailSafe/extension/scripts/g4-verify-checkpoint.cjs` | CLI: verify the whole chain |
 | `FailSafe/extension/scripts/g4-tsa-probe.cjs` | Manual live-TSA interoperability probe (random digests only) |
 | `tools/g4/sign-checkpoint.ps1` | Signs SHA-256(manifest) with the named TPM key (`CngKey.Open` + `ECDsaCng.SignHash`) |
-| `tools/g4/enroll-tpm-key.ps1` | Creates the TPM key and exports the public certificate. **Owner only; never run by automation** |
+| `tools/g4/enroll-tpm-key.ps1` | Creates the TPM key and exports the public certificate. **Owner only.** Automation never passes `-ConfirmPersistentTpmKey`; the test suite runs the script only without it, to check that it refuses before any key-provider call (#665) |
 | `tools/g4/revocations.json` | Append-only revocation registry (version 1, empty) |
 | `tools/g4/revocation-notices/v<N>.tsr` | RFC 3161 token for registry version N (N >= 2) |
 | `tools/g4/tsa-crls/*.crl` | Archived CRLs of the pinned TSA root (revocation evidence at token time) |
@@ -26,7 +26,7 @@ Design authority: the "G4: complete-ledger-byte witness" section and the Iterati
 | `tools/g4/tsa-policy.json` | Trusted TSA roots (`selected`: one root, FreeTSA Root CA, DER SHA-256 `a6379e7c...18aabc`) |
 | `tools/g4/tsa-roots/freetsa-root-ca.pem` | The FreeTSA Root CA, byte-identical to `https://freetsa.org/files/cacert.pem` (qualification evidence: `.failsafe/governance/evidence/g4-freetsa/`) |
 | `tools/g4/HISTORICAL_GAPS.md` | Historical-gap statement, bound into every manifest by SHA-256 |
-| `tools/g4/keys/<sha256>.cer` | Committed public certificates (none yet) |
+| `tools/g4/keys/<sha256>.cer` | Committed public certificates (the owner key, `a50c0071...265d8b.cer`, enrolled 2026-11-12) |
 | `tools/g4/checkpoints/g4-NNNNNN/` | `manifest.json`, `manifest.sig`, `timestamp.tsq`, `timestamp.tsr`, `tsa-chain.pem` |
 
 `.gitattributes` marks these files `binary` or `-text`, so line-ending conversion never changes a digest. The verifier reads the ledger, registry, gap statement and TSA policy from Git objects (`git show <commit>:<path>`), never from the checked-out working tree.

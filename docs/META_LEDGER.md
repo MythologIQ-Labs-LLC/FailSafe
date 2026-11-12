@@ -36611,3 +36611,63 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-token-time-transitions.md iteration 5 (exact audited commit 4bb2c324bd504f679f2d387914c7b5c322ff7664, draft PR #658, branch feat/638-g4-token-time-transitions, stacked on PR #657; issue #638), by a fifth fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. No blocking violation. Iteration-4 V8 and V9 closed, reproduced by the auditor in throwaway repositories: a forged commit-graph stays REFUSED TSA_CRL_HISTORY even with core.commitGraph=true forced through GIT_CONFIG_COUNT, GIT_CONFIG_PARAMETERS or an includeIf in the repository config, and with a split graph; substituted objects are BLOCKED REPO_INTEGRITY for a loose object even with fsck.skipList and 55 fsck message-id ignores, a hand-built pack and index with valid checksums, a forged multi-pack-index offset with recomputed checksum and a corrupted pack index, with cat-file confirmed to return the substituted bytes; fsck checks the shared object store of linked worktrees and a planted shallow there is BLOCKED REPO_INCOMPLETE_HISTORY. Earlier fixes hold on spot-check (V1, V5, V6, V7). Nothing is weaker than main; the operations doc's statement of what is enforced and what is still trusted matches the code. g4 suites 159 of 159 and docs 145 of 145 passed; the verifier on the real repository returns BLOCKED NO_CHECKPOINTS in about 5 s. The ledger only appends #959 to #962 and verifies post-anchor clean. Notes for the owner: N1, a core.fsmonitor command in a repository's own .git/config runs during verification because git fsck triggers it, outside the stated model of a fresh clone from the canonical remote, suggested hardening -c core.fsmonitor=false; N2, one ops-doc line should say a worktree must come from a canonical full clone. Prior VETOs #959 to #962 remain on record. Merge obligations: exact-head CI, PRs #647 and #657 merged first, owner authority for the protected merge. This PASS qualifies the verifier change only; it is not an operational G4 PASS and not a release decision.
 
 ---
+
+### Entry #964: GATE TRIBUNAL - plan-v6013-665-g4-tpm-scripts (iteration 1) VETO
+
+**Timestamp**: 2026-11-12T20:16:16Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T2009-f7e2ef`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-665-g4-tpm-scripts.md`
+**Report**: `.failsafe/governance/evidence/665/AUDIT_REPORT-665-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T2009-f7e2ef/audit-iter1.json`
+
+**Content Hash**: `6a0122c9b6e29bddce8e4aabf58f5806b63fd55588c3a47e1dd41a18df1b4c38`
+**Previous Hash**: `5b2b866c1c91fb1d389ae97445d6a29ee20202f6cdc532613bee195ab4b6bbbd`
+**Chain Hash (Merkle seal)**: `ad838120c541798e07c575f42897b031b3b20b9f773d4f5af228d8c1ff199d9b`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-665-g4-tpm-scripts.md iteration 1 (exact audited commit 9b2a304d0f81d442e03a4d15f93c1709c1caa2c6, draft PR #666, issue #665), by a fresh-context independent auditor on 2026-11-12 (UTC); risk grade L2. The code fix is correct and fails closed: Test-P256Key refused P-384, P-521, ECDH, RSA, DSA, generic ECDSA 256-bit keys on brainpool, secp256k1 and alias or explicit-parameter curves, curve names with trailing data, spaces, ASCII encoding or empty bytes, and throwing or null properties; the export-policy refusal, 64-byte length check and self-verification are unchanged; the enrollment script changes only its KeysDir default; the new tests pass 2 of 2, g4 suites 161 of 161, and each test fails on its original script. V1 (blocking, specification-drift): the new test executes tools/g4/enroll-tpm-key.ps1 from node --test without -ConfirmPersistentTpmKey, while the script header, docs/releases/G4_WITNESS_OPERATIONS.md and an existing test title state that the script is never run by automation, and nothing records that the refusal must stay ahead of any key-provider call. Notes: N1 the curve comparison is case-insensitive; N3 no test proves the signer calls Test-P256Key. The owner key FailSafe-G4-Ledger-Witness was not touched. Merge obligations: reconcile the three statements and record the ordering invariant, then obtain a new independent audit. Not a release decision.
+
+---
+
+### Entry #965: GATE TRIBUNAL - plan-v6013-665-g4-tpm-scripts (iteration 2) PASS
+
+**Timestamp**: 2026-11-12T20:26:17Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T2009-f7e2ef`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-665-g4-tpm-scripts.md`
+**Report**: `.failsafe/governance/evidence/665/AUDIT_REPORT-665-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T2009-f7e2ef/audit-iter2.json`
+
+**Content Hash**: `cf563d084df0f249356257345c92e33093f1ecd5f4b1ad7340a991cb27e6f12d`
+**Previous Hash**: `ad838120c541798e07c575f42897b031b3b20b9f773d4f5af228d8c1ff199d9b`
+**Chain Hash (Merkle seal)**: `4fb6e9eb1c2f1350e67d4500d662bfef06b054637bb49db797fd88c8087ce0fd`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-665-g4-tpm-scripts.md iteration 2 (exact audited commit a6c0c7524986bf277234316ddc541333f5e8eb6c, draft PR #666, issue #665), by a second fresh-context independent auditor on 2026-11-12 (UTC); risk grade L2. No violations. Iteration-1 V1 closed: the enrollment script header, docs/releases/G4_WITNESS_OPERATIONS.md and the g4Witness test title now accurately say automation never passes -ConfirmPersistentTpmKey; the ordering invariant (both refusals ahead of any CngProvider or CngKey reference) is stated and its test fails when either refusal is moved after a key-provider reference, checked on scratch copies with the static test only. Test-P256Key accepts only ECDSA on NIST P-256 with a case-sensitive curve match; the signer's export-policy refusal, 64-byte length check and self-verification are unchanged; each new test fails on the defect it covers (original scripts from main, -eq instead of -ceq, the strict algorithm comparison restored). Results: g4PowerShellScripts and g4Witness 14 of 14, g4 suites 163 of 163, docs 145 of 145; the ledger only appends #964 and verifies post-anchor clean; razor holds. The owner key FailSafe-G4-Ledger-Witness was not touched. Notes for the owner: N1, V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md still says enrollment was not run, to be updated with the certificate PR; N4, the binding test still executes the script locally even if the ordering test fails, a local-only risk. Merge obligations: exact-head CI and owner authority for the protected merge. Not a release decision.
+
+---
+
+### Entry #966: GATE TRIBUNAL - plan-v6013-638-g4-owner-key (iteration 1) PASS
+
+**Timestamp**: 2026-11-12T20:34:56Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T2029-3ab1f1`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-owner-key.md`
+**Report**: `.failsafe/governance/evidence/g4-owner-key/AUDIT_REPORT-g4-owner-key-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T2029-3ab1f1/audit-iter1.json`
+
+**Content Hash**: `c8d6e1f4b6365333998e24eb8493aec1c29e9e5e1d170d06bdc370a6e9fc9385`
+**Previous Hash**: `4fb6e9eb1c2f1350e67d4500d662bfef06b054637bb49db797fd88c8087ce0fd`
+**Chain Hash (Merkle seal)**: `46c0abbc87a4bb856ecbe23f481608d7c60df5e897792725804e06aacae3dbc7`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-owner-key.md iteration 1 (exact audited commit d7f3b61b9363ba017e95e95cad61ac2a58576e36, branch feat/638-g4-owner-key, stacked on PR #666; issue #638), by a fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3, the G4 owner trust input. No violations. Verified by the auditor: the committed blob tools/g4/keys/a50c00715e7275a86fad338c80ceacd161da02bdf2b75c60b1082eb518265d8b.cer has SHA-256 equal to its file name and to the fingerprint reported to the owner; it is a 418-byte self-signed DER X.509 v3 certificate whose self-signature verifies, P-256 with ecdsa-with-SHA256, with only Key Usage Digital Signature (critical) and Basic Constraints CA:FALSE (critical), no EKU, valid 2026-11-12T19:54:46Z to 2028-11-11T19:54:46Z (730 days), subject and issuer O=MythologIQ Labs LLC, CN=FailSafe G4 Ledger Witness; it parses in the G4 loader with the same fingerprint and is kept binary by .gitattributes. Read-only, the TPM key FailSafe-G4-Ledger-Witness reports ECDSA 256-bit nistP256, ExportPolicy None, KeyUsage Signing, user-scoped and persistent, and its public point equals the certificate's byte for byte. The diff changes no code, workflow or attributes and holds no private key material; the docs and enrollment record are accurate; g4 suites 163 of 163 and docs 145 of 145; the verifier returns BLOCKED NO_CHECKPOINTS; the ledger is unchanged and verifies post-anchor clean. Not verifiable by the auditor and stated as such: the owner's offline fingerprint record, the #647 authorizations, the failed first run leaving nothing, the refused private export and the throwaway signing check. Merge obligations: PR #666 merged first, exact-head CI, owner authority for the protected merge. Not a release decision.
+
+---

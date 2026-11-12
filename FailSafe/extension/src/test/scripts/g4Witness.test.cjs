@@ -115,7 +115,7 @@ test("the CLI never reports PASS for the real repository, which has no witness y
 
 const psSkip = process.platform !== "win32" ? "Windows PowerShell only" : false;
 
-test("both PowerShell scripts parse with no errors (enroll-tpm-key.ps1 is never run)", { skip: psSkip }, () => {
+test("both PowerShell scripts parse with no errors (enroll-tpm-key.ps1 is never run with -ConfirmPersistentTpmKey)", { skip: psSkip }, () => {
   for (const f of PS_SCRIPTS) {
     const cmd = `$t=$null;$e=$null;[void][System.Management.Automation.Language.Parser]::ParseFile('${f}',[ref]$t,[ref]$e);$e.Count`;
     const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", cmd], { encoding: "utf8" });
