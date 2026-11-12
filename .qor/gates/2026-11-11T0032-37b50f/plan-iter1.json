@@ -1,0 +1,46 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-11T0032-37b50f",
+  "ts": "2026-11-11T00:32:22Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-release-evidence-layout.md",
+  "iteration": 1,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #638",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - release mode refuses a committed checkpoint tree that is not exactly five regular files per g4-NNNNNN directory"
+  ],
+  "boundaries": {
+    "limitations": [
+      "History checks 2, 3, 5 and 6 of the post-seal exception stay operator-only"
+    ],
+    "non_goals": [
+      "No key, TSA, policy or checkpoint"
+    ],
+    "exclusions": [
+      "Diagnostic mode unchanged"
+    ]
+  },
+  "ci_commands": [
+    "node --test src/test/scripts/g4*.test.cjs",
+    "npm run test:node"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "45208a6c2faa5a601a15541ab6b532e8cc1badd1c6b2c02e7dba2b5e5c76a83f",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-11T00:32:22Z"
+  }
+}

@@ -130,6 +130,8 @@ node FailSafe/extension/scripts/g4-verify-checkpoint.cjs --release \
 | the checkout is clean: no modified or untracked file anywhere, and no git-ignored file under `tools/g4/` | `BLOCKED RELEASE_TREE_DIRTY` |
 | no `--tsa-ca` override | `BLOCKED TSA_OVERRIDE_NOT_RELEASE` |
 | no `--checkpoints` override | `BLOCKED RELEASE_OVERRIDE_REFUSED` |
+| the tree committed at HEAD under `tools/g4/checkpoints/` is exactly five regular files (`100644`) per `g4-NNNNNN` directory: no extra, nested, stray or empty path, no symbolic link, submodule or executable entry, no missing file | `REFUSED RELEASE_EVIDENCE_LAYOUT` |
+| no path committed at HEAD differs from `tools/g4/checkpoints`, `tools/g4/keys` only by letter case or Unicode form, at any level of the path (such a path would check out into the evidence directories on Windows or macOS) | `REFUSED RELEASE_EVIDENCE_LAYOUT` |
 | every file under `tools/g4/checkpoints/` and `tools/g4/keys/` equals its blob committed at HEAD | `REFUSED RELEASE_TREE_MISMATCH` |
 | the pinned fingerprint, external head and repository match the chain | `REFUSED KEY_UNTRUSTED`, `HEAD_MISMATCH` or `REPOSITORY_MISMATCH` |
 

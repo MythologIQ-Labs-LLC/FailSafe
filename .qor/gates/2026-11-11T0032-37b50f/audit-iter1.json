@@ -1,0 +1,42 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-11T0032-37b50f",
+  "ts": "2026-11-12T01:28:49Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-release-evidence-layout.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-g4-release-evidence-layout.md",
+  "risk_grade": "L3",
+  "findings_categories": [
+    "security-l3",
+    "coverage-gap"
+  ],
+  "target_content_hash": "45208a6c2faa5a601a15541ab6b532e8cc1badd1c6b2c02e7dba2b5e5c76a83f",
+  "report_content_hash": "964d4553ab4e13e388a51d909898a64af8969f99c3b8c89825f76c88c0642bca",
+  "iteration": 1,
+  "ledger_entry": 947,
+  "ledger_chain_hash": "333f31e285939ad9030d4f10533a1d1c6e1b9e7b8c65e061997fc03753b1b14e",
+  "audited_candidate": "2b223e5f5d4b2e4c0e8c299ca5b1eaa2fcecda1a",
+  "ordering": "retrospective: recorded on 2026-11-12 after the reviews were performed on 2026-11-10/11; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "B1",
+      "category": "security-l3",
+      "detail": "ls-tree record parser kept only the field after the last split on tab, so a tab inside a committed path hid an extra entry or a missing timestamp query from the layout check"
+    },
+    {
+      "id": "B2",
+      "category": "security-l3",
+      "detail": "a case-variant path such as tools/g4/Checkpoints checks out into the evidence directory on a case-insensitive filesystem; release verification returned PASS OK, exit 0, on Windows (present on main before the change)"
+    }
+  ],
+  "merge_obligations": "remediate B1 and B2; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-12T01:28:49Z"
+  }
+}

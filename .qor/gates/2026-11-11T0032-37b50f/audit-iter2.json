@@ -1,0 +1,28 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-11T0032-37b50f",
+  "ts": "2026-11-12T01:28:49Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-release-evidence-layout.md",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT-g4-release-evidence-layout-iter2.md",
+  "risk_grade": "L3",
+  "findings_categories": [],
+  "target_content_hash": "998573526c60cc5b7ba21e331772ad39323ea71c3fcc9220cb3d3f8faab69b16",
+  "report_content_hash": "65ed5f7dc5294901516be02cfd25d8e5734ceeb2805282bdadcc04ef51355115",
+  "iteration": 2,
+  "ledger_entry": 948,
+  "ledger_chain_hash": "64c549da5f996cf0be990849ec9cc3a2ec7b2fc4e97ea7fe3d134efe2e32e541",
+  "audited_candidate": "911505874c67aff0e15303ccb715942942e97e0b",
+  "ordering": "retrospective: recorded on 2026-11-12 after the reviews were performed on 2026-11-10/11; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [],
+  "merge_obligations": "current-head CI; bounded-delta check of any later branch sync; owner authority for merge; no G4 operation (key, TSA, genesis) without the #647 decisions",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "pass",
+    "ts": "2026-11-12T01:28:50Z"
+  }
+}

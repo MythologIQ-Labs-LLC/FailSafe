@@ -1,0 +1,41 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T01:13:34Z",
+  "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter2.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "coverage-gap"
+  ],
+  "target_content_hash": "ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97",
+  "report_content_hash": "4851cf12830d677ff8d1e419413d85ac297b22b0151d4e418d6748b913fd4d6a",
+  "iteration": 2,
+  "ledger_entry": 939,
+  "ledger_chain_hash": "d1ad877f14ec40220f5cbda9d8725d7254dcf292c86b50bdaa5b1f43082f32a9",
+  "audited_candidate": "dd766c159d6e5d1a64f4470d8c4f053f11821dba",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "violations": [
+    {
+      "id": "R1",
+      "category": "coverage-gap",
+      "detail": "provider contact or navigation without a click, and a workspace value in the URL, survive both suites (mousedown rewrite, WebSocket, hover open, postTask)"
+    },
+    {
+      "id": "R2",
+      "category": "coverage-gap",
+      "detail": "a false Connected status survives both suites (::after content, status-line text, pill title or aria-label)"
+    }
+  ],
+  "merge_obligations": "remediate R1-R2; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-11T01:13:34Z"
+  }
+}
