@@ -13,7 +13,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { refuse, block, sha256, G4Refusal } = require("./bytes.cjs");
-const { requireBlob, resolveCommit } = require("./git.cjs");
+const { requireBlob, resolveCommit, assertCompleteHistory } = require("./git.cjs");
 const layout = require("./layout.cjs");
 const { readCheckpointFiles } = require("./checkpoint.cjs");
 const { parseManifest } = require("./manifest.cjs");
@@ -29,6 +29,7 @@ function buildContext(o, tmpDir) {
   const repoRoot = path.resolve(o.repoRoot);
   const head = resolveCommit(repoRoot, "HEAD");
   if (!head) throw block("REPO_UNREADABLE", `${repoRoot} has no HEAD commit`);
+  assertCompleteHistory(repoRoot);
   assertReleasePreconditions(o, repoRoot, head);
   const currentRegistry = requireBlob(repoRoot, head, layout.REGISTRY_PATH, "REGISTRY_MISSING");
   registry.parse(currentRegistry);

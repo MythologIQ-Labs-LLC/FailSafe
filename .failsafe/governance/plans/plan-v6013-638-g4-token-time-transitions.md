@@ -1,6 +1,6 @@
 # Plan: G4 token-time validation, timestamped revocation notices, key rotation and recovery (#638, v6.0.13)
 
-**Status:** iteration 3, after the independent VETOs recorded as ledger Entries #959 (iteration 1, `59c4291e`) and #960 (iteration 2, `ba8c1b21`). This document records no PASS and no merge authority.
+**Status:** iteration 4, after the independent VETOs recorded as ledger Entries #959 (iteration 1, `59c4291e`), #960 (iteration 2, `ba8c1b21`) and #961 (iteration 3, `95069d83`). This document records no PASS and no merge authority.
 **Baseline:** `main` `29b819feaf07ca991c9b6a75f8e0f01549e3cd11`, stacked on PR #657 (`origin/feat/638-g4-freetsa-root`, which is itself stacked on PR #647). **Branch:** `feat/638-g4-token-time-transitions`. Merge order: #647, then #657, then this.
 **Change class:** verifier semantics. Risk grade L3: this changes when a G4 checkpoint witness is accepted.
 **Owner direction (2026-11-12, recorded in #647 section 2a):** items 6, 7 and 9 are no longer deferred.
@@ -124,6 +124,18 @@ The second independent audit confirmed that iteration-1 V1, V2, N1 and N2 are cl
   - the D/M/T check removed: 1 failure;
   - `-m` and the blob-presence check removed together: 2 failures.
 - **Totals.** G4 suites 154/154; `npm run test:node` 1136 pass, 2 fail (the known `bundleDeps` junction artefact). The sem4 throwaway repositories with real FreeTSA tokens re-verify offline under the iteration-3 code: `PASS OK` for both base and rotated, with no new FreeTSA request.
+
+## Iteration 4 (VETO #961 remediation)
+
+The third independent audit confirmed that V5 is closed, that V6 is closed within a complete history (octopus, `-s ours`, criss-cross and resolution merges, renames, mode changes, side-branch add-then-remove), and that the iteration-1 fixes hold. It found one blocking defect.
+
+- **V7. A shallow or grafted clone hid a removed CRL.**
+  - Fix: new `assertCompleteHistory` in `git.cjs`, called at the start of every verification. It returns `BLOCKED REPO_INCOMPLETE_HISTORY` when `git rev-parse --is-shallow-repository` is not `false`, or when `.git/shallow` or `.git/info/grafts` exists. This also protects the existing revocation-registry history check, which had the same exposure on `main`.
+  - The CRL `git log` calls pass `--diff-merges=separate --root` explicitly, so the verifying machine's `log.diffMerges` and `log.showRoot` cannot narrow the view (note N1).
+  - The ops doc now states that a complete clone is required and enforced.
+  - Tests (`g4CrlArchive`): a `--depth` clone, a planted `.git/shallow` and a planted `.git/info/grafts` are each `BLOCKED REPO_INCOMPLETE_HISTORY`; a full clone of the same commit passes.
+- **Planted defect:** with the `assertCompleteHistory` call removed, both new BLOCKED tests fail. **Totals:** G4 suites 157/157; `npm run test:node` 1139 pass, 2 fail (the known `bundleDeps` junction artefact).
+- **Notes N2 to N4** (one entry per serial judged; the iteration-2 notes; the TSA accuracy field) are not changed. N2 cannot arise from a genuine CA, and N4 is at most one second.
 
 ## Audit questions
 

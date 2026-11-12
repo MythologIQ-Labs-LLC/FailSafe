@@ -192,6 +192,8 @@ Archived CRLs are **append-only** (`REFUSED TSA_CRL_HISTORY`):
 - no commit reachable from HEAD may delete, change or retype a committed CRL file, with every merge diffed against every parent;
 - every CRL blob ever added in that history must still be present at HEAD, at the same path, with the same bytes. This catches a CRL dropped by a merge resolution or by an `-s ours` merge.
 
+**Complete history is required and enforced.** A shallow clone, or a repository with `.git/shallow` or `.git/info/grafts`, is `BLOCKED REPO_INCOMPLETE_HISTORY`. Release verification therefore needs a full `git clone`, never `--depth`. The CRL history is read with explicit `--diff-merges=separate --root`, so local `log.*` settings cannot narrow it.
+
 **Limit:** checkpoints do not bind the set of CRLs. A history rewrite (force-push) that removes a CRL is not detectable from the repository alone; branch protection forbids such rewrites on `main`.
 
 Revocation of the TSA signer is checked twice:

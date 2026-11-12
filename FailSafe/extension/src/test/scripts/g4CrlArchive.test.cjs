@@ -143,3 +143,34 @@ it("adding a further CRL is allowed", () => {
   S.commitAll(dir, "test: add a newer CRL");
   assert.equal(S.verify(dir).verdict, "PASS");
 });
+
+/** Clone the base repository with `extra` clone arguments (core.autocrlf off, so evidence bytes are unchanged). */
+function cloneBase(name, extra) {
+  const dest = path.join(base.work, name);
+  const url = require("node:url").pathToFileURL(base.repo).href;
+  S.git(base.work, "-c", "core.autocrlf=false", "clone", "-q", ...extra, url, dest);
+  return dest;
+}
+
+function blocked(r) {
+  assert.equal(r.code, "REPO_INCOMPLETE_HISTORY", `expected REPO_INCOMPLETE_HISTORY, got ${r.verdict} ${r.code}: ${r.detail}`);
+  assert.equal(r.verdict, "BLOCKED");
+}
+
+it("a complete clone of the qualified commit verifies (control)", () => {
+  assert.equal(S.verify(cloneBase("full-clone", [])).verdict, "PASS");
+});
+
+it("a shallow clone is BLOCKED: it cannot show the whole CRL and registry history (audit #961 V7)", () => {
+  blocked(S.verify(cloneBase("shallow-clone", ["--depth", "1"])));
+});
+
+it("a planted .git/shallow or .git/info/grafts is BLOCKED (audit #961 V7)", () => {
+  const head = S.git(base.repo, "rev-parse", "HEAD");
+  for (const [name, rel] of [["planted-shallow", "shallow"], ["planted-grafts", path.join("info", "grafts")]]) {
+    const dir = cloneBase(name, []);
+    fs.mkdirSync(path.dirname(path.join(dir, ".git", rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".git", rel), `${head}\n`);
+    blocked(S.verify(dir));
+  }
+});

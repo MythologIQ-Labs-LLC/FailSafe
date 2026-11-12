@@ -36,7 +36,8 @@ const normSerial = (s) => s.replace(/[^0-9a-f]/gi, "").replace(/^0+/, "").toUppe
 
 /** `git log` over the CRL directory, every merge diffed against every parent (-m). */
 function crlLog(repoRoot, head, args) {
-  const res = git(repoRoot, ["log", head, "-m", "--full-history", "--no-renames", ...args, "--", `${layout.TSA_CRLS_DIR}/`]);
+  // Explicit flags, so the verifying machine's log.diffMerges / log.showRoot settings cannot narrow the view.
+  const res = git(repoRoot, ["log", head, "--diff-merges=separate", "--root", "--full-history", "--no-renames", ...args, "--", `${layout.TSA_CRLS_DIR}/`]);
   if (res.status !== 0) throw block("REPO_UNREADABLE", "git log failed for the TSA CRLs");
   return res.stdout.split(/\r?\n/).filter(Boolean);
 }

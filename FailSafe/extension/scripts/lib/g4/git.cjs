@@ -4,7 +4,9 @@
  * bytes without checkout filters, so CRLF conversion never changes a digest.
  */
 const { spawnSync } = require("node:child_process");
-const { refuse } = require("./bytes.cjs");
+const fs = require("node:fs");
+const path = require("node:path");
+const { refuse, block } = require("./bytes.cjs");
 
 /** Variables that point Git at another repository, index or object store. */
 const REDIRECTS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
@@ -63,4 +65,24 @@ function commitsTouching(repoRoot, filePath) {
   return res.stdout.split(/\r?\n/).filter(Boolean);
 }
 
-module.exports = { git, showBlob, requireBlob, resolveCommit, isAncestor, commitsTouching };
+/**
+ * The verifier's history checks (revocation registry, archived CRLs) are only
+ * as complete as the history they read. A shallow clone, or a planted
+ * .git/shallow or .git/info/grafts, hides commits while HEAD keeps its SHA, so
+ * such a repository is BLOCKED (audit VETO #961 V7).
+ */
+function assertCompleteHistory(repoRoot) {
+  const res = git(repoRoot, ["rev-parse", "--is-shallow-repository"]);
+  if (res.status !== 0) throw block("REPO_UNREADABLE", "git rev-parse failed");
+  if (res.stdout.trim() !== "false") {
+    throw block("REPO_INCOMPLETE_HISTORY", "the repository is a shallow clone; G4 verification needs a complete clone (git fetch --unshallow)");
+  }
+  for (const name of ["shallow", "info/grafts"]) {
+    const rel = git(repoRoot, ["rev-parse", "--git-path", name]).stdout.trim();
+    if (rel && fs.existsSync(path.resolve(repoRoot, rel))) {
+      throw block("REPO_INCOMPLETE_HISTORY", `.git/${name} is present; G4 verification needs complete, ungrafted history`);
+    }
+  }
+}
+
+module.exports = { git, showBlob, requireBlob, resolveCommit, isAncestor, commitsTouching, assertCompleteHistory };
