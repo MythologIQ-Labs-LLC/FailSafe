@@ -1,0 +1,11 @@
+{
+  "schema": "failsafe-g4-revocations/v1",
+  "version": 2,
+  "revocations": [
+    {
+      "fingerprintSha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "effectiveUtc": "2026-11-11T16:01:56.872Z",
+      "reason": "test"
+    }
+  ]
+}

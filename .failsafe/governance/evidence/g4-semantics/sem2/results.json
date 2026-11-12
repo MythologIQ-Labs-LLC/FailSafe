@@ -1,0 +1,47 @@
+{
+  "finishedUtc": "2026-11-12T16:05:44.164Z",
+  "openssl": "OpenSSL 3.5.7 9 Jun 2026 (Library: OpenSSL 3.5.7 9 Jun 2026)",
+  "failed": 0,
+  "results": [
+    {
+      "part": "S",
+      "name": "two FreeTSA checkpoints, stamped registry v2, token-time with the real CRL",
+      "expected": "PASS OK mode:release limitations:0",
+      "actual": "PASS OK mode:release limitations:0",
+      "pass": true,
+      "detail": "2 checkpoint(s) verified to g4-000002"
+    },
+    {
+      "part": "S",
+      "name": "committed CRL removed",
+      "expected": "BLOCKED TSA_REVOCATION_EVIDENCE_MISSING",
+      "actual": "BLOCKED TSA_REVOCATION_EVIDENCE_MISSING",
+      "pass": true,
+      "detail": "revocation registry version 2: openssl ts -verify: Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | F0A50000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:unable to get certificate CRL"
+    },
+    {
+      "part": "S",
+      "name": "registry v2 notice token removed",
+      "expected": "REFUSED REVOCATION_UNSTAMPED",
+      "actual": "REFUSED REVOCATION_UNSTAMPED",
+      "pass": true,
+      "detail": "revocation registry version 2: no RFC 3161 token at tools/g4/revocation-notices/v2.tsr"
+    },
+    {
+      "part": "S",
+      "name": "a second certificate appended to the root file",
+      "expected": "REFUSED TSA_ROOT_MALFORMED",
+      "actual": "REFUSED TSA_ROOT_MALFORMED",
+      "pass": true,
+      "detail": "FreeTSA Root CA (O=Free TSA, OU=Root CA, CN=www.freetsa.org): a root file must hold exactly one certificate and nothing else"
+    },
+    {
+      "part": "S",
+      "name": "rotation A->B with FreeTSA-stamped record: release, pinned genesis key A",
+      "expected": "PASS OK mode:release limitations:0",
+      "actual": "PASS OK mode:release limitations:0",
+      "pass": true,
+      "detail": "3 checkpoint(s) verified to g4-000003"
+    }
+  ]
+}

@@ -21,6 +21,7 @@ const { createLocalTsa, createTestSigner } = require("./g4TestPki.cjs");
 
 const REAL_REPO = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const ROOT_PEM_PATH = "tools/g4/tsa-roots/g4-test-only-root.pem";
+const CRL_PATH = "tools/g4/tsa-crls/g4-test-only.crl";
 
 function git(dir, ...args) {
   const r = spawnSync("git", ["-C", dir, ...args], { encoding: "utf8", windowsHide: true });
@@ -64,6 +65,7 @@ function initRepo(dir, tsa, signer, { ledger = (b) => b } = {}) {
   write(dir, layout.REGISTRY_PATH, registryBytes(1));
   write(dir, layout.GAP_STATEMENT_PATH, Buffer.from("TEST historical gap statement\n"));
   write(dir, ROOT_PEM_PATH, tsa.rootPem);
+  if (tsa.crl) write(dir, CRL_PATH, tsa.crl());
   const rootSha = sha256(new crypto.X509Certificate(tsa.rootPem).raw);
   const policy = { schema: POLICY_SCHEMA, status: "selected", trustedRoots: [{ name: "G4 TEST ONLY root", certificatePath: ROOT_PEM_PATH, sha256: rootSha }] };
   write(dir, layout.TSA_POLICY_PATH, Buffer.from(JSON.stringify(policy, null, 2) + "\n"));
@@ -173,5 +175,5 @@ const verify = (dir, opts = {}) => verifyCheckpoints({ repoRoot: dir, ...opts })
 const cpDir = (dir, id) => path.join(dir, layout.CHECKPOINTS_DIR, id);
 
 module.exports = {
-  git, write, commitAll, appendEntry, entryText, registryBytes, addKey, checkpoint, forgeNext, initRepo, stampToken, writeUnstamped, buildBase, copyRepo, verify, cpDir,
+  CRL_PATH, git, write, commitAll, appendEntry, entryText, registryBytes, addKey, checkpoint, forgeNext, initRepo, stampToken, writeUnstamped, buildBase, copyRepo, verify, cpDir,
 };

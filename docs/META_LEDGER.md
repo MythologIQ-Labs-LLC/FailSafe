@@ -36511,3 +36511,103 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-freetsa-root.md iteration 3 (exact audited commit 9a9dc0aabe9b4aa4308d9d9ca5ec0a4a93fe0b19, draft PR #657, branch feat/638-g4-freetsa-root, issue #638), by a third fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3, production TSA trust anchor. No violations. Verified by the auditor: the root fetched live from freetsa.org, the 2019 Internet Archive capture and the trbs/rfc3161ng copy are byte-identical to the committed tools/g4/tsa-roots/freetsa-root-ca.pem (file SHA-256 2151b61137ffa86bf664691ba67e7da0b19f98c758e3d228d5d8ebf27e044438), whose DER SHA-256 a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc equals the owner-inventoried candidate and the single digest in tools/g4/tsa-policy.json; the PEM holds one self-signed certificate and tsa-roots holds only that file. VETO #956 and #957 are remediated: no statement under docs or tools/g4 contradicts the committed trust state; origin/fix/638-g4-owner-decision-proposal is 5836d38e and is a parent of dca93572; PR #657 is draft and states that PR #647 merges first; the latest #647 comment states the merge order. The verifier on this repository returns BLOCKED NO_CHECKPOINTS. No widening of trust or weakening of fail-closed behaviour; nothing under tools, FailSafe or .gitignore changed since iteration 2 and the #647 merge brings in three Markdown files only. g4 suites 109 of 109 and docs suites 145 of 145 passed; the full test:node was not re-run by the auditor. verify-ledger post-anchor clean; the ledger only appends #956 and #957, whose content hashes equal their reports. Evidence: run3 tokens and checkpoints verify offline against the committed root and fail against the Mozilla bundle; a live re-run of the corrected script met 42 of 42 expectations with 5 random-digest FreeTSA requests, including a release-mode PASS OK with no limitations. Non-blocking notes: N1, the existing verifier gap that only the first certificate of a root file is hashed while all are trusted, is to be closed in the separate G4 verification change; N4, a wording slip in V6_0_13_G4_OWNER_DECISIONS.md item 3 (above, not below). Merge obligations: current-head CI on the exact head, PR #647 merged first, owner authority for the protected merge. This PASS qualifies the trust configuration only; it is not an operational G4 PASS and not a release decision.
 
 ---
+
+### Entry #959: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 1) VETO
+
+**Timestamp**: 2026-11-12T16:20:41Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter1.json`
+
+**Content Hash**: `6da033ccabd4dad11c4eaf0fe5bda9bcb52afdf86e2866bb118067d57bc19cba`
+**Previous Hash**: `a26cb7f6d8663d3e39f336e03a499453ee231199cf0fb01d7421a97dcc399d48`
+**Chain Hash (Merkle seal)**: `cc8909928a5685f92c306798f6595f40a240ace60ebd11fdeee22b8a0d754d2d`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 1 (exact audited commit 59c4291e4b9e8ac374179ce252ad578f06debf71, draft PR #658, branch feat/638-g4-token-time-transitions, stacked on PR #657; issue #638), by a fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Each violation was reproduced by the auditor in scratch repositories with the test PKI. V1 (blocking, security): tsa-trust.cjs checks only the first PEM CRL of each committed .crl file and appends the raw file to the OpenSSL CAfile, so a certificate placed after the CRL becomes a trust anchor; a checkpoint from an unrelated TSA then verified PASS OK in release mode, defeating the single-root pin. V2 (blocking): a rotation is accepted although its token time is outside the old key's certificate window; an expired key handed over with verified continuity. V3 (blocking): with -attime and -crl_check OpenSSL consults only CRLs current at the token time, so a later valid CRL that lists the TSA signer as revoked before the token is ignored; the documentation claims otherwise. V4 (blocking): CRLs are read at HEAD only, so deleting a revoking CRL turns REFUSED TSA_SIGNER_REVOKED into PASS. Notes: N1, recovery compares the notice's stated effective time, not its notice token time; N2, a transition record binds the previous checkpoint by id only. Held: corrupted-signature, missing, expired and not-yet-valid CRLs fail closed; among CRLs current at the same time OpenSSL selects the newest; the genesis pin, recovery acknowledgement and limitation, notice rules and cat-file blob reads behave as stated; the committed FreeTSA CRL equals the live one and verifies against the pinned root; g4 suites 138 of 138 and docs 145 of 145; razor holds; the ledger is untouched by this PR. Merge obligations: remediate V1 to V4 with tests and obtain a new independent audit. Not a release decision.
+
+---
+
+### Entry #960: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 2) VETO
+
+**Timestamp**: 2026-11-12T16:55:02Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter2.json`
+
+**Content Hash**: `78338a402f865669816d3838951d247b14c45c2017b492c600cca3e0eb9c793f`
+**Previous Hash**: `cc8909928a5685f92c306798f6595f40a240ace60ebd11fdeee22b8a0d754d2d`
+**Chain Hash (Merkle seal)**: `7ade031c76a2fe69415dbd48670d283858441e5292154e8477e646813603d8df`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 2 (exact audited commit ba8c1b21fdb23323966432f14c9f029beea8ef79, draft PR #658, issue #638), by a second fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Closed and re-attacked by the auditor: iteration-1 V1 (CRL trailing data, DER, two blocks, CRL plus certificate, certificate inside CRL armour, PEM headers, BOM, trailing NUL and a non-pinned issuer were all refused), V2 (key window, including a recovery signed by a not-yet-valid new key), N1 and N2. V5 (blocking, security): the archived-CRL check refuses all tokens only for key or CA compromise and judges every other revocation, including one with no reasonCode and certificateHold, by its date; RFC 3161 section 4 keeps earlier tokens valid only for reasons unspecified, affiliationChanged, superseded and cessationOfOperation, and a TSA signer revoked without a reason after the tokens verified release-mode PASS OK. V6 (blocking, security): the append-only CRL history check runs git log without -m, so an archived CRL removed only by a merge resolution, or by an older branch merged with -s ours, goes unseen; a revoking CRL dropped that way turned REFUSED TSA_SIGNER_REVOKED into release-mode PASS OK; checkpoints also do not bind the CRL set, which is undisclosed. g4 suites 149 of 149 and docs 145 of 145 passed; razor holds; the ledger only appends #959 and verifies post-anchor clean; nothing is weakened relative to main. Merge obligations: remediate V5 and V6 with tests, correct the RFC wording and disclose or close the history-rewrite limit, then obtain a new independent audit. Not a release decision.
+
+---
+
+### Entry #961: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 3) VETO
+
+**Timestamp**: 2026-11-12T17:20:58Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter3.json`
+
+**Content Hash**: `986b1c77c47b98bd22407c29833ecbbd9a42a03022aea243badc8cf9714cdc0d`
+**Previous Hash**: `7ade031c76a2fe69415dbd48670d283858441e5292154e8477e646813603d8df`
+**Chain Hash (Merkle seal)**: `9462f47662128b0698c9861b358c01907e81ac53b40797f7cea48da88fc95177`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 3 (exact audited commit 95069d83436acefb3506ee1987723f6e6afed144, draft PR #658, issue #638), by a third fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Closed and re-attacked by the auditor: V5 (no reasonCode, keyCompromise, cACompromise, certificateHold and removeFromCRL refuse every token; unspecified, affiliationChanged, superseded and cessationOfOperation pass when the revocation follows the token; multi-entry CRLs, invalidity dates and hold instructions behave) and V6 within a complete history (octopus and -s ours merges, resolutions that drop the CRL, renames, mode changes, add-then-remove on a side branch, criss-cross merges and the same bytes under another name are all TSA_CRL_HISTORY); iteration-1 fixes still hold. V7 (blocking, security): the CRL append-only check, like the existing registry history check, does not require a complete history; on git clone --depth 5, 6 or 8 of the same qualified commit, and on a full copy with a planted .git/shallow or .git/info/grafts, a keyCompromise CRL added and deleted on a side branch is invisible and release mode returns PASS OK with no limitation while the HEAD SHA still matches --commit. Note N1: with log.showRoot=false and log.diffMerges=first-parent in the verifying machine's own Git config, an orphan-root CRL dropped by an -s ours merge also passes. g4 suites 154 of 154, docs 145 of 145; razor holds; the ledger only appends #959 and #960 and verifies post-anchor clean; nothing is weakened relative to main. Merge obligations: refuse shallow or grafted repositories, pin the git log merge and root handling, add tests, state the complete-clone requirement, and obtain a new independent audit. Not a release decision.
+
+---
+
+### Entry #962: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 4) VETO
+
+**Timestamp**: 2026-11-12T17:38:53Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter4.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter4.json`
+
+**Content Hash**: `92bb91a6d067a825c5cb89decd6e1ac07eabd496743bfab78daecb74c8937049`
+**Previous Hash**: `9462f47662128b0698c9861b358c01907e81ac53b40797f7cea48da88fc95177`
+**Chain Hash (Merkle seal)**: `be2d24a0cb47f05258d259987317b6070e6ec559c1b87b7e93ad3af209293c5a`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 4 (exact audited commit 7cfe447f51794725ce9d70f27dcb19f9d17c1648, draft PR #658, issue #638), by a fourth fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Closed and re-attacked: iteration-3 V7 (depth 1 and 2 clones, fetch --deepen, an empty planted .git/shallow, a worktree of a shallow clone and grafts in the common git directory are BLOCKED REPO_INCOMPLETE_HISTORY; per-worktree shallow or grafts files, alternates, partial clones and git replace --graft are handled), iteration-3 N1 (local log, diff and core settings no longer narrow the CRL history), V1, V5 and V6. V8 (blocking, security): the verifier reads history through Git's commit-graph, so a forged .git/objects/info/commit-graph that rewires HEAD's parent hides the commits that add and delete a revoking CRL while HEAD keeps its SHA; diagnostic and release mode returned PASS OK, including after a plain local clone that copied the graph; registry and notice history are exposed the same way. V9 (blocking, disclosure and integrity): the verifier trusts the local object store; a loose object substituted under the same object id (the revoking CRL replaced by an older valid CRL) gave release-mode PASS OK, also after a plain local clone, while git fsck --full detects it, and the operations doc overstates what is enforced. g4 suites 157 of 157 and docs 145 of 145; razor holds; the ledger only appends #959 to #961 and verifies post-anchor clean. Merge obligations: disable the commit-graph for verifier Git reads, check object integrity before reading or state the trust assumption precisely, add tests, and obtain a new independent audit. Not a release decision.
+
+---
+
+### Entry #963: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 5) PASS
+
+**Timestamp**: 2026-11-12T17:57:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter5.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter5.json`
+
+**Content Hash**: `79437586f64c67a68958b8f164dfb4699c4f60df5c84d16cb1938ad04e71c97a`
+**Previous Hash**: `be2d24a0cb47f05258d259987317b6070e6ec559c1b87b7e93ad3af209293c5a`
+**Chain Hash (Merkle seal)**: `5b2b866c1c91fb1d389ae97445d6a29ee20202f6cdc532613bee195ab4b6bbbd`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-token-time-transitions.md iteration 5 (exact audited commit 4bb2c324bd504f679f2d387914c7b5c322ff7664, draft PR #658, branch feat/638-g4-token-time-transitions, stacked on PR #657; issue #638), by a fifth fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. No blocking violation. Iteration-4 V8 and V9 closed, reproduced by the auditor in throwaway repositories: a forged commit-graph stays REFUSED TSA_CRL_HISTORY even with core.commitGraph=true forced through GIT_CONFIG_COUNT, GIT_CONFIG_PARAMETERS or an includeIf in the repository config, and with a split graph; substituted objects are BLOCKED REPO_INTEGRITY for a loose object even with fsck.skipList and 55 fsck message-id ignores, a hand-built pack and index with valid checksums, a forged multi-pack-index offset with recomputed checksum and a corrupted pack index, with cat-file confirmed to return the substituted bytes; fsck checks the shared object store of linked worktrees and a planted shallow there is BLOCKED REPO_INCOMPLETE_HISTORY. Earlier fixes hold on spot-check (V1, V5, V6, V7). Nothing is weaker than main; the operations doc's statement of what is enforced and what is still trusted matches the code. g4 suites 159 of 159 and docs 145 of 145 passed; the verifier on the real repository returns BLOCKED NO_CHECKPOINTS in about 5 s. The ledger only appends #959 to #962 and verifies post-anchor clean. Notes for the owner: N1, a core.fsmonitor command in a repository's own .git/config runs during verification because git fsck triggers it, outside the stated model of a fresh clone from the canonical remote, suggested hardening -c core.fsmonitor=false; N2, one ops-doc line should say a worktree must come from a canonical full clone. Prior VETOs #959 to #962 remain on record. Merge obligations: exact-head CI, PRs #647 and #657 merged first, owner authority for the protected merge. This PASS qualifies the verifier change only; it is not an operational G4 PASS and not a release decision.
+
+---

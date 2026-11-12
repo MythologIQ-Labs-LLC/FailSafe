@@ -5,6 +5,9 @@ FailSafe/extension/src/test/fixtures/qor-consumer/** text eol=lf
 tools/g4/checkpoints/** binary
 tools/g4/keys/** binary
 tools/g4/tsa-roots/** -text
+tools/g4/tsa-crls/** -text
+tools/g4/revocation-notices/** binary
+tools/g4/transitions/** binary
 tools/g4/revocations.json -text
 tools/g4/tsa-policy.json -text
 tools/g4/HISTORICAL_GAPS.md -text

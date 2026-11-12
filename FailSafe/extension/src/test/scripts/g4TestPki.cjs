@@ -37,21 +37,43 @@ function tsaConfig(dir) {
   ].join("\n");
 }
 
-/** A local TSA under a fresh test CA. `request(tsq)` returns a granted `.tsr`. */
-function createLocalTsa(bin, dir) {
-  fs.mkdirSync(dir, { recursive: true });
-  const p = (n) => path.join(dir, n);
-  fs.writeFileSync(p("req.cnf"), REQ_CNF);
-  fs.writeFileSync(p("tsa-ext.cnf"), "extendedKeyUsage = critical,timeStamping\nkeyUsage = critical,digitalSignature\n");
-  fs.writeFileSync(p("tsaserial"), "01\n");
-  fs.writeFileSync(p("tsa.cnf"), tsaConfig(dir));
+/** `openssl ca` configuration for the local test CA: issues the TSA certificate, revokes it and makes CRLs. */
+function caConfig(dir) {
+  const d = dir.split(path.sep).join("/");
+  return [
+    "[ca]", "default_ca = tca", "[tca]", `dir = ${d}`, "database = $dir/index.txt", "new_certs_dir = $dir",
+    "serial = $dir/caserial", "crlnumber = $dir/crlnumber", "certificate = $dir/ca.crt", "private_key = $dir/ca.key",
+    "default_md = sha256", "policy = any", "unique_subject = no", "default_crl_days = 30", "x509_extensions = tsa_ext",
+    "[any]", "commonName = supplied",
+    "[tsa_ext]", "extendedKeyUsage = critical,timeStamping", "keyUsage = critical,digitalSignature", "",
+  ].join("\n");
+}
+
+function makeCa(bin, p) {
+  const files = [["req.cnf", REQ_CNF], ["tsaserial", "01\n"], ["caserial", "1000\n"], ["crlnumber", "1000\n"], ["index.txt", ""]];
+  for (const [f, v] of files) fs.writeFileSync(p(f), v);
   sh(bin, ["genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256", "-out", p("ca.key")]);
   sh(bin, ["req", "-config", p("req.cnf"), "-x509", "-new", "-key", p("ca.key"), "-subj", "/CN=G4 TEST ONLY root CA",
     "-days", "2", "-addext", "basicConstraints=critical,CA:TRUE", "-addext", "keyUsage=critical,keyCertSign,cRLSign", "-out", p("ca.crt")]);
+}
+
+/**
+ * A local TSA under a fresh test CA. `request(tsq)` returns a granted `.tsr`.
+ * `crl()` returns a PEM CRL from the test CA (`lastMs`/`nextMs` set its window);
+ * `revokeSigner()` revokes the TSA signer certificate in later CRLs.
+ * `signerValidMs` shortens the signer's validity to model an expired signer.
+ */
+function createLocalTsa(bin, dir, { signerValidMs = 2 * 86400e3 } = {}) {
+  fs.mkdirSync(dir, { recursive: true });
+  const p = (n) => path.join(dir, n);
+  makeCa(bin, p);
+  fs.writeFileSync(p("tsa.cnf"), tsaConfig(dir));
+  fs.writeFileSync(p("ca.cnf"), caConfig(dir));
   sh(bin, ["genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256", "-out", p("tsa.key")]);
   sh(bin, ["req", "-config", p("req.cnf"), "-new", "-key", p("tsa.key"), "-subj", "/CN=G4 TEST ONLY TSA", "-out", p("tsa.csr")]);
-  sh(bin, ["x509", "-req", "-in", p("tsa.csr"), "-CA", p("ca.crt"), "-CAkey", p("ca.key"), "-CAcreateserial",
-    "-days", "2", "-extfile", p("tsa-ext.cnf"), "-out", p("tsa.crt")]);
+  const now = Date.now();
+  sh(bin, ["ca", "-batch", "-notext", "-config", p("ca.cnf"), "-in", p("tsa.csr"), "-out", p("tsa.crt"),
+    "-startdate", utcStamp(now - 60e3), "-enddate", utcStamp(now + signerValidMs)]);
   let n = 0;
   return {
     rootPem: fs.readFileSync(p("ca.crt")),
@@ -63,6 +85,15 @@ function createLocalTsa(bin, dir) {
       fs.writeFileSync(q, tsq);
       sh(bin, ["ts", "-reply", "-config", p("tsa.cnf"), "-queryfile", q, "-out", r]);
       return fs.readFileSync(r);
+    },
+    crl({ lastMs = Date.now() - 60e3, nextMs = Date.now() + 30 * 86400e3 } = {}) {
+      n += 1;
+      const out = p(`crl${n}.pem`);
+      sh(bin, ["ca", "-config", p("ca.cnf"), "-gencrl", "-crl_lastupdate", utcStamp(lastMs), "-crl_nextupdate", utcStamp(nextMs), "-out", out]);
+      return fs.readFileSync(out);
+    },
+    revokeSigner(reason) {
+      sh(bin, ["ca", "-config", p("ca.cnf"), "-revoke", p("tsa.crt"), ...(reason ? ["-crl_reason", reason] : [])]);
     },
   };
 }

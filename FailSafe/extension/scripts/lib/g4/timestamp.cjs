@@ -85,10 +85,15 @@ function extractChain(bin, tsrPath, outPem) {
   if (!b.ok) throw refuse("TOKEN_MALFORMED", b.out);
 }
 
-/** True only when OpenSSL validates the token, the imprint and the chain to `caFile`. */
-function verifyToken(bin, { imprintHex, tsrPath, caFile, untrustedFile }) {
+/**
+ * True only when OpenSSL validates the token, the imprint and the chain to `caFile`.
+ * With `atTime` (an ISO time) the chain is validated at that time instead of now,
+ * and the TSA signer is checked against a CRL in `caFile` that was current then.
+ */
+function verifyToken(bin, { imprintHex, tsrPath, caFile, untrustedFile, atTime }) {
   const args = ["ts", "-verify", "-digest", imprintHex, "-in", tsrPath, "-CAfile", caFile];
   if (untrustedFile && fs.existsSync(untrustedFile)) args.push("-untrusted", untrustedFile);
+  if (atTime) args.push("-attime", String(Math.floor(Date.parse(atTime) / 1000)), "-crl_check");
   return run(bin, args);
 }
 

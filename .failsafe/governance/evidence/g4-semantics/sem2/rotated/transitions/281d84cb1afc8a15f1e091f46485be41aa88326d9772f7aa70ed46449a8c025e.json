@@ -1,0 +1,9 @@
+{
+  "schema": "failsafe-g4-key-transition/v1",
+  "kind": "rotation",
+  "repository": "test/failsafe-g4",
+  "fromFingerprintSha256": "281d84cb1afc8a15f1e091f46485be41aa88326d9772f7aa70ed46449a8c025e",
+  "toFingerprintSha256": "e97201c4025ac54c86994bfa5aba2cce34e571103b63e2b902a1afa27c09cd83",
+  "afterCheckpoint": "g4-000002",
+  "createdUtc": "2026-11-12T16:05:39.606Z"
+}

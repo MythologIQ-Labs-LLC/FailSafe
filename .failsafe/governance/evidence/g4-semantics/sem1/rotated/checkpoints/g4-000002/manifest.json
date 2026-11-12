@@ -1,0 +1,43 @@
+{
+  "schema": "failsafe-g4-checkpoint-manifest/v1",
+  "checkpointId": "g4-000002",
+  "sequence": 2,
+  "repository": "test/failsafe-g4",
+  "commit": "77921b89cacba92874bc49552ab69340d956c9a3",
+  "ledger": {
+    "path": "docs/META_LEDGER.md",
+    "sha256": "e5ab53bd44b13281aee6ca415c0b6a54bb34465ad144ce267184759361f36ed4",
+    "byteLength": 2520250,
+    "entryCount": 977,
+    "lastEntryNumber": 9101
+  },
+  "previousCheckpoint": {
+    "checkpointId": "g4-000001",
+    "manifestSha256": "a87d7707030ae696bdab96f9d6d5f9beb86fd4567ee0fc23aff0215f26bd8d25",
+    "witnessImprint": "c2e800e79cd5280add4b77bfc681d20524660750fe1f52cb121e67e831ff8699"
+  },
+  "previousLedger": {
+    "commit": "15787bf4a2c8a9dc34ca113f15dc92acec1dfadf",
+    "byteLength": 2520130,
+    "sha256": "176beb238e474cb2ac75597e80280ec486b5e16c0f8faa431c0c56c43ff4cb98",
+    "prefixOfNew": {
+      "byteLength": 2520130,
+      "sha256": "176beb238e474cb2ac75597e80280ec486b5e16c0f8faa431c0c56c43ff4cb98"
+    }
+  },
+  "revocationRegistry": {
+    "path": "tools/g4/revocations.json",
+    "sha256": "db99f10e183ded8393b86ca9fbe0f2a56357cfef819814afd5a30af8f3e58ad7",
+    "version": 2
+  },
+  "historicalGapStatement": {
+    "path": "tools/g4/HISTORICAL_GAPS.md",
+    "sha256": "6a6b379998ad75d89e389adf4864dbd179954256eae56074e9c9ab599ef9e2e3"
+  },
+  "key": {
+    "fingerprintSha256": "504b8dfef3696678755f651233b84378b68283a2c9f71ca1e7af816ab942b9d2",
+    "algorithm": "ECDSA-P256-SHA256",
+    "signatureEncoding": "ieee-p1363"
+  },
+  "createdUtc": "2026-11-12T16:01:58.917Z"
+}
