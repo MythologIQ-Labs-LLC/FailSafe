@@ -7,8 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.13] - 2026-11-13
+
 ### Added
 - The Integrations tab has a Statewright AI card with a link that opens Statewright's Run History website (`https://statewright.ai/runs`) in your browser. Statewright handles sign-in and run data. FailSafe sends nothing to Statewright, shows no connection status, and does not read Statewright history or enforce Statewright workflows; embedded run history is not part of this release (#652).
+
+### Security
+- Release ledger witness (G4): the governance ledger behind this release is witnessed by a checkpoint signed with a non-exportable TPM key held by the owner and timestamped by an independent RFC 3161 authority (FreeTSA). A verifier (`g4-verify-checkpoint.cjs --release`) checks that the ledger only grew from one checkpoint to the next, and checks the signature, the timestamp against the pinned FreeTSA root at the token's own time, archived revocation evidence, timestamped revocation notices and key transitions. It refuses shallow, grafted or corrupted clones. This is repository and release tooling; it is not part of the installed extension (#638).
+
+### Changed
+- The Continue and Aider catalog entries no longer name a specific release when they explain that OS process containment is not qualified (#475).
+
+### Known Limitations
+- The G4 witness rests on one owner-held key and one timestamp authority. FreeTSA is a free, best-effort service with a private, self-signed root outside public trust programs and no service-level agreement; its trust was accepted by the owner and pinned after independent corroboration. Each checkpoint head and the owner's key fingerprint are retained offline by the owner. A history rewrite that removes an archived CRL is not detectable from the repository alone; branch protection forbids such rewrites. Writing a key-rotation or recovery record is not yet failure-atomic (#660); no rotation or recovery is part of this release.
+- Statewright run history, state and telemetry are not shown inside FailSafe; the card opens Statewright's website (#603-#606, #608).
+- Temporary restriction (by design): running Continue or Aider through FailSafe is unavailable until an operating-system containment boundary is built and reviewed (#475).
+- Temporary restriction (by design): selected-skill and global Qor-logic installs, the install preview and the skill list are unavailable with the frozen Qor-logic 0.176.1 CLI (#463).
+- Temporary restriction (by design): FailSafe does not install Qor-logic's Python dependencies (`jsonschema`, `PyYAML`); on a clean interpreter the install stops before changing anything until you install them (#463).
+- Environment limitation: on Windows without long-path support, installing Qor-logic into an interpreter in a deeply nested folder can exceed the 260-character path limit; pip then fails and FailSafe reports the install as failed (#463).
+- Scheduled for later remediation: an editor save that enforcement denies is reported, not prevented (#505).
+- Scheduled for later remediation: no command publishes a verified SHIELD check on GitHub; the manual advisory is neutral (#476).
+- Scheduled for later remediation: the native ledger check does not cover the text of ledger entries, and Qor-logic 0.176.1 passes 15 of FailSafe's 19 consumer-conformance checks (no JSON install preview; three entry-text tamper checks). FailSafe's tested-against Qor-logic version therefore stays 0.169.0 (#463).
+- Scheduled for later remediation: if the offline Qor-logic install itself fails after its dependency check passed, pip changes are not rolled back automatically (#463).
 
 ## [6.0.12] - 2026-11-10
 

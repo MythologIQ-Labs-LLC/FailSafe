@@ -23,7 +23,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     // The API key is optional: Continue can use its own login (#482).
     requiredKeys: [],
     docsId: 'continue',
-    configHint: 'OS process containment is not qualified in v6.0.12. Enabling Continue does not enable CLI execution.',
+    configHint: 'OS process containment is not qualified in this release. Enabling Continue does not enable CLI execution.',
     capabilities: ['isolated-run'],
     evidenceKind: 'process',
   },
@@ -35,7 +35,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     enabledKey: 'failsafe.integrations.aider.enabled',
     requiredKeys: [],
     docsId: 'aider',
-    configHint: 'OS process containment is not qualified in v6.0.12. Enabling Aider does not enable CLI execution.',
+    configHint: 'OS process containment is not qualified in this release. Enabling Aider does not enable CLI execution.',
     capabilities: ['isolated-run'],
     evidenceKind: 'process',
   },
