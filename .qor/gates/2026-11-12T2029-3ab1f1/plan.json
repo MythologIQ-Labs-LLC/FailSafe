@@ -1,0 +1,47 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-12T2029-3ab1f1",
+  "ts": "2026-11-12T20:29:29Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-owner-key.md",
+  "iteration": 1,
+  "plan_content_hash": "b9eb669ddcd10ff550f9eac97db59674f0eac1e67bc83d2a197e9ee99a984662",
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "open_questions": [],
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #638 owner key enrollment 2026-11-12 (#647 item 1)",
+  "high_risk_target": false,
+  "phases": [
+    "Phase 1 - commit the owner's public G4 witness certificate and enrollment record; update docs to the enrolled state"
+  ],
+  "boundaries": {
+    "limitations": [
+      "The fingerprint pin is the owner's offline record, not this repository"
+    ],
+    "non_goals": [
+      "No checkpoint, genesis or release",
+      "No code change"
+    ],
+    "exclusions": [
+      "No private key material"
+    ]
+  },
+  "ci_commands": [
+    "node --test src/test/scripts/g4*.test.cjs",
+    "node --test src/test/docs/*.test.cjs"
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "absent",
+    "ts": "2026-11-12T20:29:29Z"
+  }
+}

@@ -36651,3 +36651,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-665-g4-tpm-scripts.md iteration 2 (exact audited commit a6c0c7524986bf277234316ddc541333f5e8eb6c, draft PR #666, issue #665), by a second fresh-context independent auditor on 2026-11-12 (UTC); risk grade L2. No violations. Iteration-1 V1 closed: the enrollment script header, docs/releases/G4_WITNESS_OPERATIONS.md and the g4Witness test title now accurately say automation never passes -ConfirmPersistentTpmKey; the ordering invariant (both refusals ahead of any CngProvider or CngKey reference) is stated and its test fails when either refusal is moved after a key-provider reference, checked on scratch copies with the static test only. Test-P256Key accepts only ECDSA on NIST P-256 with a case-sensitive curve match; the signer's export-policy refusal, 64-byte length check and self-verification are unchanged; each new test fails on the defect it covers (original scripts from main, -eq instead of -ceq, the strict algorithm comparison restored). Results: g4PowerShellScripts and g4Witness 14 of 14, g4 suites 163 of 163, docs 145 of 145; the ledger only appends #964 and verifies post-anchor clean; razor holds. The owner key FailSafe-G4-Ledger-Witness was not touched. Notes for the owner: N1, V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md still says enrollment was not run, to be updated with the certificate PR; N4, the binding test still executes the script locally even if the ordering test fails, a local-only risk. Merge obligations: exact-head CI and owner authority for the protected merge. Not a release decision.
 
 ---
+
+### Entry #966: GATE TRIBUNAL - plan-v6013-638-g4-owner-key (iteration 1) PASS
+
+**Timestamp**: 2026-11-12T20:34:56Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T2029-3ab1f1`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-owner-key.md`
+**Report**: `.failsafe/governance/evidence/g4-owner-key/AUDIT_REPORT-g4-owner-key-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T2029-3ab1f1/audit-iter1.json`
+
+**Content Hash**: `c8d6e1f4b6365333998e24eb8493aec1c29e9e5e1d170d06bdc370a6e9fc9385`
+**Previous Hash**: `4fb6e9eb1c2f1350e67d4500d662bfef06b054637bb49db797fd88c8087ce0fd`
+**Chain Hash (Merkle seal)**: `46c0abbc87a4bb856ecbe23f481608d7c60df5e897792725804e06aacae3dbc7`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-owner-key.md iteration 1 (exact audited commit d7f3b61b9363ba017e95e95cad61ac2a58576e36, branch feat/638-g4-owner-key, stacked on PR #666; issue #638), by a fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3, the G4 owner trust input. No violations. Verified by the auditor: the committed blob tools/g4/keys/a50c00715e7275a86fad338c80ceacd161da02bdf2b75c60b1082eb518265d8b.cer has SHA-256 equal to its file name and to the fingerprint reported to the owner; it is a 418-byte self-signed DER X.509 v3 certificate whose self-signature verifies, P-256 with ecdsa-with-SHA256, with only Key Usage Digital Signature (critical) and Basic Constraints CA:FALSE (critical), no EKU, valid 2026-11-12T19:54:46Z to 2028-11-11T19:54:46Z (730 days), subject and issuer O=MythologIQ Labs LLC, CN=FailSafe G4 Ledger Witness; it parses in the G4 loader with the same fingerprint and is kept binary by .gitattributes. Read-only, the TPM key FailSafe-G4-Ledger-Witness reports ECDSA 256-bit nistP256, ExportPolicy None, KeyUsage Signing, user-scoped and persistent, and its public point equals the certificate's byte for byte. The diff changes no code, workflow or attributes and holds no private key material; the docs and enrollment record are accurate; g4 suites 163 of 163 and docs 145 of 145; the verifier returns BLOCKED NO_CHECKPOINTS; the ledger is unchanged and verifies post-anchor clean. Not verifiable by the auditor and stated as such: the owner's offline fingerprint record, the #647 authorizations, the failed first run leaving nothing, the refused private export and the throwaway signing check. Merge obligations: PR #666 merged first, exact-head CI, owner authority for the protected merge. Not a release decision.
+
+---
