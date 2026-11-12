@@ -1,8 +1,8 @@
 # FailSafe v6.0.13: G4 owner decisions needed (#638)
 
-> **Reconciled 2026-11-10 with the merged implementation** (`main` `6a7eced4`; PRs #644 and #646). The consolidated proposal for all ten items, with the retention procedure and the prepared commands, is `V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md`. It is **PROPOSED, NOT APPROVED**. Item 10 below is now enforced in code by `--release` (audit PASS #934). No decision has been made.
+> **Reconciled 2026-11-10 with the merged implementation** (`main` `6a7eced4`; PRs #644 and #646). The consolidated proposal for all ten items, with the retention procedure and the prepared commands, is `V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md`. It is **PROPOSED, NOT APPROVED**. Item 10 below is now enforced in code by `--release` (audit PASS #934). As of 2026-11-10 no decision had been made; see the 2026-11-12 status below.
 
-**Status: OPEN. Nothing in this file records a decision.** It lists the evidence gathered while the G4 tooling was implemented, gives a recommendation, and names the exact approvals that only the owner can give. Until they are given, no TPM key exists, no TSA is selected, `tools/g4/tsa-policy.json` is `pending-owner-decision`, and `g4-verify-checkpoint.cjs` returns `BLOCKED TSA_POLICY_UNSELECTED` on this repository.
+**Status (reconciled 2026-11-12):** item 3 is DECIDED: the FreeTSA public service (`V6_0_13_G4_TSA_OWNER_SELECTION_2026-11-12.md`). The other items carry the owner's policy direction of 2026-11-12, recorded with the remaining gaps in section 2a of `V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md`. No executable operation is authorized by either file. The evidence and recommendation below are the 2026-11-10 record and are kept as written; their recommendation of DigiCert is superseded by the owner's FreeTSA selection. No TPM key exists, and `main` reports `BLOCKED TSA_POLICY_UNSELECTED` until the separately audited single-root policy PR merges.
 
 The G4 deferral in `docs/releases/V6_0_12_G4_DISPOSITION.md` expires at the v6.0.13 release or on 2026-12-09, whichever comes first.
 

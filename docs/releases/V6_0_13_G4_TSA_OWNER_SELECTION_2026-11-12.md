@@ -2,7 +2,7 @@
 
 **Status:** OWNER SELECTED PROVIDER; technical trust admission and release qualification PENDING.
 **Decision authority:** solo repository owner, stated in discussion on 2026-11-12. This records the selected service, not an agent-issued operational release approval.
-**Parent proposal:** PR #647, decision **#3** in `V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md`. In the original proposal table item #3 still shows `_pending_` until the consolidated record is reconciled in a separately qualified edit; **this file is the later dated owner decision for item #3**.
+**Parent proposal:** PR #647, decision **#3** in `V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md`. That table now records item #3 as decided by this file (reconciled 2026-11-12). **This file is the dated owner decision for item #3.**
 
 ## Owner-selected service and conditions
 
@@ -15,7 +15,7 @@
 
 ## Operational prerequisites, not yet authorized or completed
 
-1. On the owner/local host, independently obtain `https://freetsa.org/files/cacert.pem` and corroborate the CA identity. Compute **DER SHA-256** and compare to the previously inventoried *candidate* `a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc`. A mismatch is a blocker, not an invitation to update the pin by assumption. This conversation could not retrieve the actual certificate bytes, so it is **not verified here**.
+1. On the owner/local host, independently obtain `https://freetsa.org/files/cacert.pem` and corroborate the CA identity. Compute **DER SHA-256** and compare to the previously inventoried *candidate* `a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc`. A mismatch is a blocker, not an invitation to update the pin by assumption. This conversation could not retrieve the actual certificate bytes, so it is **not verified here**. **Done 2026-11-12 on the owner host:** the DER SHA-256 matches, corroborated by 10 independent sources; evidence is at `.failsafe/governance/evidence/g4-freetsa/` on branch `feat/638-g4-freetsa-root`.
 2. Test a fresh SHA-256 RFC 3161 timestamp and chain using only this root; reject swapped imprint, wrong root, malformed or expired tokens and outages. Preserve the raw evidence without secrets.
 3. Only after independent root identity, actual compatible token and native governance audit, commit the root PEM and the **single-root** `tools/g4/tsa-policy.json` update through a separate qualified PR. Do not turn `status` to `selected` until the actual blob is verified and committed with policy.
 4. Keep the owner's TPM signing key non-exportable and under separate explicit local enrollment approval. Store owner certificate fingerprint and each checkpoint head **outside the repository before publication**, not merely in GitHub.
