@@ -1,10 +1,10 @@
 {
   "phase": "plan",
   "session_id": "2026-11-12T2009-f7e2ef",
-  "ts": "2026-11-12T20:09:04Z",
+  "ts": "2026-11-12T20:19:53Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-665-g4-tpm-scripts.md",
-  "iteration": 1,
-  "plan_content_hash": "8d9de63bd583db3afb6ada2aefb8149ddd8683021ad72cdaf2946c9f98c30ec3",
+  "iteration": 2,
+  "plan_content_hash": "9b6d42b8d61f857692dc3e1a3dc572729856a50dc05de0f17eaeec31ea8c5215",
   "required_gate_artifacts": [
     "plan",
     "audit",
@@ -43,6 +43,6 @@
     "host": "claude-code",
     "model_family": "claude-opus-5-5",
     "human_oversight": "absent",
-    "ts": "2026-11-12T20:09:04Z"
+    "ts": "2026-11-12T20:19:53Z"
   }
 }
