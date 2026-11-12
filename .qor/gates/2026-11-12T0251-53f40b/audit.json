@@ -1,54 +1,41 @@
 {
   "phase": "audit",
   "session_id": "2026-11-12T0251-53f40b",
-  "ts": "2026-11-12T02:51:33Z",
+  "ts": "2026-11-12T03:19:02Z",
   "target": ".failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md",
   "verdict": "VETO",
-  "report_path": ".agent/staging/AUDIT_REPORT-656.md",
+  "report_path": ".agent/staging/AUDIT_REPORT-656-iter2.md",
   "risk_grade": "L2",
   "findings_categories": [
-    "test-failure",
-    "coverage-gap",
-    "razor-overage",
-    "specification-drift"
+    "specification-drift",
+    "razor-overage"
   ],
-  "target_content_hash": "ddcef54e0bc4d4968d77f8fc3c491bc770922a7bd2ab6e87c880aeff4024d0b0",
-  "report_content_hash": "d8efcf53f687ca7b2e4d86bc212b51b4cf23e1693397578b103427335df42f13",
-  "iteration": 1,
-  "ledger_entry": 950,
-  "ledger_chain_hash": "3dc8fb5bcf6f194a55b989fdf68b58c95b45bfcc2d3b05939cc10f8f15a6d866",
-  "audited_candidate": "dd7841a2771232a9ef765949d86386d497b207c8",
+  "target_content_hash": "035d6e977887e8f7e4aee0a3bbd4873b29778296984cce20ddfcee915bc09487",
+  "report_content_hash": "5095f12c76c1bfbadd96017d73666dfdfdfd380f9151e556dfbc91ef41abb524",
+  "iteration": 2,
+  "ledger_entry": 951,
+  "ledger_chain_hash": "3c63f3d2a6a3978442ee76b0969e9ae81f1a77d1e901cf232f05e02ad497cf01",
+  "audited_candidate": "060a09faf32965af4bdf017b11fbb683e924b4cf",
   "mode": "solo; Option B fresh-context independent auditor",
   "violations": [
     {
-      "id": "B1",
-      "category": "test-failure",
-      "detail": "best of up to five attempts accepted; intermittent blocking passes"
-    },
-    {
-      "id": "B2",
-      "category": "coverage-gap",
-      "detail": "busy lag clamped by process CPU; captured spawnSync, execSync, Atomics.wait and process.binding pass"
-    },
-    {
-      "id": "B3",
+      "id": "V1",
       "category": "specification-drift",
-      "detail": "150 ms control burns process CPU, not event-loop time; fails on clean code in about 2 of 23 runs"
+      "detail": "planted 200 ms stall ends at 186-209 ms on Windows (15.6 ms CPU-clock steps); 2x margin not met"
     },
     {
-      "id": "B4",
+      "id": "V2",
       "category": "razor-overage",
-      "detail": "measureBoundedDescribe 48 lines; file 463 lines against 250"
+      "detail": "evidence script falsify.cjs nesting depth 4"
     }
   ],
-  "merge_obligations": "remediate B1-B4; new independent audit on corrected source",
-  "ordering": "recorded 2026-11-12 after the audit of dd7841a2 on 2026-11-12",
+  "merge_obligations": "remediate V1-V2; new independent audit on corrected source",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "veto",
-    "ts": "2026-11-12T02:51:33Z"
+    "ts": "2026-11-12T03:19:02Z"
   }
 }
