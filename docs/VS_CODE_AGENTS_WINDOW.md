@@ -26,6 +26,27 @@
 - Agent Plugin architecture: https://code.visualstudio.com/docs/agent-customization/agent-plugins
 - Upstream issues: https://github.com/microsoft/vscode/issues/317460, https://github.com/microsoft/vscode/issues/325827, https://github.com/microsoft/vscode/issues/318103
 
+## Version targeting and audited implementation boundaries (proposed 2026-11-12)
+
+**Candidate target: FailSafe v6.1.0** (first post-v6.0.13 feature release), **not** v6.0.13. This is a version-planning recommendation, not a release tag, owner GO, accepted native audit, or implementation authorization. No release date is promised: the **external upstream February 2027 Local-harness retirement** makes timely migration valuable, but cannot justify relaxing release qualification.
+
+| Release | Proposed scope | Stop rule |
+| --- | --- | --- |
+| v6.0.13 | Existing Statewright handoff and mandatory G4/release gates only | No agent-native scope expansion. |
+| v6.0.14 (conditional) | Only an independently justified backward-compatible bug/compatibility patch | Do not silently ship skills/MCP feature work in a patch. |
+| **v6.1.0** | First *genuinely usable* Copilot-harness integration: native discoverable FailSafe skills; B209 external MCP status/audit transport with real authorization and explicit refusal; migration of supported `@failsafe` read-only actions and appropriate human-approval handoffs; actual installed-host validation. | Do not ship if either skill discovery or real external tool execution is unproven. Do not expose owner decision/seal/L3 approval as an agent-autonomous operation. |
+| v6.1.x (future candidates) | Optional Cursor and Antigravity host-specific integration, session correlation/Inbox UX if a public API exists, hook coverage improvements | Each host/runtime needs explicit qualification; no inferred parity. |
+
+**Source mapping / packaging hazards discovered:** `FailSafeChatParticipant.ts` handles `intent`, `audit`, `trust`, `status`, `seal` (and a `risk` case not listed in its `chatParticipants` manifest). The `seal` handler only offers a VS Code confirmation button; it does **not** independently seal. Its no-intent response says *all file writes are blocked*, which is not generally true given the documented editor-save observation limitation (#505): the migration must correct, not propagate, that statement.
+
+The repository's `.agents/skills/qor-audit/SKILL.md` and `qor-status/SKILL.md` are **not extension-ready as-is**: sampled YAML headers declare `name: ql-audit` / `ql-status` under `qor-audit` / `qor-status` folders, plus a second frontmatter-looking header; VS Code requires `name` to match the parent directory or silently does not load the skill. Do not bulk-register existing `.agents` skill folders, and do not assume their contents are a qualified stable runtime API. Create reviewed thin wrappers with valid Agent Skills metadata and provenance/pins for frozen Qor-Logic 0.176.1; preserve its frozen source.
+
+The extension's `.vscodeignore` excludes `*.md` by default and omits `dist/extension/skills/**`; any newly packaged `skills/*/SKILL.md` must be explicitly retained and checked **inside the final target-specific VSIX**, not just on disk. The manifest currently supports VS Code `^1.101.0`; raising the whole-extension minimum to 1.146 would lock out existing installations. Make support-floor/backward-compatibility a reviewed decision, and test old-host behavior instead of silently changing `engines.vscode`.
+
+**Suggested first v6.1.0 vertical slice:** an agent discovers `failsafe-preflight`, calls real external `qorelogic_status` over the B209 bridge, receives truthful active-intent/lock/unavailable state; `failsafe-review-change` can request a properly scoped audit with a validated intent and only report source-bound results; `failsafe-release-readiness` gathers *read-only* qualification evidence and links the operator to existing seal/release controls. No agent self-attested PASS, unsupervised commit, L3 decision, or release. All denied attempts leave auditable outcomes where appropriate.
+
+**Qualification checklist:** exact VS Code build + Copilot harness; real newly installed signed/target-specific VSIX; skill metadata valid, embedded asset hash/path and actual discovery; external MCP client success + stale intent/forged caller/worktree swap/timeout/unavailable refusal; operator confirmation untouched; source/receipt binding; old-host downgrade; protected worktree/ledger effects; independent native Qor PASS, CI and installed user-path proof. Track #326, #662, B209 and B207 separately. Avoid making Cursor or Antigravity parity a blocker for the first explicitly VS Code Copilot-qualified slice if they are truthfully disclosed as unverified.
+
 ### Proposed architecture decision: agent-native, runtime-independent FailSafe governance
 
 **Owner-approved strategic direction (2026-11-12); technical qualification and native Qor audit pending.**
