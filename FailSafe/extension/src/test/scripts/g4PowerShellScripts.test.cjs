@@ -4,10 +4,12 @@
  * Windows PowerShell only. No TPM key is created, opened or used: the enrollment
  * script is run without -ConfirmPersistentTpmKey, so it must refuse in its body
  * after parameter binding succeeds; the signer's P-256 test is exercised with
- * ephemeral software keys and stand-in key objects.
+ * ephemeral software keys and stand-in key objects. Automation never passes
+ * -ConfirmPersistentTpmKey.
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
@@ -19,6 +21,23 @@ const skip = process.platform !== "win32" ? "Windows PowerShell only" : false;
 function ps(args) {
   return spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args], { encoding: "utf8", windowsHide: true });
 }
+
+test("enroll-tpm-key.ps1 refuses before any key-provider call: the switch and approval checks come first (#665)", () => {
+  const text = fs.readFileSync(ENROLL, "utf8");
+  const body = text.slice(text.indexOf("Set-StrictMode"));
+  const confirm = body.indexOf("if (-not $ConfirmPersistentTpmKey)");
+  const approval = body.indexOf("IsNullOrWhiteSpace($OwnerApprovalRef)");
+  const provider = Math.min(...["CngProvider", "CngKey"].map((t) => body.indexOf(t)).filter((i) => i >= 0));
+  assert.ok(confirm > 0 && approval > 0 && Number.isFinite(provider), "markers present");
+  assert.ok(confirm < provider && approval < provider, "both refusals precede the first key-provider reference");
+});
+
+test("sign-checkpoint.ps1 opens the key through Test-P256Key, not a strict algorithm comparison (#665)", () => {
+  const text = fs.readFileSync(SIGN, "utf8");
+  const open = text.slice(text.indexOf("function Open-WitnessKey"), text.indexOf("function Get-CertificateKey"));
+  assert.match(open, /if \(-not \(Test-P256Key \$key\)\)/);
+  assert.doesNotMatch(open, /Algorithm -ne \[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256/);
+});
 
 test("enroll-tpm-key.ps1 binds its parameters and refuses in its body without -ConfirmPersistentTpmKey (#665)", { skip }, () => {
   const r = ps(["-File", ENROLL, "-OwnerApprovalRef", "g4 binding test, no key"]);
@@ -54,6 +73,7 @@ $k384 = [System.Security.Cryptography.CngKey]::Create($A::ECDsaP384)
   generic_ecdsa_nistP384 = Test-P256Key (Stub ([System.Security.Cryptography.CngAlgorithm]::new('ECDSA')) $G::ECDsa 384 'nistP384')
   generic_ecdsa_256_wrong_curve = Test-P256Key (Stub ([System.Security.Cryptography.CngAlgorithm]::new('ECDSA')) $G::ECDsa 256 'brainpoolP256r1')
   generic_ecdsa_no_curve = Test-P256Key (Stub ([System.Security.Cryptography.CngAlgorithm]::new('ECDSA')) $G::ECDsa 256 $null)
+  generic_ecdsa_uppercase_curve = Test-P256Key (Stub ([System.Security.Cryptography.CngAlgorithm]::new('ECDSA')) $G::ECDsa 256 'NISTP256')
   rsa = Test-P256Key (Stub $A::Rsa $G::Rsa 2048 $null)
 } | ConvertTo-Json -Compress
 `;
@@ -68,6 +88,7 @@ test("sign-checkpoint.ps1 accepts a P-256 key reported as generic ECDSA and refu
     generic_ecdsa_nistP384: false,
     generic_ecdsa_256_wrong_curve: false,
     generic_ecdsa_no_curve: false,
+    generic_ecdsa_uppercase_curve: false,
     rsa: false,
   });
 });

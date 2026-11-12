@@ -1,6 +1,6 @@
 # Plan: G4 TPM scripts on Windows PowerShell 5.1 with a real key (#665, #638, v6.0.13)
 
-**Status:** iteration 1, PROPOSED for independent audit. This document records no PASS and no merge authority.
+**Status:** iteration 2, after the independent VETO recorded as ledger Entry #964 (iteration 1 audited `9b2a304d`). This document records no PASS and no merge authority.
 **Baseline:** `main` `5b7994a6b0a9f1c7d7348965b5f0569af2abc5b3`. **Branch:** `fix/665-g4-tpm-scripts`.
 **Change class:** fix to owner-only release tooling. Risk grade L2: it changes which keys the checkpoint signer accepts, and it must not widen that set beyond P-256.
 
@@ -30,13 +30,23 @@ Both scripts are covered by tests that only parse them. Neither defect weakened 
 ## Evidence
 
 - Each new test fails on the original script and passes on the fix (planted by restoring the `main` version of each script).
-- G4 suites: 161/161.
+- G4 suites: 161/161 (iteration 1); 163/163 (iteration 2). Real-key signing re-verified with the case-sensitive check.
 - **Real key, verification only:** the fixed signer signed a throwaway message (not a checkpoint) with `FailSafe-G4-Ledger-Witness`. G4's `verifySignature` accepted the 64-byte signature against the new certificate and rejected it for a one-bit-changed message.
 
 ## Out of scope
 
 - No key is created, deleted or replaced, and the certificate is not committed here; it goes through its own PR after the owner records the fingerprint offline.
 - No checkpoint, genesis or release.
+
+## Iteration 2 (VETO #964 remediation)
+
+- **V1. "Never run by automation" had become false.** The new test runs `enroll-tpm-key.ps1`, without `-ConfirmPersistentTpmKey`.
+  - The three statements now say exactly that: the script's header, the `G4_WITNESS_OPERATIONS.md` row, and the `g4Witness` test title. Automation never passes `-ConfirmPersistentTpmKey`, and runs the script only to check that it refuses.
+  - The safety of that run rests on an ordering invariant, which the header now states: the `-ConfirmPersistentTpmKey` and `-OwnerApprovalRef` refusals come before any key-provider call.
+  - A new test enforces the invariant: both refusals must precede the first `CngProvider` or `CngKey` reference in the script body.
+- **N1.** The curve comparison is now case-sensitive (`-ceq 'nistP256'`). A test case with `NISTP256` is refused.
+- **N3.** A new test checks that `Open-WitnessKey` refuses through `Test-P256Key` and no longer through the strict algorithm comparison.
+- **Plan wording.** The `Test-P256Key` test fails on the original script because that script lacks the function. Its behaviour on the real defect, a generic-`ECDSA` P-256 key, is covered by the stand-in case and by the real-key verification above.
 
 ## Audit questions
 

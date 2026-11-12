@@ -51,7 +51,7 @@ function Test-P256Key($Key) {
     } catch {
         return $false
     }
-    return ([System.Text.Encoding]::Unicode.GetString($raw).TrimEnd([char]0) -eq 'nistP256')
+    return ([System.Text.Encoding]::Unicode.GetString($raw).TrimEnd([char]0) -ceq 'nistP256')
 }
 
 function Open-WitnessKey([string]$Name) {
