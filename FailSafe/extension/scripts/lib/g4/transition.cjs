@@ -44,7 +44,8 @@ function parseRecord(bytes, fromFp) {
     throw invalid(`transition record for ${fromFp.slice(0, 16)} is not JSON${err.code ? ` (${err.code})` : ""}`);
   }
   const ok = r && r.schema === SCHEMA && KINDS.includes(r.kind) && r.fromFingerprintSha256 === fromFp
-    && isHex64(r.toFingerprintSha256) && /^g4-\d{6}$/.test(r.afterCheckpoint) && typeof r.repository === "string"
+    && isHex64(r.toFingerprintSha256) && /^g4-\d{6}$/.test(r.afterCheckpoint) && isHex64(r.afterCheckpointManifestSha256)
+    && typeof r.repository === "string"
     && !Number.isNaN(Date.parse(r.createdUtc));
   if (!ok) throw invalid(`transition record for ${fromFp.slice(0, 16)} has a wrong schema, kind or field`);
   return r;
@@ -68,7 +69,8 @@ function certFor(ctx, fp) {
 
 function checkBinding(t, m, prev) {
   const r = t.record;
-  if (r.toFingerprintSha256 !== m.key.fingerprintSha256 || r.afterCheckpoint !== prev.id || r.repository !== m.manifest.repository) {
+  const bound = r.afterCheckpoint === prev.id && r.afterCheckpointManifestSha256 === sha256(prev.manifestBytes);
+  if (r.toFingerprintSha256 !== m.key.fingerprintSha256 || !bound || r.repository !== m.manifest.repository) {
     throw invalid(`${m.id}: the transition record for ${prev.fingerprint.slice(0, 16)} names ${r.toFingerprintSha256.slice(0, 16)} after ${r.afterCheckpoint}, not this key after ${prev.id}`);
   }
 }
@@ -85,8 +87,10 @@ function checkRotation(ctx, t, genTime) {
 function checkRecovery(ctx, t, genTime, prev) {
   const from = t.record.fromFingerprintSha256;
   const notice = registry.revocationFor(ctx.currentRegistry, from);
-  if (!notice || Date.parse(notice.effectiveUtc) > Date.parse(genTime)) {
-    throw refuse("KEY_RECOVERY_UNREVOKED", `recovery from ${from.slice(0, 16)} requires that key to be revoked no later than the record's token time ${genTime}`);
+  const witnessed = ctx.noticeWitnessed && ctx.noticeWitnessed.get(from);
+  // Both the stated effective time and the notice's own token must precede the recovery record (audit #959 N1).
+  if (!notice || !witnessed || Date.parse(notice.effectiveUtc) > Date.parse(genTime) || Date.parse(witnessed) > Date.parse(genTime)) {
+    throw refuse("KEY_RECOVERY_UNREVOKED", `recovery from ${from.slice(0, 16)} requires that key to be revoked, and the revocation timestamped, no later than the record's token time ${genTime}`);
   }
   const ack = `${prev.id}:${sha256(t.recordBytes)}`;
   if (!(ctx.acceptRecovery || []).includes(ack)) {
@@ -105,13 +109,18 @@ function acceptKeyChange(ctx, m, prev, genTime) {
   if (!t) throw refuse("KEY_RESET", `${m.id}: key changed from ${prev.fingerprint.slice(0, 16)} without an accepted transition`);
   checkBinding(t, m, prev);
   const signerFp = t.record.kind === "rotation" ? t.record.fromFingerprintSha256 : t.record.toFingerprintSha256;
-  if (!verifySignature(t.recordBytes, t.signatureBytes, certFor(ctx, signerFp))) {
+  const signerCert = certFor(ctx, signerFp);
+  if (!verifySignature(t.recordBytes, t.signatureBytes, signerCert)) {
     throw invalid(`${m.id}: the ${t.record.kind} record is not signed by ${signerFp.slice(0, 16)}`);
   }
   const what = `transition record for ${prev.fingerprint.slice(0, 16)}`;
   const tTime = verifyStampBlob(ctx, { rel: t.tokenRel, imprintHex: transitionImprint(t.recordBytes, t.signatureBytes), what, missingCode: "KEY_TRANSITION_INVALID" });
   if (Date.parse(tTime) < Date.parse(prev.genTime) || Date.parse(tTime) > Date.parse(genTime)) {
     throw invalid(`${what}: token time ${tTime} is not between ${prev.id} (${prev.genTime}) and ${m.id} (${genTime})`);
+  }
+  const t0 = Date.parse(tTime);
+  if (t0 < Date.parse(signerCert.cert.validFrom) || t0 > Date.parse(signerCert.cert.validTo)) {
+    throw invalid(`${what}: token time ${tTime} is outside the signing key's certificate window (audit #959 V2)`);
   }
   return t.record.kind === "rotation" ? checkRotation(ctx, t, tTime) : checkRecovery(ctx, t, tTime, prev);
 }

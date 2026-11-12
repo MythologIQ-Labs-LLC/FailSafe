@@ -1,6 +1,6 @@
 # Plan: G4 token-time validation, timestamped revocation notices, key rotation and recovery (#638, v6.0.13)
 
-**Status:** iteration 1, PROPOSED for independent audit. This document records no PASS and no merge authority.
+**Status:** iteration 2, after the independent VETO recorded as ledger Entry #959 (iteration 1 audited `59c4291e`). This document records no PASS and no merge authority.
 **Baseline:** `main` `29b819feaf07ca991c9b6a75f8e0f01549e3cd11`, stacked on PR #657 (`origin/feat/638-g4-freetsa-root`, which is itself stacked on PR #647). **Branch:** `feat/638-g4-token-time-transitions`. Merge order: #647, then #657, then this.
 **Change class:** verifier semantics. Risk grade L3: this changes when a G4 checkpoint witness is accepted.
 **Owner direction (2026-11-12, recorded in #647 section 2a):** items 6, 7 and 9 are no longer deferred.
@@ -45,7 +45,7 @@ This is design and code only. It authorizes no rotation, recovery, revocation, k
   - recovery: unacknowledged, a wrong digest, accepted with the limitation (library and CLI), unrevoked, and signed by the old key;
   - the builder's own refusals.
 - **Existing suites.** Two revocation tests now stamp their registry version. One of them used a notice dated a day after its own commit; under item 7 that is postdated, so it now uses a notice effective after the checkpoints but before its token.
-- **Totals.** G4 suites 138/138. `npm run test:node` (after stacking on #657): 1120 pass, 2 fail. Both failures are the known `bundleDeps` junction artefact.
+- **Totals.** G4 suites 149/149 (iteration 2; 138 in iteration 1). `npm run test:node` (iteration 2): 1131 pass, 2 fail. Both failures are the known `bundleDeps` junction artefact.
 - **Planted defects in the new verifier, each caught (failing tests in brackets):**
   - token time disabled (6);
   - notices skipped (4);
@@ -69,6 +69,40 @@ This is design and code only. It authorizes no rotation, recovery, revocation, k
 ## Rollback
 
 Revert this PR: the verifier returns to current-time validation with no notice or transition support. No committed checkpoint, notice or transition exists yet.
+
+## Iteration 2 (VETO #959 remediation)
+
+The independent audit of `59c4291e` reproduced four blocking defects. Each is fixed, and each has a test that fails when its fix is planted back out.
+
+- **V1. A `.crl` file could add a trust anchor.**
+  - Before: only the first PEM CRL in each file was checked, and the raw file was appended to the OpenSSL CAfile.
+  - Fix: new `crl-archive.cjs`. Each `.crl` file must hold exactly one PEM CRL and nothing else (`TSA_CRL_MALFORMED`), and the CRL must verify against one pinned root on its own (`TSA_CRL_UNTRUSTED`). Only OpenSSL's canonical re-encoding reaches the trust file.
+  - Tests: `g4TokenTime`, covering two CRLs, a CRL followed by a smuggled CA root and its CRL, and a CRL from another key under the same CA name.
+- **V2. A rotation was accepted from an expired key.**
+  - Fix: the record's token time must lie inside the signing key's certificate window (the old key for a rotation, the new key for a recovery).
+  - Test: `g4KeyTransition`, a rotation signed after the old key expired.
+- **V3. A later CRL revoking the signer before the token was ignored.**
+  - Fix: after OpenSSL's `-crl_check` (which still needs a CRL current at the token time), `assertSignerNotRevoked` consults every archived CRL from the signer's issuing root. It refuses when the signer is listed as revoked at or before the token's time, or for key or CA compromise at any time (RFC 3161 section 4).
+  - Tests: `g4CrlArchive`, covering a later CRL that lists an earlier revocation, a key-compromise revocation that also refuses earlier tokens, and a `superseded` revocation after a token that leaves it valid.
+  - The operations doc no longer claims more than the code does.
+- **V4. Archived CRLs could be deleted.**
+  - Fix: `git log --full-history --no-renames --diff-filter=DMT -- tools/g4/tsa-crls/` must be empty (`TSA_CRL_HISTORY`).
+  - Tests: deletion, change, deletion hidden by a later restore, and an allowed addition.
+- **N1.** A recovery now also requires that the old key's notice was timestamped, by its registry version's token, no later than the recovery record. A backdated revocation stamped after the record is `KEY_RECOVERY_UNREVOKED` (test). `verifyNotices` returns when each revocation was witnessed.
+- **N2.** A transition record now binds the previous checkpoint's manifest SHA-256 (`afterCheckpointManifestSha256`; test, plus a control record that passes).
+- **N3 to N5.** Unchanged: the inherited Git-history limit, a bogus CRL causing only refusal, and the symlink reading noted as correct.
+
+**Planted defects in the fixes, each caught:**
+- extra content in a CRL file;
+- CRL root unchecked;
+- later CRLs ignored;
+- compromise ignored;
+- CRL history unchecked;
+- key window unchecked;
+- notice token time ignored;
+- manifest binding unchecked.
+
+The first key-window plant was itself wrong (`false && a || b` still evaluates `b`) and caught nothing. Replanted as `if (false)`, it is caught.
 
 ## Audit questions
 

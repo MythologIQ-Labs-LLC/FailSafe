@@ -1,0 +1,7 @@
+ok   S two FreeTSA checkpoints, stamped registry v2, token-time with the real CRL: expected PASS OK mode:release limitations:0, got PASS OK mode:release limitations:0 (2 checkpoint(s) verified to g4-000002)
+ok   S committed CRL removed (archived CRLs are append-only): expected REFUSED TSA_CRL_HISTORY, got REFUSED TSA_CRL_HISTORY (an archived CRL was removed or changed at 322ecfbfc371; archived CRLs are append-only)
+ok   S registry v2 notice token removed: expected REFUSED REVOCATION_UNSTAMPED, got REFUSED REVOCATION_UNSTAMPED (revocation registry version 2: no RFC 3161 token at tools/g4/revocation-notices/v2.tsr)
+ok   S a second certificate appended to the root file: expected REFUSED TSA_ROOT_MALFORMED, got REFUSED TSA_ROOT_MALFORMED (FreeTSA Root CA (O=Free TSA, OU=Root CA, CN=www.freetsa.org): a root file must hold exactly one certificate and nothing else)
+ok   S rotation A->B with FreeTSA-stamped record: release, pinned genesis key A: expected PASS OK mode:release limitations:0, got PASS OK mode:release limitations:0 (3 checkpoint(s) verified to g4-000003)
+
+5/5 expectations met

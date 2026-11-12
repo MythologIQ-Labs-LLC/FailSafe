@@ -84,7 +84,7 @@ async function run() {
   fs.mkdirSync(DIR, { recursive: true });
   const base = await build();
   expect("two FreeTSA checkpoints, stamped registry v2, token-time with the real CRL", base.repo, releaseOpts(base.repo, base.a.fingerprint, "g4-000002"), "PASS OK mode:release limitations:0");
-  variant(base, "committed CRL removed", (d) => fs.rmSync(path.join(d, CRL_REL)), "BLOCKED TSA_REVOCATION_EVIDENCE_MISSING");
+  variant(base, "committed CRL removed (archived CRLs are append-only)", (d) => fs.rmSync(path.join(d, CRL_REL)), "REFUSED TSA_CRL_HISTORY");
   variant(base, "registry v2 notice token removed", (d) => fs.rmSync(path.join(d, Q.layout.noticeTokenPath(2))), "REFUSED REVOCATION_UNSTAMPED");
   variant(base, "a second certificate appended to the root file", (d) => fs.appendFileSync(path.join(d, Q.ROOT_REL), fs.readFileSync(path.join(Q.OUT, "..", "forged-root.pem"))), "REFUSED TSA_ROOT_MALFORMED");
   await rotate(base);

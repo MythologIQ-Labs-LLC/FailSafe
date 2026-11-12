@@ -92,8 +92,8 @@ function createLocalTsa(bin, dir, { signerValidMs = 2 * 86400e3 } = {}) {
       sh(bin, ["ca", "-config", p("ca.cnf"), "-gencrl", "-crl_lastupdate", utcStamp(lastMs), "-crl_nextupdate", utcStamp(nextMs), "-out", out]);
       return fs.readFileSync(out);
     },
-    revokeSigner() {
-      sh(bin, ["ca", "-config", p("ca.cnf"), "-revoke", p("tsa.crt")]);
+    revokeSigner(reason) {
+      sh(bin, ["ca", "-config", p("ca.cnf"), "-revoke", p("tsa.crt"), ...(reason ? ["-crl_reason", reason] : [])]);
     },
   };
 }

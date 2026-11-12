@@ -34,11 +34,21 @@ before(async () => {
 });
 after(() => { if (base) fs.rmSync(base.work, { recursive: true, force: true }); });
 
-function withCrl(bytes) {
+let fresh = 0;
+/** A new repository whose archived CRL is `bytes` from the start (null: none), with one checkpoint. */
+async function withCrl(bytes) {
+  const dir = path.join(base.work, `fresh-${++fresh}`);
+  fs.mkdirSync(dir, { recursive: true });
+  S.initRepo(dir, bytes === null ? { rootPem: base.tsa.rootPem } : { rootPem: base.tsa.rootPem, crl: () => bytes }, base.signer);
+  await S.checkpoint(dir, base.tsa, base.signer);
+  return dir;
+}
+
+/** The base repository with `files` ({rel: bytes}) added in a new commit. */
+function adding(files) {
   const dir = S.copyRepo(base);
-  if (bytes === null) fs.rmSync(path.join(dir, S.CRL_PATH));
-  else S.write(dir, S.CRL_PATH, bytes);
-  S.commitAll(dir, "test: replace the archived CRL");
+  for (const [rel, bytes] of Object.entries(files)) S.write(dir, rel, bytes);
+  S.commitAll(dir, "test: add files under tools/g4/tsa-crls");
   return dir;
 }
 
@@ -47,30 +57,31 @@ it("the base chain passes with its archived CRL", () => {
   assert.equal(r.verdict, "PASS", r.detail);
 });
 
-it("no archived CRL: BLOCKED, never a pass on the token alone", () => {
-  refused(S.verify(withCrl(null)), "TSA_REVOCATION_EVIDENCE_MISSING", "BLOCKED");
+it("no archived CRL: BLOCKED, never a pass on the token alone", async () => {
+  refused(S.verify(await withCrl(null)), "TSA_REVOCATION_EVIDENCE_MISSING", "BLOCKED");
 });
 
-it("a CRL that had expired before the token time does not count", () => {
+it("a CRL that had expired before the token time does not count", async () => {
   const now = Date.now();
-  refused(S.verify(withCrl(base.tsa.crl({ lastMs: now - 3 * DAY, nextMs: now - 2 * DAY }))), "TSA_REVOCATION_EVIDENCE_MISSING", "BLOCKED");
+  refused(S.verify(await withCrl(base.tsa.crl({ lastMs: now - 3 * DAY, nextMs: now - 2 * DAY }))), "TSA_REVOCATION_EVIDENCE_MISSING", "BLOCKED");
 });
 
-it("a CRL issued after the token time does not count", () => {
-  refused(S.verify(withCrl(base.tsa.crl({ lastMs: Date.now() + 3600e3 }))), "TSA_REVOCATION_EVIDENCE_MISSING", "BLOCKED");
+it("a CRL issued after the token time does not count", async () => {
+  refused(S.verify(await withCrl(base.tsa.crl({ lastMs: Date.now() + 3600e3 }))), "TSA_REVOCATION_EVIDENCE_MISSING", "BLOCKED");
 });
 
-it("a CRL from another key under the same CA name is refused", () => {
+it("a CRL from another key under the same CA name is refused when loaded", () => {
   const other = createLocalTsa(found.bin, path.join(base.work, "other-ca"));
-  refused(S.verify(withCrl(other.crl())), "TOKEN_INVALID");
+  refused(S.verify(adding({ "tools/g4/tsa-crls/other.crl": other.crl() })), "TSA_CRL_UNTRUSTED");
 });
 
-it("anything but a PEM CRL in tools/g4/tsa-crls is refused", () => {
-  refused(S.verify(withCrl(Buffer.from("not a crl\n"))), "TSA_CRL_MALFORMED");
-  const dir = S.copyRepo(base);
-  S.write(dir, "tools/g4/tsa-crls/notes.txt", Buffer.from("x\n"));
-  S.commitAll(dir, "test: stray file");
-  refused(S.verify(dir), "TSA_CRL_MALFORMED");
+it("anything but exactly one PEM CRL per .crl file is refused (audit #959 V1)", () => {
+  const other = createLocalTsa(found.bin, path.join(base.work, "smuggled-ca"));
+  const crl = base.tsa.crl();
+  refused(S.verify(adding({ "tools/g4/tsa-crls/bad.crl": Buffer.from("not a crl\n") })), "TSA_CRL_MALFORMED");
+  refused(S.verify(adding({ "tools/g4/tsa-crls/notes.txt": Buffer.from("x\n") })), "TSA_CRL_MALFORMED");
+  refused(S.verify(adding({ "tools/g4/tsa-crls/two.crl": Buffer.concat([crl, crl]) })), "TSA_CRL_MALFORMED");
+  refused(S.verify(adding({ "tools/g4/tsa-crls/smuggled.crl": Buffer.concat([crl, other.rootPem, other.crl()]) })), "TSA_CRL_MALFORMED");
 });
 
 it("a root file holding a second certificate is refused (audit #956 N1)", () => {
@@ -103,6 +114,8 @@ it("a token stays valid after its TSA signer expires, because the chain is check
 it("a TSA signer revoked before a token's time is refused; earlier tokens stay valid", async () => {
   const b2 = await S.buildBase(found.bin);
   try {
+    // Times have one-second resolution, and a revocation in a token's own second counts as before it.
+    await sleep(1100);
     b2.tsa.revokeSigner();
     await sleep(1100);
     S.write(b2.repo, "tools/g4/tsa-crls/after-revocation.crl", b2.tsa.crl({ lastMs: Date.now() }));

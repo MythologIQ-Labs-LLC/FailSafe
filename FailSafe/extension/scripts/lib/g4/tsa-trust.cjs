@@ -15,9 +15,10 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { refuse, block, sha256 } = require("./bytes.cjs");
-const { git, requireBlob, showBlob } = require("./git.cjs");
+const { requireBlob, showBlob } = require("./git.cjs");
 const layout = require("./layout.cjs");
 const ts = require("./timestamp.cjs");
+const { loadCrlArchive, assertSignerNotRevoked } = require("./crl-archive.cjs");
 
 const POLICY_SCHEMA = "failsafe-g4-tsa-policy/v1";
 const PEM_CERT = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g;
@@ -54,33 +55,19 @@ function rootPem(repoRoot, head, r) {
   return certs[0];
 }
 
-/** Every committed file under tools/g4/tsa-crls/ must be a PEM CRL OpenSSL can read. */
-function crlPems(repoRoot, head, bin, tmpDir) {
-  const res = git(repoRoot, ["ls-tree", "-r", "-z", "--name-only", head, "--", `${layout.TSA_CRLS_DIR}/`]);
-  if (res.status !== 0) throw block("REPO_UNREADABLE", "git ls-tree failed for the TSA CRLs");
-  return res.stdout.split("\0").filter(Boolean).map((rel, i) => {
-    const buf = requireBlob(repoRoot, head, rel, "TSA_CRL_MALFORMED");
-    const file = path.join(tmpDir, `crl-${i}.pem`);
-    fs.writeFileSync(file, buf);
-    const pem = /^-----BEGIN X509 CRL-----/.test(buf.toString("latin1"));
-    if (!rel.endsWith(".crl") || !pem || !ts.run(bin, ["crl", "-in", file, "-noout"]).ok) {
-      throw refuse("TSA_CRL_MALFORMED", `${rel} is not a PEM CRL`);
-    }
-    return buf.toString("utf8");
-  });
-}
-
 /**
  * One CAfile for OpenSSL: the pinned roots (or a diagnostic --tsa-ca override)
- * followed by the archived CRLs. Returns its path.
+ * followed by the canonical archived CRLs (crl-archive.cjs).
+ * @returns {{file:string, archive:object}}
  */
-function buildTrustFile({ repoRoot, head, bin, tmpDir, overrideCaFile }) {
-  const roots = overrideCaFile
-    ? [fs.readFileSync(overrideCaFile, "utf8")]
+function buildTrust({ repoRoot, head, bin, tmpDir, overrideCaFile }) {
+  const rootPems = overrideCaFile
+    ? fs.readFileSync(overrideCaFile, "utf8").match(PEM_CERT) || []
     : readPolicy(repoRoot, head).trustedRoots.map((r) => rootPem(repoRoot, head, r));
+  const archive = loadCrlArchive({ repoRoot, head, bin, tmpDir, rootPems });
   const file = path.join(tmpDir, "tsa-trust.pem");
-  fs.writeFileSync(file, [...roots, ...crlPems(repoRoot, head, bin, tmpDir)].join("\n") + "\n");
-  return file;
+  fs.writeFileSync(file, [...rootPems, ...archive.crls.map((c) => c.pem)].join("\n") + "\n");
+  return { file, archive };
 }
 
 function tokenFailure(what, out) {
@@ -110,6 +97,7 @@ function verifyStamp(ctx, { imprintHex, tsrPath, chainPath, what }) {
   if (!info.genTime) throw refuse("TOKEN_INVALID", `${what}: token time unreadable`);
   const r = ts.verifyToken(ctx.openssl, { imprintHex, tsrPath, caFile: ctx.caFile, untrustedFile: chainPath, atTime: info.genTime });
   if (!r.ok) throw tokenFailure(what, r.out);
+  assertSignerNotRevoked(ctx, { tsrPath, chainPath, genTime: info.genTime, what });
   return info.genTime;
 }
 
@@ -122,4 +110,4 @@ function verifyStampBlob(ctx, { rel, imprintHex, what, missingCode }) {
   return verifyStamp(ctx, { imprintHex, tsrPath: file, chainPath: null, what });
 }
 
-module.exports = { POLICY_SCHEMA, buildTrustFile, verifyStamp, verifyStampBlob };
+module.exports = { POLICY_SCHEMA, buildTrust, verifyStamp, verifyStampBlob };

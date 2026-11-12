@@ -19,7 +19,7 @@ const { readCheckpointFiles } = require("./checkpoint.cjs");
 const { parseManifest } = require("./manifest.cjs");
 const registry = require("./registry.cjs");
 const ts = require("./timestamp.cjs");
-const { POLICY_SCHEMA, buildTrustFile } = require("./tsa-trust.cjs");
+const { POLICY_SCHEMA, buildTrust } = require("./tsa-trust.cjs");
 const { verifyNotices } = require("./notices.cjs");
 const { verifyWitness } = require("./verify-witness.cjs");
 const { verifyLedger } = require("./verify-ledger.cjs");
@@ -44,9 +44,11 @@ function buildContext(o, tmpDir) {
     expectedRepository: o.repository || null,
     acceptRecovery: o.acceptRecovery || [],
     openssl,
-    caFile: buildTrustFile({ repoRoot, head, bin: openssl, tmpDir, overrideCaFile: o.tsaCaFile }),
   };
-  verifyNotices(ctx);
+  const trust = buildTrust({ repoRoot, head, bin: openssl, tmpDir, overrideCaFile: o.tsaCaFile });
+  ctx.caFile = trust.file;
+  ctx.archive = trust.archive;
+  ctx.noticeWitnessed = verifyNotices(ctx);
   return ctx;
 }
 

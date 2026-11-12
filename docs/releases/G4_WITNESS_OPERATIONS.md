@@ -186,17 +186,22 @@ Regression suite: `npm run test:node` in `FailSafe/extension`. It runs `g4Witnes
 
 Every RFC 3161 token is validated at its own `genTime`: checkpoint tokens, revocation-notice tokens and transition-record tokens alike. The command is `openssl ts -verify ... -attime <genTime> -crl_check`. The trust file holds:
 - the pinned roots named in `tools/g4/tsa-policy.json`, where each root file must hold exactly one certificate (`TSA_ROOT_MALFORMED` otherwise);
-- every CRL committed under `tools/g4/tsa-crls/` (PEM files ending `.crl`, read from Git at HEAD; anything else is `TSA_CRL_MALFORMED`).
+- OpenSSL's canonical re-encoding of every CRL committed under `tools/g4/tsa-crls/`. Each CRL is read from Git at HEAD, and each `.crl` file must hold exactly one PEM CRL and nothing else (`TSA_CRL_MALFORMED`). The CRL must verify against one pinned root on its own (`TSA_CRL_UNTRUSTED`). A CRL file therefore cannot add a trust anchor.
 
-The TSA signer must appear in no committed CRL that was current at the token's time.
+Archived CRLs are **append-only**: a committed CRL file that was ever deleted, changed or renamed is `REFUSED TSA_CRL_HISTORY`, even if it was later restored.
+
+Revocation of the TSA signer is checked twice:
+- OpenSSL requires a CRL current at the token's time (`-crl_check`).
+- The verifier then consults **every** archived CRL from the signer's issuing root, including CRLs issued after the token. The token is refused if any of them lists the signer as revoked at or before the token's time, or as revoked for key or CA compromise at any time (RFC 3161 section 4: a compromised TSA key makes all its tokens suspect).
 
 | Situation | Result |
 |---|---|
 | No CRL current at the token's time | `BLOCKED TSA_REVOCATION_EVIDENCE_MISSING` |
-| Signer revoked in a CRL current then | `REFUSED TSA_SIGNER_REVOKED` |
-| A CRL that does not verify against the pinned root | `REFUSED TOKEN_INVALID` |
+| Signer revoked at or before the token's time, or for compromise, in any archived CRL | `REFUSED TSA_SIGNER_REVOKED` |
+| A CRL file not signed by a pinned root | `REFUSED TSA_CRL_UNTRUSTED` |
+| An archived CRL removed or changed in history | `REFUSED TSA_CRL_HISTORY` |
 
-A checkpoint therefore stays verifiable after its TSA signer certificate expires, and a token made after its signer was revoked is refused.
+A checkpoint therefore stays verifiable after its TSA signer certificate expires. A token made after its signer was revoked is refused once any archived CRL records that revocation.
 
 **Archived evidence is a pre-seal input.** Before a seal, a CRL that covers the planned token time must be committed: its `lastUpdate` is at or before that time and its `nextUpdate` after it. FreeTSA publishes its root CRL yearly (`http://www.freetsa.org/crl/root_ca.crl`). The committed `freetsa-root-ca-2026-09-18.crl` covers 2026-09-18 to 2027-09-18. After that date a newer CRL must be fetched, checked against the pinned root (`openssl crl -in <file> -CAfile tools/g4/tsa-roots/freetsa-root-ca.pem -noout`) and committed before the next checkpoint. Older CRLs are never removed.
 
@@ -236,7 +241,8 @@ The token's imprint is `SHA-256("FailSafe-G4-revocations-v1\0" || u64be(len) || 
 4. Optionally revoke the old key afterwards (see Revocation).
 
 The verifier accepts the change only if all of these hold:
-- the record names this repository, the old and new fingerprints, and the previous checkpoint;
+- the record names this repository, the old and new fingerprints, the previous checkpoint and that checkpoint's manifest SHA-256;
+- its token time is inside the signing key's certificate window;
 - it is signed by the old key and timestamped between the two checkpoints;
 - the old key was not revoked at the record's time.
 
@@ -250,7 +256,7 @@ Otherwise the change is `KEY_TRANSITION_INVALID`. Continuity is verified, and th
 5. The next checkpoint is signed by the new key.
 
 The verifier refuses the recovery:
-- with `KEY_RECOVERY_UNREVOKED` while the old key is not revoked by the record's time;
+- with `KEY_RECOVERY_UNREVOKED` unless the old key's notice is effective by the record's token time **and** that notice's own registry token is no later than the record's token (a revocation timestamped after the recovery, even if backdated, does not count);
 - with `KEY_RECOVERY_UNACKNOWLEDGED` unless `--accept-recovery g4-NNNNNN:<digest>` is passed with the offline value.
 
 When it is accepted, every PASS (release mode included) carries the limitation `emergency key recovery after g4-NNNNNN ... chain continuity across it is NOT verified`. Checkpoint links and the ledger byte-prefix continue to be checked across a recovery. What is not verified is that the holder of the old key agreed to the change. A recovery therefore never claims uninterrupted continuity, and a release across one needs its own recorded owner decision.

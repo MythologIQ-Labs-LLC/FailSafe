@@ -1,0 +1,33 @@
+{
+  "schema": "failsafe-g4-checkpoint-manifest/v1",
+  "checkpointId": "g4-000001",
+  "sequence": 1,
+  "repository": "test/failsafe-g4",
+  "commit": "d8b5f9bc089a7a43c90acd331474ae756f4d0028",
+  "ledger": {
+    "path": "docs/META_LEDGER.md",
+    "sha256": "07891ebff99590365d8d3fa06e6742c19b855235120a4259b7e7a058b503b632",
+    "byteLength": 2522852,
+    "entryCount": 977,
+    "lastEntryNumber": 959
+  },
+  "previousCheckpoint": {
+    "genesis": "after clean epoch #914"
+  },
+  "previousLedger": null,
+  "revocationRegistry": {
+    "path": "tools/g4/revocations.json",
+    "sha256": "a946671f89256a82e01cf106ad010f6951bf7e7a28c02309b5abe19bf3146886",
+    "version": 1
+  },
+  "historicalGapStatement": {
+    "path": "tools/g4/HISTORICAL_GAPS.md",
+    "sha256": "6a6b379998ad75d89e389adf4864dbd179954256eae56074e9c9ab599ef9e2e3"
+  },
+  "key": {
+    "fingerprintSha256": "13bd917ddf84434815cf48581703c4fdad784fca4bb35cad53a03d6f23205825",
+    "algorithm": "ECDSA-P256-SHA256",
+    "signatureEncoding": "ieee-p1363"
+  },
+  "createdUtc": "2026-11-12T16:43:51.965Z"
+}

@@ -34,4 +34,8 @@ It then creates the following, each with a real FreeTSA token:
 
 `rotated/` in each run holds the throwaway repository's checkpoints, the transition record (`.json`, `.sig`, `.tsr`), the notice token and the registry. Local directory names in the logs are replaced by `<scratch>`, and `.pem` files carry an added `.txt` suffix.
 
-**Network use:** 10 RFC 3161 requests to `https://freetsa.org/tsr`, 5 per run, at least 2 s apart. Each was for a framed SHA-256 imprint of throwaway test data. No repository content, key, path or secret was sent.
+**After audit VETO #959 (iteration 2): `sem3` and `sem4`.** The record format gained `afterCheckpointManifestSha256`, and archived CRLs became append-only, so the check was run again.
+- `sem3` met 4 of 5. Its single miss was the script's own outdated expectation: removing the committed CRL is now `REFUSED TSA_CRL_HISTORY` (append-only) rather than `BLOCKED`.
+- `sem4`, with that expectation corrected in `scripts/qualify-semantics.cjs`, met **5 of 5**. Release-mode `PASS OK` with no limitation held both for the stamped registry and for the rotation pinned to the genesis key.
+
+**Network use:** 20 RFC 3161 requests to `https://freetsa.org/tsr`, 5 per run (sem1 to sem4), at least 2 s apart. Each was for a framed SHA-256 imprint of throwaway test data. No repository content, key, path or secret was sent.

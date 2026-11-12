@@ -49,17 +49,25 @@ function checkVersion(ctx, v, published, previousTime) {
   return genTime;
 }
 
-/** Throws unless every committed registry version carries a valid, consistent notice token. */
+/**
+ * Throws unless every committed registry version carries a valid, consistent
+ * notice token. Returns, for each revoked fingerprint, the token time of the
+ * version that first published its notice (when the revocation was witnessed).
+ * @returns {Map<string, string>}
+ */
 function verifyNotices(ctx) {
   let published = 0;
   let previousTime = null;
+  const witnessed = new Map();
   for (const v of committedVersions(ctx)) {
     if (v.version === 1 && v.parsed.revocations.length > 0) {
       throw refuse("REVOCATION_UNSTAMPED", "revocation registry version 1 holds a notice; notices start at version 2, each with a token");
     }
     if (v.version >= 2) previousTime = checkVersion(ctx, v, published, previousTime);
+    for (const n of v.parsed.revocations.slice(published)) if (!witnessed.has(n.fingerprintSha256)) witnessed.set(n.fingerprintSha256, previousTime);
     published = v.parsed.revocations.length;
   }
+  return witnessed;
 }
 
 module.exports = { NOTICE_TAG, noticeImprint, verifyNotices };

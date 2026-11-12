@@ -89,8 +89,10 @@ it("the genesis pin still decides: pinning the new key instead is refused", asyn
 
 /** Write a hand-made record signed by `signer`, bypassing the builder's checks. */
 async function forgeRecord(dir, fields, signer, { stamp = true } = {}) {
+  const manifestSha = sha256(fs.readFileSync(path.join(S.cpDir(dir, "g4-000002"), layout.FILES.manifest)));
   const r = { schema: SCHEMA, kind: "rotation", repository: REPOSITORY, fromFingerprintSha256: base.signer.fingerprint,
-    toFingerprintSha256: keyB.fingerprint, afterCheckpoint: "g4-000002", createdUtc: new Date().toISOString(), ...fields };
+    toFingerprintSha256: keyB.fingerprint, afterCheckpoint: "g4-000002", afterCheckpointManifestSha256: manifestSha,
+    createdUtc: new Date().toISOString(), ...fields };
   const bytes = Buffer.from(JSON.stringify(r, null, 2) + "\n");
   const sig = signer.sign(bytes);
   const p = layout.transitionPaths(base.signer.fingerprint);
@@ -103,7 +105,14 @@ async function forgeRecord(dir, fields, signer, { stamp = true } = {}) {
   await S.checkpoint(dir, base.tsa, keyB);
 }
 
+it("control: a hand-made record with every binding right passes", async () => {
+  const dir = await prepare();
+  await forgeRecord(dir, {}, base.signer);
+  assert.equal(S.verify(dir).verdict, "PASS");
+});
+
 for (const [name, fields, signerOf, stamp] of [
+  ["a rotation bound to another manifest of the previous checkpoint (audit #959 N2)", { afterCheckpointManifestSha256: "0".repeat(64) }, () => base.signer, true],
   ["a rotation signed by the new key instead of the old one", {}, () => keyB, true],
   ["a rotation naming the wrong previous checkpoint", { afterCheckpoint: "g4-000001" }, () => base.signer, true],
   ["a rotation to a different key than the one that signs next", { toFingerprintSha256: "c".repeat(64) }, () => base.signer, true],
@@ -165,6 +174,41 @@ it("recovery: refused while the lost key is not revoked", async () => {
   const dir = await prepare();
   await transitionThenCheckpoint(dir, record("recovery", { signer: keyB }));
   refused(S.verify(dir), "KEY_RECOVERY_UNREVOKED");
+});
+
+it("recovery: refused when the revocation is backdated but timestamped after the record (audit #959 N1)", async () => {
+  const dir = await prepare();
+  const before = Date.now() - 5000;
+  await writeTransition({ ...record("recovery", { signer: keyB }), repoRoot: dir });
+  S.commitAll(dir, "test: recovery record first");
+  await sleep(1100);
+  S.write(dir, layout.REGISTRY_PATH, S.registryBytes(2, [{ fingerprintSha256: base.signer.fingerprint, effectiveUtc: new Date(before).toISOString(), reason: "late" }]));
+  S.commitAll(dir, "test: backdated revocation");
+  await stampRegistry({ repoRoot: dir, tsa: base.tsa });
+  S.commitAll(dir, "test: its token, after the record");
+  S.appendEntry(dir, 933);
+  S.commitAll(dir, "test: entry 933");
+  await S.checkpoint(dir, base.tsa, keyB);
+  const ack = `g4-000002:${sha256(fs.readFileSync(path.join(dir, layout.transitionPaths(base.signer.fingerprint).record)))}`;
+  refused(S.verify(dir, { acceptRecovery: [ack] }), "KEY_RECOVERY_UNREVOKED");
+});
+
+it("refused: a rotation signed after the old key's certificate expired (audit #959 V2)", async () => {
+  const work = fs.mkdtempSync(path.join(base.work, "expired-old-"));
+  const a2 = createTestSigner(found.bin, path.join(work, "keys"), "A2", { notAfterMs: Date.now() + 8000 });
+  const dir = path.join(work, "repo");
+  fs.mkdirSync(dir);
+  S.initRepo(dir, base.tsa, a2);
+  await S.checkpoint(dir, base.tsa, a2);
+  S.addKey(dir, keyB);
+  S.commitAll(dir, "test: key B");
+  await sleep(9000);
+  await writeTransition({ ...record("rotation", { signer: a2 }), repoRoot: dir, fromFingerprint: a2.fingerprint, afterCheckpoint: "g4-000001" });
+  S.commitAll(dir, "test: rotation by the expired key");
+  S.appendEntry(dir, 934);
+  S.commitAll(dir, "test: entry 934");
+  await S.checkpoint(dir, base.tsa, keyB);
+  refused(S.verify(dir), "KEY_TRANSITION_INVALID");
 });
 
 it("recovery: a record signed by the old key instead of the new one is refused", async () => {

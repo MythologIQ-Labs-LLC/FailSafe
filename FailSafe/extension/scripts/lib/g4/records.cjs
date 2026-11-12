@@ -8,7 +8,7 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
-const { refuse, block, isHex64 } = require("./bytes.cjs");
+const { refuse, block, isHex64, sha256 } = require("./bytes.cjs");
 const { requireBlob } = require("./git.cjs");
 const layout = require("./layout.cjs");
 const registry = require("./registry.cjs");
@@ -63,8 +63,10 @@ async function writeTransition({ repoRoot, kind, fromFingerprint, toFingerprint,
   if (!isHex64(fromFingerprint) || !isHex64(toFingerprint)) throw refuse("TRANSITION_INPUT", "fingerprints must be 64 lowercase hex");
   const expected = kind === "rotation" ? fromFingerprint : toFingerprint;
   if (signer.fingerprint !== expected) throw refuse("TRANSITION_INPUT", `a ${kind} record must be signed by ${expected.slice(0, 16)}`);
+  const afterManifest = path.join(repoRoot, layout.CHECKPOINTS_DIR, afterCheckpoint, layout.FILES.manifest);
+  if (!fs.existsSync(afterManifest)) throw refuse("TRANSITION_INPUT", `${afterCheckpoint} has no manifest in this checkout`);
   const record = { schema: SCHEMA, kind, repository, fromFingerprintSha256: fromFingerprint, toFingerprintSha256: toFingerprint,
-    afterCheckpoint, createdUtc: createdUtc || new Date().toISOString() };
+    afterCheckpoint, afterCheckpointManifestSha256: sha256(fs.readFileSync(afterManifest)), createdUtc: createdUtc || new Date().toISOString() };
   const recordBytes = Buffer.from(JSON.stringify(record, null, 2) + "\n");
   const signatureBytes = signer.sign(recordBytes);
   if (!verifySignature(recordBytes, signatureBytes, loadCertificate(signer.certificateDer))) throw refuse("SIGNATURE_INVALID", "signer output does not verify");
