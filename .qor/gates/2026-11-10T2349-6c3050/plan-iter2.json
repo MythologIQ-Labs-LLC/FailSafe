@@ -1,0 +1,46 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T00:24:38Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "iteration": 2,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #652",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - static Statewright website-handoff card in the Integrations Catalog renderer with jsdom and Playwright tests"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Installed-host click and real provider destination are verified outside CI"
+    ],
+    "non_goals": [
+      "No provider API, credentials, telemetry, ingestion or status probe"
+    ],
+    "exclusions": [
+      "No G4, RC, tag or publication"
+    ]
+  },
+  "ci_commands": [
+    "npm run test:all",
+    "npx playwright test src/test/ui/integrations-catalog.spec.ts"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "ed26bcbb75380258a935fbe34d941c9ba5333c989abd9382644ebc5054689f97",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-11T00:24:38Z"
+  }
+}

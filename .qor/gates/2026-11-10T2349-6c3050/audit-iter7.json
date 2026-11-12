@@ -1,0 +1,36 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T16:12:19Z",
+  "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter7-confirmation.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "specification-drift"
+  ],
+  "target_content_hash": "05a2e3f2cca42fcbd2584c13005623e7dd7c48597efbb816235dc9e0f5b6feaa",
+  "report_content_hash": "29a804f9c2257e83d01ed27e4f652cf3c0159f913cb9d3286e2536e7acdb98c9",
+  "iteration": 7,
+  "ledger_entry": 945,
+  "ledger_chain_hash": "b4773d479809b5a9f0b6ac1b890673e17f3d054a2571e89bca0b34e75ff21f2f",
+  "audited_candidate": "e9ff78bd26cdb6fbc3d03eed59b0c3aafec8f205",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; bounded confirmation check by a fresh-context independent reviewer (not an open-ended audit)",
+  "violations": [
+    {
+      "id": "D",
+      "category": "specification-drift",
+      "detail": "bounded confirmation check: jsdom stubs miss window.WebSocket, so a mutant made 27 external DNS lookups of the provider; two record sentences claiming the suites cannot reach the provider are false"
+    }
+  ],
+  "merge_obligations": "apply the fifth auditor's closed list; confirmation check of that list; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-11T16:12:19Z"
+  }
+}

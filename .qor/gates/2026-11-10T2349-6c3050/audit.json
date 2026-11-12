@@ -1,0 +1,28 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-10T2349-6c3050",
+  "ts": "2026-11-11T18:05:59Z",
+  "target": ".failsafe/governance/plans/plan-v6013-statewright-652-website-first.md",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT-653-iter8-confirmation.md",
+  "risk_grade": "L2",
+  "findings_categories": [],
+  "target_content_hash": "ff51e08541bbadaac66d11224aa759e2e397c90cea0aa816bde36fa0ac499d47",
+  "report_content_hash": "7b4306a76d5623bb96cd2a510b780dbb6a1ca4dd52de310800026248e1b389e7",
+  "iteration": 8,
+  "ledger_entry": 946,
+  "ledger_chain_hash": "1fda71ae8924526b80d60d31dfad34ce00c29e2668ecff476d7b6c792008efbe",
+  "audited_candidate": "b395693d174e837a7c053f4193a376d1c0a7f9ae",
+  "ordering": "retrospective, post-implementation, pre-release review under declared ordering inversion; not a pre-implementation verdict",
+  "mode": "solo; bounded confirmation check by a fresh-context independent reviewer (not an open-ended audit)",
+  "violations": [],
+  "merge_obligations": "required current-head CI; owner authority; owner acceptance of open installed-host items (signed-in view, VS Code 1.122.1, Cursor); no admin bypass",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "pass",
+    "ts": "2026-11-11T18:05:59Z"
+  }
+}

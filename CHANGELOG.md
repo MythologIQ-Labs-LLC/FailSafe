@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The Integrations tab has a Statewright AI card with a link that opens Statewright's Run History website (`https://statewright.ai/runs`) in your browser. Statewright handles sign-in and run data. FailSafe sends nothing to Statewright, shows no connection status, and does not read Statewright history or enforce Statewright workflows; embedded run history is not part of this release (#652).
+
 ## [6.0.12] - 2026-11-10
 
 ### Added

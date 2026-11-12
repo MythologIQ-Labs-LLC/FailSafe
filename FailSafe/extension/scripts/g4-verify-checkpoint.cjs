@@ -13,7 +13,9 @@
  * unless --trust-fingerprint, --trusted-head, --repository and --commit are all
  * given and well formed, HEAD is exactly --commit, and the checkout is clean
  * (no modified or untracked file; no ignored file under tools/g4). It refuses
- * the --tsa-ca and --checkpoints overrides.
+ * the --tsa-ca and --checkpoints overrides, a committed checkpoint tree that
+ * is not exactly five regular files per g4-NNNNNN directory, and any committed
+ * path that differs from the evidence directories only by case.
  *
  * --tsa-ca is a test/diagnostic override: a PASS under it carries the
  * limitation "NOT a release verification". Unexpected errors are BLOCKED
