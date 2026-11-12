@@ -17,7 +17,7 @@ Design authority: the "G4: complete-ledger-byte witness" section and the Iterati
 | `FailSafe/extension/scripts/g4-verify-checkpoint.cjs` | CLI: verify the whole chain |
 | `FailSafe/extension/scripts/g4-tsa-probe.cjs` | Manual live-TSA interoperability probe (random digests only) |
 | `tools/g4/sign-checkpoint.ps1` | Signs SHA-256(manifest) with the named TPM key (`CngKey.Open` + `ECDsaCng.SignHash`) |
-| `tools/g4/enroll-tpm-key.ps1` | Creates the TPM key and exports the public certificate. **Owner only; never run by automation** |
+| `tools/g4/enroll-tpm-key.ps1` | Creates the TPM key and exports the public certificate. **Owner only.** Automation never passes `-ConfirmPersistentTpmKey`; the test suite runs the script only without it, to check that it refuses before any key-provider call (#665) |
 | `tools/g4/revocations.json` | Append-only revocation registry (version 1, empty) |
 | `tools/g4/revocation-notices/v<N>.tsr` | RFC 3161 token for registry version N (N >= 2) |
 | `tools/g4/tsa-crls/*.crl` | Archived CRLs of the pinned TSA root (revocation evidence at token time) |

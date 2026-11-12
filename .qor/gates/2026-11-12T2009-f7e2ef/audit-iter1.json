@@ -1,0 +1,35 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T2009-f7e2ef",
+  "ts": "2026-11-12T20:16:30Z",
+  "target": ".failsafe/governance/plans/plan-v6013-665-g4-tpm-scripts.md",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/665/AUDIT_REPORT-665-iter1.md",
+  "risk_grade": "L2",
+  "target_content_hash": "8d9de63bd583db3afb6ada2aefb8149ddd8683021ad72cdaf2946c9f98c30ec3",
+  "report_content_hash": "6a0122c9b6e29bddce8e4aabf58f5806b63fd55588c3a47e1dd41a18df1b4c38",
+  "iteration": 1,
+  "ledger_entry": 964,
+  "ledger_chain_hash": "ad838120c541798e07c575f42897b031b3b20b9f773d4f5af228d8c1ff199d9b",
+  "audited_candidate": "9b2a304d0f81d442e03a4d15f93c1709c1caa2c6",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "findings_categories": [
+    "specification-drift"
+  ],
+  "violations": [
+    {
+      "id": "V1",
+      "category": "specification-drift",
+      "detail": "test executes enroll-tpm-key.ps1 while three statements say it is never run by automation; ordering invariant unrecorded"
+    }
+  ],
+  "merge_obligations": "reconcile statements, record ordering invariant; new independent audit",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "veto",
+    "ts": "2026-11-12T20:16:30Z"
+  }
+}
