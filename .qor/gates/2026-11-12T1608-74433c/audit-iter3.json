@@ -1,0 +1,35 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T1608-74433c",
+  "ts": "2026-11-12T17:21:11Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter3.md",
+  "risk_grade": "L3",
+  "target_content_hash": "44bc13a3b378d177619b906edfc6b1182a42710d34dcdd03de006114761f768c",
+  "report_content_hash": "986b1c77c47b98bd22407c29833ecbbd9a42a03022aea243badc8cf9714cdc0d",
+  "iteration": 3,
+  "ledger_entry": 961,
+  "ledger_chain_hash": "9462f47662128b0698c9861b358c01907e81ac53b40797f7cea48da88fc95177",
+  "audited_candidate": "95069d83436acefb3506ee1987723f6e6afed144",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "findings_categories": [
+    "security-l3"
+  ],
+  "violations": [
+    {
+      "id": "V7",
+      "category": "security-l3",
+      "detail": "shallow or grafted clone hides removed CRLs from the append-only check; release PASS"
+    }
+  ],
+  "merge_obligations": "refuse shallow or grafted repositories; pin git log merge and root handling; tests; new independent audit",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "veto",
+    "ts": "2026-11-12T17:21:11Z"
+  }
+}

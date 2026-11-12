@@ -36551,3 +36551,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 2 (exact audited commit ba8c1b21fdb23323966432f14c9f029beea8ef79, draft PR #658, issue #638), by a second fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Closed and re-attacked by the auditor: iteration-1 V1 (CRL trailing data, DER, two blocks, CRL plus certificate, certificate inside CRL armour, PEM headers, BOM, trailing NUL and a non-pinned issuer were all refused), V2 (key window, including a recovery signed by a not-yet-valid new key), N1 and N2. V5 (blocking, security): the archived-CRL check refuses all tokens only for key or CA compromise and judges every other revocation, including one with no reasonCode and certificateHold, by its date; RFC 3161 section 4 keeps earlier tokens valid only for reasons unspecified, affiliationChanged, superseded and cessationOfOperation, and a TSA signer revoked without a reason after the tokens verified release-mode PASS OK. V6 (blocking, security): the append-only CRL history check runs git log without -m, so an archived CRL removed only by a merge resolution, or by an older branch merged with -s ours, goes unseen; a revoking CRL dropped that way turned REFUSED TSA_SIGNER_REVOKED into release-mode PASS OK; checkpoints also do not bind the CRL set, which is undisclosed. g4 suites 149 of 149 and docs 145 of 145 passed; razor holds; the ledger only appends #959 and verifies post-anchor clean; nothing is weakened relative to main. Merge obligations: remediate V5 and V6 with tests, correct the RFC wording and disclose or close the history-rewrite limit, then obtain a new independent audit. Not a release decision.
 
 ---
+
+### Entry #961: GATE TRIBUNAL - plan-v6013-638-g4-token-time-transitions (iteration 3) VETO
+
+**Timestamp**: 2026-11-12T17:20:58Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1608-74433c`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md`
+**Report**: `.failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1608-74433c/audit-iter3.json`
+
+**Content Hash**: `986b1c77c47b98bd22407c29833ecbbd9a42a03022aea243badc8cf9714cdc0d`
+**Previous Hash**: `7ade031c76a2fe69415dbd48670d283858441e5292154e8477e646813603d8df`
+**Chain Hash (Merkle seal)**: `9462f47662128b0698c9861b358c01907e81ac53b40797f7cea48da88fc95177`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-token-time-transitions.md iteration 3 (exact audited commit 95069d83436acefb3506ee1987723f6e6afed144, draft PR #658, issue #638), by a third fresh-context independent auditor on 2026-11-12 (UTC); risk grade L3. Closed and re-attacked by the auditor: V5 (no reasonCode, keyCompromise, cACompromise, certificateHold and removeFromCRL refuse every token; unspecified, affiliationChanged, superseded and cessationOfOperation pass when the revocation follows the token; multi-entry CRLs, invalidity dates and hold instructions behave) and V6 within a complete history (octopus and -s ours merges, resolutions that drop the CRL, renames, mode changes, add-then-remove on a side branch, criss-cross merges and the same bytes under another name are all TSA_CRL_HISTORY); iteration-1 fixes still hold. V7 (blocking, security): the CRL append-only check, like the existing registry history check, does not require a complete history; on git clone --depth 5, 6 or 8 of the same qualified commit, and on a full copy with a planted .git/shallow or .git/info/grafts, a keyCompromise CRL added and deleted on a side branch is invisible and release mode returns PASS OK with no limitation while the HEAD SHA still matches --commit. Note N1: with log.showRoot=false and log.diffMerges=first-parent in the verifying machine's own Git config, an orphan-root CRL dropped by an -s ours merge also passes. g4 suites 154 of 154, docs 145 of 145; razor holds; the ledger only appends #959 and #960 and verifies post-anchor clean; nothing is weakened relative to main. Merge obligations: refuse shallow or grafted repositories, pin the git log merge and root handling, add tests, state the complete-clone requirement, and obtain a new independent audit. Not a release decision.
+
+---
