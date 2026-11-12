@@ -70,7 +70,7 @@ Each item needs an explicit, dated owner record, such as a committed decision fi
 
    Then the owner runs it on the owner's workstation and commits only the `.cer`.
 2. **Key fingerprint publication.** Where the owner fingerprint is recorded outside the repository, so verifiers can pin it with `--trust-fingerprint`.
-3. **TSA selection.** Which TSA (recommended: DigiCert). The owner commits its root PEM under `tools/g4/tsa-roots/` and sets `tsa-policy.json` to `"status": "selected"` with the root's DER SHA-256.
+3. **TSA selection.** **Decided 2026-11-12: FreeTSA public service** (`V6_0_13_G4_TSA_OWNER_SELECTION_2026-11-12.md`); the 2026-11-10 recommendation of DigiCert below is superseded. Which TSA (recommended on 2026-11-10: DigiCert). The owner commits its root PEM under `tools/g4/tsa-roots/` and sets `tsa-policy.json` to `"status": "selected"` with the root's DER SHA-256.
 4. **Trusted-head retention.** Where each checkpoint head (`g4-NNNNNN:<manifest sha256>`) is retained independently of the repository, for example an owner-held offline record or a public transparency log. Without it, truncation and re-genesis stay undetectable, and the test suite demonstrates both.
 5. **Cadence and gate wiring.** Confirm one checkpoint at every `/qor-substantiate` seal and every RC promotion. Approve adding the checkpoint and verification step to the seal procedure (not wired in this change), and creating the genesis checkpoint at the v6.0.13 seal.
 6. **Key transition and recovery procedure.** Approve:

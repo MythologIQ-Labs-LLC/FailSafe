@@ -1,6 +1,6 @@
 # G4 ledger witness: operations (v6.0.13, #638)
 
-**Status:** the tooling is implemented and tested against a throwaway local test TSA and ephemeral software test keys. **No owner key exists and no checkpoint exists.** The owner selected the FreeTSA public service on 2026-11-12 (`docs/releases/V6_0_13_G4_TSA_OWNER_SELECTION_2026-11-12.md`). On this repository the verifier returns `BLOCKED TSA_POLICY_UNSELECTED` until the separately audited single-root policy is merged, and `BLOCKED NO_CHECKPOINTS` after that until a genesis checkpoint exists. See `docs/releases/V6_0_13_G4_OWNER_DECISIONS.md` for the remaining owner actions.
+**Status:** the tooling is implemented and tested against a throwaway local test TSA and ephemeral software test keys. **No owner key exists, no TSA is selected, and no checkpoint exists.** The verifier returns `BLOCKED TSA_POLICY_UNSELECTED` on this repository until the owner approvals in `docs/releases/V6_0_13_G4_OWNER_DECISIONS.md` are given and carried out.
 
 Design authority: the "G4: complete-ledger-byte witness" section and the Iteration 3 refinements of `.failsafe/governance/plans/plan-v6012-release-governance.md` (audits #917 to #919), and the owner decision `docs/releases/V6_0_12_G4_DISPOSITION.md`.
 
