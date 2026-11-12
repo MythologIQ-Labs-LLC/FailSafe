@@ -1,0 +1,51 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T1608-74433c",
+  "ts": "2026-11-12T16:21:11Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter1.md",
+  "risk_grade": "L3",
+  "target_content_hash": "d6e7437fcb7f7ce925a8145082fe6369fb487f8c675e1d5f900e5f69f388d59f",
+  "report_content_hash": "6da033ccabd4dad11c4eaf0fe5bda9bcb52afdf86e2866bb118067d57bc19cba",
+  "iteration": 1,
+  "ledger_entry": 959,
+  "ledger_chain_hash": "cc8909928a5685f92c306798f6595f40a240ace60ebd11fdeee22b8a0d754d2d",
+  "audited_candidate": "59c4291e4b9e8ac374179ce252ad578f06debf71",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "findings_categories": [
+    "security-l3",
+    "specification-drift"
+  ],
+  "violations": [
+    {
+      "id": "V1",
+      "category": "security-l3",
+      "detail": "CRL file may carry certificates that become TSA trust anchors"
+    },
+    {
+      "id": "V2",
+      "category": "security-l3",
+      "detail": "rotation accepted outside the old key's certificate window"
+    },
+    {
+      "id": "V3",
+      "category": "security-l3",
+      "detail": "later CRL revoking the signer before the token time is ignored"
+    },
+    {
+      "id": "V4",
+      "category": "security-l3",
+      "detail": "archived CRLs can be deleted"
+    }
+  ],
+  "merge_obligations": "remediate V1-V4 with tests; new independent audit",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "veto",
+    "ts": "2026-11-12T16:21:11Z"
+  }
+}
