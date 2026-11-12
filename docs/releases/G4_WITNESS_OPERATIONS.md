@@ -1,6 +1,6 @@
 # G4 ledger witness: operations (v6.0.13, #638)
 
-**Status:** the tooling is implemented and tested against a throwaway local test TSA and ephemeral software test keys. **No owner key exists, no TSA is selected, and no checkpoint exists.** The verifier returns `BLOCKED TSA_POLICY_UNSELECTED` on this repository until the owner approvals in `docs/releases/V6_0_13_G4_OWNER_DECISIONS.md` are given and carried out.
+**Status:** the tooling is implemented and tested against a throwaway local test TSA and ephemeral software test keys. **No owner key exists and no checkpoint exists.** The TSA is selected: the owner chose the FreeTSA public service on 2026-11-12, and `tools/g4/tsa-policy.json` trusts its root alone. The verifier returns `BLOCKED NO_CHECKPOINTS` on this repository until a genesis checkpoint exists. The remaining owner actions are in `docs/releases/V6_0_13_G4_OWNER_DECISIONS.md`.
 
 Design authority: the "G4: complete-ledger-byte witness" section and the Iteration 3 refinements of `.failsafe/governance/plans/plan-v6012-release-governance.md` (audits #917 to #919), and the owner decision `docs/releases/V6_0_12_G4_DISPOSITION.md`.
 
@@ -19,7 +19,8 @@ Design authority: the "G4: complete-ledger-byte witness" section and the Iterati
 | `tools/g4/sign-checkpoint.ps1` | Signs SHA-256(manifest) with the named TPM key (`CngKey.Open` + `ECDsaCng.SignHash`) |
 | `tools/g4/enroll-tpm-key.ps1` | Creates the TPM key and exports the public certificate. **Owner only; never run by automation** |
 | `tools/g4/revocations.json` | Append-only revocation registry (version 1, empty) |
-| `tools/g4/tsa-policy.json` | Trusted TSA roots (`pending-owner-decision`, none) |
+| `tools/g4/tsa-policy.json` | Trusted TSA roots (`selected`: one root, FreeTSA Root CA, DER SHA-256 `a6379e7c...18aabc`) |
+| `tools/g4/tsa-roots/freetsa-root-ca.pem` | The FreeTSA Root CA, byte-identical to `https://freetsa.org/files/cacert.pem` (qualification evidence: `.failsafe/governance/evidence/g4-freetsa/`) |
 | `tools/g4/HISTORICAL_GAPS.md` | Historical-gap statement, bound into every manifest by SHA-256 |
 | `tools/g4/keys/<sha256>.cer` | Committed public certificates (none yet) |
 | `tools/g4/checkpoints/g4-NNNNNN/` | `manifest.json`, `manifest.sig`, `timestamp.tsq`, `timestamp.tsr`, `tsa-chain.pem` |
@@ -82,7 +83,7 @@ Windows PowerShell's .NET Framework has no `CngProvider.MicrosoftPlatformCryptoP
 After enrollment:
 1. Commit `tools/g4/keys/<fingerprint>.cer`. The private key never leaves the TPM. Nothing in CI or the repository can sign.
 2. Record the fingerprint outside the repository, where a verifier can pin it with `--trust-fingerprint`.
-3. Commit the selected TSA root under `tools/g4/tsa-roots/`, and set `tsa-policy.json` to `"status": "selected"` with its DER SHA-256.
+3. The TSA root is already committed (FreeTSA, 2026-11-12). Changing it, or adding a second root, is a new owner decision with its own independent audit.
 
 ## Checkpoint cadence
 
