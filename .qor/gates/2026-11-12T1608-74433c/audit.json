@@ -1,35 +1,41 @@
 {
   "phase": "audit",
   "session_id": "2026-11-12T1608-74433c",
-  "ts": "2026-11-12T17:21:11Z",
+  "ts": "2026-11-12T17:39:10Z",
   "target": ".failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md",
   "verdict": "VETO",
-  "report_path": ".failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter3.md",
+  "report_path": ".failsafe/governance/evidence/g4-semantics/AUDIT_REPORT-g4-token-time-transitions-iter4.md",
   "risk_grade": "L3",
-  "target_content_hash": "44bc13a3b378d177619b906edfc6b1182a42710d34dcdd03de006114761f768c",
-  "report_content_hash": "986b1c77c47b98bd22407c29833ecbbd9a42a03022aea243badc8cf9714cdc0d",
-  "iteration": 3,
-  "ledger_entry": 961,
-  "ledger_chain_hash": "9462f47662128b0698c9861b358c01907e81ac53b40797f7cea48da88fc95177",
-  "audited_candidate": "95069d83436acefb3506ee1987723f6e6afed144",
+  "target_content_hash": "3baea77db08c656c957ce5caa5ce05de1c1d5e3d5276c7b5f9aece6d07744406",
+  "report_content_hash": "92bb91a6d067a825c5cb89decd6e1ac07eabd496743bfab78daecb74c8937049",
+  "iteration": 4,
+  "ledger_entry": 962,
+  "ledger_chain_hash": "be2d24a0cb47f05258d259987317b6070e6ec559c1b87b7e93ad3af209293c5a",
+  "audited_candidate": "7cfe447f51794725ce9d70f27dcb19f9d17c1648",
   "mode": "solo; Option B fresh-context independent auditor",
   "findings_categories": [
-    "security-l3"
+    "security-l3",
+    "specification-drift"
   ],
   "violations": [
     {
-      "id": "V7",
+      "id": "V8",
       "category": "security-l3",
-      "detail": "shallow or grafted clone hides removed CRLs from the append-only check; release PASS"
+      "detail": "forged commit-graph hides CRL history while HEAD keeps its SHA; release PASS"
+    },
+    {
+      "id": "V9",
+      "category": "security-l3",
+      "detail": "substituted loose object passes; object store trusted; docs overstate enforcement"
     }
   ],
-  "merge_obligations": "refuse shallow or grafted repositories; pin git log merge and root handling; tests; new independent audit",
+  "merge_obligations": "disable commit-graph for verifier reads; object integrity check or precise trust statement; tests; new independent audit",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "claude-opus-5-5",
     "human_oversight": "veto",
-    "ts": "2026-11-12T17:21:11Z"
+    "ts": "2026-11-12T17:39:10Z"
   }
 }
