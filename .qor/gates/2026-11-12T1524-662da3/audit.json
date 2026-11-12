@@ -1,0 +1,35 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T1524-662da3",
+  "ts": "2026-11-12T15:32:37Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-freetsa-root.md",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/g4-freetsa/AUDIT_REPORT-g4-freetsa-root-iter1.md",
+  "risk_grade": "L3",
+  "target_content_hash": "3771b3ce285521eb468f6d4fc24231d0341b37f03d2f2733b8920a6fabbb5fc7",
+  "report_content_hash": "447d013d9219a274caea66f51f69097af812eb61fc5491fc07e475829a89153e",
+  "iteration": 1,
+  "ledger_entry": 956,
+  "ledger_chain_hash": "ff894793f813d2541a4e7ae63f3376254cc6ef6d7d612422810e0f6256afdc08",
+  "audited_candidate": "c2102207aecf3a81e788abbb33a0ba05974b467d",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "findings_categories": [
+    "specification-drift"
+  ],
+  "violations": [
+    {
+      "id": "V1",
+      "category": "specification-drift",
+      "detail": "G4_WITNESS_OPERATIONS.md and V6_0_13_G4_OWNER_DECISIONS.md still say no TSA is selected"
+    }
+  ],
+  "merge_obligations": "remediate V1; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "veto",
+    "ts": "2026-11-12T15:32:37Z"
+  }
+}

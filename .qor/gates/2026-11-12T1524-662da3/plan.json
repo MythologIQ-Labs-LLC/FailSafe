@@ -1,0 +1,48 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-12T1524-662da3",
+  "ts": "2026-11-12T15:24:44Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-freetsa-root.md",
+  "iteration": 1,
+  "plan_content_hash": "3771b3ce285521eb468f6d4fc24231d0341b37f03d2f2733b8920a6fabbb5fc7",
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "open_questions": [],
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #638 (owner FreeTSA selection 2026-11-12, PR #647)",
+  "high_risk_target": false,
+  "phases": [
+    "Phase 1 - commit the corroborated FreeTSA root and a single-root selected tools/g4/tsa-policy.json; pin both in g4Witness.test.cjs; retain qualification evidence"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Current-time chain validation until token-time verification lands",
+      "No TSA signer revocation check"
+    ],
+    "non_goals": [
+      "No verifier code change",
+      "No TPM key, checkpoint, genesis or release"
+    ],
+    "exclusions": [
+      "No fallback or second TSA root"
+    ]
+  },
+  "ci_commands": [
+    "node --test src/test/scripts/g4*.test.cjs",
+    "npm run test:node"
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "absent",
+    "ts": "2026-11-12T15:24:44Z"
+  }
+}

@@ -36451,3 +36451,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: RECORD CORRECTION, not an audit verdict, written by the implementer. The report sealed by Entry #954 (content hash 798e7f494d6fa0b82b23fb64aeede4667c96e3f818dfb76a1c851395c3c3d85d) was committed at .agent/staging/AUDIT_REPORT-656-iter5-records.md in 0ebf2032 and is moved unchanged (same git blob d2610783) to .failsafe/governance/evidence/651/AUDIT_REPORT-656-iter5-records.md. The report quotes the name of a test in the pro-retirement guard, that name mentions the retired product, and the guard exempts historical records only under .failsafe/, so CI run 43156370765 on 0ebf2032 failed on it. Entry #954 is left exactly as sealed; its Report field named the original path, which was true when it was sealed. The implementer pushed 0ebf2032 without running test:node locally first, contrary to the repository's CI-budget rule; this relocation was validated locally before it was pushed. The cited file records the move.
 
 ---
+
+### Entry #956: GATE TRIBUNAL - plan-v6013-638-g4-freetsa-root (iteration 1) VETO
+
+**Timestamp**: 2026-11-12T15:32:27Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T1524-662da3`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-freetsa-root.md`
+**Report**: `.failsafe/governance/evidence/g4-freetsa/AUDIT_REPORT-g4-freetsa-root-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T1524-662da3/audit-iter1.json`
+
+**Content Hash**: `447d013d9219a274caea66f51f69097af812eb61fc5491fc07e475829a89153e`
+**Previous Hash**: `19d265e6b0ba16fe35fe8f35d9e6aac2e97e554fa61e24bd0755d6e53b4cc804`
+**Chain Hash (Merkle seal)**: `ff894793f813d2541a4e7ae63f3376254cc6ef6d7d612422810e0f6256afdc08`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-freetsa-root.md iteration 1 (exact audited commit c2102207aecf3a81e788abbb33a0ba05974b467d, branch feat/638-g4-freetsa-root, issue #638), by a fresh-context independent auditor on 2026-11-12 (UTC). Risk grade L3: production TSA trust anchor. Verified by the auditor itself: the committed tools/g4/tsa-roots/freetsa-root-ca.pem is byte-identical (file SHA-256 2151b61137ffa86bf664691ba67e7da0b19f98c758e3d228d5d8ebf27e044438) to the root fetched live from freetsa.org and www.freetsa.org, to the 2019 Internet Archive capture and to the copies in trbs/rfc3161ng and huridocs/preserve; its DER SHA-256 a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc equals the owner-inventoried candidate and the single policy digest, so the STOP condition does not apply; no trust widening or fail-closed weakening was found; the .gitignore negation admits only .pem files directly in tools/g4/tsa-roots and a planted .pem or .key there gives BLOCKED RELEASE_TREE_DIRTY in release mode; the new pin test failed on every planted policy or root change except added unknown JSON fields; g4 suites 109 of 109 and the pro-retirement guard passed; the live qualification re-run met 42 of 42 expectations with 5 random-digest FreeTSA requests. V1 (blocking, specification-drift): docs/releases/G4_WITNESS_OPERATIONS.md and docs/releases/V6_0_13_G4_OWNER_DECISIONS.md on main would still say that no TSA is selected and that the policy is pending, contradicting the committed trust configuration. Notes for the owner: N1, an existing verifier gap not introduced here, policyCaFile hashes only the first certificate of a root file but trusts every certificate in it, so a certificate appended to a root PEM would pass the policy digest check; the committed file is pinned by its file hash in the new test. N2, state the PR #647 merge precondition on the PR. Merge obligations: remediate V1 and obtain a new independent audit. Not a release decision.
+
+---
