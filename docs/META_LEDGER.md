@@ -36272,3 +36272,43 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL PASS for plan-v6013-statewright-652-website-first.md iteration 8 (plan hash recorded in plan-iter8.json; exact audited source b395693d174e837a7c053f4193a376d1c0a7f9ae on main 9f16548d; draft PR #653, issue #652). BOUNDED CONFIRMATION CHECK, not an open-ended audit, by an eighth fresh reviewer, executed as the owner instructed ("execute the sixth audit as a bounded confirmation of these findings ... record an independent PASS only if the defined acceptance criteria pass"), against criteria set before the check: D network guard real and truthfully described (jsdom stubs on the window and as globals, restored after each test; the window-socket mutant of Entry #945 makes no attempt from the Statewright test file; the committed external guard refuses non-loopback lookups and connections and its baselines report none; the Playwright host mapping applies to every test), F records true (Entries #938 to #945 unaltered since e475ca8f and the chain verifies; the committed scripts reproduced 36 of 36 sampled evidence rows exactly), O1 style composition (the appending edits are killed, no false refusal, not vacuous), and A, B, C, E, G, H as found by Entry #945. All hold. 184 earlier mutants re-run with the auditors' own definitions: 171 killed, the same 13 carried survivors as Entry #945, none moved from killed to survived. The shipped files are byte-identical to dd766c15 and no defect was found in them against the owner-approved scope or any required negative. No flake in 150 Playwright runs under load; guards green; razor holds. Observations recorded for the owner, outside the verdict: the plan sentence that the external guard refuses every DNS lookup is narrower in fact, because dns.resolve calls, dns.Resolver instances and UDP sends are not covered (no browser, jsdom, fetch, ws or http path uses them; only a deliberate import of Node network modules into browser code could); every test process means every Node test process, and the browser is covered by the host mapping; on the audited commit CI completed with 12 of 13 checks passing, and the Full Test Suite failed one timing test in ArchitectureLinks.test.cjs (event loop lag 112 ms against 100 ms; tracked in #651, a file this change does not touch, passing locally), so test:ui did not run in CI. Installed-host acceptance on a VSIX built from the audited commit (SHA-256 70e19874ea5a9fd2cc72adbdae8ee70b0b8a8d6f96be2eb645a963a3720a926d, unpacked contents identical to every earlier tested build) is recorded by the implementer in .agent/staging/installed-653/: 14 of 14 on VS Code 1.145.2 and 1.141.1, real destination the signed-out redirect https://statewright.ai/login?redirect=/runs; not run on VS Code 1.122.1 (blocked by a held update mutex), Cursor (not installed), or a signed-in Statewright account. This PASS is a bounded confirmation and does not authorise merge, release or publication; merge needs the owner's authority and acceptance of the open installed-host items.
 
 ---
+
+### Entry #947: GATE TRIBUNAL - plan-v6013-638-g4-release-evidence-layout (iteration 1) - VETO
+
+**Timestamp**: 2026-11-12T01:28:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-11T0032-37b50f`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-release-evidence-layout.md`
+**Report**: `.agent/staging/AUDIT_REPORT-g4-release-evidence-layout.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-11T0032-37b50f/audit-iter1.json`
+
+**Content Hash**: `964d4553ab4e13e388a51d909898a64af8969f99c3b8c89825f76c88c0642bca`
+**Previous Hash**: `1fda71ae8924526b80d60d31dfad34ce00c29e2668ecff476d7b6c792008efbe`
+**Chain Hash (Merkle seal)**: `333f31e285939ad9030d4f10533a1d1c6e1b9e7b8c65e061997fc03753b1b14e`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-638-g4-release-evidence-layout.md iteration 1 (exact audited source 2b223e5f5d4b2e4c0e8c299ca5b1eaa2fcecda1a on main 9f16548d; PR #654, issue #638). Independent Option B audit by a fresh-context auditor, risk grade L3, performed on 2026-11-10 and recorded here on 2026-11-12 from the preserved report (SHA-256 964d4553ab4e13e388a51d909898a64af8969f99c3b8c89825f76c88c0642bca, committed in 91150587); the delay is because PR #653 entries #938 to #946 were being written on another branch and entry numbers must stay sequential. The rule held for every ordinary construction and caused no false refusal on a genuine repository. Blocking B1: the git ls-tree record parser split on every tab and kept one field, so a tab inside a committed path cut the path short and the layout check accepted an extra entry and a missing timestamp query (refused on NTFS only by a later check; a release PASS in a POSIX simulation). Blocking B2, present on main before the change: on a case-insensitive filesystem a checkpoint committed under tools/g4/Checkpoints, Tools/g4/checkpoints or tools/G4/checkpoints checks out into the real evidence directory, and the auditor obtained PASS OK, mode release, exit 0 from the real CLI on Windows with the query dropped and extra files added. Non-blocking N1 to N10 in the report, including committed empty directories, a GIT_DIR and GIT_WORK_TREE redirect that returned a release PASS (present on main), eight surviving mutants, and record inaccuracies. Diagnostic mode byte-identical to main. No real key, TSA or network service was used.
+
+---
+
+### Entry #948: GATE TRIBUNAL - plan-v6013-638-g4-release-evidence-layout (iteration 2) - PASS
+
+**Timestamp**: 2026-11-12T01:28:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-11T0032-37b50f`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-638-g4-release-evidence-layout.md`
+**Report**: `.agent/staging/AUDIT_REPORT-g4-release-evidence-layout-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-11T0032-37b50f/audit-iter2.json`
+
+**Content Hash**: `65ed5f7dc5294901516be02cfd25d8e5734ceeb2805282bdadcc04ef51355115`
+**Previous Hash**: `333f31e285939ad9030d4f10533a1d1c6e1b9e7b8c65e061997fc03753b1b14e`
+**Chain Hash (Merkle seal)**: `64c549da5f996cf0be990849ec9cc3a2ec7b2fc4e97ea7fe3d134efe2e32e541`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-638-g4-release-evidence-layout.md iteration 2 (exact audited source 911505874c67aff0e15303ccb715942942e97e0b, two commits on main 9f16548d; PR #654, issue #638). Independent Option B re-audit by a second fresh-context auditor, risk grade L3, performed on 2026-11-11 and recorded here on 2026-11-12 from the preserved report (SHA-256 65ed5f7dc5294901516be02cfd25d8e5734ceeb2805282bdadcc04ef51355115, written 2026-11-11 02:28 UTC, after that commit, and committed with this entry). B1 closed: the three tab constructions and a POSIX simulation are refused with RELEASE_EVIDENCE_LAYOUT by the library and the CLI. B2 closed: the three case-variant prefixes, in place and in a fresh clone with a clean status and the extra files physically in the evidence directory, are refused, while main returns PASS OK for the same repositories. No blocking finding after more than 60 crafted trees, a 40-row environment matrix and 60 mutants; no false refusal on genuine repositories (one, two and six builder-made checkpoints, worktrees, the real repository tree); diagnostic mode byte-identical to main in 66 of 66 runs; razor within limits. Non-blocking N1 to N12 recorded for tracking: the two evidence root directories themselves are not required to be directories (a symlink or submodule there is refused only by later checks); duplicate tree entries pass the new rule and are refused by the clean-checkout check; 8.3 short names and other non-case aliases rely on Git path protection and the clean check; a core.worktree setting in the checkout's own .git/config or a planted git binary is outside the claim; twelve non-equivalent mutants survive; documentation precision items. This PASS is an implementation verdict, not G4 operational qualification: no key, TSA, trust anchor or checkpoint exists, and the verifier on the repository reports BLOCKED TSA_POLICY_UNSELECTED until the owner decisions under #647. No real key, TSA or network service was used.
+
+---
