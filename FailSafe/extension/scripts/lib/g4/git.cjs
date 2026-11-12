@@ -6,9 +6,23 @@
 const { spawnSync } = require("node:child_process");
 const { refuse } = require("./bytes.cjs");
 
+/** Variables that point Git at another repository, index or object store. */
+const REDIRECTS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR", "GIT_NAMESPACE", "GIT_GRAFT_FILE", "GIT_SHALLOW_FILE", "GIT_REPLACE_REF_BASE"];
+
+/** The environment for Git, without anything that would make `-C repoRoot` read elsewhere. */
+function gitEnv() {
+  const env = { ...process.env };
+  for (const name of Object.keys(env)) {
+    if (REDIRECTS.includes(name.toUpperCase())) delete env[name];
+  }
+  return env;
+}
+
 function git(repoRoot, args, opts = {}) {
   // --no-replace-objects: a replace ref must never substitute an object read here.
   const res = spawnSync("git", ["--no-replace-objects", "-C", repoRoot, ...args], {
+    env: gitEnv(),
     encoding: opts.encoding === "buffer" ? "buffer" : "utf8",
     maxBuffer: 256 * 1024 * 1024,
     windowsHide: true,

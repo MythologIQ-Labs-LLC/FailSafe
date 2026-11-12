@@ -1,0 +1,47 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-11T0032-37b50f",
+  "ts": "2026-11-12T01:28:49Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-release-evidence-layout.md",
+  "iteration": 2,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #638 (audits #936/#937 note N6; VETO on 2b223e5f)",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - release mode refuses a malformed or case/Unicode-aliased committed checkpoint tree; Git runs without repository-redirecting environment variables"
+  ],
+  "boundaries": {
+    "limitations": [
+      "History checks 2, 3, 5 and 6 of the post-seal exception stay operator-only"
+    ],
+    "non_goals": [
+      "No key, TSA, policy or checkpoint"
+    ],
+    "exclusions": [
+      "Diagnostic mode unchanged"
+    ]
+  },
+  "ci_commands": [
+    "node --test src/test/scripts/g4*.test.cjs",
+    "npm run test:node"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "998573526c60cc5b7ba21e331772ad39323ea71c3fcc9220cb3d3f8faab69b16",
+  "ordering": "retrospective: recorded on 2026-11-12 after the reviews were performed on 2026-11-10/11; not a pre-implementation verdict",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-12T01:28:49Z"
+  }
+}
