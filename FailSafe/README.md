@@ -38,6 +38,6 @@ Workspace governance is **not enforced by physical directory separation**. FailS
 
 The shared MCP client transport currently serves Bicameral and Open Design. FailSafe's own in-process MCP server exists in code but has **no reachable external-client transport** ([contract and B209](../docs/architecture/integrations/failsafe-mcp-server.md)). There is no native Omium or generic production-outcome verification integration; those are proposed interoperability opportunities, not shipped features.
 
-Marketplace installs are disabled pending isolation and scanner acceptance. GitHub's user-facing check command sends a neutral manual advisory, not a verified SHIELD PASS. Read the [extension README](extension/README.md) and [integration portfolio](../docs/architecture/INTEGRATION_PORTFOLIO.md) before making a feature, availability or security claim.
+FailSafe's **in-app Agent Marketplace** installs are disabled pending isolation and scanner acceptance (#468, #469); this does **not** refer to installing FailSafe itself from the VS Code Marketplace or Open VSX. GitHub's user-facing check command sends a neutral manual advisory, not a verified SHIELD PASS. Read the [extension README](extension/README.md) and [integration portfolio](../docs/architecture/INTEGRATION_PORTFOLIO.md) before making a feature, availability or security claim.
 
 **Do not revive the obsolete v4.x deployment recipes from repository history.** `docs/ARCHITECTURE_INDEX.md` and current tested scripts take precedence.
