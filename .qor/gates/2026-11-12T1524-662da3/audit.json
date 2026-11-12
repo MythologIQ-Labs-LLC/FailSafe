@@ -1,40 +1,27 @@
 {
   "phase": "audit",
   "session_id": "2026-11-12T1524-662da3",
-  "ts": "2026-11-12T15:40:54Z",
+  "ts": "2026-11-12T15:50:07Z",
   "target": ".failsafe/governance/plans/plan-v6013-638-g4-freetsa-root.md",
-  "verdict": "VETO",
-  "report_path": ".failsafe/governance/evidence/g4-freetsa/AUDIT_REPORT-g4-freetsa-root-iter2.md",
+  "verdict": "PASS",
+  "report_path": ".failsafe/governance/evidence/g4-freetsa/AUDIT_REPORT-g4-freetsa-root-iter3.md",
   "risk_grade": "L3",
-  "target_content_hash": "87743ad97ccee9d0dd6884c9712adfc867d797daa68595693fbfb6e1720087f8",
-  "report_content_hash": "234d2c6631a79dea1e6e8c2b7bc88a58edc67b988782b0751ca772c189b0fd7a",
-  "iteration": 2,
-  "ledger_entry": 957,
-  "ledger_chain_hash": "84e13bbb3aaba6487da589b08bbc8c5c62962cb6440b0cfcbd795e55105ef386",
-  "audited_candidate": "5288dde6e6b551d6204998248a2a50ad99fe0f9a",
+  "target_content_hash": "d9a1e64601e7e437ebf76f31c3cc6d750679926eec3d4ecf43708e2cbc1b49fc",
+  "report_content_hash": "0583b2109eeec1b15c9590fd0969a7a69b717d22d118ea80fb6b6812719fb459",
+  "iteration": 3,
+  "ledger_entry": 958,
+  "ledger_chain_hash": "a26cb7f6d8663d3e39f336e03a499453ee231199cf0fb01d7421a97dcc399d48",
+  "audited_candidate": "9a9dc0aabe9b4aa4308d9d9ca5ec0a4a93fe0b19",
   "mode": "solo; Option B fresh-context independent auditor",
-  "findings_categories": [
-    "specification-drift"
-  ],
-  "violations": [
-    {
-      "id": "V1",
-      "category": "specification-drift",
-      "detail": "#647 records still call trust admission pending and the policy PR under audit"
-    },
-    {
-      "id": "V2",
-      "category": "specification-drift",
-      "detail": "plan claimed #647 commits pushed and precondition stated on PR; neither true"
-    }
-  ],
-  "merge_obligations": "remediate V1-V2; new independent audit on corrected source",
+  "findings_categories": [],
+  "violations": [],
+  "merge_obligations": "current-head CI; PR #647 merged first; owner authority for merge",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "claude-opus-5-5",
-    "human_oversight": "veto",
-    "ts": "2026-11-12T15:40:54Z"
+    "human_oversight": "pass",
+    "ts": "2026-11-12T15:50:07Z"
   }
 }
