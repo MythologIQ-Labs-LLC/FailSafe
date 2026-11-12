@@ -4,6 +4,17 @@
 
 **Prepared:** 2026-11-10. **Implementation baseline:** `main` `6a7eced4de4c2bf540430b440379ee3ef29af8a3` (PR #644 merged as `42f61921`, PR #646 as `6a7eced4`). **Audits:** VETO #930, PASS #931, delta ACCEPT #932; release mode VETO #933, PASS #934, delta ACCEPT #935. This record supersedes the list in `V6_0_13_G4_OWNER_DECISIONS.md` only once approved.
 
+## Current integration checkpoint (2026-11-11)
+
+**Read-only status reconciliation, NOT an owner decision.** All ten proposed owner responses below remain pending.
+
+- Verified integration baseline: `main` `54724e0180c0dcf33bf3a34f46a6b4b9a3dc475c`. Statewright website-handoff PR #653 is merged (independent PASS #946). G4 evidence-layout hardening PR #654 is merged (VETO #947, PASS #948, delta ACCEPT #949; 13/13 CI and an exact-tree normal merge).
+- Post-seal five-file checkpoint exception PR #650 is merged into `docs/releases/RELEASE_INTEGRATION_PATH.md`. Operator checks are not the same as CI-enforced checks. Any governance allow-list required on the actual release branch must be confirmed before the seal; do not assume it is resolved by documentation alone.
+- `tools/g4/tsa-policy.json` still says `"status": "pending-owner-decision"` and `"trustedRoots": []`. No owner-authorized TPM key enrollment, published/offline trust fingerprint, independent retained checkpoint head, selected production TSA root, genesis or operational `--release` PASS has been established by these merges.
+- **Mandatory before a G4-qualified v6.0.13 seal:** owner decisions 1–5 and 8. Decisions 6, 7 and 9 can be explicitly deferred with their consequences; item 10 confirms the already-enforced fail-closed release verification environment. The owner has selected **neither** FreeTSA nor a contractual/publicly trusted TSA.
+- Separate PR #656 remains independently VETOED on false-acceptance gaps in its timing-test oracle; historical green CI is not authorization. Its native ledger record belongs *after* #949 (subject to rechecking live tail) before a later revised PASS can be recorded.
+- Prepared commands in section 4 remain **UNEXECUTED** and must be verified against the eventual exact release candidate. No action below may be performed merely because this document exists.
+
 ## 1. Evidence gathered without enrollment or signing
 
 ### TPM (read-only, owner workstation, 2026-11-10T21:01Z)
