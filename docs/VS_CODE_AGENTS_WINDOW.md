@@ -47,6 +47,31 @@ The extension's `.vscodeignore` excludes `*.md` by default and omits `dist/exten
 
 **Qualification checklist:** exact VS Code build + Copilot harness; real newly installed signed/target-specific VSIX; skill metadata valid, embedded asset hash/path and actual discovery; external MCP client success + stale intent/forged caller/worktree swap/timeout/unavailable refusal; operator confirmation untouched; source/receipt binding; old-host downgrade; protected worktree/ledger effects; independent native Qor PASS, CI and installed user-path proof. Track #326, #662, B209 and B207 separately. Avoid making Cursor or Antigravity parity a blocker for the first explicitly VS Code Copilot-qualified slice if they are truthfully disclosed as unverified.
 
+### B209: bridge security contract (source-checked 2026-11-12; issue #664)
+
+> **Design only.** Dedicated [B209 issue #664](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/664) holds the proposed service/API boundary and executable negative tests. That issue is not a native audit, accepted implementation plan, or permission to widen the v6.0.13 release.
+
+**Confirmed current semantics (not yet tested as a reachable external MCP server):**
+
+| Current surface | Observed source behavior | Release implication |
+| --- | --- | --- |
+| `FailSafeMCPServer.start` (`FailSafeServer.ts`) | Attaches `StdioServerTransport` inside the VS Code extension host; no spawnable MCP entrypoint for Agent Host | B209 must produce an actual process-accessible transport; don't advertise a ghost `.mcp.json` entry |
+| `qorelogic_status` | Returns hard-coded `status: "ACTIVE"`, lock bool and current intent ID | Presence is not a trusted/verified policy decision; return a truthful checked/unverified/unavailable state |
+| `sentinel_audit_file` | Matches caller-provided intent ID to `getActiveIntent()` and tests path via `getWorkspaceFolder(Uri.file(path))` | An intent ID is not client authentication or a verification receipt; protect against symlinks/junctions and cross-worktree confusion |
+| `ledger_log_decision` | Appends `PROPOSAL` with shared `agentDid: "did:mcp:external"` | Do **not** expose in v6.1.0; agent-authored text is not owner-authenticated approval |
+| `failsafe.create_risk` | Registers a risk-store mutation when RiskManager exists | Excluded from the first external tool surface; separate future authorization review |
+| Console `/api/hub` and `consoleHostGuard` | Generic read API plus loopback Host/Origin/browser protections | Those checks do not authenticate local processes, so never proxy the general Console API wholesale |
+| `commit-check` | Shared-hook token; HTTP failures/invalid token intentionally result in shell-hook *fail open* | **Do not copy** this failure contract for MCP. Missing authorization or unavailable runtime must refuse the tool operation |
+
+**Recommended authority order:** agent discovers reviewed packaged skill → user explicitly enables a real bundled local MCP bridge → bridge authenticates to a narrowly scoped governance broker → broker resolves immutable/verified repository and worktree context and current subject-bound policy evidence → authoritative engine answers **verified, unverified, unavailable or denied** → agent receives only bounded result/evidence. No duplicate policy evaluator; no broad mutable Console route forwarding. An attacker already running as the same OS user is not isolated simply by using a local bearer token; document that threat limit rather than implying a sandbox.
+
+**First release capabilities:** read-only status and scoped Sentinel audit with possible diagnostic side-effects disclosed. Defer risk/ledger mutations, seal, L3 approvals, break-glass, change of enforcement mode, committing, and releasing. An agent cannot mint authorization by quoting an intent ID. Skill instructions are hints, never an enforcement mechanism.
+
+**Packaging/compatibility acceptance:** the exact target-specific VSIX must contain correctly named `skills/failsafe-*/SKILL.md` content and a launchable, verified, non-workspace-controlled MCP executable; `.vscodeignore` currently excludes `*.md` and legacy `dist/extension/skills/**`. Audit package contents and installation separately. The extension manifest's current `engines.vscode: ^1.101.0` floor must not be raised without a backward-compatibility decision. No assumption that VS Code, Cursor, Antigravity or a remote Agent Host share the same extension runtime. Validate each supported host/harness combination.
+
+**External falsification:** invalid/replayed/cross-workspace credentials, forged intent/ledger, stale policy, symlink/junction/UNC path escape, concurrent worktrees, session restart, missing host, cancellation, timeout and tool-input floods must not produce a PASS, a false attribution or unintended mutation. Actual registered server discovery, authenticated MCP tool call and denial must be witnessed in a supported 1.146 Copilot Agent Host session, and issue #326 still requires its separate operator visual/worktree matrix.
+
+
 ### Proposed architecture decision: agent-native, runtime-independent FailSafe governance
 
 **Owner-approved strategic direction (2026-11-12); technical qualification and native Qor audit pending.**
