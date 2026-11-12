@@ -192,7 +192,12 @@ Archived CRLs are **append-only** (`REFUSED TSA_CRL_HISTORY`):
 - no commit reachable from HEAD may delete, change or retype a committed CRL file, with every merge diffed against every parent;
 - every CRL blob ever added in that history must still be present at HEAD, at the same path, with the same bytes. This catches a CRL dropped by a merge resolution or by an `-s ours` merge.
 
-**Complete history is required and enforced.** A shallow clone, or a repository with `.git/shallow` or `.git/info/grafts`, is `BLOCKED REPO_INCOMPLETE_HISTORY`. Release verification therefore needs a full `git clone`, never `--depth`. The CRL history is read with explicit `--diff-merges=separate --root`, so local `log.*` settings cannot narrow it.
+**What the verifier enforces about the repository it reads**, before any history check:
+- **Complete history.** A shallow clone, or a repository with `.git/shallow` or `.git/info/grafts`, is `BLOCKED REPO_INCOMPLETE_HISTORY`.
+- **Genuine objects.** `git fsck --full --no-dangling` must pass, so every object re-hashes to its id and history is connected. Otherwise the verifier returns `BLOCKED REPO_INTEGRITY`.
+- **No unauthenticated shortcuts.** Git runs with `--no-replace-objects` and `-c core.commitGraph=false`, and the `GIT_DIR`-style environment redirects are removed. The CRL history is read with explicit `--diff-merges=separate --root`, so local `log.*` settings cannot narrow it.
+
+**What it still trusts:** the Git and OpenSSL binaries on the verifying machine, and SHA-1 object ids (Git's own collision detection applies). Release verification should therefore run on a full clone fetched from the canonical remote (`git clone https://github.com/MythologIQ-Labs-LLC/FailSafe`, never `--depth`), on a machine the verifier controls. A local copy of someone else's `.git` is no substitute.
 
 **Limit:** checkpoints do not bind the set of CRLs. A history rewrite (force-push) that removes a CRL is not detectable from the repository alone; branch protection forbids such rewrites on `main`.
 

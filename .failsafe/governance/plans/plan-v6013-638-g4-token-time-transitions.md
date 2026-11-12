@@ -1,6 +1,6 @@
 # Plan: G4 token-time validation, timestamped revocation notices, key rotation and recovery (#638, v6.0.13)
 
-**Status:** iteration 4, after the independent VETOs recorded as ledger Entries #959 (iteration 1, `59c4291e`), #960 (iteration 2, `ba8c1b21`) and #961 (iteration 3, `95069d83`). This document records no PASS and no merge authority.
+**Status:** iteration 5, after the independent VETOs recorded as ledger Entries #959 (iteration 1, `59c4291e`), #960 (iteration 2, `ba8c1b21`), #961 (iteration 3, `95069d83`) and #962 (iteration 4, `7cfe447f`). This document records no PASS and no merge authority.
 **Baseline:** `main` `29b819feaf07ca991c9b6a75f8e0f01549e3cd11`, stacked on PR #657 (`origin/feat/638-g4-freetsa-root`, which is itself stacked on PR #647). **Branch:** `feat/638-g4-token-time-transitions`. Merge order: #647, then #657, then this.
 **Change class:** verifier semantics. Risk grade L3: this changes when a G4 checkpoint witness is accepted.
 **Owner direction (2026-11-12, recorded in #647 section 2a):** items 6, 7 and 9 are no longer deferred.
@@ -136,6 +136,19 @@ The third independent audit confirmed that V5 is closed, that V6 is closed withi
   - Tests (`g4CrlArchive`): a `--depth` clone, a planted `.git/shallow` and a planted `.git/info/grafts` are each `BLOCKED REPO_INCOMPLETE_HISTORY`; a full clone of the same commit passes.
 - **Planted defect:** with the `assertCompleteHistory` call removed, both new BLOCKED tests fail. **Totals:** G4 suites 157/157; `npm run test:node` 1139 pass, 2 fail (the known `bundleDeps` junction artefact).
 - **Notes N2 to N4** (one entry per serial judged; the iteration-2 notes; the TSA accuracy field) are not changed. N2 cannot arise from a genuine CA, and N4 is at most one second.
+
+## Iteration 5 (VETO #962 remediation)
+
+The fourth independent audit confirmed that V7 is closed: shallow clones, deepened clones, planted shallow or grafts files, alternates, partial clones and replace grafts are all handled. It also confirmed that iteration-3 N1 is closed and that V1, V5 and V6 hold. It found two blocking defects in how far the verifier trusts the local object database.
+
+- **V8. A forged commit-graph hid history.**
+  - Fix: every Git call the verifier makes runs with `-c core.commitGraph=false`, so history is walked from the commit objects themselves.
+  - Test (`g4RepoIntegrity`, adapted from the auditor's forgery): HEAD's parent is rewired in a written commit-graph to hide the commits that add and delete a revoking CRL. The verifier still returns `REFUSED TSA_CRL_HISTORY`. The precondition confirms that `git rev-list` itself is fooled by the forged graph.
+- **V9. The local object store was trusted.**
+  - Fix: `git fsck --full --no-dangling` must pass before any history check, or the verifier returns `BLOCKED REPO_INTEGRITY`. On the real repository this takes about 4.5 s.
+  - Test: a loose object, the revoking CRL's blob, is replaced by the bytes of another blob under the same id. The verifier returns `BLOCKED REPO_INTEGRITY`, where it returned `PASS` before the fix.
+  - Planted defects: trusting the commit-graph again, or skipping fsck, each fails its test. **Totals:** G4 suites 159/159; `npm run test:node` 1141 pass, 2 fail (the known `bundleDeps` junction artefact). The CLI on the real repository returns `BLOCKED NO_CHECKPOINTS` in 4.5 s.
+  - The ops doc now states exactly what is enforced (complete history, genuine objects, no commit-graph or replace shortcuts) and what is still trusted: the Git and OpenSSL binaries, SHA-1 ids, and a full clone from the canonical remote.
 
 ## Audit questions
 

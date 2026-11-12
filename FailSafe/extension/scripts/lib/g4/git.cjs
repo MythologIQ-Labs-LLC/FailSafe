@@ -23,7 +23,9 @@ function gitEnv() {
 
 function git(repoRoot, args, opts = {}) {
   // --no-replace-objects: a replace ref must never substitute an object read here.
-  const res = spawnSync("git", ["--no-replace-objects", "-C", repoRoot, ...args], {
+  // core.commitGraph=false: history is walked from the commit objects themselves, never from a
+  // commit-graph file, which is unauthenticated and could rewire parents (audit VETO #962 V8).
+  const res = spawnSync("git", ["--no-replace-objects", "-c", "core.commitGraph=false", "-C", repoRoot, ...args], {
     env: gitEnv(),
     encoding: opts.encoding === "buffer" ? "buffer" : "utf8",
     maxBuffer: 256 * 1024 * 1024,
@@ -67,9 +69,12 @@ function commitsTouching(repoRoot, filePath) {
 
 /**
  * The verifier's history checks (revocation registry, archived CRLs) are only
- * as complete as the history they read. A shallow clone, or a planted
- * .git/shallow or .git/info/grafts, hides commits while HEAD keeps its SHA, so
- * such a repository is BLOCKED (audit VETO #961 V7).
+ * as complete, and only as genuine, as the objects they read.
+ * - A shallow clone, or a planted .git/shallow or .git/info/grafts, hides
+ *   commits while HEAD keeps its SHA: BLOCKED (audit VETO #961 V7).
+ * - `git fsck --full` must pass, so every object re-hashes to its id and the
+ *   history is connected; a loose or packed object substituted under the same
+ *   id is BLOCKED REPO_INTEGRITY (audit VETO #962 V9).
  */
 function assertCompleteHistory(repoRoot) {
   const res = git(repoRoot, ["rev-parse", "--is-shallow-repository"]);
@@ -82,6 +87,11 @@ function assertCompleteHistory(repoRoot) {
     if (rel && fs.existsSync(path.resolve(repoRoot, rel))) {
       throw block("REPO_INCOMPLETE_HISTORY", `.git/${name} is present; G4 verification needs complete, ungrafted history`);
     }
+  }
+  const fsck = git(repoRoot, ["fsck", "--full", "--no-dangling", "--no-progress"]);
+  if (fsck.status !== 0) {
+    const first = `${fsck.stderr || ""}${fsck.stdout || ""}`.split(/\r?\n/).find(Boolean) || `exit ${fsck.status}`;
+    throw block("REPO_INTEGRITY", `git fsck --full failed: ${first}`);
   }
 }
 
