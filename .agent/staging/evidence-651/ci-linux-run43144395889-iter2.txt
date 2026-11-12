@@ -1,0 +1,9 @@
+# wall-clock minus kernel run-queue wait: worst turn held 60.0 ms (wall 75.3, main-thread CPU 60.0, run-queue wait 15.3) over 21 turns
+# every call: wall-clock minus kernel run-queue wait: worst turn held 207.6 ms (wall 207.7, main-thread CPU 205.1, run-queue wait 0.1) over 13 turns
+# call 1 of 5 only: wall-clock minus kernel run-queue wait: worst turn held 200.6 ms (wall 201.5, main-thread CPU 201.0, run-queue wait 0.9) over 18 turns
+# call 3 of 5 only: wall-clock minus kernel run-queue wait: worst turn held 200.7 ms (wall 200.9, main-thread CPU 200.9, run-queue wait 0.2) over 20 turns
+# live Atomics.wait: wall-clock minus kernel run-queue wait: worst turn held 202.9 ms (wall 202.9, main-thread CPU 3.6, run-queue wait 0.0) over 10 turns
+# live spawnSync: wall-clock minus kernel run-queue wait: worst turn held 227.6 ms (wall 227.6, main-thread CPU 2.6, run-queue wait 0.0) over 7 turns
+# captured Atomics.wait: wall-clock minus kernel run-queue wait: worst turn held 200.9 ms (wall 200.9, main-thread CPU 0.9, run-queue wait 0.0) over 8 turns
+# captured spawnSync: wall-clock minus kernel run-queue wait: worst turn held 227.0 ms (wall 227.0, main-thread CPU 2.1, run-queue wait 0.0) over 7 turns
+# destructured execSync: wall-clock minus kernel run-queue wait: worst turn held 227.2 ms (wall 227.2, main-thread CPU 3.0, run-queue wait 0.0) over 7 turns

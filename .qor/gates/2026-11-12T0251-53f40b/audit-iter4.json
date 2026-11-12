@@ -1,0 +1,41 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T0251-53f40b",
+  "ts": "2026-11-12T04:11:07Z",
+  "target": ".failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT-656-iter4-records.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "specification-drift",
+    "test-failure"
+  ],
+  "target_content_hash": "45859e920eacd85c2480455a8bd246a3c368bf256ccd59d5336cb07a2ec5c08c",
+  "report_content_hash": "e7eb760d624116db7857b27e3edef35fca8c84655964ebeb0e70c54d34f0fc31",
+  "iteration": 4,
+  "ledger_entry": 953,
+  "ledger_chain_hash": "9e112c909f23350964b4eee7f81e73c3ef3141898016d629024b96d47709a767",
+  "audited_candidate": "b29cd87075706b56924e5e3ec98f985de19cafdc",
+  "mode": "solo; Option B fresh-context independent auditor; bounded confirmation check",
+  "violations": [
+    {
+      "id": "R4",
+      "category": "specification-drift",
+      "detail": "Entry #952 says 29 planted variants match; its report says 28 rows match"
+    },
+    {
+      "id": "C5",
+      "category": "test-failure",
+      "detail": "Full Test failed on the audited commit in lockQueue.test.js R1 (a file the PR does not touch); the #651 suites did not run"
+    }
+  ],
+  "merge_obligations": "correct R4 (records only) and obtain current-head CI; new independent audit on corrected source",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "veto",
+    "ts": "2026-11-12T04:11:07Z"
+  }
+}

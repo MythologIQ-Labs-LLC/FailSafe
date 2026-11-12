@@ -36332,3 +36332,122 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: BOUNDED-DELTA ACCEPT for PR #654 (issue #638): the delta from the audited source 911505874c67aff0e15303ccb715942942e97e0b (PASS, Entry #948) to head 7f4c173b2d0c39eb3595d802767074080f866c17 preserves that PASS. Independent fresh-context reviewer; this is not a new audit of the feature. The delta is the merge of main 9a9d8c0d (PR #653) as 1abf42e8 and the governance commit 7f4c173b that records Entries #947 and #948. Findings: every file the PR changes other than the ledger and the .agent and .qor records has the same blob as at the audited commit (eight files); main changed none of them after the PR's base 9f16548d, so the overlay discarded nothing; the only conflict resolution is .qor/session/current taken from main, which no G4 script reads; at the head 108 of 108 G4 tests pass, test:node shows only the known junction artefact, and the verifier on the repository still reports BLOCKED TSA_POLICY_UNSELECTED; Entries #938 to #946 are unchanged, #947 and #948 follow in sequence with correct content and chain hashes, the chain verifies, and their Decision text matches the reports; the PASS report names the audited commit and was written after it; the gate files agree with the ledger; no key or secret is tracked. CI at 7f4c173b: twelve checks passed and the Full Test Suite was still running when the review ended. Clarification of dates in Entries #947 and #948, stated in UTC: commit 2b223e5f was made at 2026-11-11T00:32Z and its VETO report written at 2026-11-11T00:56Z; commit 91150587 was made at 2026-11-11T01:47Z and its PASS report written at 2026-11-11T02:28Z; both entries were recorded on 2026-11-12. Entry #947's "performed on 2026-11-10" is the local date (UTC-5); the two audits were about 92 minutes apart, not a day apart. Observations, not blocking: the closing sentence of #948 about TSA_POLICY_UNSELECTED and #647 is the recorder's addition, verified true by this reviewer; .qor/session/current now names the #652 session, so later governance phases for #638 must name their session explicitly; plan-iter2.json keeps high_risk_target false although the change is graded L3 (the schema field is the EU AI Act classification, as recorded in the plan). This ACCEPT does not authorise merge, release or any G4 operation; merge needs current-head CI and the owner's authority, and G4 operations need the owner decisions under #647.
 
 ---
+
+### Entry #950: GATE TRIBUNAL - plan-v6013-651-architecturelinks-ci-reliability (iteration 1) - VETO
+
+**Timestamp**: 2026-11-12T02:51:33Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T0251-53f40b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md`
+**Report**: `.agent/staging/AUDIT_REPORT-656.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T0251-53f40b/audit-iter1.json`
+
+**Content Hash**: `d8efcf53f687ca7b2e4d86bc212b51b4cf23e1693397578b103427335df42f13`
+**Previous Hash**: `bfb9d6cef356e9bd91f42112ba0a9d169e2ce6d0220c0cb05b35293389cd4709`
+**Chain Hash (Merkle seal)**: `3dc8fb5bcf6f194a55b989fdf68b58c95b45bfcc2d3b05939cc10f8f15a6d866`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-651-architecturelinks-ci-reliability.md iteration 1 (exact audited source dd7841a2771232a9ef765949d86386d497b207c8 on main 9f16548d; PR #656, issue #651). Independent fresh-context Option B audit, risk grade L2 (test-only, but it changes the oracle of a no-blocking-I/O contract), performed on 2026-11-12 (UTC); the report was posted verbatim to PR #656 (comment 6812264033) and is committed with this entry. An external method probe by another assistant was not used. The change does fix the reported flake: under 32 busy processes on 16 logical CPUs the base test failed 10 of 10 and the new test passed 10 of 10. It does so by weakening detection. Blocking B1: the verdict retries up to five attempts and keeps the smallest lag, so implementations that block the event loop on the first call, every fifth call, alternate calls or at random passed the new test and failed the base test, which breaches the owner constraint against discarding failures. Blocking B2: busy lag is the smaller of the wall gap and process CPU time, so off-CPU blocking that bypasses the live-reference wrappers passed: spawnSync captured at load, execSync destructured at load, Atomics.wait captured or bound at load, and process.binding spawn_sync, each of which the base test caught. Blocking B3: the 150 ms stall control burns process-wide CPU, so the real stall ranged from 84 to 157 ms and the control failed on unmodified code in about 2 of 23 runs; the plan's description of it is false. Blocking B4: measureBoundedDescribe is 48 lines against a 40-line limit, and the file grows from 375 to 463 lines against 250. Non-blocking N1 to N9 in the report, including that the 100 ms limit is not pinned by any test and that there is no child-process negative control. The 100 ms threshold value and the three named controls were present.
+
+---
+
+### Entry #951: GATE TRIBUNAL - plan-v6013-651-architecturelinks-ci-reliability (iteration 2) - VETO
+
+**Timestamp**: 2026-11-12T03:19:02Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T0251-53f40b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md`
+**Report**: `.agent/staging/AUDIT_REPORT-656-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T0251-53f40b/audit-iter2.json`
+
+**Content Hash**: `5095f12c76c1bfbadd96017d73666dfdfdfd380f9151e556dfbc91ef41abb524`
+**Previous Hash**: `3dc8fb5bcf6f194a55b989fdf68b58c95b45bfcc2d3b05939cc10f8f15a6d866`
+**Chain Hash (Merkle seal)**: `3c63f3d2a6a3978442ee76b0969e9ae81f1a77d1e901cf232f05e02ad497cf01`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-651-architecturelinks-ci-reliability.md iteration 2 (exact audited source 060a09faf32965af4bdf017b11fbb683e924b4cf, PR #656, issue #651; CI 13 of 13 on that commit). Independent fresh-context re-audit by a second auditor, risk grade L2, performed on 2026-11-12 (UTC). The redesign is sound: B1 of Entry #950 is remediated (one sampler over five calls, the worst turn decides, nothing retried; first-call, every-fifth, alternate and random stalls fail 5 of 5); B2 is remediated (held time is wall-clock minus kernel run-queue wait on Linux and plain wall-clock elsewhere; CPU time is never subtracted; 26 planted blocking variants in the compiled production module, including captured spawnSync, destructured execSync, captured and bound Atomics.wait and process.binding spawn_sync, fail 5 of 5, while unmodified code and asynchronous thread-pool work pass); B4 is fixed for the five test files; coverage is preserved (the 11 non-bounded tests moved byte for byte); no production or workflow change; the stated Windows limitation is honest and did not occur in 15 loaded runs. On Linux CI run 43144395889 the run-queue mode was active, the main test held 60.0 ms of a 75.3 ms wall turn, and the captured-reference controls were held for 200.9 to 227.2 ms with no run-queue wait. Blocking V1: the planted 200 ms stall loops on process.threadCpuUsage, which advances in steps of about 15.6 ms on Windows, so the stall ended between 186.1 and 209.1 ms (71 of 100 trials under 200 ms), which breaches the required 2x margin on Windows and makes the plan's sentence false there; the margin held on Linux. Blocking V2: the committed evidence script .agent/staging/evidence-651/falsify.cjs has nesting depth 4. Non-blocking N1 to N10 in the report, including: the comparison is not anchored near the limit (a 1.5x loosened comparison survives); no control for the raw-binding seam; Node 20 lacks process.threadCpuUsage; plan arithmetic (the base had 12 tests, not 13) and an under-load figure without committed raw output. Clarification of Entry #950, as this audit notes (N7): its sentence that the intermittent variants and the bound Atomics.wait failed the base test overstates the first report, which ran the base test on the first-call, alternate, captured spawnSync, destructured execSync, captured Atomics.wait and binding variants (each failed 3 of 3) and did not run it on the every-fifth, random and bound variants.
+
+---
+
+### Entry #952: GATE TRIBUNAL - plan-v6013-651-architecturelinks-ci-reliability (iteration 3, bounded confirmation check) - VETO
+
+**Timestamp**: 2026-11-12T03:55:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T0251-53f40b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md`
+**Report**: `.agent/staging/AUDIT_REPORT-656-iter3-confirmation.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T0251-53f40b/audit-iter3.json`
+
+**Content Hash**: `237bcce870379907a2ddf387e4f58b70358a6381a081757700fc1bf0d47cdaf0`
+**Previous Hash**: `3c63f3d2a6a3978442ee76b0969e9ae81f1a77d1e901cf232f05e02ad497cf01`
+**Chain Hash (Merkle seal)**: `4be020260b88cc415be6028cd970247981f846922e81f48b4949d380e6aedac4`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-651-architecturelinks-ci-reliability.md iteration 3 (exact audited source fcb16f682cd06aec601baca8758438ee623c3088, PR #656, issue #651; CI 13 of 13 on that commit). BOUNDED CONFIRMATION CHECK, not an open-ended audit, by a third fresh reviewer, performed on 2026-11-12 (UTC), against eight criteria set before the check. The code and tests pass every technical criterion. V1 of Entry #951 is fixed: the shipped stall held at least 205.6 ms over 250 trials at random clock phase, idle and under load, and the old loop measured in the same harness fell under 200 ms in 74 of 100. V2 is fixed. The non-blocking fixes are real: the loosened-comparison and binding-seam mutants are killed, and a Node without process.threadCpuUsage fails all five tests with a clear message. There is no regression: 29 planted variants match the previous audit, and no mutant killed before survives. The suites passed 20 of 20 idle and 10 of 10 under load; test:node shows only the known junction artefact; scope, razor and coverage hold. On Linux CI run 43148402279 for that commit the run-queue mode was active, the main test held 60.0 ms, the stall controls 216.5 to 226.9 ms, the 120 ms control 141.5 ms, and the captured-reference controls 201.1 to 228.9 ms with no run-queue wait. The VETO rests on three record statements. R1: Entry #951 says 26 planted blocking variants fail 5 of 5; the report it seals lists 29 variants, of which 25 fail 5 of 5, 2 are correct passes (unmodified code and asynchronous thread-pool work) and 2 are sub-millisecond captured-reference calls that pass, as in the base test. This entry is the correction of #951 on that point. R2: plan iteration 3 repeats the figure 26. R3: the plan says the probe's worst turn under load at raised priority was 27 to 54 ms and cites a file that shows 27.1 to 48.3 ms, and it says that figure has committed raw output, which is not true of the cited file. Observations, not blocking: the plan's iteration-2 evidence still says test:node passed three runs in a row with raw output retained, but those files were overwritten in iteration 3 and survive only in git history at 060a09fa; the random 50 percent planted variant plants nothing in about 1 run in 32.
+
+---
+
+### Entry #953: GATE TRIBUNAL - plan-v6013-651-architecturelinks-ci-reliability (iteration 4, records-only confirmation check) - VETO
+
+**Timestamp**: 2026-11-12T04:11:07Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T0251-53f40b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md`
+**Report**: `.agent/staging/AUDIT_REPORT-656-iter4-records.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T0251-53f40b/audit-iter4.json`
+
+**Content Hash**: `e7eb760d624116db7857b27e3edef35fca8c84655964ebeb0e70c54d34f0fc31`
+**Previous Hash**: `4be020260b88cc415be6028cd970247981f846922e81f48b4949d380e6aedac4`
+**Chain Hash (Merkle seal)**: `9e112c909f23350964b4eee7f81e73c3ef3141898016d629024b96d47709a767`
+
+**Decision**: GATE TRIBUNAL VETO for plan-v6013-651-architecturelinks-ci-reliability.md iteration 4 (exact audited source b29cd87075706b56924e5e3ec98f985de19cafdc, PR #656, issue #651). BOUNDED, RECORDS-ONLY CONFIRMATION CHECK, not an audit of the code, by a fourth fresh reviewer, performed on 2026-11-12 (UTC). Confirmed: the delta since fcb16f68 changes no file under FailSafe/ or .github/; the ledger at fcb16f68 is a byte prefix of the head's ledger and Entry #952 is the only addition; #952's content and previous hashes are correct and the chain verifies; the corrected count for Entry #951 (25 of 29 planted variants fail 5 of 5) is true; the corrected plan figures R2 and R3 and the observation O1 are true. Blocking R4: Entry #952 says "There is no regression: 29 planted variants match the previous audit". The report #952 seals says instead: "The planted set (29 variants x 5 runs) matches iteration 2 on 28 rows. `cpu150_random50` passed 1/5: in that run no stall was drawn". The report writes the multiplication sign as U+00D7; it is written as x here because the ledger seals ASCII only. This entry is the correction of #952 on that point. Blocking C5: on the audited commit CI completed with 12 of 13 checks passing. The Full Test Suite job (run 43151479737) failed in a timing assertion of the cross-process lock queue test (lockQueue.test.js, R1: "the hot writer stored 16 updates after the waiter started waiting", against a limit of 3). The PR does not touch that file. Because the job stops at the first failing step, the #651 suites did not run on that commit. The failed job log is committed at .agent/staging/evidence-651/ci-43151479737-failed.log.
+
+---
+
+### Entry #954: GATE TRIBUNAL - plan-v6013-651-architecturelinks-ci-reliability (iteration 4, records-only confirmation check) - PASS
+
+**Timestamp**: 2026-11-12T04:40:28Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T0251-53f40b`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md`
+**Report**: `.agent/staging/AUDIT_REPORT-656-iter5-records.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T0251-53f40b/audit-iter5.json`
+
+**Content Hash**: `798e7f494d6fa0b82b23fb64aeede4667c96e3f818dfb76a1c851395c3c3d85d`
+**Previous Hash**: `9e112c909f23350964b4eee7f81e73c3ef3141898016d629024b96d47709a767`
+**Chain Hash (Merkle seal)**: `65c124ced1632fbe1a530c2797d4c272eac9c24cc7ae973ebb9d57ee4b9eaddb`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-651-architecturelinks-ci-reliability.md iteration 4 (exact audited head e48d1c65c30e2dbfc8b9a3bfea1b207c4e89e8a9, PR #656, issue #651). BOUNDED, RECORDS-ONLY CONFIRMATION CHECK, not an audit of the code, by a fifth fresh reviewer, performed on 2026-11-12 (UTC). The technical qualification of the test change is Entry #952 on source fcb16f682cd06aec601baca8758438ee623c3088, whose criteria were all met; this check confirms that nothing under FailSafe/ or .github/ has changed since that source, so that qualification applies to this head. Confirmed: Entry #953 follows #952 with correct content and previous hashes, Entries #938 to #952 are unchanged, and the chain verifies; #953's quotations are verbatim apart from its disclosed ASCII substitution, and its CI facts for run 43151479737 are true; the raw failed-CI log that #953 cites was at .agent/staging/evidence-651/ when #953 was sealed and now lives unchanged (blob 88af08af) at .failsafe/governance/evidence/651/ci-43151479737-failed.log, a move disclosed in commit e48d1c65 and the evidence README, made because the log's test names tripped the pro-retirement guard, which exempts historical records under .failsafe/; no other file was edited to pass that guard. CI on the audited head: 13 of 13 checks passed; Full Test run 43154347011 ran the #651 suites on Linux in run-queue mode, the main bounded test held 74.2 ms against the 100 ms limit, and every control held from 137.0 to 232.6 ms and failed its verdict as required; test:node 1077 passed and 0 failed; test:ui 263 passed. Observation recorded for the owner: #953 says the #651 suites did not run because the job stops at the first failing step; more precisely, the test:all step chains its commands with &&, so the failing npm test prevented test:node from starting, as the report #953 seals states. This PASS qualifies the test change for the normal protected merge only; it is not a release decision.
+
+---
+
+### Entry #955: RECORD CORRECTION - relocation of the report sealed by Entry #954 (plan-v6013-651-architecturelinks-ci-reliability)
+
+**Timestamp**: 2026-11-12T04:51:37Z
+**Phase**: RECORD
+**Author**: Implementer (record correction)
+**Session**: `2026-11-12T0251-53f40b`
+**Verdict**: CORRECTION (no verdict)
+**Target**: `.failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md`
+**Report**: `.failsafe/governance/evidence/651/RELOCATION-954-report.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `n/a (record correction)`
+
+**Content Hash**: `87e347a68bd15811ab0bcb1e7e749734827bd09d6d2d0ec151dfc61bb588ad08`
+**Previous Hash**: `65c124ced1632fbe1a530c2797d4c272eac9c24cc7ae973ebb9d57ee4b9eaddb`
+**Chain Hash (Merkle seal)**: `19d265e6b0ba16fe35fe8f35d9e6aac2e97e554fa61e24bd0755d6e53b4cc804`
+
+**Decision**: RECORD CORRECTION, not an audit verdict, written by the implementer. The report sealed by Entry #954 (content hash 798e7f494d6fa0b82b23fb64aeede4667c96e3f818dfb76a1c851395c3c3d85d) was committed at .agent/staging/AUDIT_REPORT-656-iter5-records.md in 0ebf2032 and is moved unchanged (same git blob d2610783) to .failsafe/governance/evidence/651/AUDIT_REPORT-656-iter5-records.md. The report quotes the name of a test in the pro-retirement guard, that name mentions the retired product, and the guard exempts historical records only under .failsafe/, so CI run 43156370765 on 0ebf2032 failed on it. Entry #954 is left exactly as sealed; its Report field named the original path, which was true when it was sealed. The implementer pushed 0ebf2032 without running test:node locally first, contrary to the repository's CI-budget rule; this relocation was validated locally before it was pushed. The cited file records the move.
+
+---

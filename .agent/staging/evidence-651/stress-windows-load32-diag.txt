@@ -1,0 +1,10 @@
+# wall-clock, above-normal priority: worst turn held 44.2 ms (wall 44.2, main-thread CPU 47.0, run-queue wait 0.0) over 16 turns
+# wall-clock, above-normal priority: worst turn held 50.6 ms (wall 50.6, main-thread CPU 47.0, run-queue wait 0.0) over 15 turns
+# wall-clock, above-normal priority: worst turn held 50.4 ms (wall 50.4, main-thread CPU 47.0, run-queue wait 0.0) over 14 turns
+# wall-clock, above-normal priority: worst turn held 52.5 ms (wall 52.5, main-thread CPU 47.0, run-queue wait 0.0) over 14 turns
+# wall-clock, above-normal priority: worst turn held 53.0 ms (wall 53.0, main-thread CPU 47.0, run-queue wait 0.0) over 14 turns
+# wall-clock, above-normal priority: worst turn held 45.8 ms (wall 45.8, main-thread CPU 47.0, run-queue wait 0.0) over 16 turns
+# wall-clock, above-normal priority: worst turn held 51.4 ms (wall 51.4, main-thread CPU 31.0, run-queue wait 0.0) over 15 turns
+# wall-clock, above-normal priority: worst turn held 54.3 ms (wall 54.3, main-thread CPU 47.0, run-queue wait 0.0) over 15 turns
+# wall-clock, above-normal priority: worst turn held 55.1 ms (wall 55.1, main-thread CPU 46.0, run-queue wait 0.0) over 14 turns
+# wall-clock, above-normal priority: worst turn held 54.3 ms (wall 54.3, main-thread CPU 63.0, run-queue wait 0.0) over 15 turns

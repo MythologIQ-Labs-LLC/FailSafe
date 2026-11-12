@@ -1,0 +1,47 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-12T0251-53f40b",
+  "ts": "2026-11-12T03:56:10Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md",
+  "iteration": 4,
+  "change_class": "hotfix",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #651 (VETO #950 remediation)",
+  "high_risk_target": false,
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "phases": [
+    "Phase 1 - ArchitectureLinks bounded-I/O verdict: per-turn held time over every call, no retries; off-CPU blocking never excused; negative controls; Section 4 split"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Kernel run-queue accounting is used only on Linux; elsewhere the verdict is wall-clock time at raised priority"
+    ],
+    "non_goals": [
+      "No production code change",
+      "No CI workflow change"
+    ],
+    "exclusions": [
+      "The 100 ms limit is not raised"
+    ]
+  },
+  "ci_commands": [
+    "node --test src/test/governance/architecture/ArchitectureLinks*.test.cjs",
+    "npm run test:node"
+  ],
+  "open_questions": [],
+  "plan_content_hash": "45859e920eacd85c2480455a8bd246a3c368bf256ccd59d5336cb07a2ec5c08c",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-11-12T03:56:10Z"
+  }
+}

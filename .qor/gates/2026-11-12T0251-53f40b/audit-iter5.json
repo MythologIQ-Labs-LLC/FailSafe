@@ -1,0 +1,27 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T0251-53f40b",
+  "ts": "2026-11-12T04:40:29Z",
+  "target": ".failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT-656-iter5-records.md",
+  "risk_grade": "L2",
+  "findings_categories": [],
+  "target_content_hash": "45859e920eacd85c2480455a8bd246a3c368bf256ccd59d5336cb07a2ec5c08c",
+  "report_content_hash": "798e7f494d6fa0b82b23fb64aeede4667c96e3f818dfb76a1c851395c3c3d85d",
+  "iteration": 5,
+  "ledger_entry": 954,
+  "ledger_chain_hash": "65c124ced1632fbe1a530c2797d4c272eac9c24cc7ae973ebb9d57ee4b9eaddb",
+  "audited_candidate": "e48d1c65c30e2dbfc8b9a3bfea1b207c4e89e8a9",
+  "mode": "solo; Option B fresh-context independent auditor; bounded confirmation check",
+  "violations": [],
+  "merge_obligations": "current-head CI; owner authority for merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "unknown",
+    "human_oversight": "pass",
+    "ts": "2026-11-12T04:40:29Z"
+  }
+}
