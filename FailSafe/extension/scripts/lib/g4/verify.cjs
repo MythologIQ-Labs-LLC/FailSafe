@@ -9,7 +9,6 @@
  * the newest checkpoints together with the newest ledger tail is not
  * detectable from the repository alone.
  */
-const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -20,41 +19,11 @@ const { readCheckpointFiles } = require("./checkpoint.cjs");
 const { parseManifest } = require("./manifest.cjs");
 const registry = require("./registry.cjs");
 const ts = require("./timestamp.cjs");
+const { POLICY_SCHEMA, buildTrustFile } = require("./tsa-trust.cjs");
+const { verifyNotices } = require("./notices.cjs");
 const { verifyWitness } = require("./verify-witness.cjs");
 const { verifyLedger } = require("./verify-ledger.cjs");
 const { assertReleasePreconditions } = require("./release-mode.cjs");
-
-const POLICY_SCHEMA = "failsafe-g4-tsa-policy/v1";
-
-/** Trusted TSA roots from the committed policy, concatenated into one CAfile. */
-function policyCaFile(repoRoot, head, tmpDir) {
-  const raw = requireBlob(repoRoot, head, layout.TSA_POLICY_PATH, "TSA_POLICY_MISSING");
-  let p;
-  try {
-    p = JSON.parse(raw.toString("utf8"));
-  } catch {
-    throw refuse("TSA_POLICY_MALFORMED", "tsa-policy.json is not JSON");
-  }
-  if (p.schema !== POLICY_SCHEMA || p.status !== "selected" || !Array.isArray(p.trustedRoots) || p.trustedRoots.length === 0) {
-    throw block("TSA_POLICY_UNSELECTED", "no TSA trust root is selected in tools/g4/tsa-policy.json");
-  }
-  const pems = p.trustedRoots.map((r) => {
-    const pem = requireBlob(repoRoot, head, r.certificatePath, "TSA_POLICY_MISSING");
-    if (loadAnyCert(pem) !== r.sha256) throw refuse("TSA_ROOT_MISMATCH", `${r.name}: root fingerprint differs from policy`);
-    return pem.toString("utf8");
-  });
-  const caFile = path.join(tmpDir, "tsa-roots.pem");
-  fs.writeFileSync(caFile, pems.join("\n"));
-  return caFile;
-}
-
-function loadAnyCert(pem) {
-  try {
-    return sha256(new crypto.X509Certificate(pem).raw);
-  } catch {
-    throw refuse("TSA_POLICY_MALFORMED", "a trusted TSA root does not parse");
-  }
-}
 
 function buildContext(o, tmpDir) {
   const repoRoot = path.resolve(o.repoRoot);
@@ -64,16 +33,21 @@ function buildContext(o, tmpDir) {
   const currentRegistry = requireBlob(repoRoot, head, layout.REGISTRY_PATH, "REGISTRY_MISSING");
   registry.parse(currentRegistry);
   registry.assertGitHistoryMonotonic(repoRoot, layout.REGISTRY_PATH);
-  return {
+  const openssl = ts.requireOpenssl();
+  const ctx = {
     repoRoot,
     head,
+    tmpDir,
     currentRegistry,
     checkpointsDir: o.checkpointsDir || path.join(repoRoot, layout.CHECKPOINTS_DIR),
     trustFingerprint: o.trustFingerprint || null,
     expectedRepository: o.repository || null,
-    openssl: ts.requireOpenssl(),
-    caFile: o.tsaCaFile || policyCaFile(repoRoot, head, tmpDir),
+    acceptRecovery: o.acceptRecovery || [],
+    openssl,
+    caFile: buildTrustFile({ repoRoot, head, bin: openssl, tmpDir, overrideCaFile: o.tsaCaFile }),
   };
+  verifyNotices(ctx);
+  return ctx;
 }
 
 function verifyOne(ctx, entry, prev) {
@@ -132,7 +106,7 @@ function summarize(s) {
 /**
  * @param {{repoRoot:string, checkpointsDir?:string, trustFingerprint?:string,
  *   trustedHead?:string, tsaCaFile?:string, repository?:string, release?:boolean,
- *   expectedCommit?:string}} o
+ *   expectedCommit?:string, acceptRecovery?:string[]}} o
  */
 function verifyCheckpoints(o) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "g4-verify-"));
@@ -143,11 +117,13 @@ function verifyCheckpoints(o) {
     const entries = layout.listCheckpoints(ctx.checkpointsDir);
     checkSequence(entries);
     let prev = null;
+    const recoveries = [];
     for (const e of entries) {
       prev = verifyOne(ctx, e, prev);
       done.push(summarize(prev));
+      if (prev.limitation) recoveries.push(prev.limitation);
     }
-    const limitations = checkHead(ctx, prev, o);
+    const limitations = [...recoveries, ...checkHead(ctx, prev, o)];
     return { verdict: "PASS", code: "OK", mode, detail: `${done.length} checkpoint(s) verified to ${prev.id}`, checkpoints: done, limitations };
   } catch (err) {
     const r = err instanceof G4Refusal ? err : block("INTERNAL_ERROR", firstLine(err));

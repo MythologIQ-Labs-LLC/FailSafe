@@ -70,7 +70,7 @@ A G4 checkpoint attests a commit that already exists, so it cannot be part of th
 
 **What may be added.** Exactly one new directory `tools/g4/checkpoints/g4-NNNNNN/`, numbered one above the previous checkpoint, with exactly these five files, all added in the single commit K: `manifest.json`, `manifest.sig`, `timestamp.tsq`, `timestamp.tsr`, `tsa-chain.pem`. Nothing under `tools/g4/checkpoints/` may be modified, deleted, renamed or replaced, in any commit.
 
-**What stays pre-seal.** `tools/g4/keys/**`, `tools/g4/tsa-roots/**`, `tools/g4/tsa-policy.json`, `tools/g4/revocations.json`, the G4 scripts and all product source are not on the post-seal list. Key, root, policy, revocation and archive changes are committed and qualified before S.
+**What stays pre-seal.** `tools/g4/keys/**`, `tools/g4/tsa-roots/**`, `tools/g4/tsa-crls/**` (a CRL current at the planned token time), `tools/g4/tsa-policy.json`, `tools/g4/revocations.json`, `tools/g4/revocation-notices/**`, `tools/g4/transitions/**`, the G4 scripts and all product source are not on the post-seal list. Key, root, policy, revocation and archive changes are committed and qualified before S.
 
 **Checks before merging** (all must hold; any failure means re-seal or NO-GO):
 

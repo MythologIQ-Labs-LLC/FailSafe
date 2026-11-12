@@ -12,6 +12,9 @@ const GAP_STATEMENT_PATH = "tools/g4/HISTORICAL_GAPS.md";
 const TSA_POLICY_PATH = "tools/g4/tsa-policy.json";
 const KEYS_DIR = "tools/g4/keys";
 const CHECKPOINTS_DIR = "tools/g4/checkpoints";
+const TSA_CRLS_DIR = "tools/g4/tsa-crls";
+const NOTICES_DIR = "tools/g4/revocation-notices";
+const TRANSITIONS_DIR = "tools/g4/transitions";
 const GENESIS_MARKER = "after clean epoch #914";
 const GENESIS_EPOCH_HEADING = "### Entry #914: EPOCH";
 const MANIFEST_SCHEMA = "failsafe-g4-checkpoint-manifest/v1";
@@ -40,6 +43,17 @@ function listCheckpoints(checkpointsDir) {
     .sort((a, b) => a.sequence - b.sequence);
 }
 
+/** Committed RFC 3161 token for revocation-registry version `version`. */
+function noticeTokenPath(version) {
+  return `${NOTICES_DIR}/v${version}.tsr`;
+}
+
+/** Committed transition record files for the key `fromFingerprint`. */
+function transitionPaths(fromFingerprint) {
+  const base = `${TRANSITIONS_DIR}/${fromFingerprint}`;
+  return { record: `${base}.json`, signature: `${base}.sig`, token: `${base}.tsr` };
+}
+
 function certPathFor(repoRoot, fingerprint) {
   return path.join(repoRoot, KEYS_DIR, `${fingerprint}.cer`);
 }
@@ -51,6 +65,9 @@ module.exports = {
   TSA_POLICY_PATH,
   KEYS_DIR,
   CHECKPOINTS_DIR,
+  TSA_CRLS_DIR,
+  NOTICES_DIR,
+  TRANSITIONS_DIR,
   GENESIS_MARKER,
   GENESIS_EPOCH_HEADING,
   MANIFEST_SCHEMA,
@@ -58,4 +75,6 @@ module.exports = {
   checkpointId,
   listCheckpoints,
   certPathFor,
+  noticeTokenPath,
+  transitionPaths,
 };

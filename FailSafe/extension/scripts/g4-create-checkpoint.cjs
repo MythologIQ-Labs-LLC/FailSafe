@@ -42,7 +42,12 @@ function parseArgs(argv) {
 function httpTsa(url) {
   return {
     async request(tsq) {
-      const res = await postQuery(url, tsq);
+      let res;
+      try {
+        res = await postQuery(url, tsq);
+      } catch (err) {
+        throw new G4Refusal("BLOCKED", "TSA_OFFLINE", `${url}: ${err.message}`);
+      }
       if (res.status !== 200) throw new G4Refusal("BLOCKED", "TSA_OFFLINE", `${url} answered HTTP ${res.status}`);
       return res.body;
     },

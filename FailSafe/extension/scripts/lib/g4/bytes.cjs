@@ -51,6 +51,16 @@ function witnessImprint(manifestBytes, signatureBytes) {
   return sha256(framed);
 }
 
+/**
+ * Imprint for any other G4 record: SHA-256(tag || for each part: u64be(len) || part).
+ * Each record kind has its own tag, so no token can be replayed across kinds.
+ */
+function taggedImprint(tag, ...parts) {
+  const framed = [Buffer.from(tag, "utf8")];
+  for (const p of parts) framed.push(u64be(p.length), p);
+  return sha256(Buffer.concat(framed));
+}
+
 /** Strict UTF-8 decode: refuses a BOM and any invalid sequence. */
 function decodeUtf8Strict(buf, what) {
   if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
@@ -75,6 +85,7 @@ module.exports = {
   sha256,
   u64be,
   witnessImprint,
+  taggedImprint,
   decodeUtf8Strict,
   isHex64,
 };

@@ -19,6 +19,10 @@ Design authority: the "G4: complete-ledger-byte witness" section and the Iterati
 | `tools/g4/sign-checkpoint.ps1` | Signs SHA-256(manifest) with the named TPM key (`CngKey.Open` + `ECDsaCng.SignHash`) |
 | `tools/g4/enroll-tpm-key.ps1` | Creates the TPM key and exports the public certificate. **Owner only; never run by automation** |
 | `tools/g4/revocations.json` | Append-only revocation registry (version 1, empty) |
+| `tools/g4/revocation-notices/v<N>.tsr` | RFC 3161 token for registry version N (N >= 2) |
+| `tools/g4/tsa-crls/*.crl` | Archived CRLs of the pinned TSA root (revocation evidence at token time) |
+| `tools/g4/transitions/<fp>.{json,sig,tsr}` | Key rotation or recovery record for the key `<fp>` |
+| `FailSafe/extension/scripts/g4-record.cjs` | CLI: stamp a registry version, or write a transition record (owner only) |
 | `tools/g4/tsa-policy.json` | Trusted TSA roots (`pending-owner-decision`, none) |
 | `tools/g4/HISTORICAL_GAPS.md` | Historical-gap statement, bound into every manifest by SHA-256 |
 | `tools/g4/keys/<sha256>.cer` | Committed public certificates (none yet) |
@@ -177,41 +181,78 @@ openssl ts -verify -digest <imprint> -in tools/g4/checkpoints/g4-000001/timestam
 
 Regression suite: `npm run test:node` in `FailSafe/extension`. It runs `g4Witness`, `g4FalsifyLedger`, `g4FalsifyKeys` and `g4FalsifyTokens`. They run offline against a throwaway local OpenSSL TSA, and if no `openssl` binary is found they are skipped with an explicit reason (set `G4_OPENSSL`).
 
-## Revocation and rotation
+## TSA tokens at token time (owner item 9)
 
-**Revocation.** The owner appends a notice to `tools/g4/revocations.json` (`fingerprintSha256`, `effectiveUtc`, `reason`, `authorizedBy`), bumps `version`, and commits. The procedure also calls for timestamping the new registry bytes with the selected TSA:
+Every RFC 3161 token is validated at its own `genTime`: checkpoint tokens, revocation-notice tokens and transition-record tokens alike. The command is `openssl ts -verify ... -attime <genTime> -crl_check`. The trust file holds:
+- the pinned roots named in `tools/g4/tsa-policy.json`, where each root file must hold exactly one certificate (`TSA_ROOT_MALFORMED` otherwise);
+- every CRL committed under `tools/g4/tsa-crls/` (PEM files ending `.crl`, read from Git at HEAD; anything else is `TSA_CRL_MALFORMED`).
+
+The TSA signer must appear in no committed CRL that was current at the token's time.
+
+| Situation | Result |
+|---|---|
+| No CRL current at the token's time | `BLOCKED TSA_REVOCATION_EVIDENCE_MISSING` |
+| Signer revoked in a CRL current then | `REFUSED TSA_SIGNER_REVOKED` |
+| A CRL that does not verify against the pinned root | `REFUSED TOKEN_INVALID` |
+
+A checkpoint therefore stays verifiable after its TSA signer certificate expires, and a token made after its signer was revoked is refused.
+
+**Archived evidence is a pre-seal input.** Before a seal, a CRL that covers the planned token time must be committed: its `lastUpdate` is at or before that time and its `nextUpdate` after it. FreeTSA publishes its root CRL yearly (`http://www.freetsa.org/crl/root_ca.crl`). The committed `freetsa-root-ca-2026-09-18.crl` covers 2026-09-18 to 2027-09-18. After that date a newer CRL must be fetched, checked against the pinned root (`openssl crl -in <file> -CAfile tools/g4/tsa-roots/freetsa-root-ca.pem -noout`) and committed before the next checkpoint. Older CRLs are never removed.
+
+**Limit.** Token-time validation trusts the TSA's own `genTime`. If a TSA key were compromised and the compromise never published, its holder could backdate tokens. The externally retained trusted head is what detects a replaced chain.
+
+## Revocation (owner item 7)
+
+The owner appends a notice to `tools/g4/revocations.json` (`fingerprintSha256`, `effectiveUtc`, `reason`, `authorizedBy`), bumps `version` and commits it. Then the owner timestamps that committed version and commits the token:
 
 ```bash
-openssl ts -query -digest <sha256 of revocations.json> -sha256 -cert -out v<N>.tsq
+node FailSafe/extension/scripts/g4-record.cjs notice --tsa-url https://freetsa.org/tsr
+# writes tools/g4/revocation-notices/v<N>.tsr; commit it
 ```
 
-The `.tsr` is stored as `tools/g4/revocation-notices/v<N>.tsr`. The v6.0.13 verifier enforces:
-- the effective time: checkpoints whose token time is at or after it are refused, and earlier ones stay valid and are marked as predating the revocation;
-- the registry digest and version bound in each checkpoint;
-- append-only history, both across checkpoints and in the registry's own Git history.
+The token's imprint is `SHA-256("FailSafe-G4-revocations-v1\0" || u64be(len) || registry bytes)`. The verifier enforces:
+- every committed registry version from 2 onward has its token, valid at token time (`REVOCATION_UNSTAMPED` otherwise);
+- version 1 holds no notice;
+- version tokens are in time order (`REVOCATION_TIME_ORDER`);
+- a notice is effective no later than 5 minutes after its own version's token time (`REVOCATION_POSTDATED`), so a revocation can never be dated after the moment it was independently witnessed;
+- checkpoints whose token time is at or after the effective time are refused (`KEY_REVOKED`); earlier ones stay valid and are marked as predating the revocation;
+- the registry digest and version bound in each checkpoint, and append-only history.
 
-It does **not** verify the notice timestamps (see limitations).
+## Key rotation and emergency recovery (owner item 6)
 
-**Rotation (planned, old key still available).** Not supported by the v6.0.13 verifier: any key change between consecutive checkpoints is `REFUSED KEY_RESET`. The design requires all of these before a new key is trusted:
-- a key-transition record, timestamped and bound to the old fingerprint;
-- an owner identity attestation;
-- an independent technical PASS.
+`--trust-fingerprint` pins the **genesis** key. A later checkpoint may be signed by another key only through a committed transition record for the previous key, `tools/g4/transitions/<old fingerprint>.{json,sig,tsr}`. Without one, the change is `REFUSED KEY_RESET`.
 
-That record format and its verifier support need owner approval of the procedure, and are listed as an owner decision.
-
-## Recovery from TPM loss or reset
-
-A TPM clear, motherboard replacement or Windows reinstall destroys the key, unrecoverably by design. There is no backup, no fallback key and no copy in CI.
-1. Revoke the lost fingerprint (notice with `effectiveUtc` = time of loss), and commit it.
-2. Do not delete or rewrite `tools/g4/checkpoints/`. Move the old chain intact to `tools/g4/archive/<old fingerprint>/checkpoints/`. It stays verifiable with `--checkpoints <that dir>`.
-3. Enroll a new key (approval required), then produce the transition record, the owner identity attestation and an independent technical PASS before any new checkpoint is trusted.
-4. The new chain starts with a new genesis. Until cross-chain continuity is implemented, prove by hand that the new genesis ledger begins with the archived head's ledger bytes. On a POSIX shell:
+**Planned rotation, old key still available:**
+1. Enroll the new key (separate owner authorization) and commit its `.cer`.
+2. Write the record, signed by the **old** key, after the last checkpoint `g4-NNNNNN`:
 
    ```bash
-   cmp -n <old head byteLength> <(git show <old head commit>:docs/META_LEDGER.md) <(git show <new genesis commit>:docs/META_LEDGER.md)
+   node FailSafe/extension/scripts/g4-record.cjs transition --kind rotation --from <old fp> --to <new fp> --after g4-NNNNNN --cert tools/g4/keys/<old fp>.cer --key-name <old TPM key name> --tsa-url https://freetsa.org/tsr
    ```
 
-   Record the result in the transition record.
+   Commit the three files before the seal; they are pre-seal inputs.
+3. The next checkpoint is signed by the new key.
+4. Optionally revoke the old key afterwards (see Revocation).
+
+The verifier accepts the change only if all of these hold:
+- the record names this repository, the old and new fingerprints, and the previous checkpoint;
+- it is signed by the old key and timestamped between the two checkpoints;
+- the old key was not revoked at the record's time.
+
+Otherwise the change is `KEY_TRANSITION_INVALID`. Continuity is verified, and the release PASS carries no limitation.
+
+**Emergency recovery, old key lost** (TPM clear, motherboard replacement, Windows reinstall). There is no backup by design.
+1. Revoke the lost fingerprint, with `effectiveUtc` at or before the time of loss, and stamp that registry version.
+2. Enroll a new key (separate authorization) and commit its `.cer`.
+3. Write the record with `--kind recovery`, signed by the **new** key, and commit it.
+4. **The owner records `g4-NNNNNN:<sha256 of the .json>` offline**, as with a trusted head.
+5. The next checkpoint is signed by the new key.
+
+The verifier refuses the recovery:
+- with `KEY_RECOVERY_UNREVOKED` while the old key is not revoked by the record's time;
+- with `KEY_RECOVERY_UNACKNOWLEDGED` unless `--accept-recovery g4-NNNNNN:<digest>` is passed with the offline value.
+
+When it is accepted, every PASS (release mode included) carries the limitation `emergency key recovery after g4-NNNNNN ... chain continuity across it is NOT verified`. Checkpoint links and the ledger byte-prefix continue to be checked across a recovery. What is not verified is that the holder of the old key agreed to the change. A recovery therefore never claims uninterrupted continuity, and a release across one needs its own recorded owner decision.
 
 ## Operating limitations (disclosed)
 
@@ -220,12 +261,9 @@ A TPM clear, motherboard replacement or Windows reinstall destroys the key, unre
 - **Re-genesis.** Without `--trust-fingerprint` or `--trusted-head`, replacing the whole checkpoint directory with a fresh chain signed by any key whose certificate is committed verifies PASS. The suite records this case, and shows it is refused with either anchor.
 - **TSA trust and availability.** The design trusts the selected TSA. RFC 3161 proves existence at a time, not inclusion in a public append-only log.
 - **Windows-only signing.** Verification needs only Node, Git and OpenSSL, on any OS.
-- **Not implemented in v6.0.13:**
-  - revocation-notice timestamps are not verified;
-  - the key-transition record and cross-chain continuity are not implemented (key changes fail closed);
-  - the trusted head is not published anywhere automatically.
+- **Not implemented:** the trusted head is not published anywhere automatically.
 - **Time checks.** The verifier refuses `createdUtc` more than 5 minutes after the token time, or more than 24 hours before it.
-- **TSA certificate expiry (owner decision).** `openssl ts -verify` validates the TSA chain at the current time, not at the token time. When the TSA signer certificate expires, verification of old checkpoints will REFUSE. This fails closed, but it makes old checkpoints unverifiable. The alternative is `-attime <genTime>`, which validates at the token time. It is a long-term-validation policy, and it needs the owner's decision (and, ideally, archived revocation status for the TSA chain). It is not implemented.
+- **TSA certificate expiry.** Tokens are validated at their own time against archived CRLs (see "TSA tokens at token time"). An expired TSA signer certificate does not invalidate earlier tokens; a missing or stale CRL blocks.
 - **Registry Git history.** The Git-history layer uses `git log -- tools/g4/revocations.json`, which follows Git's default history simplification. A merge whose registry equals an older side hides the newer version from that layer. The checkpoint anchors still catch such a rollback: the bound version is compared checkpoint to checkpoint and checkpoint to HEAD (`REGISTRY_ROLLBACK`, tested). A rollback that happens before any checkpoint binds the newer version is not detectable.
 - **Working tree.** Certificates and checkpoint files are read from the checked-out tree. Ledger, registry, gap statement and TSA policy are read from Git objects (with replace refs disabled). In a diagnostic run, a PASS on a dirty tree can reflect uncommitted checkpoint or certificate files. In `--release` mode the verifier enforces this itself: the checkout must be clean and at `--commit`, and every file under `tools/g4/checkpoints/` and `tools/g4/keys/` is compared byte for byte with its blob committed at HEAD, so `git update-index --skip-worktree`, `--assume-unchanged` or a same-size swap cannot substitute evidence. Only a `mode: release` PASS is release evidence.
 - **Token status.** A non-granted token is refused (`TOKEN_INVALID`). In practice `openssl ts -verify` already rejects a response that carries no token, so this check is defence in depth.

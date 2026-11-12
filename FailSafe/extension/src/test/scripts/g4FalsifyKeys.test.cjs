@@ -12,6 +12,7 @@ const layout = require("../../../scripts/lib/g4/layout.cjs");
 const { sha256 } = require("../../../scripts/lib/g4/bytes.cjs");
 const { createTestSigner } = require("./g4TestPki.cjs");
 const S = require("./g4Scenario.cjs");
+const { stampRegistry } = require("../../../scripts/lib/g4/records.cjs");
 
 const found = ts.findOpenssl();
 const skip = found ? false : "openssl CLI unavailable (set G4_OPENSSL); G4 falsification cannot run";
@@ -27,6 +28,13 @@ const notice = (fp, effectiveMs, reason = "test") => ({ fingerprintSha256: fp, e
 function setRegistry(dir, version, revocations, msg) {
   S.write(dir, layout.REGISTRY_PATH, S.registryBytes(version, revocations));
   return S.commitAll(dir, msg);
+}
+
+/** A registry version with its independent notice token, as owner item 7 requires. */
+async function setStampedRegistry(dir, version, revocations, msg) {
+  setRegistry(dir, version, revocations, msg);
+  await stampRegistry({ repoRoot: dir, tsa: base.tsa });
+  return S.commitAll(dir, `${msg}: notice token`);
 }
 
 const it = (name, fn) => test(name, { skip }, fn);
@@ -82,15 +90,16 @@ it("pinned trust: the real chain is refused when a different key is pinned", () 
   refused(S.verify(base.repo, { trustFingerprint: keyB.fingerprint }), "KEY_UNTRUSTED");
 });
 
-it("revoked key: revocation effective before the checkpoints' token times", () => {
+it("revoked key: revocation effective before the checkpoints' token times", async () => {
   const dir = S.copyRepo(base);
-  setRegistry(dir, 2, [notice(base.signer.fingerprint, Date.now() - DAY)], "revoke A");
+  await setStampedRegistry(dir, 2, [notice(base.signer.fingerprint, Date.now() - DAY)], "revoke A");
   refused(S.verify(dir), "KEY_REVOKED");
 });
 
-it("revocation effective after the checkpoints: they stay valid, marked as predating it", () => {
+it("revocation effective after the checkpoints: they stay valid, marked as predating it", async () => {
   const dir = S.copyRepo(base);
-  setRegistry(dir, 2, [notice(base.signer.fingerprint, Date.now() + DAY)], "revoke A later");
+  await new Promise((r) => setTimeout(r, 1100));
+  await setStampedRegistry(dir, 2, [notice(base.signer.fingerprint, Date.now())], "revoke A later");
   const r = S.verify(dir);
   assert.equal(r.verdict, "PASS", r.detail);
   assert.match(r.checkpoints[0].revocation, /predates revocation/);

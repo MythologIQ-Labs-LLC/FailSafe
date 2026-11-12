@@ -7,7 +7,7 @@
  *     [--trusted-head <g4-NNNNNN>:<manifest sha256, retained out of band>]
  *     [--tsa-ca <PEM file of trusted TSA roots; overrides tools/g4/tsa-policy.json>]
  *     [--repository <owner/name>] [--commit <qualified commit sha>]
- *     [--checkpoints <dir>] [--release] [--json]
+ *     [--checkpoints <dir>] [--accept-recovery <g4-NNNNNN>:<record sha256>]... [--release] [--json]
  *
  * --release is the only mode that counts as release evidence. It is BLOCKED
  * unless --trust-fingerprint, --trusted-head, --repository and --commit are all
@@ -17,14 +17,24 @@
  * is not exactly five regular files per g4-NNNNNN directory, and any committed
  * path that differs from the evidence directories only by case.
  *
+ * --trust-fingerprint pins the GENESIS key. A later key is accepted only through
+ * a committed transition record (tools/g4/transitions/): a rotation signed by
+ * the previous key, or an emergency recovery whose digest the owner holds
+ * offline and passes with --accept-recovery; a PASS across a recovery always
+ * carries the limitation that continuity across it is NOT verified.
+ *
  * --tsa-ca is a test/diagnostic override: a PASS under it carries the
  * limitation "NOT a release verification". Unexpected errors are BLOCKED
  * INTERNAL_ERROR.
  *
  * Walks tools/g4/checkpoints from genesis to head and checks, for each:
  * manifest bytes and schema; signature against the committed certificate;
- * the RFC 3161 token (openssl ts -verify) for the length-framed imprint; token
- * time inside the key window; key unchanged, known, pinned and not revoked;
+ * the RFC 3161 token (openssl ts -verify) for the length-framed imprint, its
+ * chain validated at the token's own time against the pinned TSA root and a
+ * committed CRL (tools/g4/tsa-crls/) current then; token time inside the key
+ * window; key known, pinned at genesis, changed only through an accepted
+ * transition, and not revoked; a token for every revocation-registry version
+ * from 2 on (tools/g4/revocation-notices/), no notice dated after it;
  * previous-checkpoint links; byte-prefix continuity against the real ledger
  * blob at every commit (git show); the registry and gap-statement digests;
  * monotonic revocation history. Exit 0 PASS, 1 REFUSED, 2 BLOCKED.
@@ -58,6 +68,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--json") o.json = true;
     else if (argv[i] === "--release") o.release = true;
+    else if (argv[i] === "--accept-recovery") o.acceptRecovery = [...(o.acceptRecovery || []), valueOf(argv, i++)];
     else if (FLAGS[argv[i]]) o[FLAGS[argv[i]]] = valueOf(argv, i++);
     else throw new Error(`unknown or incomplete argument: ${argv[i]}`);
   }
