@@ -33,11 +33,23 @@ FailSafe is a VS Code extension with a Monitor and a broader Console. It **does 
 
 ## See it in action
 
-![FailSafe Console overview](FailSafe/extension/media/FailSafe-Overview.PNG)
+[![Poster for the narrated FailSafe v6.0.12 walkthrough, From Change to Confidence](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/video/failsafe-6.0.12-from-change-to-confidence-poster.jpg)](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/video/failsafe-6.0.12-from-change-to-confidence.mp4)
 
-![FailSafe Monitor sidebar](FailSafe/extension/media/FailSafe-Sidebar.PNG)
+[Watch the v6.0.12 walkthrough (1:53, MP4)](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/video/failsafe-6.0.12-from-change-to-confidence.mp4) · [English captions](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/video/failsafe-6.0.12-from-change-to-confidence.en.vtt) · [Transcript](https://github.com/Knapp-Kevin/MythologIQ/blob/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/transcript.md) · [Capture provenance and limits](https://github.com/MythologIQ-Labs-LLC/FailSafe/blob/aa7380381a7428364816c144279652ba3bf638e3/docs/marketing/failsafe-v6.0.12/PROVENANCE.md)
 
-For more screens, see the [UI and technical reference](docs/archive/README_LEGACY_REFERENCE.md).
+The film shows the published v6.0.12 extension in VS Code using a **fictional project**. Developer edits were scripted for the recording; no AI agent performed them. A denied editor save is **reported, not prevented**, and the film does not demonstrate a completed governance approval or release seal. Media links are pinned to reviewed source assets, not to an unverified website deployment.
+
+### Screenshots from v6.0.12
+
+![FailSafe v6.0.12 Console and Monitor sharing a dark theme, composited from simultaneous recordings](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/screenshots/web/06-homepage-console-monitor-6.0.12.webp)
+
+*Console and Monitor in the same theme (composite of two simultaneous recordings).*
+
+![VS Code showing the FailSafe v6.0.12 Monitor sidebar next to the fictional demo repository](https://raw.githubusercontent.com/Knapp-Kevin/MythologIQ/c96560437c974e7de08504493a2608641fe602d2/public/assets/failsafe-v6.0.12/screenshots/web/02-monitor-vscode-dark.webp)
+
+*The FailSafe Monitor inside VS Code.*
+
+For older screenshots and deeper technical references, see the [historical UI reference](docs/archive/README_LEGACY_REFERENCE.md).
 
 ## Get started
 
