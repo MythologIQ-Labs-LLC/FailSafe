@@ -16,10 +16,11 @@
 
 ## 2026-11-12 — v6.0.13 release candidate prepared (not sealed, not published)
 
-- Branch `release/v6.0.13-rc1` from `main` `5b7994a6` (PR #658 merge; rule suite 5080017488 `result=pass`).
+- Branch `release/v6.0.13-rc1` from `main` `5b7994a6` (PR #658 merge; rule suite 5080017488 `result=pass`), updated to `main` `23e254d9` (PR #666 TPM script fix, PASS #965; PR #667 owner certificate, PASS #966).
 - Product change since v6.0.12: the Statewright website handoff card (#652, PR #653). The Continue and Aider catalog hints no longer name a release (#475).
 - Release tooling: the G4 ledger witness (#638), merged through PRs #644, #646, #650, #654, #647, #657 and #658 (independent PASS #931/#934/#937/#948/#958/#963). The FreeTSA root and a single-root policy are committed.
-- Not yet done, and each needs the owner: TPM key enrollment and the offline fingerprint record; the v6.0.13 seal; the genesis checkpoint `g4-000001` and its offline head; `--release` verification on H and M; release GO.
+- Owner key `FailSafe-G4-Ledger-Witness` enrolled 2026-11-12 under owner authorization; certificate `tools/g4/keys/a50c00715e7275a86fad338c80ceacd161da02bdf2b75c60b1082eb518265d8b.cer`; the owner holds the fingerprint offline.
+- Not yet done, and each needs the owner: the genesis checkpoint `g4-000001` and its offline head (after the v6.0.13 seal); `--release` verification on H and M; release GO.
 - Open and disclosed: #660 (transition and notice record writes are not failure-atomic; no rotation or recovery in this release), #505, #476, #475, #463.
 
 ## 2026-11-10 — v6.0.12 release recovery (#634)
