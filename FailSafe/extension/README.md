@@ -1,8 +1,14 @@
 # FailSafe: Governance for AI Coding Agents
 
+## What's New in v6.0.13
+
+- **Statewright AI in the Integrations tab.** A Statewright card opens Statewright's own Run History website (`https://statewright.ai/runs`) in your browser when you choose it. Statewright handles sign-in and run data; FailSafe sends nothing to Statewright, shows no connection status, and does not read Statewright history or enforce Statewright workflows (#652).
+- **Witnessed release ledger.** The governance ledger behind this release is checkpointed with an owner-held, non-exportable TPM key and an independent RFC 3161 timestamp, and the checkpoint is verified before publication (#638). This is release tooling; it adds nothing to the installed extension.
+- Continue and Aider stay disabled (#475). See the changelog for known limitations.
+
 ## What's New in v6.0.12
 
-**Release candidate, not yet published; the published release is v6.0.11.** One theme for the whole app: the theme you pick in the Console now also applies to the Monitor sidebar and the SRE view, stays the same in the browser Console and in VS Code, and is kept across reloads and restarts in the VS Code setting `failsafe.console.theme` (#601). Includes the dependency updates merged after v6.0.11.
+**Released 2026-11-10.** One theme for the whole app: the theme you pick in the Console now also applies to the Monitor sidebar and the SRE view, stays the same in the browser Console and in VS Code, and is kept across reloads and restarts in the VS Code setting `failsafe.console.theme` (#601). Includes the dependency updates merged after v6.0.11.
 
 - **Continue and Aider no longer start from FailSafe.** FailSafe cannot yet contain them at the operating-system level, and a git worktree is not a sandbox, so both commands refuse before any process, prompt or credential read, and the catalog shows them disabled (#475). This is a temporary restriction.
 - **Qor-logic is pinned to the frozen 0.176.1 release.** FailSafe installs it only from the verified local wheel you select, offline, with no PyPI upgrade, and reports a skill install as successful only when the CLI's file count matches a hash-verified install receipt. Selected-skill and global installs, the install preview and the skill list are unavailable with this release (#463). See the changelog for known limitations.
@@ -54,8 +60,8 @@ Supported agent integrations can add controlled workflows and evidence:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. On Windows, only a `cn.exe` or `cn.com` on PATH counts: Continue's npm shim `cn.cmd` cannot run without a shell, so an npm install is reported unavailable. |
-| 🔧 **Aider governed wrapper** | Run Aider (auto-commit off) in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Aider (governed)`). | Apply re-checks HEAD, the tree and the exact reviewed bytes before writing. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
+| 🤖 **Continue (`cn`) governed command (disabled)** | `FailSafe: Run Continue (governed)` refuses before launching Continue. | A disposable git worktree is not an OS sandbox, so FailSafe does not claim agent containment it cannot enforce. No Continue process starts and no setting or credential is read through this command (#475). Historical Windows CLI limitation: Continue's npm shim `cn.cmd` cannot run without a shell; this does not override the current no-launch gate. |
+| 🔧 **Aider governed command (disabled)** | `FailSafe: Run Aider (governed)` refuses before launching Aider. | No Aider process starts and no credential is read through this command until a separately qualified containment mechanism exists (#475). |
 | 👁️ **OpenHands run import** | Import an exported OpenHands run, after you confirm, as historical evidence in the FailSafe timeline (`FailSafe: Import OpenHands Run (observe)`). Version-gated, deduplicated and signed for this install; the transparency log gets one summary line. | See what an agent run did next to your own governance events. It is a record of a past run, not live enforcement (#477). |
 | 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture: remote MCP, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
 
@@ -82,7 +88,7 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 
 ---
 
-**Current Release**: v6.0.12 (2026-11-10)
+**Current Release**: v6.0.13 (2026-11-13)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
