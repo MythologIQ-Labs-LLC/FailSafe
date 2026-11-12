@@ -1,10 +1,10 @@
 {
   "phase": "plan",
   "session_id": "2026-11-12T1608-74433c",
-  "ts": "2026-11-12T16:08:55Z",
+  "ts": "2026-11-12T16:45:15Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-token-time-transitions.md",
-  "iteration": 1,
-  "plan_content_hash": "d6e7437fcb7f7ce925a8145082fe6369fb487f8c675e1d5f900e5f69f388d59f",
+  "iteration": 2,
+  "plan_content_hash": "a3d791b122c3ee49f0f03c85867538139b8dc9035932894ef929e0e5e8a6f574",
   "required_gate_artifacts": [
     "plan",
     "audit",
@@ -44,6 +44,6 @@
     "host": "claude-code",
     "model_family": "claude-opus-5-5",
     "human_oversight": "absent",
-    "ts": "2026-11-12T16:08:55Z"
+    "ts": "2026-11-12T16:45:15Z"
   }
 }
