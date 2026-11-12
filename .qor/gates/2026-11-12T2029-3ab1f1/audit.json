@@ -1,0 +1,27 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-12T2029-3ab1f1",
+  "ts": "2026-11-12T20:35:12Z",
+  "target": ".failsafe/governance/plans/plan-v6013-638-g4-owner-key.md",
+  "verdict": "PASS",
+  "report_path": ".failsafe/governance/evidence/g4-owner-key/AUDIT_REPORT-g4-owner-key-iter1.md",
+  "risk_grade": "L3",
+  "target_content_hash": "b9eb669ddcd10ff550f9eac97db59674f0eac1e67bc83d2a197e9ee99a984662",
+  "report_content_hash": "c8d6e1f4b6365333998e24eb8493aec1c29e9e5e1d170d06bdc370a6e9fc9385",
+  "iteration": 1,
+  "ledger_entry": 966,
+  "ledger_chain_hash": "46c0abbc87a4bb856ecbe23f481608d7c60df5e897792725804e06aacae3dbc7",
+  "audited_candidate": "d7f3b61b9363ba017e95e95cad61ac2a58576e36",
+  "mode": "solo; Option B fresh-context independent auditor",
+  "findings_categories": [],
+  "violations": [],
+  "merge_obligations": "current-head CI; PR #666 merged first; owner authority for merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "pass",
+    "ts": "2026-11-12T20:35:12Z"
+  }
+}
