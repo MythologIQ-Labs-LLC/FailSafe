@@ -1,10 +1,10 @@
 {
   "phase": "plan",
   "session_id": "2026-11-12T1524-662da3",
-  "ts": "2026-11-12T15:33:48Z",
+  "ts": "2026-11-12T15:43:44Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-638-g4-freetsa-root.md",
-  "iteration": 2,
-  "plan_content_hash": "87743ad97ccee9d0dd6884c9712adfc867d797daa68595693fbfb6e1720087f8",
+  "iteration": 3,
+  "plan_content_hash": "d9a1e64601e7e437ebf76f31c3cc6d750679926eec3d4ecf43708e2cbc1b49fc",
   "required_gate_artifacts": [
     "plan",
     "audit",
@@ -43,6 +43,6 @@
     "host": "claude-code",
     "model_family": "claude-opus-5-5",
     "human_oversight": "absent",
-    "ts": "2026-11-12T15:33:48Z"
+    "ts": "2026-11-12T15:43:44Z"
   }
 }
