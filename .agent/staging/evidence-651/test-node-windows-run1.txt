@@ -1,0 +1,5 @@
+# wall-clock, above-normal priority: worst turn held 55.6 ms (wall 55.6, main-thread CPU 31.0, run-queue wait 0.0) over 18 turns
+not ok 308 - bundled dependencies (C2 T5)
+# tests 1110
+# pass 1090
+# fail 2
