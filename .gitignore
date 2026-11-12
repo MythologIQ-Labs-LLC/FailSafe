@@ -105,6 +105,8 @@ nul
 .env.*.local
 *.pem
 *.key
+# G4 (#638): public TSA trust-root certificates only, never keys
+!tools/g4/tsa-roots/*.pem
 .vsce-token
 .ovsx-token
 
