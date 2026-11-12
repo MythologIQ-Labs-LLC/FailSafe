@@ -1,0 +1,48 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-12T2009-f7e2ef",
+  "ts": "2026-11-12T20:19:53Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-665-g4-tpm-scripts.md",
+  "iteration": 2,
+  "plan_content_hash": "9b6d42b8d61f857692dc3e1a3dc572729856a50dc05de0f17eaeec31ea8c5215",
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "open_questions": [],
+  "change_class": "hotfix",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #665 (found during owner-authorized G4 enrollment 2026-11-12)",
+  "high_risk_target": false,
+  "phases": [
+    "Phase 1 - enroll-tpm-key.ps1 KeysDir default resolved in body; sign-checkpoint.ps1 Test-P256Key accepts only P-256; executable PowerShell tests"
+  ],
+  "boundaries": {
+    "limitations": [
+      "Tests run on Windows PowerShell only"
+    ],
+    "non_goals": [
+      "No key creation, deletion or replacement",
+      "No certificate commit",
+      "No checkpoint"
+    ],
+    "exclusions": [
+      "No change to accepted key types beyond P-256"
+    ]
+  },
+  "ci_commands": [
+    "node --test src/test/scripts/g4*.test.cjs",
+    "npm run test:node"
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "absent",
+    "ts": "2026-11-12T20:19:53Z"
+  }
+}
