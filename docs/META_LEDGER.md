@@ -36631,3 +36631,23 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: GATE TRIBUNAL VETO for plan-v6013-665-g4-tpm-scripts.md iteration 1 (exact audited commit 9b2a304d0f81d442e03a4d15f93c1709c1caa2c6, draft PR #666, issue #665), by a fresh-context independent auditor on 2026-11-12 (UTC); risk grade L2. The code fix is correct and fails closed: Test-P256Key refused P-384, P-521, ECDH, RSA, DSA, generic ECDSA 256-bit keys on brainpool, secp256k1 and alias or explicit-parameter curves, curve names with trailing data, spaces, ASCII encoding or empty bytes, and throwing or null properties; the export-policy refusal, 64-byte length check and self-verification are unchanged; the enrollment script changes only its KeysDir default; the new tests pass 2 of 2, g4 suites 161 of 161, and each test fails on its original script. V1 (blocking, specification-drift): the new test executes tools/g4/enroll-tpm-key.ps1 from node --test without -ConfirmPersistentTpmKey, while the script header, docs/releases/G4_WITNESS_OPERATIONS.md and an existing test title state that the script is never run by automation, and nothing records that the refusal must stay ahead of any key-provider call. Notes: N1 the curve comparison is case-insensitive; N3 no test proves the signer calls Test-P256Key. The owner key FailSafe-G4-Ledger-Witness was not touched. Merge obligations: reconcile the three statements and record the ordering invariant, then obtain a new independent audit. Not a release decision.
 
 ---
+
+### Entry #965: GATE TRIBUNAL - plan-v6013-665-g4-tpm-scripts (iteration 2) PASS
+
+**Timestamp**: 2026-11-12T20:26:17Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-12T2009-f7e2ef`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-v6013-665-g4-tpm-scripts.md`
+**Report**: `.failsafe/governance/evidence/665/AUDIT_REPORT-665-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-12T2009-f7e2ef/audit-iter2.json`
+
+**Content Hash**: `cf563d084df0f249356257345c92e33093f1ecd5f4b1ad7340a991cb27e6f12d`
+**Previous Hash**: `ad838120c541798e07c575f42897b031b3b20b9f773d4f5af228d8c1ff199d9b`
+**Chain Hash (Merkle seal)**: `4fb6e9eb1c2f1350e67d4500d662bfef06b054637bb49db797fd88c8087ce0fd`
+
+**Decision**: GATE TRIBUNAL PASS for plan-v6013-665-g4-tpm-scripts.md iteration 2 (exact audited commit a6c0c7524986bf277234316ddc541333f5e8eb6c, draft PR #666, issue #665), by a second fresh-context independent auditor on 2026-11-12 (UTC); risk grade L2. No violations. Iteration-1 V1 closed: the enrollment script header, docs/releases/G4_WITNESS_OPERATIONS.md and the g4Witness test title now accurately say automation never passes -ConfirmPersistentTpmKey; the ordering invariant (both refusals ahead of any CngProvider or CngKey reference) is stated and its test fails when either refusal is moved after a key-provider reference, checked on scratch copies with the static test only. Test-P256Key accepts only ECDSA on NIST P-256 with a case-sensitive curve match; the signer's export-policy refusal, 64-byte length check and self-verification are unchanged; each new test fails on the defect it covers (original scripts from main, -eq instead of -ceq, the strict algorithm comparison restored). Results: g4PowerShellScripts and g4Witness 14 of 14, g4 suites 163 of 163, docs 145 of 145; the ledger only appends #964 and verifies post-anchor clean; razor holds. The owner key FailSafe-G4-Ledger-Witness was not touched. Notes for the owner: N1, V6_0_13_G4_OWNER_DECISION_RECORD_PROPOSED.md still says enrollment was not run, to be updated with the certificate PR; N4, the binding test still executes the script locally even if the ordering test fails, a local-only risk. Merge obligations: exact-head CI and owner authority for the protected merge. Not a release decision.
+
+---
