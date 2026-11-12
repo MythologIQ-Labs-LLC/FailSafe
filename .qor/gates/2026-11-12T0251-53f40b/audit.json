@@ -1,41 +1,45 @@
 {
   "phase": "audit",
   "session_id": "2026-11-12T0251-53f40b",
-  "ts": "2026-11-12T03:19:02Z",
+  "ts": "2026-11-12T03:55:46Z",
   "target": ".failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md",
   "verdict": "VETO",
-  "report_path": ".agent/staging/AUDIT_REPORT-656-iter2.md",
+  "report_path": ".agent/staging/AUDIT_REPORT-656-iter3-confirmation.md",
   "risk_grade": "L2",
   "findings_categories": [
-    "specification-drift",
-    "razor-overage"
+    "specification-drift"
   ],
-  "target_content_hash": "035d6e977887e8f7e4aee0a3bbd4873b29778296984cce20ddfcee915bc09487",
-  "report_content_hash": "5095f12c76c1bfbadd96017d73666dfdfdfd380f9151e556dfbc91ef41abb524",
-  "iteration": 2,
-  "ledger_entry": 951,
-  "ledger_chain_hash": "3c63f3d2a6a3978442ee76b0969e9ae81f1a77d1e901cf232f05e02ad497cf01",
-  "audited_candidate": "060a09faf32965af4bdf017b11fbb683e924b4cf",
-  "mode": "solo; Option B fresh-context independent auditor",
+  "target_content_hash": "c8ace3cf999d4670b500d1297e518e4ba73eec5e12e28b7b710381b23e4b8551",
+  "report_content_hash": "237bcce870379907a2ddf387e4f58b70358a6381a081757700fc1bf0d47cdaf0",
+  "iteration": 3,
+  "ledger_entry": 952,
+  "ledger_chain_hash": "4be020260b88cc415be6028cd970247981f846922e81f48b4949d380e6aedac4",
+  "audited_candidate": "fcb16f682cd06aec601baca8758438ee623c3088",
+  "mode": "solo; Option B fresh-context independent auditor; bounded confirmation check",
   "violations": [
     {
-      "id": "V1",
+      "id": "R1",
       "category": "specification-drift",
-      "detail": "planted 200 ms stall ends at 186-209 ms on Windows (15.6 ms CPU-clock steps); 2x margin not met"
+      "detail": "Entry #951 says 26 planted variants fail; its report lists 25 of 29"
     },
     {
-      "id": "V2",
-      "category": "razor-overage",
-      "detail": "evidence script falsify.cjs nesting depth 4"
+      "id": "R2",
+      "category": "specification-drift",
+      "detail": "plan iteration 3 repeats 26"
+    },
+    {
+      "id": "R3",
+      "category": "specification-drift",
+      "detail": "plan cites 27 to 54 ms from a file showing 27.1 to 48.3 ms"
     }
   ],
-  "merge_obligations": "remediate V1-V2; new independent audit on corrected source",
+  "merge_obligations": "correct R1-R3 (records only); new independent audit on corrected source",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "veto",
-    "ts": "2026-11-12T03:19:02Z"
+    "ts": "2026-11-12T03:55:46Z"
   }
 }
