@@ -116,7 +116,7 @@ it("a TSA signer revoked before a token's time is refused; earlier tokens stay v
   try {
     // Times have one-second resolution, and a revocation in a token's own second counts as before it.
     await sleep(1100);
-    b2.tsa.revokeSigner();
+    b2.tsa.revokeSigner("superseded");
     await sleep(1100);
     S.write(b2.repo, "tools/g4/tsa-crls/after-revocation.crl", b2.tsa.crl({ lastMs: Date.now() }));
     S.commitAll(b2.repo, "test: CRL listing the revoked TSA signer");

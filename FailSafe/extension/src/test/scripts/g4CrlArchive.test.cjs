@@ -38,7 +38,7 @@ before(async () => {
 it("a CRL issued after a token, listing the signer as revoked before it, is refused", async () => {
   const b = await freshBase();
   await sleep(1100);
-  b.tsa.revokeSigner();
+  b.tsa.revokeSigner("superseded");
   await sleep(1100);
   S.appendEntry(b.repo, 940);
   S.commitAll(b.repo, "test: entry 940");
@@ -59,6 +59,48 @@ it("a signer revoked for key compromise is refused for every token, earlier ones
   const r = S.verify(b.repo);
   refused(r, "TSA_SIGNER_REVOKED");
   assert.match(r.detail, /g4-000001/, "the genesis token, made before the revocation, is refused too");
+});
+
+for (const [label, reason] of [["with no reasonCode", undefined], ["on certificateHold", "certificateHold"], ["for CA compromise", "CACompromise"]]) {
+  it(`a signer revoked ${label} after the tokens invalidates them all (RFC 3161 section 4; audit #960 V5)`, async () => {
+    const b = await freshBase();
+    await sleep(1100);
+    b.tsa.revokeSigner(reason);
+    S.write(b.repo, LATER_CRL, b.tsa.crl({ lastMs: Date.now() }));
+    S.commitAll(b.repo, `test: CRL revoking the signer ${label}`);
+    refused(S.verify(b.repo), "TSA_SIGNER_REVOKED");
+  });
+}
+
+/** Commit a revoking CRL on a side branch, then merge it into the base branch with `mergeArgs`, dropping the CRL. */
+async function mergeDroppingCrl(mergeArgs, resolve) {
+  const b = await freshBase();
+  const main = S.git(b.repo, "rev-parse", "--abbrev-ref", "HEAD");
+  S.git(b.repo, "checkout", "-q", "-b", "side");
+  await sleep(1100);
+  b.tsa.revokeSigner("keyCompromise");
+  S.write(b.repo, LATER_CRL, b.tsa.crl({ lastMs: Date.now() }));
+  S.commitAll(b.repo, "test: revoking CRL on a side branch");
+  assert.equal(S.verify(b.repo).code, "TSA_SIGNER_REVOKED", "precondition: the side branch refuses");
+  S.git(b.repo, "checkout", "-q", main);
+  S.git(b.repo, "merge", "-q", "--no-ff", ...mergeArgs, "side");
+  if (resolve) resolve(b.repo);
+  return b;
+}
+
+it("a CRL dropped by a merge resolution is refused (audit #960 V6)", async () => {
+  const b = await mergeDroppingCrl(["--no-commit"], (dir) => {
+    S.git(dir, "rm", "-q", "--cached", LATER_CRL);
+    fs.rmSync(path.join(dir, LATER_CRL));
+    S.git(dir, "commit", "-q", "-m", "test: merge that drops the CRL");
+  });
+  refused(S.verify(b.repo), "TSA_CRL_HISTORY");
+});
+
+it("a CRL dropped by merging its branch with -s ours is refused (audit #960 V6)", async () => {
+  const b = await mergeDroppingCrl(["-s", "ours", "-m", "test: ours merge"]);
+  assert.equal(fs.existsSync(path.join(b.repo, LATER_CRL)), false, "precondition: the CRL is absent at HEAD");
+  refused(S.verify(b.repo), "TSA_CRL_HISTORY");
 });
 
 it("a signer revoked for another reason after a token leaves that token valid", async () => {

@@ -2,16 +2,22 @@
 /**
  * G4 (#638): the archived TSA CRLs in tools/g4/tsa-crls/ (owner item 9).
  *
- * - Append-only: no committed CRL file may ever be deleted, changed or renamed
- *   (TSA_CRL_HISTORY), so revocation evidence cannot be withdrawn.
+ * - Append-only: every CRL blob ever added in the history reachable from HEAD,
+ *   through any parent of any merge, must still be present at HEAD at the same
+ *   path with the same bytes, and no commit may delete, change or retype one
+ *   (TSA_CRL_HISTORY). Limit: checkpoints do not bind the CRL set, so a history
+ *   rewrite (force-push) that drops a CRL is visible only by comparing with an
+ *   earlier clone; branch protection is what forbids such rewrites.
  * - Each file holds exactly one PEM CRL and nothing else, and that CRL must
  *   verify against one pinned root (TSA_CRL_MALFORMED, TSA_CRL_UNTRUSTED).
  *   Only OpenSSL's canonical re-encoding of each CRL reaches the trust file, so
  *   a CRL file can never add a trust anchor.
- * - signerRevocation() consults EVERY archived CRL from the signer's issuing
- *   root, not only the one current at the token time: a TSA signer listed as
- *   revoked at or before the token's time, or revoked for key or CA compromise
- *   at any time (RFC 3161 section 4), is refused.
+ * - assertSignerNotRevoked() consults EVERY archived CRL from the signer's
+ *   issuing root, not only the one current at the token time. RFC 3161 section
+ *   4: only a revocation whose reasonCode is unspecified, affiliationChanged,
+ *   superseded or cessationOfOperation leaves tokens made before it valid. Any
+ *   other reason, or no reasonCode at all, invalidates every token of that
+ *   signer, earlier ones included.
  */
 const crypto = require("node:crypto");
 const fs = require("node:fs");
@@ -23,17 +29,30 @@ const ts = require("./timestamp.cjs");
 
 const PEM_CRL = /-----BEGIN X509 CRL-----[\s\S]+?-----END X509 CRL-----/g;
 const PEM_CERT = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g;
-const COMPROMISE = /Key Compromise|CA Compromise/i;
+const KEEPS_EARLIER = new Set(["Unspecified", "Affiliation Changed", "Superseded", "Cessation Of Operation"]);
 const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
 
 const normSerial = (s) => s.replace(/[^0-9a-f]/gi, "").replace(/^0+/, "").toUpperCase();
 
-/** Any committed CRL ever deleted, modified or renamed is refused. */
-function assertAppendOnly(repoRoot) {
-  const res = git(repoRoot, ["log", "--full-history", "--no-renames", "--format=%H", "--diff-filter=DMT", "--", `${layout.TSA_CRLS_DIR}/`]);
+/** `git log` over the CRL directory, every merge diffed against every parent (-m). */
+function crlLog(repoRoot, head, args) {
+  const res = git(repoRoot, ["log", head, "-m", "--full-history", "--no-renames", ...args, "--", `${layout.TSA_CRLS_DIR}/`]);
   if (res.status !== 0) throw block("REPO_UNREADABLE", "git log failed for the TSA CRLs");
-  const changed = res.stdout.split(/\r?\n/).filter(Boolean);
+  return res.stdout.split(/\r?\n/).filter(Boolean);
+}
+
+/** Every CRL blob ever added must still be at HEAD, unchanged; nothing may ever delete or change one. */
+function assertAppendOnly(repoRoot, head) {
+  const changed = crlLog(repoRoot, head, ["--format=%H", "--diff-filter=DMT"]);
   if (changed.length) throw refuse("TSA_CRL_HISTORY", `an archived CRL was removed or changed at ${changed[0].slice(0, 12)}; archived CRLs are append-only`);
+  const res = git(repoRoot, ["ls-tree", "-r", "--full-tree", head, "--", `${layout.TSA_CRLS_DIR}/`]);
+  if (res.status !== 0) throw block("REPO_UNREADABLE", "git ls-tree failed for the TSA CRLs");
+  const atHead = new Map(res.stdout.split(/\r?\n/).filter(Boolean).map((l) => [l.split("\t")[1], l.split("\t")[0].split(" ")[2]]));
+  for (const line of crlLog(repoRoot, head, ["--format=", "--raw", "--no-abbrev", "--diff-filter=A"])) {
+    const [meta, rel] = line.split("\t");
+    const blob = meta.split(" ")[3];
+    if (atHead.get(rel) !== blob) throw refuse("TSA_CRL_HISTORY", `archived CRL ${rel} (blob ${blob.slice(0, 12)}) is not at HEAD unchanged; archived CRLs are append-only`);
+  }
 }
 
 function opensslDate(text) {
@@ -47,7 +66,7 @@ function revokedEntries(bin, file) {
   return out.split(/Serial Number:/).slice(1).map((chunk) => ({
     serial: normSerial(chunk.split(/\r?\n/)[0]),
     date: opensslDate((/Revocation Date: ([^\r\n]+)/.exec(chunk) || [])[1] || ""),
-    compromise: COMPROMISE.test(chunk),
+    keepsEarlier: KEEPS_EARLIER.has(((/CRL Reason Code:\s*\r?\n\s*([A-Za-z ]+?)\s*(\r?\n|$)/.exec(chunk)) || [])[1]),
   }));
 }
 
@@ -77,7 +96,7 @@ function loadOne(ctx, rel, i) {
  * @returns {{rootPems:string[], crls:object[]}}
  */
 function loadCrlArchive(o) {
-  assertAppendOnly(o.repoRoot);
+  assertAppendOnly(o.repoRoot, o.head);
   const rootFiles = o.rootPems.map((pem, i) => {
     const f = path.join(o.tmpDir, `root-${i}.pem`);
     fs.writeFileSync(f, pem);
@@ -106,8 +125,9 @@ function assertSignerNotRevoked(ctx, { tsrPath, chainPath, genTime, what }) {
     const issuer = roots.findIndex((r) => cert.checkIssued(r) && cert.verify(r.publicKey));
     for (const crl of ctx.archive.crls.filter((c) => c.root === issuer)) {
       const hit = crl.revoked.find((e) => e.serial === normSerial(cert.serialNumber));
-      if (hit && (hit.compromise || !hit.date || Date.parse(hit.date) <= Date.parse(genTime))) {
-        throw refuse("TSA_SIGNER_REVOKED", `${what}: TSA signer ${hit.serial} is revoked (${hit.compromise ? "compromise" : hit.date}) in ${crl.rel}; token time ${genTime}`);
+      if (hit && (!hit.keepsEarlier || !hit.date || Date.parse(hit.date) <= Date.parse(genTime))) {
+        const why = hit.keepsEarlier ? `revoked ${hit.date}` : "revoked with a reason (or none) that invalidates every token";
+        throw refuse("TSA_SIGNER_REVOKED", `${what}: TSA signer ${hit.serial} is ${why} in ${crl.rel}; token time ${genTime}`);
       }
     }
   }

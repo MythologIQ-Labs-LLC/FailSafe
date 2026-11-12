@@ -188,18 +188,22 @@ Every RFC 3161 token is validated at its own `genTime`: checkpoint tokens, revoc
 - the pinned roots named in `tools/g4/tsa-policy.json`, where each root file must hold exactly one certificate (`TSA_ROOT_MALFORMED` otherwise);
 - OpenSSL's canonical re-encoding of every CRL committed under `tools/g4/tsa-crls/`. Each CRL is read from Git at HEAD, and each `.crl` file must hold exactly one PEM CRL and nothing else (`TSA_CRL_MALFORMED`). The CRL must verify against one pinned root on its own (`TSA_CRL_UNTRUSTED`). A CRL file therefore cannot add a trust anchor.
 
-Archived CRLs are **append-only**: a committed CRL file that was ever deleted, changed or renamed is `REFUSED TSA_CRL_HISTORY`, even if it was later restored.
+Archived CRLs are **append-only** (`REFUSED TSA_CRL_HISTORY`):
+- no commit reachable from HEAD may delete, change or retype a committed CRL file, with every merge diffed against every parent;
+- every CRL blob ever added in that history must still be present at HEAD, at the same path, with the same bytes. This catches a CRL dropped by a merge resolution or by an `-s ours` merge.
+
+**Limit:** checkpoints do not bind the set of CRLs. A history rewrite (force-push) that removes a CRL is not detectable from the repository alone; branch protection forbids such rewrites on `main`.
 
 Revocation of the TSA signer is checked twice:
 - OpenSSL requires a CRL current at the token's time (`-crl_check`).
-- The verifier then consults **every** archived CRL from the signer's issuing root, including CRLs issued after the token. The token is refused if any of them lists the signer as revoked at or before the token's time, or as revoked for key or CA compromise at any time (RFC 3161 section 4: a compromised TSA key makes all its tokens suspect).
+- The verifier then consults **every** archived CRL from the signer's issuing root, including CRLs issued after the token. Following RFC 3161 section 4, tokens made before a revocation stay valid only when its reasonCode is unspecified, affiliationChanged, superseded or cessationOfOperation, and then only if they precede the revocation date. With any other reason, or with no reasonCode at all, every token of that signer is refused, earlier ones included. That covers keyCompromise, cACompromise and certificateHold.
 
 | Situation | Result |
 |---|---|
 | No CRL current at the token's time | `BLOCKED TSA_REVOCATION_EVIDENCE_MISSING` |
-| Signer revoked at or before the token's time, or for compromise, in any archived CRL | `REFUSED TSA_SIGNER_REVOKED` |
+| Signer revoked at or before the token's time, or with a reason (or none) that invalidates every token, in any archived CRL | `REFUSED TSA_SIGNER_REVOKED` |
 | A CRL file not signed by a pinned root | `REFUSED TSA_CRL_UNTRUSTED` |
-| An archived CRL removed or changed in history | `REFUSED TSA_CRL_HISTORY` |
+| An archived CRL removed or changed anywhere in the history reachable from HEAD, merges included | `REFUSED TSA_CRL_HISTORY` |
 
 A checkpoint therefore stays verifiable after its TSA signer certificate expires. A token made after its signer was revoked is refused once any archived CRL records that revocation.
 

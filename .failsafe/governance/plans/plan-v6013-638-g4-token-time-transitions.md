@@ -1,6 +1,6 @@
 # Plan: G4 token-time validation, timestamped revocation notices, key rotation and recovery (#638, v6.0.13)
 
-**Status:** iteration 2, after the independent VETO recorded as ledger Entry #959 (iteration 1 audited `59c4291e`). This document records no PASS and no merge authority.
+**Status:** iteration 3, after the independent VETOs recorded as ledger Entries #959 (iteration 1, `59c4291e`) and #960 (iteration 2, `ba8c1b21`). This document records no PASS and no merge authority.
 **Baseline:** `main` `29b819feaf07ca991c9b6a75f8e0f01549e3cd11`, stacked on PR #657 (`origin/feat/638-g4-freetsa-root`, which is itself stacked on PR #647). **Branch:** `feat/638-g4-token-time-transitions`. Merge order: #647, then #657, then this.
 **Change class:** verifier semantics. Risk grade L3: this changes when a G4 checkpoint witness is accepted.
 **Owner direction (2026-11-12, recorded in #647 section 2a):** items 6, 7 and 9 are no longer deferred.
@@ -103,6 +103,27 @@ The independent audit of `59c4291e` reproduced four blocking defects. Each is fi
 - manifest binding unchecked.
 
 The first key-window plant was itself wrong (`false && a || b` still evaluates `b`) and caught nothing. Replanted as `if (false)`, it is caught.
+
+## Iteration 3 (VETO #960 remediation)
+
+The second independent audit confirmed that iteration-1 V1, V2, N1 and N2 are closed. It re-ran the original attacks and variants, including a recovery signed by a not-yet-valid new key, and each now fails. It found two blocking defects in the V3 and V4 fixes.
+
+- **V5. Revocation reasons were the wrong way round.**
+  - The iteration-2 text above inverted RFC 3161 section 4: it refused all tokens only for key or CA compromise and judged every other revocation by date.
+  - Section 4 keeps earlier tokens valid only for reasonCode unspecified, affiliationChanged, superseded or cessationOfOperation. Any other reason, or no reasonCode, invalidates every token.
+  - The code, the ops doc and this plan now follow the RFC.
+  - Tests: no reasonCode, certificateHold and cACompromise each invalidate earlier tokens; superseded still keeps them valid. The date-based tests use `superseded`.
+- **V6. A CRL could be dropped through a merge.**
+  - The history check now uses `git log HEAD -m --full-history --no-renames`, so every merge is diffed against every parent.
+  - Independently, every CRL blob ever added in that history must still be present at HEAD with the same path and bytes.
+  - Tests: a CRL dropped by a merge resolution, and a branch merged with `-s ours`; both are `TSA_CRL_HISTORY`.
+  - The two layers overlap on purpose. Planting either one out leaves the merge tests passing, because the other layer still catches them. Planting both out fails both tests.
+  - The history-rewrite limit is now disclosed: checkpoints do not bind the CRL set, so a force-push that removes a CRL is not detectable from the repository alone.
+- **Planted defects in the iteration-3 fixes:**
+  - every reason keeps earlier tokens: 6 failures;
+  - the D/M/T check removed: 1 failure;
+  - `-m` and the blob-presence check removed together: 2 failures.
+- **Totals.** G4 suites 154/154; `npm run test:node` 1136 pass, 2 fail (the known `bundleDeps` junction artefact). The sem4 throwaway repositories with real FreeTSA tokens re-verify offline under the iteration-3 code: `PASS OK` for both base and rotated, with no new FreeTSA request.
 
 ## Audit questions
 
