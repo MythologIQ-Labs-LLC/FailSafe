@@ -8,30 +8,30 @@ The candidate pin from the 2026-11-10 inventory was DER SHA-256 `a6379e7cecc05fa
 
 | Source | Retrieved | File in `root-sources/` | DER SHA-256 |
 |---|---|---|---|
-| `https://freetsa.org/files/cacert.pem` (live, HTTPS) | 2026-11-12 | `freetsa.org_files_cacert.pem.txt` | `a6379e7c…18aabc` |
-| `https://www.freetsa.org/files/cacert.pem` (live, HTTPS) | 2026-11-12 | `www.freetsa.org_files_cacert.pem.txt` | `a6379e7c…18aabc` |
-| Internet Archive capture 2016-08-29 | via `web.archive.org/web/2017…id_/` | `wayback-2017.pem.txt` | `a6379e7c…18aabc` |
-| Internet Archive capture 2019-07-23 | | `wayback-2019.pem.txt` | `a6379e7c…18aabc` |
-| Internet Archive capture 2021-04-22 | | `wayback-2021.pem.txt` | `a6379e7c…18aabc` |
-| Internet Archive capture 2022-12-06 | | `wayback-2023.pem.txt` | `a6379e7c…18aabc` |
-| Internet Archive capture 2025-03-06 | | `wayback-2025.pem.txt` | `a6379e7c…18aabc` |
-| GitHub `trbs/rfc3161ng` `data/freetsa_cacert.pem`, first committed 2018-09-18 | 2026-11-12 | `gh-trbs_rfc3161ng.pem.txt` | `a6379e7c…18aabc` |
-| GitHub `huridocs/preserve` `files/freetsa/cacert.pem`, first committed 2022-05-17 | 2026-11-12 | `gh-huridocs_preserve.pem.txt` | `a6379e7c…18aabc` |
-| GitHub `chainloop-dev/chainloop` `devel/devkeys/freetsa.pem`, first committed 2025-02-20 (second certificate of two; the first is FreeTSA's previous TSA signer) | 2026-11-12 | `gh-chainloop-dev_chainloop.pem.txt` | `a6379e7c…18aabc` |
+| `https://freetsa.org/files/cacert.pem` (live, HTTPS) | 2026-11-12 | `freetsa.org_files_cacert.pem.txt` | `a6379e7c...18aabc` |
+| `https://www.freetsa.org/files/cacert.pem` (live, HTTPS) | 2026-11-12 | `www.freetsa.org_files_cacert.pem.txt` | `a6379e7c...18aabc` |
+| Internet Archive capture 2016-08-29 | via `web.archive.org/web/2017...id_/` | `wayback-2017.pem.txt` | `a6379e7c...18aabc` |
+| Internet Archive capture 2019-07-23 | | `wayback-2019.pem.txt` | `a6379e7c...18aabc` |
+| Internet Archive capture 2021-04-22 | | `wayback-2021.pem.txt` | `a6379e7c...18aabc` |
+| Internet Archive capture 2022-12-06 | | `wayback-2023.pem.txt` | `a6379e7c...18aabc` |
+| Internet Archive capture 2025-03-06 | | `wayback-2025.pem.txt` | `a6379e7c...18aabc` |
+| GitHub `trbs/rfc3161ng` `data/freetsa_cacert.pem`, first committed 2018-09-18 | 2026-11-12 | `gh-trbs_rfc3161ng.pem.txt` | `a6379e7c...18aabc` |
+| GitHub `huridocs/preserve` `files/freetsa/cacert.pem`, first committed 2022-05-17 | 2026-11-12 | `gh-huridocs_preserve.pem.txt` | `a6379e7c...18aabc` |
+| GitHub `chainloop-dev/chainloop` `devel/devkeys/freetsa.pem`, first committed 2025-02-20 (second certificate of two; the first is FreeTSA's previous TSA signer) | 2026-11-12 | `gh-chainloop-dev_chainloop.pem.txt` | `a6379e7c...18aabc` |
 
 The Internet Archive captures and the three repositories were made by other parties at other times, from 2016 to 2025. To substitute the root, an attacker would have had to alter all of them as well as the live site.
 
 **Certificate:** subject = issuer = `O=Free TSA, OU=Root CA, CN=www.freetsa.org, emailAddress=busilezas@gmail.com, L=Wuerzburg, ST=Bayern, C=DE`; serial `C1E986160DA8E980`; valid 2016-03-13 to 2041-03-07; RSA 4096, sha512WithRSAEncryption; CA:TRUE; key usage Certificate Sign and CRL Sign. The PEM file's SHA-256 `2151b61137ffa86bf664691ba67e7da0b19f98c758e3d228d5d8ebf27e044438` equals the value FreeTSA prints on `index_en.php`, and the committed file is byte-identical to it.
 
-**Current TSA signer** (`root-sources/freetsa.org_files_tsa.crt`): serial `C2E986160DA8E9CD`, valid 2026-02-15 to 2040-02-02, EKU critical Time Stamping, issued by the root above (`openssl verify` OK). Its SHA-256 `32e841a9…b191fc` (DER) is the certificate embedded in every token below, and its file SHA-256 `8bfb0305…a13467` equals the value FreeTSA prints.
+**Current TSA signer** (`root-sources/freetsa.org_files_tsa.crt`): serial `C2E986160DA8E9CD`, valid 2026-02-15 to 2040-02-02, EKU critical Time Stamping, issued by the root above (`openssl verify` OK). Its SHA-256 `32e841a9...b191fc` (DER) is the certificate embedded in every token below, and its file SHA-256 `8bfb0305...a13467` equals the value FreeTSA prints.
 
-**Revocation data:** `root_ca.crl.pem.txt` (SHA-256 `13d85acc…031935`). Its signature verifies against the root. Last update 2026-09-18, next update 2027-09-18, and it lists no revoked certificates. The OCSP responder named in the signer certificate (`http://www.freetsa.org:2560`) did not answer within 60 s from this host, so no OCSP evidence is recorded.
+**Revocation data:** `root_ca.crl.pem.txt` (SHA-256 `13d85acc...031935`). Its signature verifies against the root. Last update 2026-09-18, next update 2027-09-18, and it lists no revoked certificates. The OCSP responder named in the signer certificate (`http://www.freetsa.org:2560`) did not answer within 60 s from this host, so no OCSP evidence is recorded.
 
-**Published terms:** `freetsa.org_freetsa.html` (SHA-256 `7890c117…38e942`, identical to the copy retained on 2026-11-10) and `freetsa.org_index_en.php`.
+**Published terms:** `freetsa.org_freetsa.html` (SHA-256 `7890c117...38e942`, identical to the copy retained on 2026-11-10) and `freetsa.org_index_en.php`.
 
 ## 2. Interoperability and rejection (`scripts/`, `run1/`, `run2/`)
 
-`scripts/qualify-freetsa.cjs <repo> <out>` with its two parts. It reads the exact candidate `tools/g4/tsa-policy.json` (SHA-256 `738f5cb1…5bf670`) and the root PEM it names. Both are recorded in `results.json`.
+`scripts/qualify-freetsa.cjs <repo> <out>` with its two parts. It reads the exact candidate `tools/g4/tsa-policy.json` (SHA-256 `738f5cb1...5bf670`) and the root PEM it names. Both are recorded in `results.json`.
 
 - **Part A**: three real FreeTSA tokens, each for SHA-256 of 64 fresh random bytes, checked with `openssl ts -verify` against the pinned root alone. Then the rejection cases.
 - **Part B**: the real G4 verifier (`verifyCheckpoints`, `--release`) over throwaway Git repositories. They carry the exact policy and root bytes, a copy of the real ledger, and an ephemeral software test signer (certificate in `part-b-ephemeral-test-signer.cer`; its private key was never retained). Two real FreeTSA-witnessed checkpoints were made, and their five files each are in `part-b-base-checkpoints/`.
@@ -87,9 +87,11 @@ The Internet Archive captures and the three repositories were made by other part
    - flips located inside the signed TSTInfo (genTime and nonce), both rejected;
    - an explicit unsigned-certificate case: it verifies with the genuine chain, and is rejected without it.
 
+**`run3` (after audit VETO #957 N2): 42 of 42 expectations met.** In the independent re-audit, the iteration-2 script crashed on its nonce case. That case found the nonce by a fixed byte pattern, and a random nonce can encode with a different length. The case is replaced by a flip of the byte immediately after genTime, which is still inside the signed TSTInfo, and it is rejected. Everything else is unchanged. run3 is a full fresh run (5 more FreeTSA requests) of the corrected scripts in `scripts/`. run2 remains as produced by the earlier script version.
+
 ## 3. Network use
 
-- **FreeTSA** received 10 RFC 3161 queries, 5 per run, at least 2 s apart. Each was for SHA-256 of 64 fresh random bytes. No repository content, key, path or secret was sent.
+- **FreeTSA** received 15 RFC 3161 queries from the implementer, 5 per run, at least 2 s apart. Independent auditors sent 8 more in their own re-runs. Each was for SHA-256 of 64 fresh random bytes. No repository content, key, path or secret was sent.
 - **Read-only HTTPS GETs:**
   - the root, the signer certificate, the two policy pages and the CRL from freetsa.org;
   - five Internet Archive captures;

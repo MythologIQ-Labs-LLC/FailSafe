@@ -90,7 +90,8 @@ function rejections(t1, t2) {
   mutate(t1, "truncated", (b) => b.subarray(0, Math.floor(b.length / 2)));
   mutate(t1, "last byte of signature flipped", (b) => flip(b, b.length - 1));
   mutate(t1, "a genTime digit inside the signed TSTInfo flipped", (b) => flip(b, at(b, "180f", 4)));
-  mutate(t1, "the TSTInfo nonce flipped", (b) => flip(b, at(b, "0101ff0208", 6)));
+  // The field after genTime (accuracy, ordering or nonce) is still inside the signed TSTInfo.
+  mutate(t1, "the byte after genTime inside the signed TSTInfo flipped", (b) => flip(b, at(b, "180f", 17)));
   unsignedCertSet(t1);
   mutate(t1, "random bytes", () => crypto.randomBytes(t1.info.text.length));
   mutate(t1, "empty", () => Buffer.alloc(0));
