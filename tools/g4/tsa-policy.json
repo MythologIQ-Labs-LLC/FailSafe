@@ -1,6 +1,12 @@
 {
   "schema": "failsafe-g4-tsa-policy/v1",
-  "status": "pending-owner-decision",
-  "note": "No TSA is selected. The verifier returns BLOCKED TSA_POLICY_UNSELECTED until the owner records a TSA decision and commits its trusted root under tools/g4/tsa-roots/ with its DER SHA-256 here. See docs/releases/V6_0_13_G4_OWNER_DECISIONS.md.",
-  "trustedRoots": []
+  "status": "selected",
+  "note": "One trusted TSA root: the FreeTSA Root CA for the FreeTSA public RFC 3161 service at https://freetsa.org/tsr, selected by the owner on 2026-11-12 (docs/releases/V6_0_13_G4_TSA_OWNER_SELECTION_2026-11-12.md). The PEM is byte-identical to https://freetsa.org/files/cacert.pem as retrieved and corroborated on 2026-11-12. sha256 is the DER SHA-256 of that certificate. No fallback TSA is trusted. Adding, replacing or removing a root is an owner decision and needs an independent audit.",
+  "trustedRoots": [
+    {
+      "name": "FreeTSA Root CA (O=Free TSA, OU=Root CA, CN=www.freetsa.org)",
+      "certificatePath": "tools/g4/tsa-roots/freetsa-root-ca.pem",
+      "sha256": "a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc"
+    }
+  ]
 }

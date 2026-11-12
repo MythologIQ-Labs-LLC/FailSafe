@@ -1,0 +1,66 @@
+HTTP/1.1 302 FOUND
+Server: nginx
+Date: Thu, 12 Nov 2026 15:11:53 GMT
+Content-Type: text/plain; charset=utf-8
+Content-Length: 0
+Connection: keep-alive
+x-archive-redirect-reason: found capture at 20210422221707
+location: https://web.archive.org/web/20210422221707id_/https://www.freetsa.org/files/cacert.pem
+server-timing: captures_list;dur=0.559912, exclusion.robots;dur=0.044215, exclusion.robots.policy;dur=0.030183, esindex;dur=0.011611, cdx.remote;dur=36.869635, LoadShardBlock;dur=1651.027832, PetaboxLoader3.datanode;dur=1580.126359, PetaboxLoader3.resolve;dur=14.966010
+x-app-server: wwwb-app218-dc8
+x-ts: 302
+x-tr: 1720
+server-timing: TR;dur=0,Tw;dur=258,Tc;dur=11
+set-cookie: wb-p-SERVER=wwwb-app218; path=/
+X-location: All
+X-AS: 11776
+X-RL: 0
+X-NA: 0
+X-Page-Cache: MISS
+Server-Timing: MISS
+X-NID: Breezeline
+Referrer-Policy: no-referrer-when-downgrade
+Permissions-Policy: interest-cohort=()
+X-sd: 0
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 12 Nov 2026 15:11:58 GMT
+Content-Type: application/pem-certificate-chain
+Content-Length: 2833
+Connection: keep-alive
+x-archive-orig-server: nginx
+x-archive-orig-date: Thu, 22 Apr 2021 22:17:07 GMT
+x-archive-orig-content-length: 2833
+x-archive-orig-last-modified: Sat, 05 Dec 2020 00:11:26 GMT
+x-archive-orig-connection: keep-alive
+x-archive-orig-etag: "5fcad02e-b11"
+x-archive-orig-expires: Thu, 31 Dec 2037 23:55:55 GMT
+x-archive-orig-cache-control: max-age=315360000
+x-archive-orig-pragma: public
+x-archive-orig-cache-control: public, must-revalidate, proxy-revalidate
+x-archive-orig-accept-ranges: bytes
+cache-control: max-age=1800
+accept-ranges: bytes
+memento-datetime: Thu, 22 Apr 2021 22:17:07 GMT
+link: <https://www.freetsa.org/files/cacert.pem>; rel="original", <https://web.archive.org/web/timemap/link/https://www.freetsa.org/files/cacert.pem>; rel="timemap"; type="application/link-format", <https://web.archive.org/web/https://www.freetsa.org/files/cacert.pem>; rel="timegate"
+content-security-policy: default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: archive.org web.archive.org web-static.archive.org wayback-api.archive.org athena.archive.org analytics.archive.org pragma.archivelab.org wwwb-events.archive.org
+x-archive-src: CC-MAIN-2021-17-1618039563095.86-0011/CC-MAIN-20210422221531-20210423011531-00238.warc.gz
+server-timing: captures_list;dur=0.660323, exclusion.robots;dur=0.048677, exclusion.robots.policy;dur=0.032285, esindex;dur=0.008781, cdx.remote;dur=113.689185, LoadShardBlock;dur=1962.481685, PetaboxLoader3.resolve;dur=99.063226, PetaboxLoader3.datanode;dur=1646.357780, load_resource;dur=171.530413
+x-app-server: wwwb-app246-dc8
+x-ts: 200
+x-tr: 2293
+server-timing: TR;dur=0,Tw;dur=159,Tc;dur=6
+set-cookie: wb-p-SERVER=wwwb-app246; path=/
+cache-control: private
+X-location: All
+X-AS: 11776
+X-RL: 0
+X-NA: 0
+X-Page-Cache: MISS
+Server-Timing: MISS
+X-NID: Breezeline
+Referrer-Policy: no-referrer-when-downgrade
+Permissions-Policy: interest-cohort=()
+X-sd: 0
+

@@ -1,0 +1,348 @@
+{
+  "probedUtc": "2026-11-12T15:41:55.537Z",
+  "openssl": "OpenSSL 3.5.7 9 Jun 2026 (Library: OpenSSL 3.5.7 9 Jun 2026)",
+  "node": "v24.19.0",
+  "tsaUrl": "https://freetsa.org/tsr",
+  "policySha256": "738f5cb1f1c094e30ca0069a008a9c213dcb9faf1a4ced862933c2fcc15bf670",
+  "rootPemSha256": "2151b61137ffa86bf664691ba67e7da0b19f98c758e3d228d5d8ebf27e044438",
+  "finishedUtc": "2026-11-12T15:42:20.247Z",
+  "failed": 0,
+  "results": [
+    {
+      "part": "A",
+      "name": "token 1 granted, sha256, genTime",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "genTime 2026-11-12T15:41:55.000Z"
+    },
+    {
+      "part": "A",
+      "name": "token 1 embedded signer is the published tsa.crt",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "32e841a95cc11641,a6379e7cecc05faa"
+    },
+    {
+      "part": "A",
+      "name": "token 1 verifies against the pinned FreeTSA root only",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true,
+      "detail": "Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert"
+    },
+    {
+      "part": "A",
+      "name": "token 2 granted, sha256, genTime",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "genTime 2026-11-12T15:41:57.000Z"
+    },
+    {
+      "part": "A",
+      "name": "token 2 embedded signer is the published tsa.crt",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "32e841a95cc11641,a6379e7cecc05faa"
+    },
+    {
+      "part": "A",
+      "name": "token 2 verifies against the pinned FreeTSA root only",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true,
+      "detail": "Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | Warning: certificate from '<scratch>\\run3\\part-a\\token-2\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert"
+    },
+    {
+      "part": "A",
+      "name": "token 3 granted, sha256, genTime",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "genTime 2026-11-12T15:41:59.000Z"
+    },
+    {
+      "part": "A",
+      "name": "token 3 embedded signer is the published tsa.crt",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "32e841a95cc11641,a6379e7cecc05faa"
+    },
+    {
+      "part": "A",
+      "name": "token 3 verifies against the pinned FreeTSA root only",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true,
+      "detail": "Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | Warning: certificate from '<scratch>\\run3\\part-a\\token-3\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert"
+    },
+    {
+      "part": "A",
+      "name": "wrong root (public Mozilla bundle) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | A0910000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:self-signed certificate in certificate chain"
+    },
+    {
+      "part": "A",
+      "name": "wrong root (forged root with the same subject DN) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | 48B90000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:self-signed certificate in certificate chain"
+    },
+    {
+      "part": "A",
+      "name": "substituted imprint (fresh random digest) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | 30380000:error:17800067:time stamp routines:ts_check_imprints:message imprint mismatch:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:508:"
+    },
+    {
+      "part": "A",
+      "name": "substituted imprint (token 2's digest) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | C4090000:error:17800067:time stamp routines:ts_check_imprints:message imprint mismatch:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:508:"
+    },
+    {
+      "part": "A",
+      "name": "malformed token (truncated) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | 20C10000:error:0680008E:asn1 encoding routines:asn1_d2i_read_bio:not enough data:../openssl-3.5.7/crypto/asn1/a_d2i_fp.c:270:"
+    },
+    {
+      "part": "A",
+      "name": "malformed token (last byte of signature flipped) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "48BB0000:error:10800069:PKCS7 routines:PKCS7_signatureVerify:signature failure:../openssl-3.5.7/crypto/pkcs7/pk7_doit.c:1177: | 48BB0000:error:1780006D:time stamp routines:TS_RESP_verify_signature:signature failure:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:146:"
+    },
+    {
+      "part": "A",
+      "name": "malformed token (a genTime digit inside the signed TSTInfo flipped) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "2C360000:error:10800065:PKCS7 routines:PKCS7_signatureVerify:digest failure:../openssl-3.5.7/crypto/pkcs7/pk7_doit.c:1138: | 2C360000:error:1780006D:time stamp routines:TS_RESP_verify_signature:signature failure:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:146:"
+    },
+    {
+      "part": "A",
+      "name": "malformed token (the byte after genTime inside the signed TSTInfo flipped) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "14AB0000:error:17800081:time stamp routines:ts_resp_set_tst_info:pkcs7 to ts tst info failed:../openssl-3.5.7/crypto/ts/ts_asn1.c:147: | 14AB0000:error:06800064:asn1 encoding routines:asn1_item_embed_d2i:aux error:../openssl-3.5.7/crypto/asn1/tasn_dec.c:507:Type=TS_RESP"
+    },
+    {
+      "part": "A",
+      "name": "unsigned embedded certificate byte flipped, genuine chain supplied (signed content intact)",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true,
+      "detail": "Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert"
+    },
+    {
+      "part": "A",
+      "name": "unsigned embedded certificate byte flipped, no separate chain",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "6C670000:error:06880006:asn1 encoding routines:ASN1_item_verify_ctx:EVP lib:../openssl-3.5.7/crypto/asn1/a_verify.c:219: | 6C670000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:certificate signature failure"
+    },
+    {
+      "part": "A",
+      "name": "malformed token (random bytes) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "743D0000:error:068000A8:asn1 encoding routines:asn1_check_tlen:wrong tag:../openssl-3.5.7/crypto/asn1/tasn_dec.c:1231: | 743D0000:error:0688010A:asn1 encoding routines:asn1_item_embed_d2i:nested asn1 error:../openssl-3.5.7/crypto/asn1/tasn_dec.c:375:Type=TS_RESP"
+    },
+    {
+      "part": "A",
+      "name": "malformed token (empty) rejected",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | 4C430000:error:0680008E:asn1 encoding routines:asn1_d2i_read_bio:not enough data:../openssl-3.5.7/crypto/asn1/a_d2i_fp.c:142:"
+    },
+    {
+      "part": "A",
+      "name": "verification time at token time",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true,
+      "detail": "Using configuration from C:/Program Files/Git/mingw64/etc/ssl//openssl.cnf | Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert"
+    },
+    {
+      "part": "A",
+      "name": "verification time before the signer certificate (2026-01-01)",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | DC150000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:certificate is not yet valid"
+    },
+    {
+      "part": "A",
+      "name": "verification time after the signer certificate expires (2040-02-03)",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | DC310000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:certificate has expired"
+    },
+    {
+      "part": "A",
+      "name": "verification time after the root expires (2041-03-08)",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "pass": true,
+      "detail": "Warning: certificate from '<scratch>\\run3\\part-a\\token-1\\chain.pem' with subject '/O=Free TSA/OU=Root CA/CN=www.freetsa.org/emailAddress=busilezas@gmail.com/L=Wuerzburg/ST=Bayern/C=DE' has expired | E0580000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:certificate has expired"
+    },
+    {
+      "part": "B",
+      "name": "release verification, real FreeTSA tokens, exact policy and root",
+      "expected": "PASS OK mode:release limitations:0",
+      "actual": "PASS OK mode:release limitations:0",
+      "pass": true,
+      "detail": "2 checkpoint(s) verified to g4-000002"
+    },
+    {
+      "part": "B",
+      "name": "release verification against a stale trusted head (g4-000001)",
+      "expected": "REFUSED HEAD_MISMATCH",
+      "actual": "REFUSED HEAD_MISMATCH",
+      "pass": true,
+      "detail": "trusted head g4-000001:457343135f06c4933f7b7f6672e08d7aa5211399fbaad1547fa4bbba7e41ef85 but repository head is g4-000002:df7f1f31e6e24ffe60118b6c9f9d9ae86f686b6b59a3db5da95ce8f8f831fb99"
+    },
+    {
+      "part": "B",
+      "name": "policy status pending",
+      "expected": "BLOCKED TSA_POLICY_UNSELECTED",
+      "actual": "BLOCKED TSA_POLICY_UNSELECTED",
+      "pass": true,
+      "detail": "no TSA trust root is selected in tools/g4/tsa-policy.json"
+    },
+    {
+      "part": "B",
+      "name": "policy selected with no root",
+      "expected": "BLOCKED TSA_POLICY_UNSELECTED",
+      "actual": "BLOCKED TSA_POLICY_UNSELECTED",
+      "pass": true,
+      "detail": "no TSA trust root is selected in tools/g4/tsa-policy.json"
+    },
+    {
+      "part": "B",
+      "name": "policy digest one hex digit off",
+      "expected": "REFUSED TSA_ROOT_MISMATCH",
+      "actual": "REFUSED TSA_ROOT_MISMATCH",
+      "pass": true,
+      "detail": "FreeTSA Root CA (O=Free TSA, OU=Root CA, CN=www.freetsa.org): root fingerprint differs from policy"
+    },
+    {
+      "part": "B",
+      "name": "root file missing",
+      "expected": "REFUSED TSA_POLICY_MISSING",
+      "actual": "REFUSED TSA_POLICY_MISSING",
+      "pass": true,
+      "detail": "tools/g4/tsa-roots/freetsa-root-ca.pem is not readable at 5a4c16bbee6fd7fde9f3c4bf426ce95c53e5105f"
+    },
+    {
+      "part": "B",
+      "name": "root swapped for a same-DN forged root, digest updated",
+      "expected": "REFUSED TOKEN_INVALID",
+      "actual": "REFUSED TOKEN_INVALID",
+      "pass": true,
+      "detail": "g4-000001: openssl ts -verify: Warning: certificate from '<scratch>\\run3\\part-b\\case-5\\tools\\g4\\checkpoints\\g4-000001\\tsa-chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | 749A0000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:self-signed certificate in certificate chain"
+    },
+    {
+      "part": "B",
+      "name": "g4-000001's token substituted into g4-000002",
+      "expected": "REFUSED TOKEN_IMPRINT_MISMATCH",
+      "actual": "REFUSED TOKEN_IMPRINT_MISMATCH",
+      "pass": true,
+      "detail": "g4-000002: openssl ts -verify: Warning: certificate from '<scratch>\\run3\\part-b\\case-6\\tools\\g4\\checkpoints\\g4-000002\\tsa-chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | C03F0000:error:17800067:time stamp routines:ts_check_imprints:message imprint mismatch:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:508:"
+    },
+    {
+      "part": "B",
+      "name": "g4-000002 token with one byte flipped",
+      "expected": "REFUSED TOKEN_INVALID",
+      "actual": "REFUSED TOKEN_INVALID",
+      "pass": true,
+      "detail": "g4-000002: openssl ts -verify: CC9F0000:error:10800069:PKCS7 routines:PKCS7_signatureVerify:signature failure:../openssl-3.5.7/crypto/pkcs7/pk7_doit.c:1177: | CC9F0000:error:1780006D:time stamp routines:TS_RESP_verify_signature:signature failure:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:146:"
+    },
+    {
+      "part": "B",
+      "name": "release mode refuses a --tsa-ca override",
+      "expected": "BLOCKED TSA_OVERRIDE_NOT_RELEASE",
+      "actual": "BLOCKED TSA_OVERRIDE_NOT_RELEASE",
+      "pass": true,
+      "detail": "--tsa-ca bypasses the committed TSA root pin; a release verification must use tools/g4/tsa-policy.json"
+    },
+    {
+      "part": "B",
+      "name": "diagnostic mode with only public roots (no fallback)",
+      "expected": "REFUSED TOKEN_INVALID",
+      "actual": "REFUSED TOKEN_INVALID",
+      "pass": true,
+      "detail": "g4-000001: openssl ts -verify: Warning: certificate from '<scratch>\\run3\\part-b\\base\\tools\\g4\\checkpoints\\g4-000001\\tsa-chain.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert | D4B40000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../openssl-3.5.7/crypto/ts/ts_rsp_verify.c:190:Verify error:self-signed certificate in certificate chain"
+    },
+    {
+      "part": "B",
+      "name": "outage (connection refused): no checkpoint or staging directory written",
+      "expected": "[]",
+      "actual": "[]",
+      "pass": true,
+      "detail": "ERROR fetch failed"
+    },
+    {
+      "part": "B",
+      "name": "outage (unresolvable host): no checkpoint or staging directory written",
+      "expected": "[]",
+      "actual": "[]",
+      "pass": true,
+      "detail": "ERROR fetch failed"
+    },
+    {
+      "part": "B",
+      "name": "outage (HTTP 503): no checkpoint or staging directory written",
+      "expected": "[]",
+      "actual": "[]",
+      "pass": true,
+      "detail": "BLOCKED TSA_OFFLINE"
+    },
+    {
+      "part": "B",
+      "name": "outage (HTTP 200 empty body): no checkpoint or staging directory written",
+      "expected": "[]",
+      "actual": "[]",
+      "pass": true,
+      "detail": "BLOCKED TSA_OFFLINE"
+    },
+    {
+      "part": "B",
+      "name": "outage (HTTP 200 garbage): no checkpoint or staging directory written",
+      "expected": "[]",
+      "actual": "[]",
+      "pass": true,
+      "detail": "REFUSED TOKEN_MALFORMED"
+    },
+    {
+      "part": "B",
+      "name": "outage (no answer within the timeout): no checkpoint or staging directory written",
+      "expected": "[]",
+      "actual": "[]",
+      "pass": true,
+      "detail": "ERROR The operation was aborted due to timeout"
+    }
+  ]
+}
