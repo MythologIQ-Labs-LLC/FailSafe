@@ -13,6 +13,10 @@ This directory contains the source for the **single FailSafe VS Code/Cursor exte
 - [Integration Portfolio](../docs/architecture/INTEGRATION_PORTFOLIO.md): **canonical** feature states, egress, test depth, and outstanding integration defects.
 - [Release verification tooling](../tools/release-verification/README.md): platform and artifact evidence.
 
+## Current product demonstration
+
+The [repository README](../README.md#see-it-in-action) links to the **v6.0.12 narrated walkthrough**, English captions, transcript, capture provenance, and current screenshots. The media assets are pinned to an independently recorded website-source revision; they are not copied into this source directory or presented as a new release qualification. The demo uses a fictional workspace and scripted editor actions. It does **not** prove that editor saves can be blocked or that a governance release seal was completed.
+
 ## Source and packaging
 
 The extension's TypeScript source, tests, scripts and bundled documentation live under `extension/`. Check its [package.json](extension/package.json) for the supported VS Code engine and actual script names.
