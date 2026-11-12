@@ -38,14 +38,30 @@ Add-Type -AssemblyName System.Core
 
 $ProviderName = 'Microsoft Platform Crypto Provider'
 
+<#
+  True only for an ECDSA key on the NIST P-256 curve. CNG reports a key created
+  in the Microsoft Platform Crypto Provider with the generic algorithm 'ECDSA'
+  rather than 'ECDSA_P256', so the curve is read from the key itself (#665).
+#>
+function Test-P256Key($Key) {
+    if ($Key.Algorithm -eq [System.Security.Cryptography.CngAlgorithm]::ECDsaP256) { return $true }
+    if ($Key.AlgorithmGroup -ne [System.Security.Cryptography.CngAlgorithmGroup]::ECDsa -or $Key.KeySize -ne 256) { return $false }
+    try {
+        $raw = $Key.GetProperty('ECCCurveName', [System.Security.Cryptography.CngPropertyOptions]::None).GetValue()
+    } catch {
+        return $false
+    }
+    return ([System.Text.Encoding]::Unicode.GetString($raw).TrimEnd([char]0) -eq 'nistP256')
+}
+
 function Open-WitnessKey([string]$Name) {
     $provider = New-Object System.Security.Cryptography.CngProvider($ProviderName)
     if (-not [System.Security.Cryptography.CngKey]::Exists($Name, $provider)) {
         throw "G4 key '$Name' does not exist in '$ProviderName'. Enrollment requires owner approval."
     }
     $key = [System.Security.Cryptography.CngKey]::Open($Name, $provider)
-    if ($key.Algorithm -ne [System.Security.Cryptography.CngAlgorithm]::ECDsaP256) {
-        throw "G4 key '$Name' is $($key.Algorithm), not ECDSA P-256."
+    if (-not (Test-P256Key $key)) {
+        throw "G4 key '$Name' is $($key.Algorithm) ($($key.KeySize) bits), not ECDSA P-256."
     }
     if ($key.ExportPolicy -ne [System.Security.Cryptography.CngExportPolicies]::None) {
         throw "G4 key '$Name' is exportable ($($key.ExportPolicy)); refusing to sign."

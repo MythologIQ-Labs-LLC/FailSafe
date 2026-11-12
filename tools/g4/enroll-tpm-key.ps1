@@ -29,12 +29,16 @@ param(
     [string]$KeyName = 'FailSafe-G4-Ledger-Witness',
     [int]$ValidDays = 730,
     [string]$Subject = 'CN=FailSafe G4 Ledger Witness, O=MythologIQ Labs LLC',
-    [string]$KeysDir = (Join-Path $PSScriptRoot 'keys')
+    # Empty means tools/g4/keys next to this script. It is resolved in the body: Windows
+    # PowerShell 5.1 leaves $PSScriptRoot empty while param() defaults are evaluated (#665).
+    [string]$KeysDir = ''
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Core
+
+if ([string]::IsNullOrWhiteSpace($KeysDir)) { $KeysDir = Join-Path $PSScriptRoot 'keys' }
 
 if (-not $ConfirmPersistentTpmKey) {
     throw 'Refusing: pass -ConfirmPersistentTpmKey. This creates a persistent TPM key (owner approval required).'
