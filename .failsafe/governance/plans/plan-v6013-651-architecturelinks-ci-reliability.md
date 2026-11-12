@@ -1,6 +1,6 @@
 # Plan: #651 deterministic ArchitectureLinks bounded-I/O qualification
 
-**Status:** iteration 2, after the independent VETO recorded as ledger Entry #950. Iteration 1 is kept below, marked rejected. This document records no PASS and no merge authority.
+**Status:** iteration 3, after the independent VETOs recorded as ledger Entries #950 and #951. Iteration 1 is kept below, marked rejected. This document records no PASS and no merge authority.
 **Owner scope:** issue [#651](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/651) (CI reliability). **Associated PR:** #656, replacement for #655 on a branch allowed by repository policy.
 **Baseline:** `main` `54724e0180c0dcf33bf3a34f46a6b4b9a3dc475c` (the branch was synced with it); iteration 1 was based on `9f16548d`.
 **Implementation candidates:** iteration 1 `3ba649ac` (rejected); iteration 2 is the commit that adds this section (test-only source).
@@ -32,9 +32,9 @@ The independent audit of `dd7841a2` found that iteration 1 fixed the flake by we
 **Verdict now** (`eventLoopOracle.cjs`):
 1. Every turn of every call counts. The measured run makes five describe calls one after another and takes the worst turn over all of them. Nothing is retried and no attempt is discarded.
 2. A turn's held time is its wall-clock gap minus the main thread's run-queue wait in that gap. On Linux that wait is the kernel's own accounting for the main thread (`/proc/self/task/<tid>/schedstat`, second field). Time blocked off the CPU is not run-queue wait, so it always counts.
-3. Where the kernel does not expose that accounting (Windows, macOS), the run-queue wait is taken as zero and the verdict is plain wall-clock time. To keep wall-clock time meaningful on a loaded machine, the measurement raises the test process to above-normal priority when the system allows it, and restores it afterwards. On the same 32-process load the real function's worst turn was then 27 to 54 ms with nothing excused.
-4. The seams that count synchronous fs, any child process, `Atomics.wait` and raw `process.binding` calls stay, for live references. A reference captured earlier bypasses them and is caught by the time verdict instead; the controls prove that.
-5. The limit is the literal 100 ms, pinned by a test. The planted stall is a literal 200 ms of main-thread CPU (`process.threadCpuUsage()`), twice the limit, and does not move with the limit.
+3. Where the kernel does not expose that accounting (Windows, macOS), the run-queue wait is taken as zero and the verdict is plain wall-clock time. To keep wall-clock time meaningful on a loaded machine, the measurement raises the test process to above-normal priority when the system allows it, and restores it afterwards. On the same 32-process load the real function's worst turn was then 27 to 54 ms with nothing excused (`.agent/staging/evidence-651/probe-windows-load32-priority.txt`).
+4. The seams that count synchronous fs, any child process, `Atomics.wait` and raw `process.binding` calls stay, for live references. A reference captured earlier bypasses them, and it is caught by the time verdict only when it holds the event loop for 100 ms or longer. A short call through a captured reference is not seen at all, as in the base test.
+5. The limit is the literal 100 ms, pinned by a test. The planted stall is a literal 200 ms, twice the limit, and does not move with the limit. (Iteration 2 burned main-thread CPU until `process.threadCpuUsage()` had grown by 200 ms. On Windows that clock advances in steps of about 15.6 ms, so the stall ended between 186 and 209 ms, which is not twice the limit; see iteration 3.)
 
 **Negative controls**, each required to fail the verdict:
 - A 200 ms main-thread stall on every call, on the first call only, and on the third call only.
@@ -48,7 +48,7 @@ The independent audit of `dd7841a2` found that iteration 1 fixed the flake by we
 - `ArchitectureLinks.boundedIo.test.cjs`: the #651 verdict and its controls.
 - `eventLoopOracle.cjs`: the measurement.
 
-Every file is under 250 lines and every function under 40. The suites have 16 tests in total, against 13 before: the old bounded test is replaced by five.
+Every file is under 250 lines and every function under 40. The suites have 16 tests in total, against 12 on the base (13 in iteration 1): the old bounded test is replaced by five.
 
 **Evidence on Windows.**
 - 15 violations were planted at the top of the compiled production `describeAffectedArchitecture` and the main test was run 5 times each. All 13 violations failed 5 of 5: CPU stalls of 150 ms always, on the first call, on every fifth call, on alternate calls and at random; a 105 ms stall; captured `spawnSync`; destructured `execSync`; captured and bound `Atomics.wait`; `process.binding('spawn_sync')`; live `statSync`; destructured `readFileSync`. Unmodified code and asynchronous thread-pool work passed 5 of 5.
@@ -62,6 +62,20 @@ Every file is under 250 lines and every function under 40. The suites have 16 te
 - If a Linux kernel does not expose the accounting, the verdict falls back to plain wall-clock time, which never excuses anything.
 
 **Limitation.** On Windows and macOS the verdict cannot tell waiting for a CPU apart from blocking off the CPU, so it does not try. It is strict wall-clock time at raised priority. On a machine loaded heavily enough to keep an above-normal-priority process from the CPU for 100 ms, it can fail without a defect in the code. That failure is not excused. The safer arrangement, if it occurs, is to run this suite on its own (`node --test` with this one file) rather than in parallel with the rest of the suite.
+
+## Iteration 3 (VETO #951 remediation)
+
+The second independent audit (source `060a09fa`) found the redesign sound. B1, B2 and B4 of Entry #950 were remediated, 26 planted blocking variants failed, and on Linux CI the run-queue path counted off-CPU blocking in full. It vetoed on two points.
+
+- **V1, the stall margin on Windows.** `burnMainThread(ms)` now burns until the thread's reported CPU time has grown by `ms` plus one clock step (16 ms) and `ms` of wall-clock time has passed. The true main-thread CPU time is then at least `ms` on any platform, and the turn is at least `ms` long. The stall controls now require the held time to be at least 200 ms; iteration 2 checked only CPU time at 150 ms.
+- **V2, nesting in the evidence script.** `falsify.cjs` is restructured into functions (nesting at most 3).
+- **Non-blocking notes taken:**
+  - N3: a 120 ms stall, just over the limit, must also fail, so a loosened comparison is caught.
+  - N4: a raw `process.binding` call is now a control.
+  - N6: the suite fails with a clear message on a Node version without `process.threadCpuUsage`.
+  - N7: the overstatement in Entry #950 is clarified in Entry #951.
+  - N2 and N8: the wording and the test count are corrected above, and the under-load figure has committed raw output.
+- **Not changed:** N1 (Linux excuses run-queue wait by design; that is the intended arrangement) and N5 (a partial restore only in a practically unreachable case).
 
 ## Falsification and independent-review questions (iteration 1)
 

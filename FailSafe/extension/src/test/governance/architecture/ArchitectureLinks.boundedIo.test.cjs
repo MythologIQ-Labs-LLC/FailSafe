@@ -26,6 +26,8 @@ const capturedSpawnSync = childProcess.spawnSync;
 const { execSync: capturedExecSync } = require('child_process');
 
 const STALL_MS = 200; // twice the limit, as a literal: it must not move with LAG_LIMIT_MS
+const JUST_OVER_MS = 120; // a stall just over the limit, which a loosened comparison would let through
+const CPU_CLOCK_STEP_MS = 16; // Windows reports thread CPU time in steps of about 15.6 ms
 const CHILD_SLEEP = `setTimeout(() => {}, ${STALL_MS})`;
 
 let root;
@@ -40,10 +42,15 @@ function bigWorkspace() {
   return root;
 }
 
-/** Burn main-thread CPU, on the event loop, until this thread has used `ms` of it. */
+/**
+ * Burn main-thread CPU on the event loop for at least `ms`: until the thread's reported CPU time has
+ * grown by `ms` plus one clock step (so the true CPU time is at least `ms` however coarse the clock)
+ * and at least `ms` of wall-clock time has passed (audit VETO #951, V1).
+ */
 function burnMainThread(ms) {
   const from = threadCpuMs();
-  while (threadCpuMs() - from < ms) { /* synchronous work on the event loop */ }
+  const start = performance.now();
+  while (threadCpuMs() - from < ms + CPU_CLOCK_STEP_MS || performance.now() - start < ms) { /* synchronous work on the event loop */ }
 }
 
 /** Measure `calls` describe calls; `plant(i)` runs inside call i before its real read. */
@@ -62,6 +69,7 @@ test('#651: the limit is the literal 100 ms, sampled every 10 ms, and the plante
   assert.equal(LAG_LIMIT_MS, 100);
   assert.equal(SAMPLE_MS, 10);
   assert.equal(STALL_MS, 2 * 100);
+  assert.equal(typeof process.threadCpuUsage, 'function', `#651 needs Node 22 or later; this is Node ${process.version}`);
 });
 
 test('describe: bounded I/O - no git, no sync fs, no child process; the event loop stays responsive (5,000 rows, a pathological cell)', async (t) => {
@@ -80,18 +88,25 @@ test('#651 control: a 200 ms main-thread stall fails, on every call and on one c
   const every = await bounded({ calls: 3, plant: () => burnMainThread(STALL_MS) });
   t.diagnostic(`every call: ${describeTurn(every)}`);
   expectHeld(every, 'stall on every call');
-  assert.ok(every.worst.cpu >= STALL_MS * 0.75, `the stall was main-thread CPU: ${describeTurn(every)}`);
+  assert.ok(every.worst.held >= STALL_MS, `the stall held the loop for at least ${STALL_MS} ms: ${describeTurn(every)}`);
+  assert.ok(every.worst.cpu >= STALL_MS - CPU_CLOCK_STEP_MS, `the stall was main-thread CPU: ${describeTurn(every)}`);
   assert.deepEqual(every.results.map((d) => d.state), ['ok', 'ok', 'ok']);
   for (const only of [0, 2]) {
     const m = await bounded({ plant: (i) => { if (i === only) burnMainThread(STALL_MS); } });
     t.diagnostic(`call ${only + 1} of 5 only: ${describeTurn(m)}`);
     expectHeld(m, `stall on call ${only + 1} of 5 only`);
+    assert.ok(m.worst.held >= STALL_MS, `the stall held the loop for at least ${STALL_MS} ms: ${describeTurn(m)}`);
   }
+  const near = await bounded({ calls: 2, plant: () => burnMainThread(JUST_OVER_MS) });
+  t.diagnostic(`${JUST_OVER_MS} ms on every call: ${describeTurn(near)}`);
+  expectHeld(near, `a ${JUST_OVER_MS} ms stall, just over the limit`);
 });
 
 test('#651 control: live synchronous fs, Atomics.wait and spawnSync are counted and held', async (t) => {
   const syncFs = await bounded({ calls: 2, plant: () => fs.statSync(bigWorkspace()) });
   assert.deepEqual(syncFs.blocking, [['fs.statSync', 2]]);
+  const raw = await bounded({ calls: 1, plant: () => process.binding('spawn_sync') });
+  assert.deepEqual(raw.blocking, [['process.binding', 1]], 'a raw native binding is counted');
   const parked = await bounded({ calls: 2, plant: () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, STALL_MS) });
   t.diagnostic(`live Atomics.wait: ${describeTurn(parked)}`);
   assert.deepEqual(parked.blocking, [['Atomics.wait', 2]]);

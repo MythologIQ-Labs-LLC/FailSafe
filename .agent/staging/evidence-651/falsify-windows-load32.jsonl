@@ -1,0 +1,6 @@
+{"name":"none","pass":3,"fail":0,
+{"name":"cpu150_first","pass":0,"fail":3,
+{"name":"cpu105","pass":0,"fail":3,
+{"name":"spawnSync_captured","pass":0,"fail":3,
+{"name":"atomics_captured","pass":0,"fail":3,
+{"name":"threadpool_async","pass":3,"fail":0,

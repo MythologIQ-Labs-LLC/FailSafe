@@ -30,19 +30,29 @@ const V = {
   threadpool_async: { load: '', body: 'require("crypto").pbkdf2(\'x\', \'y\', 200000, 32, \'sha256\', () => {});' },
 };
 const names = process.argv.slice(4).length ? process.argv.slice(4) : Object.keys(V);
-try {
-  for (const name of names) {
-    const v = V[name];
-    if (!orig.includes(HEAD)) throw new Error('anchor missing');
-    fs.writeFileSync(F, orig.replace(HEAD, `${v.load}\n${HEAD}\n${v.body}`));
-    let pass = 0, fail = 0;
-    const msgs = [];
-    for (let k = 0; k < runs; k += 1) {
-      const r = spawnSync(process.execPath, ['--test', '--test-name-pattern=bounded I/O - no git', TEST], { cwd: ext, encoding: 'utf8' });
-      if (r.status === 0) pass += 1; else { fail += 1; const m = /(?:event loop held|blocking|git runner|AssertionError)[^\n]{0,180}/.exec(r.stdout + r.stderr); msgs.push(m ? m[0] : 'exit ' + r.status); }
-      const diag = /# (wall-clock[^\n]*)/.exec(r.stdout);
-      if (diag && k === 0) msgs.unshift('diag: ' + diag[1].slice(0, 150));
-    }
-    console.log(JSON.stringify({ name, pass, fail, msgs: msgs.slice(0, 3) }));
+
+/** Plant one variant, run the main test `runs` times, and return its pass and fail counts. */
+function runVariant(name) {
+  const v = V[name];
+  if (!orig.includes(HEAD)) throw new Error('anchor missing');
+  fs.writeFileSync(F, orig.replace(HEAD, `${v.load}\n${HEAD}\n${v.body}`));
+  let pass = 0, fail = 0;
+  const msgs = [];
+  for (let k = 0; k < runs; k += 1) {
+    const r = spawnSync(process.execPath, ['--test', '--test-name-pattern=bounded I/O - no git', TEST], { cwd: ext, encoding: 'utf8' });
+    if (r.status === 0) pass += 1;
+    else { fail += 1; msgs.push(firstReason(r)); }
+    const diag = /# (wall-clock[^\n]*)/.exec(r.stdout);
+    if (diag && k === 0) msgs.unshift('diag: ' + diag[1].slice(0, 150));
   }
+  return { name, pass, fail, msgs: msgs.slice(0, 3) };
+}
+
+function firstReason(r) {
+  const m = /(?:event loop held|blocking|git runner|AssertionError)[^\n]{0,180}/.exec(r.stdout + r.stderr);
+  return m ? m[0] : 'exit ' + r.status;
+}
+
+try {
+  for (const name of names) console.log(JSON.stringify(runVariant(name)));
 } finally { fs.writeFileSync(F, orig); }

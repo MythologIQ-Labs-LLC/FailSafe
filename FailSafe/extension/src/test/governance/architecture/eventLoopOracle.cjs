@@ -38,6 +38,9 @@ function runQueueMs() {
 }
 
 function threadCpuMs() {
+  if (typeof process.threadCpuUsage !== 'function') {
+    throw new Error(`#651 needs process.threadCpuUsage (Node 22 or later); this is Node ${process.version}`);
+  }
   const u = process.threadCpuUsage();
   return (u.user + u.system) / 1000;
 }
@@ -75,8 +78,9 @@ function raisePriority() {
 
 /**
  * Count every call, during the measurement, of a synchronous fs function, any child_process
- * function, Atomics.wait, or a raw native binding. These see live references only; a reference
- * captured earlier is caught by the held-time verdict instead.
+ * function, Atomics.wait, or a raw native binding. These see live references only. A reference
+ * captured earlier is caught by the held-time verdict instead, but only when it holds the event loop
+ * for the limit or longer; a short call through a captured reference is not seen at all.
  */
 function installSeams() {
   const counts = new Map();

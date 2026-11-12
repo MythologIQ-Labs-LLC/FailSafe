@@ -1,9 +1,9 @@
 {
   "phase": "plan",
   "session_id": "2026-11-12T0251-53f40b",
-  "ts": "2026-11-12T02:52:36Z",
+  "ts": "2026-11-12T03:27:56Z",
   "plan_path": ".failsafe/governance/plans/plan-v6013-651-architecturelinks-ci-reliability.md",
-  "iteration": 2,
+  "iteration": 3,
   "change_class": "hotfix",
   "doc_tier": "standard",
   "pr_target": "main",
@@ -35,13 +35,13 @@
     "npm run test:node"
   ],
   "open_questions": [],
-  "plan_content_hash": "035d6e977887e8f7e4aee0a3bbd4873b29778296984cce20ddfcee915bc09487",
+  "plan_content_hash": "c8ace3cf999d4670b500d1297e518e4ba73eec5e12e28b7b710381b23e4b8551",
   "ai_provenance": {
     "system": "Qor-logic",
     "version": "0.176.1",
     "host": "claude-code",
     "model_family": "unknown",
     "human_oversight": "absent",
-    "ts": "2026-11-12T02:52:36Z"
+    "ts": "2026-11-12T03:27:56Z"
   }
 }
