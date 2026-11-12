@@ -1,0 +1,54 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-12T2324-8d58c3",
+  "ts": "2026-11-12T23:24:31Z",
+  "plan_path": ".failsafe/governance/plans/plan-v6013-release-governance.md",
+  "iteration": 1,
+  "plan_content_hash": "2ddb96634ef634941a41e3f9295685b0f568ee6cef26390f64deb50cc79334b8",
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "open_questions": [],
+  "change_class": "governance",
+  "doc_tier": "standard",
+  "pr_target": "main",
+  "originating_remediation": "GH #637 v6.0.13 release (owner scope 2026-11-10: Statewright Option A and G4)",
+  "high_risk_target": false,
+  "phases": [
+    "Phase 1 - v6.0.13 release source: version, changelog, README markers, Continue/Aider wording; seal S and seal record R; G4 genesis after owner authorization; release verification on H and M; owner GO before tag"
+  ],
+  "boundaries": {
+    "limitations": [
+      "G4 rests on one owner key and FreeTSA",
+      "#660 record writes not failure-atomic",
+      "#505 #476 #475 #463 open"
+    ],
+    "non_goals": [
+      "No #659 media",
+      "No embedded Statewright data",
+      "No tag or publication without owner GO"
+    ],
+    "exclusions": [
+      "No post-seal product change"
+    ]
+  },
+  "ci_commands": [
+    "npx tsc -p ./",
+    "npx eslint src --ext ts",
+    "npm run test:node",
+    "npm run test:ui",
+    "node --test src/test/docs/*.test.cjs",
+    "node scripts/release-gate.cjs --preflight"
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5-5",
+    "human_oversight": "absent",
+    "ts": "2026-11-12T23:24:31Z"
+  }
+}
