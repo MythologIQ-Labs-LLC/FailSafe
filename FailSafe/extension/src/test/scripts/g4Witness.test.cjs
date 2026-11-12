@@ -92,6 +92,21 @@ test("committed TSA policy trusts exactly one root: the pinned FreeTSA Root CA",
   assert.match(cert.subject, /CN=www\.freetsa\.org/);
 });
 
+test("committed blobs are read even when rev:path is longer than Windows MAX_PATH allows for a path", () => {
+  const { showBlob } = require("../../../scripts/lib/g4/git.cjs");
+  const deep = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "g4-long-")), "d".repeat(60), "e".repeat(60));
+  fs.mkdirSync(deep, { recursive: true });
+  const run = (...args) => spawnSync("git", ["-C", deep, ...args], { encoding: "utf8", input: args.includes("--stdin") ? "long path blob\n" : undefined });
+  run("init", "-q");
+  const blob = run("hash-object", "-w", "--stdin").stdout.trim();
+  const rel = `tools/g4/transitions/${"a".repeat(64)}.json`;
+  run("update-index", "--add", "--cacheinfo", `100644,${blob},${rel}`);
+  run("-c", "user.name=t", "-c", "user.email=t@invalid", "-c", "commit.gpgsign=false", "commit", "-q", "-m", "t");
+  const head = run("rev-parse", "HEAD").stdout.trim();
+  assert.equal(String(showBlob(deep, head, rel)), "long path blob\n");
+  assert.equal(showBlob(deep, head, "tools/g4"), null, "a tree is not a blob");
+});
+
 test("the CLI never reports PASS for the real repository, which has no witness yet", { skip: found ? false : "openssl unavailable" }, () => {
   const r = spawnSync(process.execPath, [path.join(EXT, "scripts", "g4-verify-checkpoint.cjs"), "--repo-root", REPO], { encoding: "utf8" });
   assert.ok(r.status === 1 || r.status === 2, `exit ${r.status}: ${r.stdout}${r.stderr}`);

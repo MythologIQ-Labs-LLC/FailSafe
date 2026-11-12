@@ -1,6 +1,6 @@
 "use strict";
 /**
- * G4 (#638): read committed blobs. `git show <rev>:<path>` returns the blob
+ * G4 (#638): read committed blobs. `git cat-file blob <rev>:<path>` returns the blob
  * bytes without checkout filters, so CRLF conversion never changes a digest.
  */
 const { spawnSync } = require("node:child_process");
@@ -32,7 +32,9 @@ function git(repoRoot, args, opts = {}) {
 
 /** Blob bytes at `rev:path`, or null when the path or commit is absent. */
 function showBlob(repoRoot, rev, filePath) {
-  const res = git(repoRoot, ["show", `${rev}:${filePath}`], { encoding: "buffer" });
+  // cat-file never treats its argument as a working-tree path, so a long rev:path cannot hit
+  // Windows MAX_PATH ("Filename too long") the way `git show` can; it also refuses non-blobs.
+  const res = git(repoRoot, ["cat-file", "blob", `${rev}:${filePath}`], { encoding: "buffer" });
   if (res.status !== 0) return null;
   return res.stdout;
 }
