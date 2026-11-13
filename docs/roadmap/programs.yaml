@@ -34,7 +34,8 @@ meta:
     Scoring is artifact-in-tree, not issue status. A phase counts as landed only
     when its code + tests are on `main` and the release it targets has shipped to
     a marketplace — verifiable against META_LEDGER DELIVER entries and git tags,
-    not a checkbox. The v6.1.0 agentic-work forecast is a release objective,\n    not a scored or delivered feature until governed work is actually verified.
+    not a checkbox. The v6.1.0 agentic-work forecast is a release objective,
+    not a scored or delivered feature until governed work is actually verified.
   metaRow:
     - { label: Released, value: v6.0.13 }
     - { label: Marketplaces, value: VS Code + Open VSX }
