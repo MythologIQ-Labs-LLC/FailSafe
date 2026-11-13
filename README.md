@@ -57,6 +57,8 @@ FailSafe's core monitoring and governance run locally. External integrations are
 
 **Current Release**: v6.0.13 ([release notes](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.13)); the previous release is v6.0.12. See the [release history](CHANGELOG.md) for fixes, security corrections, and packaged platform support.
 
+**v6.0.13 highlights:** the Integrations Catalog now includes a **Statewright AI website handoff**. Open the FailSafe Console, go to **Integrations → Catalog**, find **Statewright AI**, and select **Open Statewright Run History**. Statewright handles sign-in and run data in your browser; FailSafe does not embed the history or enforce Statewright workflows. G4 release-ledger witnessing is repository tooling, not an extension feature. Read the [branded v6.0.13 release-notes PDF](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/v6.0.13/FailSafe-v6.0.13-Release-Notes.pdf) and [full changelog](CHANGELOG.md).
+
 Newer work on `main` may not yet be available in the marketplace release. Check [GitHub Releases](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases) before assuming a repository feature is installed.
 
 ## For developers and agentic contributors
