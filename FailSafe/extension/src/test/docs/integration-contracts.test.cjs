@@ -980,7 +980,7 @@ function validate(inputs) {
   ];
   for (const w of want) {
     const r = rowsById.get(w.id);
-    if (!r) { add('registry', `docs/ARCHITECTURE_INDEX.md has no registry row ${w.id}`); continue; }
+    if (!r) { add('registry', `ARCHITECTURE_INDEX.md has no registry row ${w.id}`); continue; }
     if (w.retired) { if (r.status !== 'historical') add('registry', `${w.id}: status must be historical for a retired contract`); }
     else if (r.status !== 'canonical') add('registry', `${w.id}: status must be canonical`);
     if (w.retired && !(r.updated_by || '').includes(w.retired.item)) add('registry', `${w.id}: updated_by must name the retirement item ${w.retired.item}`);
@@ -1094,7 +1094,7 @@ function repoInputs() {
     reviews: fs.readdirSync(path.join(REPO_ROOT, REVIEW_DIR)).filter((n) => /_CONTRACT_REVIEW\.md$/.test(n)).map((n) => `${REVIEW_DIR}${n}`).sort(),
     history: gitHistory(gitRun), manifestText: read(MANIFEST) || '',
     portfolioText: read(PORTFOLIO) || '', scenariosText: read(SCENARIOS) || '', backlogText: read('docs/BACKLOG.md') || '',
-    archIndexText: read('docs/ARCHITECTURE_INDEX.md') || '', govIndexText: read('docs/GOVERNANCE_INDEX.md') || '',
+    archIndexText: read('ARCHITECTURE_INDEX.md') || '', govIndexText: read('docs/GOVERNANCE_INDEX.md') || '',
     requiredIds: LD1_OTHER_IDS,
   };
 }
