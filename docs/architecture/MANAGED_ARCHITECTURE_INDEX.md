@@ -6,7 +6,7 @@
 
 ## Context
 
-[#530](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/530) gave this repository one checked navigation spine for design intent: `docs/ARCHITECTURE_INDEX.md`, a registry table, an `architecture-normative` glob block, an `architecture-legacy` prefix block and `check-architecture-index.cjs`. [#531](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/531) asks FailSafe to offer the same spine to the repositories it governs: find an existing index, bootstrap one safely when there is none, show documents that match the architecture globs but have no registry row, and route every decision about a document through a human.
+[#530](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/530) originally gave this repository one checked navigation spine for design intent at `docs/ARCHITECTURE_INDEX.md` (migrated to root `ARCHITECTURE_INDEX.md` for FailSafe itself in v6.1.0 development), a registry table, an `architecture-normative` glob block, an `architecture-legacy` prefix block and `check-architecture-index.cjs`. [#531](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/531) asks FailSafe to offer the same spine to the repositories it governs: find an existing index, bootstrap one safely when there is none, show documents that match the architecture globs but have no registry row, and route every decision about a document through a human.
 
 Two constraints shape the slice:
 
@@ -26,7 +26,7 @@ The pure functions of `check-architecture-index.cjs` move to `FailSafe/extension
 | Field | FailSafe-repo profile | User-repo profile |
 |---|---|---|
 | `indexPath` | `ARCHITECTURE_INDEX.md` (FailSafe root) | setting `failsafe.architecture.indexPath`, default `docs/ARCHITECTURE_INDEX.md` for other repositories |
-| `linkBase` | `posix.dirname(indexPath)` = `docs` | `posix.dirname(indexPath)` |
+| `linkBase` | `posix.dirname(indexPath)` = `.` for root `ARCHITECTURE_INDEX.md` | `posix.dirname(indexPath)` (typically `docs` with the user-repository default) |
 | `registryTail` | `existing: <indexPath>#registry` | same rule |
 | default normative globs | the repository's own block | `ARCHITECTURE*.md`, `docs/ARCHITECTURE*.md`, `docs/architecture/**/*.md`, `docs/design/**/*.md`, `docs/adr/**/*.md`, `adr/**/*.md`, `docs/**/*ARCHITECTURE*.md`, `docs/**/*DESIGN*.md` |
 | default legacy prefixes | the repository's own block | `docs/archive/**` |
