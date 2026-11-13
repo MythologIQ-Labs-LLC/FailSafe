@@ -146,7 +146,9 @@ export function discoverReleases(changelogText: string): TrackerRc[] {
  * Tiered program-progress eligibility: the weighted calculator is populated for
  * MAJOR releases across the full history, but for MINOR/PATCH releases only
  * within a recent window (so we don't owe weighted data for every old patch).
- * Pure — `now` is injected. Non-prod (forecast) + undated + unparseable → shown.
+ * Pure — `now` is injected. Forecasts remain on the release axis but
+ * cannot receive a verified weighted snapshot before shipping. Other non-prod
+ * and undated/unparseable records retain their existing eligibility behavior.
  */
 export function isProgramEligible(
   rc: TrackerRc,
@@ -156,7 +158,10 @@ export function isProgramEligible(
   if (!m) return true;
   const minor = parseInt(m[2], 10);
   const patch = parseInt(m[3], 10);
-  if (rc.state !== 'prod') return true;          // forecast/planned → always tracked
+  // A forecast is a future release target, not a completed release snapshot.
+  // The dashboard keeps the anchor visible but marks the bars "no snapshot".
+  if (rc.state === 'forecast') return false;
+  if (rc.state !== 'prod') return true;          // provisional staging/PR unchanged
   if (minor === 0 && patch === 0) return true;   // major → full history
   const date = rc.note ? new Date(rc.note) : null;
   if (!date || Number.isNaN(date.getTime())) return true;
