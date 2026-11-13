@@ -4,7 +4,7 @@
  *
  *   node FailSafe/extension/scripts/check-architecture-index.cjs [--repo-root <dir>]
  *
- * Reads docs/ARCHITECTURE_INDEX.md (registry table, `architecture-normative` and
+ * Reads root ARCHITECTURE_INDEX.md (registry table, `architecture-normative` and
  * `architecture-legacy` fenced blocks), README.md and docs/GOVERNANCE_INDEX.md, takes
  * the tracked-file list from `git ls-files -z`, and prints one
  * `[architecture-index] <code>: <detail>` line per problem, then PASS or FAIL.
