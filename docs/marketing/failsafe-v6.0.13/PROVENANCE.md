@@ -1,6 +1,6 @@
 # Provenance: FailSafe v6.0.13 Statewright demo reel (preview, GH #673)
 
-**Status: preview for owner review. Not approved, not published, not committed.** This cut shows Statewright's signed-in, empty Run History page. The earlier signed-out cut, which shows Statewright's Log in page, is kept in `alt-signedout/` with its own PROVENANCE.md.
+**Status: owner-review preview, now committed and pushed to public draft PR #680. No website, marketplace, or social promotion has been approved.** This cut shows Statewright's signed-in, empty Run History page. The earlier signed-out cut, which shows Statewright's Log in page, is kept in `alt-signedout/` with its own PROVENANCE.md.
 
 ## 1. Software filmed
 
@@ -68,7 +68,7 @@ No runs, transitions or provider data are claimed or fabricated.
 - **Statewright segment, every frame at full resolution:** 553 consecutive frames of the final MP4 (film 37.47 to 55.87 s) match the supplied redacted clip pixel for pixel (mean absolute difference below 1.0), and all 600 clip frames are identical to its first frame apart from 3 codec-noise pixels. The covered header area is one uniform colour in every frame (std at most 1.0, at most 4 levels from the header colour). Frame 0 was inspected at full resolution: no name, initials, email or other account data. The 0.5 s cross-fade to the end card blends only this clean picture with the card.
 - **Rest of the film:** reviewed at 1 fps on contact sheets, plus full-resolution key frames and the cut at 5 fps. It shows only the fictional workspace, generic Command Palette entries, the Console for `c:\demo\tasklet-6013`, and a blank loading tab at `statewright.ai/runs`. There are no names, emails, tokens or owner paths.
 - **Delivered files:** searched (text and binary) for the owner's account and user names; one Windows user path in a copied music log was redacted. `events.json` contains no page text and the theme key is redacted.
-- Nothing was uploaded, published, committed or pushed.
+- At the initial capture and QA checkpoint, nothing had yet been uploaded, committed or pushed. This review kit is now committed and pushed to public draft PR #680; it is publicly accessible as PR content. No owner approval for website, marketplace, or social promotion is implied.
 
 ## 8. Deliverable hashes (SHA-256)
 
