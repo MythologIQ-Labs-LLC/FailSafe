@@ -209,15 +209,17 @@ export function buildTrackerModel(
     return rc; // forecast: no ref unless the manifest declared one
   });
 
-  // Tiered program-progress eligibility (majors always; minors/patches within
-  // their recent window). Computed only when `now` is supplied — the live route
-  // always supplies it; pure callers may omit, leaving progressEligible
-  // undefined (the dashboard treats undefined as eligible for back-compat).
+  // Time-window eligibility for shipped history requires `now` (the live route
+  // always supplies it). Forecasts are never entitled to a verified progress
+  // snapshot, even for pure/offline callers that omit `now`; preserve undefined
+  // for other states without a clock to retain the historical caller contract.
   if (live.now) {
     const minorDays = live.minorDays ?? 60;
     const patchDays = live.patchDays ?? 30;
     const now = live.now;
     rcs = rcs.map((rc) => ({ ...rc, progressEligible: isProgramEligible(rc, { now, minorDays, patchDays }) }));
+  } else {
+    rcs = rcs.map((rc) => rc.state === 'forecast' ? { ...rc, progressEligible: false } : rc);
   }
 
   return {
