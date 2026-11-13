@@ -24,7 +24,7 @@ test("nested application README uses the real single-extension source and packag
     "FailSafe/extension/package.json",
     "FailSafe/extension/scripts/package-target.cjs",
     "FailSafe/extension/scripts/validate-vsix.cjs",
-    "docs/ARCHITECTURE_INDEX.md",
+    "ARCHITECTURE_INDEX.md",
     "docs/architecture/INTEGRATION_PORTFOLIO.md",
   ]) assert.ok(fs.existsSync(path.join(REPO, p)), `missing documented entry point: ${p}`);
 });

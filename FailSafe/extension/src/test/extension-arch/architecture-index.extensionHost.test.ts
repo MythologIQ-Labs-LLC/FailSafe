@@ -80,4 +80,42 @@ suite('#531 managed architecture index (extension host, temp git workspace)', ()
     assert.equal(dialogs.slice(shown).filter((d) => d === ARCHITECTURE_BOOTSTRAP_TITLE).length, 0);
     assert.ok(fs.readFileSync(target).equals(before), 'byte-identical after the second run');
   });
+
+  test('root migration: installed extension respects workspace root path and reuses existing authority', async function () {
+    this.timeout(60000);
+    const currentPath = path.join(root, ...INDEX.split('/'));
+    const rootPath = path.join(root, 'ARCHITECTURE_INDEX.md');
+    const original = fs.readFileSync(currentPath);
+    const migrated = original.toString('utf8')
+      .replace(/\]\(architecture\/RUNTIME\.md\)/g, '](docs/architecture/RUNTIME.md)')
+      .replace(/\]\(\.\.\/ARCHITECTURE\.md\)/g, '](ARCHITECTURE.md)');
+    const config = vscode.workspace.getConfiguration('failsafe.architecture');
+    const previous = config.inspect<string>('indexPath')?.workspaceValue;
+    const shown = dialogs.length;
+    try {
+      // Only this temporary test workspace is modified, never the operator's settings.
+      fs.writeFileSync(rootPath, migrated, { flag: 'wx' });
+      fs.rmSync(currentPath);
+      await config.update('indexPath', 'ARCHITECTURE_INDEX.md', vscode.ConfigurationTarget.Workspace);
+      assert.equal(vscode.workspace.getConfiguration('failsafe.architecture').get('indexPath'), 'ARCHITECTURE_INDEX.md');
+
+      const snapshot = discoverArchitectureIndex({ workspaceRoot: root, indexPathSetting: 'ARCHITECTURE_INDEX.md' });
+      assert.equal(snapshot.state, 'present', JSON.stringify(snapshot.problems));
+      assert.deepEqual(snapshot.problems, []);
+      assert.deepEqual(snapshot.rows.map((r) => r.docPath),
+        ['ARCHITECTURE_INDEX.md', 'docs/architecture/RUNTIME.md']);
+
+      const result = await vscode.commands.executeCommand(COMMAND) as Record<string, unknown>;
+      assert.equal(result.status, 'reuse', JSON.stringify(result));
+      assert.equal(result.path, 'ARCHITECTURE_INDEX.md');
+      assert.equal(dialogs.slice(shown).filter((d) => d === ARCHITECTURE_BOOTSTRAP_TITLE).length, 0,
+        'root index must never trigger duplicate-bootstrap confirmation');
+      assert.equal(fs.existsSync(currentPath), false, 'no duplicate docs index may appear');
+      assert.ok(fs.readFileSync(rootPath).equals(Buffer.from(migrated)), 'root index must remain byte-identical');
+    } finally {
+      await config.update('indexPath', previous, vscode.ConfigurationTarget.Workspace);
+      fs.writeFileSync(currentPath, original);
+      if (fs.existsSync(rootPath)) fs.rmSync(rootPath);
+    }
+  });
 });

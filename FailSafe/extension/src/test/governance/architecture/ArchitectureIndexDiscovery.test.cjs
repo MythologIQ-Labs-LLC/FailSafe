@@ -83,6 +83,54 @@ test('present: a valid index with every document registered has zero problems an
   assert.ok(!Number.isNaN(Date.parse(snap.checkedAt)));
 });
 
+test('root migration: an explicitly configured root index loads canonical rows with root-relative links', () => {
+  const rootSelf = ['architecture-navigation', 'architecture navigation', '[Architecture Index](ARCHITECTURE_INDEX.md)', 'canonical',
+    'manual', '-', '-', '-', 'unknown', 'unknown', 'manual'];
+  const runtime = ['runtime', 'runtime', '[Runtime](docs/architecture/RUNTIME.md)', 'canonical',
+    'manual', '-', '-', '-', 'unknown', 'unknown', 'manual'];
+  const root = repo({
+    'ARCHITECTURE_INDEX.md': index([rootSelf, runtime], { globs: ['ARCHITECTURE_INDEX.md', 'docs/architecture/**/*.md'] }),
+    'docs/architecture/RUNTIME.md': '# Runtime\\n',
+  });
+  const snap = discover(root, { indexPathSetting: 'ARCHITECTURE_INDEX.md' });
+  assert.equal(snap.state, 'present', JSON.stringify(snap.problems));
+  assert.equal(snap.indexPath, 'ARCHITECTURE_INDEX.md');
+  assert.deepEqual(snap.rows.map((r) => [r.id, r.docPath, r.listed]),
+    [['architecture-navigation', 'ARCHITECTURE_INDEX.md', true], ['runtime', 'docs/architecture/RUNTIME.md', true]]);
+  assert.deepEqual(snap.problems, []);
+  assert.deepEqual(snap.candidates, []);
+  assert.ok(snap.indexSha256, 'root index carries an evidence fingerprint');
+});
+
+test('root migration: legacy default reports the root index as present-elsewhere and never bootstraps over it', () => {
+  const rootSelf = ['architecture-navigation', 'architecture navigation', '[Architecture Index](ARCHITECTURE_INDEX.md)', 'canonical',
+    'manual', '-', '-', '-', 'unknown', 'unknown', 'manual'];
+  const root = repo({
+    'ARCHITECTURE_INDEX.md': index([rootSelf], { globs: ['ARCHITECTURE_INDEX.md'] }),
+  });
+  const snap = discover(root);
+  assert.equal(snap.state, 'present-elsewhere');
+  assert.equal(snap.indexPath, 'docs/ARCHITECTURE_INDEX.md', 'installed user-workspace default unchanged');
+  assert.equal(snap.elsewherePath, 'ARCHITECTURE_INDEX.md', 'do not create a second authority');
+  assert.deepEqual(snap.rows, [], 'without opt-in path override root index is not misrepresented as active');
+});
+
+test('root migration: two competing on-disk indices are reported rather than silently accepted', () => {
+  const rootSelf = ['architecture-navigation', 'architecture navigation', '[Architecture Index](ARCHITECTURE_INDEX.md)', 'canonical',
+    'manual', '-', '-', '-', 'unknown', 'unknown', 'manual'];
+  const docsSelf = ['architecture-navigation', 'architecture navigation', '[Architecture Index](ARCHITECTURE_INDEX.md)', 'canonical',
+    'manual', '-', '-', '-', 'unknown', 'unknown', 'manual'];
+  const root = repo({
+    'ARCHITECTURE_INDEX.md': index([rootSelf], { globs: ['ARCHITECTURE_INDEX.md', 'docs/ARCHITECTURE*.md'] }),
+    'docs/ARCHITECTURE_INDEX.md': index([docsSelf]),
+  });
+  const snap = discover(root, { indexPathSetting: 'ARCHITECTURE_INDEX.md' });
+  assert.equal(snap.state, 'present-with-problems', 'a second index is not a clean canonical snapshot');
+  assert.ok(snap.problems.some((p) => p.code === 'unregistered-normative' &&
+    p.detail.includes('docs/ARCHITECTURE_INDEX.md')), JSON.stringify(snap.problems));
+  assert.ok(snap.candidates.some((c) => c.path === 'docs/ARCHITECTURE_INDEX.md'));
+});
+
 test('absent: candidates come from the default globs, legacy excluded, each with suggestions from the others', () => {
   const root = repo({
     'docs/architecture/RUNTIME.md': '# Runtime\n',

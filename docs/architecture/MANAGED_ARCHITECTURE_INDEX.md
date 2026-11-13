@@ -1,12 +1,12 @@
 # Managed Architecture Index (ADR, #531)
 
 **Status:** accepted for the first vertical slice (plan `plan-531-architecture-governance.md`, audit PASS at iteration 2); amended for the second slice, architecture authority (plan `plan-531b-architecture-authority.md`, audit PASS at iteration 3; LD7-LD10), and for the B311/B312 residuals, affected decisions and registry links (plan `plan-b311-b312-architecture-residuals.md`, audit PASS at iteration 3; LD11).
-**Registry row:** `managed-architecture-index` in the [Architecture Index](../ARCHITECTURE_INDEX.md).
+**Registry row:** `managed-architecture-index` in the [Architecture Index](../../ARCHITECTURE_INDEX.md).
 **Design source for the view:** the Integrations Catalog renderer (`FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js`).
 
 ## Context
 
-[#530](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/530) gave this repository one checked navigation spine for design intent: `docs/ARCHITECTURE_INDEX.md`, a registry table, an `architecture-normative` glob block, an `architecture-legacy` prefix block and `check-architecture-index.cjs`. [#531](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/531) asks FailSafe to offer the same spine to the repositories it governs: find an existing index, bootstrap one safely when there is none, show documents that match the architecture globs but have no registry row, and route every decision about a document through a human.
+[#530](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/530) originally gave this repository one checked navigation spine for design intent at `docs/ARCHITECTURE_INDEX.md` (migrated to root `ARCHITECTURE_INDEX.md` for FailSafe itself in v6.1.0 development), a registry table, an `architecture-normative` glob block, an `architecture-legacy` prefix block and `check-architecture-index.cjs`. [#531](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/531) asks FailSafe to offer the same spine to the repositories it governs: find an existing index, bootstrap one safely when there is none, show documents that match the architecture globs but have no registry row, and route every decision about a document through a human.
 
 Two constraints shape the slice:
 
@@ -25,8 +25,8 @@ The pure functions of `check-architecture-index.cjs` move to `FailSafe/extension
 
 | Field | FailSafe-repo profile | User-repo profile |
 |---|---|---|
-| `indexPath` | `docs/ARCHITECTURE_INDEX.md` | setting `failsafe.architecture.indexPath`, default `docs/ARCHITECTURE_INDEX.md` |
-| `linkBase` | `posix.dirname(indexPath)` = `docs` | `posix.dirname(indexPath)` |
+| `indexPath` | `ARCHITECTURE_INDEX.md` (FailSafe root) | setting `failsafe.architecture.indexPath`, default `docs/ARCHITECTURE_INDEX.md` for other repositories |
+| `linkBase` | `posix.dirname(indexPath)` = `.` for root `ARCHITECTURE_INDEX.md` | `posix.dirname(indexPath)` (typically `docs` with the user-repository default) |
 | `registryTail` | `existing: <indexPath>#registry` | same rule |
 | default normative globs | the repository's own block | `ARCHITECTURE*.md`, `docs/ARCHITECTURE*.md`, `docs/architecture/**/*.md`, `docs/design/**/*.md`, `docs/adr/**/*.md`, `adr/**/*.md`, `docs/**/*ARCHITECTURE*.md`, `docs/**/*DESIGN*.md` |
 | default legacy prefixes | the repository's own block | `docs/archive/**` |
@@ -149,7 +149,7 @@ Before recording any proposal, the route re-reads the workspace under the lock a
 
 | Kind | What it is | Its single home | How FailSafe treats it |
 |---|---|---|---|
-| 1. Canonical architecture authority | a registry row with status `canonical`; `proposed` sits under it as intended, not yet accepted, authority | the registry in `docs/ARCHITECTURE_INDEX.md` (or `failsafe.architecture.indexPath`) | competing canonical authority is refused at propose (LD8, LD9); affected decisions list `canonical` and `proposed` rows, each labelled with its status |
+| 1. Canonical architecture authority | a registry row with status `canonical`; `proposed` sits under it as intended, not yet accepted, authority | the FailSafe repository's root `ARCHITECTURE_INDEX.md` (or the configurable `failsafe.architecture.indexPath` in other repositories) | competing canonical authority is refused at propose (LD8, LD9); affected decisions list `canonical` and `proposed` rows, each labelled with its status |
 | 2. Descriptive documentation | a `descriptive` row | the registry | shown and linked; never authority; never an affected decision |
 | 3. Historical or superseded documentation | a `historical` or `superseded` row | the registry | kept for history; never an affected decision |
 | 4. Operator taxonomy (intent) | the programs, verticals and agent mappings the operator intends | `docs/roadmap/tracker-config.yaml` when present (local; Workspace › Taxonomy) | records intent; disagreements with kinds 5 and `docs/roadmap/programs.yaml` are reported as drift, never reconciled |

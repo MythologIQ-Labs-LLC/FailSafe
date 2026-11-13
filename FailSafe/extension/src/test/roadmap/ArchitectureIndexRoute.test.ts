@@ -153,6 +153,34 @@ suite('#531 ArchitectureIndexRoute', () => {
     assert.equal((await s2.harness.request({ path: '/api/v1/architecture/index' })).body.ledger, 'available');
   });
 
+  test('root migration: GET resolves the root index and bootstrap refuses creating a second index', async () => {
+    const rootSelf = [...SELF];
+    const runtime = [...RUNTIME];
+    runtime[2] = '[Runtime](docs/architecture/RUNTIME.md)';
+    const text = indexText([rootSelf, runtime]).replace('docs/ARCHITECTURE*.md', 'ARCHITECTURE_INDEX.md');
+    const root = repo({ 'ARCHITECTURE_INDEX.md': text, 'docs/architecture/RUNTIME.md': '# Runtime\\n' });
+    const s = await start(root, { getIndexPathSetting: () => 'ARCHITECTURE_INDEX.md' });
+
+    const res = await s.harness.request({ path: '/api/v1/architecture/index' });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.state, 'present', JSON.stringify(res.body.problems));
+    assert.equal(res.body.indexPath, 'ARCHITECTURE_INDEX.md');
+    assert.deepEqual(res.body.rows.map((r: { id: string; docPath: string }) => [r.id, r.docPath]), [
+      ['architecture-navigation', 'ARCHITECTURE_INDEX.md'],
+      ['runtime', 'docs/architecture/RUNTIME.md'],
+    ]);
+
+    const duplicate = await s.harness.request({
+      method: 'POST', path: '/api/actions/architecture-index/bootstrap', body: { mode: 'create' },
+    });
+    assert.equal(duplicate.status, 409);
+    assert.equal(duplicate.body.reuse, 'ARCHITECTURE_INDEX.md');
+    assert.equal(s.shown.length, 0, 'no duplicate-index confirmation should be displayed');
+    assert.equal(s.ledger!.entries.length, 0, 'a refused duplicate must not write a ledger event');
+    assert.equal(fs.existsSync(path.join(root, 'docs', 'ARCHITECTURE_INDEX.md')), false);
+    assert.equal(fs.readFileSync(path.join(root, 'ARCHITECTURE_INDEX.md'), 'utf8'), text);
+  });
+
   test('bootstrap with an existing index answers 409 {reuse} and writes nothing, without a dialog', async () => {
     const text = indexText([SELF, RUNTIME]);
     const root = repo({ 'docs/ARCHITECTURE_INDEX.md': text, 'docs/architecture/RUNTIME.md': '# R\n' });

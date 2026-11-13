@@ -1,5 +1,5 @@
 /**
- * FX1001 — docs/ARCHITECTURE_INDEX.md is the checked navigation spine for design intent (#530).
+ * FX1001 — root ARCHITECTURE_INDEX.md is the checked navigation spine for design intent (#530).
  *
  * Why this suite exists:
  * Issue #530 asks that a new contributor can go README -> index -> the canonical document, and that
@@ -30,9 +30,9 @@ const checker = require(SCRIPT);
 // docs/architecture/MANAGED_ARCHITECTURE_INDEX.md (matches docs/architecture/**/*.md), 9 -> 10.
 // #532 part A added docs/architecture/INTEGRATION_PORTFOLIO.md, INTEGRATION_SCENARIOS.md and 30
 // contracts under docs/architecture/integrations/ (same glob), 10 -> 42.
-const EXPECTED_GLOB_COUNT = 12;
+const EXPECTED_GLOB_COUNT = 13;
 const EXPECTED_NORMATIVE_COUNT = 42;
-const TAIL = 'existing: docs/ARCHITECTURE_INDEX.md#registry';
+const TAIL = 'existing: ARCHITECTURE_INDEX.md#registry';
 
 const HEADER =
   '| id | domain | doc | status | owner | supersedes | related | governance_ref | contract | verification | updated_by |';
@@ -44,28 +44,28 @@ const ROW_NAV = [
   '`src/test/a.test.ts`', '/qor-plan',
 ];
 const ROW_UI = [
-  'ui-standard', 'ui standard', '[UI standard](ui/STANDARD.md)', 'canonical', '/qor-plan', '-',
+  'ui-standard', 'ui standard', '[UI standard](docs/ui/STANDARD.md)', 'canonical', '/qor-plan', '-',
   'architecture-navigation', '#101', '`src/a.ts`', 'unknown', '/qor-plan',
 ];
 const ROW_GOV = [
-  'governance-registry', 'governance registry', '[Governance Index](GOVERNANCE_INDEX.md)', 'descriptive',
+  'governance-registry', 'governance registry', '[Governance Index](docs/GOVERNANCE_INDEX.md)', 'descriptive',
   '/qor-substantiate', '-', '-', '-', 'unknown', 'unknown', '-',
 ];
 
-const GLOBS = ['docs/ARCHITECTURE*.md', 'docs/ui/**/*.md', 'docs/architecture/**/*.md', 'docs/**/*_SPEC*.md'];
+const GLOBS = ['ARCHITECTURE_INDEX.md', 'docs/ARCHITECTURE*.md', 'docs/ui/**/*.md', 'docs/architecture/**/*.md', 'docs/**/*_SPEC*.md'];
 const LEGACY = ['docs/Planning/**'];
 const TRACKED = [
-  'README.md', 'docs/ARCHITECTURE_INDEX.md', 'docs/GOVERNANCE_INDEX.md', 'docs/ui/STANDARD.md',
+  'README.md', 'ARCHITECTURE_INDEX.md', 'docs/GOVERNANCE_INDEX.md', 'docs/ui/STANDARD.md',
   'docs/Planning/old.md', 'docs/Planning/ARCHITECTURE_SPEC_OLD.md', 'src/a.ts', 'src/test/a.test.ts',
 ];
-const GOVERNANCE_ROWS = ['docs/ARCHITECTURE_INDEX.md', 'docs/ui/STANDARD.md'];
+const GOVERNANCE_ROWS = ['ARCHITECTURE_INDEX.md', 'docs/ui/STANDARD.md'];
 const README =
-  '# Product\n\n**Developing?** Start with the [Architecture Index](docs/ARCHITECTURE_INDEX.md).\n\n## Install\n';
+  '# Product\n\n**Developing?** Start with the [Architecture Index](ARCHITECTURE_INDEX.md).\n\n## Install\n';
 
 const tableRow = (cells) => '| ' + cells.join(' | ') + ' |';
 
-function makeIndex({ rows = [ROW_NAV, ROW_UI, ROW_GOV], globs = GLOBS, legacy = LEGACY, prose = '' } = {}) {
-  const lines = ['# Architecture Index', '', 'Governance lives in the [Governance Index](GOVERNANCE_INDEX.md).', prose, ''];
+function makeIndex({ rows = [ROW_NAV, ROW_UI, ROW_GOV], globs = GLOBS, legacy = LEGACY, prose = '', governanceLink = 'docs/GOVERNANCE_INDEX.md' } = {}) {
+  const lines = ['# Architecture Index', '', `Governance lives in the [Governance Index](${governanceLink}).`, prose, ''];
   lines.push('## Registry', '', HEADER, SEPARATOR, ...rows.map(tableRow), '');
   if (globs) lines.push('## Normative scope', '', '```architecture-normative', ...globs, '```', '');
   if (legacy) lines.push('## Legacy and historical documents', '', '```architecture-legacy', ...legacy, '```', '');
@@ -141,7 +141,7 @@ describe('FX1001 architecture index: fixtures', () => {
   it('a clean fixture passes, and a legacy file matching a normative glob is not required', () => {
     const result = checker.validate(fixture());
     assert.deepEqual(lines(result), []);
-    assert.deepEqual(result.normativeMatches, ['docs/ARCHITECTURE_INDEX.md', 'docs/ui/STANDARD.md']);
+    assert.deepEqual(result.normativeMatches, ['ARCHITECTURE_INDEX.md', 'docs/ui/STANDARD.md']);
   });
 
   it('code 0 missing-section: no architecture-normative block', () => {
@@ -149,14 +149,14 @@ describe('FX1001 architecture index: fixtures', () => {
   });
 
   it('code 1 unregistered-normative: a duplicate in a directory with no canonical row gets token-matched suggestions', () => {
-    const extra = ['wiki-nav', 'wiki navigation', '[nav](wiki/navigation-architecture-copy.md)', 'descriptive',
+    const extra = ['wiki-nav', 'wiki navigation', '[nav](docs/wiki/navigation-architecture-copy.md)', 'descriptive',
       '/qor-plan', '-', '-', '-', 'unknown', 'unknown', '-'];
     const input = withRow(extra);
     input.tracked = [...TRACKED, 'docs/wiki/navigation-architecture-copy.md', 'docs/architecture/ARCHITECTURE_NAVIGATION_COPY.md'];
     const [problem, ...rest] = assertOnly(input, 'unregistered-normative');
     assert.equal(rest.length, 0);
     assert.match(problem.detail, /^docs\/architecture\/ARCHITECTURE_NAVIGATION_COPY\.md /);
-    assert.match(problem.detail, /suggestions: docs\/wiki\/navigation-architecture-copy\.md, docs\/ARCHITECTURE_INDEX\.md;/);
+    assert.ok(problem.detail.includes('suggestions: docs/wiki/navigation-architecture-copy.md, ARCHITECTURE_INDEX.md;'), problem.detail);
     assert.ok(problem.detail.endsWith(TAIL), problem.detail);
   });
 
@@ -172,7 +172,7 @@ describe('FX1001 architecture index: fixtures', () => {
   });
 
   it('code 3 duplicate-id', () => {
-    const dup = replaceCell(replaceCell(ROW_GOV, 'doc', '[Readme](../README.md)'), 'id', 'governance-registry');
+    const dup = replaceCell(replaceCell(ROW_GOV, 'doc', '[Readme](README.md)'), 'id', 'governance-registry');
     assertOnly(withRow(dup), 'duplicate-id');
   });
 
@@ -182,9 +182,9 @@ describe('FX1001 architecture index: fixtures', () => {
 
   it('code 5 conflicting-canonical: domains are compared after trim and lower-case, and both paths are named', () => {
     let rival = replaceCell(replaceCell(ROW_GOV, 'id', 'rival'), 'status', 'canonical');
-    rival = replaceCell(replaceCell(replaceCell(rival, 'domain', 'ARCHITECTURE Navigation'), 'updated_by', '/qor-plan'), 'doc', '[Readme](../README.md)');
+    rival = replaceCell(replaceCell(replaceCell(rival, 'domain', 'ARCHITECTURE Navigation'), 'updated_by', '/qor-plan'), 'doc', '[Readme](README.md)');
     const [problem] = assertOnly(withRow(rival), 'conflicting-canonical');
-    assert.match(problem.detail, /docs\/ARCHITECTURE_INDEX\.md and README\.md/);
+    assert.ok(problem.detail.includes('ARCHITECTURE_INDEX.md and README.md'), problem.detail);
   });
 
   it('code 6 bad-status', () => {
@@ -206,7 +206,7 @@ describe('FX1001 architecture index: fixtures', () => {
 
   it('code 10 supersede-cycle', () => {
     const a = replaceCell(ROW_GOV, 'supersedes', 'other-registry');
-    const b = replaceCell(replaceCell(replaceCell(ROW_GOV, 'id', 'other-registry'), 'doc', '[Readme](../README.md)'), 'supersedes', 'governance-registry');
+    const b = replaceCell(replaceCell(replaceCell(ROW_GOV, 'id', 'other-registry'), 'doc', '[Readme](README.md)'), 'supersedes', 'governance-registry');
     assertOnly(fixture({ index: { rows: [ROW_NAV, ROW_UI, a, b] } }), 'supersede-cycle');
   });
 
@@ -216,12 +216,12 @@ describe('FX1001 architecture index: fixtures', () => {
 
   it('code 12 unsafe-link: an escaping link in the index, and an absolute one on the README off-ramp', () => {
     assertOnly(fixture({ index: { prose: 'See [outside](../../outside.md).' } }), 'unsafe-link');
-    const readmeText = '# P\n\nStart at the [Architecture Index](docs/ARCHITECTURE_INDEX.md) or [C:](C:/repo/x.md).\n\n## A\n';
+    const readmeText = '# P\n\nStart at the [Architecture Index](ARCHITECTURE_INDEX.md) or [C:](C:/repo/x.md).\n\n## A\n';
     assertOnly(fixture({ readmeText }), 'unsafe-link');
   });
 
   it('code 13 not-in-governance-index: a mention outside a tier row does not count', () => {
-    const governanceText = makeGovernance(['docs/ui/STANDARD.md'], ['docs/ARCHITECTURE_INDEX.md']);
+    const governanceText = makeGovernance(['docs/ui/STANDARD.md'], ['ARCHITECTURE_INDEX.md']);
     assertOnly(fixture({ governanceText }), 'not-in-governance-index');
   });
 
@@ -230,7 +230,7 @@ describe('FX1001 architecture index: fixtures', () => {
   });
 
   it('code 15 missing-off-ramp: the README links the index only after its first section heading', () => {
-    const readmeText = '# Product\n\nCustomer text.\n\n## Develop\n\nSee [Architecture Index](docs/ARCHITECTURE_INDEX.md).\n';
+    const readmeText = '# Product\n\nCustomer text.\n\n## Develop\n\nSee [Architecture Index](ARCHITECTURE_INDEX.md).\n';
     assertOnly(fixture({ readmeText }), 'missing-off-ramp');
   });
 
@@ -239,14 +239,14 @@ describe('FX1001 architecture index: fixtures', () => {
   });
 
   it('code 17 authority-in-legacy', () => {
-    const old = replaceCell(replaceCell(replaceCell(ROW_UI, 'doc', '[Old](Planning/old.md)'), 'id', 'old-ui'), 'domain', 'old ui');
+    const old = replaceCell(replaceCell(replaceCell(ROW_UI, 'doc', '[Old](docs/Planning/old.md)'), 'id', 'old-ui'), 'domain', 'old ui');
     const input = withRow(old);
     input.governanceText = makeGovernance([...GOVERNANCE_ROWS, 'docs/Planning/old.md']);
     assertOnly(input, 'authority-in-legacy');
   });
 
   it('code 18 not-dual-registered: a canonical doc under docs/ with no GOVERNANCE_INDEX tier row fails', () => {
-    assertOnly(fixture({ governanceText: makeGovernance(['docs/ARCHITECTURE_INDEX.md']) }), 'not-dual-registered');
+    assertOnly(fixture({ governanceText: makeGovernance(['ARCHITECTURE_INDEX.md']) }), 'not-dual-registered');
   });
 });
 
@@ -254,7 +254,8 @@ describe('FX1001 architecture index: golden row', () => {
   it('the real repository passes with the recorded glob and normative counts', () => {
     const inputs = checker.loadRepoInputs(REPO_ROOT);
     assert.ok(inputs.tracked.length > 500, `git ls-files listed only ${inputs.tracked.length} files`);
-    assert.ok(inputs.tracked.includes('docs/ARCHITECTURE_INDEX.md'), 'the index is not tracked (git add -f)');
+    assert.ok(inputs.tracked.includes('ARCHITECTURE_INDEX.md'), 'the index is not tracked (git add -f)');
+    assert.ok(!inputs.tracked.includes('docs/ARCHITECTURE_INDEX.md'), 'old docs index must not remain tracked as a competing authority');
     assert.ok(inputs.tracked.includes('FailSafe/extension/src/test/docs/architecture-index.test.cjs'),
       'this test is not tracked (the docs/ ignore rule matches src/test/docs; git add -f)');
     const result = checker.validate(inputs);
@@ -272,22 +273,22 @@ const POLICY_CODES = ['not-in-governance-index', 'competing-index', 'missing-off
 
 /** The fixtures above, one per code, rebuilt so each can run through either profile. */
 function codeFixtures() {
-  const extraNav = ['wiki-nav', 'wiki navigation', '[nav](wiki/navigation-architecture-copy.md)', 'descriptive',
+  const extraNav = ['wiki-nav', 'wiki navigation', '[nav](docs/wiki/navigation-architecture-copy.md)', 'descriptive',
     '/qor-plan', '-', '-', '-', 'unknown', 'unknown', '-'];
   const unregistered = withRow(extraNav);
   unregistered.tracked = [...TRACKED, 'docs/wiki/navigation-architecture-copy.md', 'docs/architecture/ARCHITECTURE_NAVIGATION_COPY.md'];
   let rival = replaceCell(replaceCell(ROW_GOV, 'id', 'rival'), 'status', 'canonical');
-  rival = replaceCell(replaceCell(replaceCell(rival, 'domain', 'ARCHITECTURE Navigation'), 'updated_by', '/qor-plan'), 'doc', '[Readme](../README.md)');
+  rival = replaceCell(replaceCell(replaceCell(rival, 'domain', 'ARCHITECTURE Navigation'), 'updated_by', '/qor-plan'), 'doc', '[Readme](README.md)');
   const cycleA = replaceCell(ROW_GOV, 'supersedes', 'other-registry');
-  const cycleB = replaceCell(replaceCell(replaceCell(ROW_GOV, 'id', 'other-registry'), 'doc', '[Readme](../README.md)'), 'supersedes', 'governance-registry');
-  const old = replaceCell(replaceCell(replaceCell(ROW_UI, 'doc', '[Old](Planning/old.md)'), 'id', 'old-ui'), 'domain', 'old ui');
+  const cycleB = replaceCell(replaceCell(replaceCell(ROW_GOV, 'id', 'other-registry'), 'doc', '[Readme](README.md)'), 'supersedes', 'governance-registry');
+  const old = replaceCell(replaceCell(replaceCell(ROW_UI, 'doc', '[Old](docs/Planning/old.md)'), 'id', 'old-ui'), 'domain', 'old ui');
   const legacyAuthority = withRow(old);
   legacyAuthority.governanceText = makeGovernance([...GOVERNANCE_ROWS, 'docs/Planning/old.md']);
   return [
     ['missing-section', fixture({ index: { globs: null } })],
     ['unregistered-normative', unregistered],
     ['missing-path', fixture({ index: { rows: [ROW_NAV, replaceCell(ROW_UI, 'contract', '`src/missing.ts`'), ROW_GOV] } })],
-    ['duplicate-id', withRow(replaceCell(replaceCell(ROW_GOV, 'doc', '[Readme](../README.md)'), 'id', 'governance-registry'))],
+    ['duplicate-id', withRow(replaceCell(replaceCell(ROW_GOV, 'doc', '[Readme](README.md)'), 'id', 'governance-registry'))],
     ['duplicate-path', withRow(replaceCell(ROW_GOV, 'id', 'governance-again'))],
     ['conflicting-canonical', withRow(rival)],
     ['bad-status', fixture({ index: { rows: [ROW_NAV, ROW_UI, replaceCell(ROW_GOV, 'status', 'active')] } })],
@@ -297,12 +298,12 @@ function codeFixtures() {
     ['supersede-cycle', fixture({ index: { rows: [ROW_NAV, ROW_UI, cycleA, cycleB] } })],
     ['broken-link', fixture({ index: { prose: 'See [the old plan](OLD_PLAN.md#scope).' } })],
     ['unsafe-link', fixture({ index: { prose: 'See [outside](../../outside.md).' } })],
-    ['not-in-governance-index', fixture({ governanceText: makeGovernance(['docs/ui/STANDARD.md'], ['docs/ARCHITECTURE_INDEX.md']) })],
+    ['not-in-governance-index', fixture({ governanceText: makeGovernance(['docs/ui/STANDARD.md'], ['ARCHITECTURE_INDEX.md']) })],
     ['competing-index', fixture({ index: { prose: '\n## Tier 1 — Canonical Sources\n' } })],
-    ['missing-off-ramp', fixture({ readmeText: '# Product\n\nCustomer text.\n\n## Develop\n\nSee [Architecture Index](docs/ARCHITECTURE_INDEX.md).\n' })],
+    ['missing-off-ramp', fixture({ readmeText: '# Product\n\nCustomer text.\n\n## Develop\n\nSee [Architecture Index](ARCHITECTURE_INDEX.md).\n' })],
     ['legacy-prefix-missing', fixture({ index: { legacy: [...LEGACY, 'docs/archive/**'] } })],
     ['authority-in-legacy', legacyAuthority],
-    ['not-dual-registered', fixture({ governanceText: makeGovernance(['docs/ARCHITECTURE_INDEX.md']) })],
+    ['not-dual-registered', fixture({ governanceText: makeGovernance(['ARCHITECTURE_INDEX.md']) })],
   ];
 }
 
@@ -317,7 +318,7 @@ describe('#531 architecture index: one core, FailSafe-repo and user-repo profile
     core = require(CORE);
     profiles = require(PROFILES);
     failsafe = profiles.failsafeRepoProfile();
-    user = profiles.userRepoProfile('docs/ARCHITECTURE_INDEX.md');
+    user = profiles.userRepoProfile('ARCHITECTURE_INDEX.md');
   });
 
   it('the core names no docs/ path: every location comes from the profile', () => {
@@ -326,7 +327,9 @@ describe('#531 architecture index: one core, FailSafe-repo and user-repo profile
   });
 
   it('profiles derive linkBase and the registry tail from indexPath', () => {
-    assert.equal(failsafe.linkBase, 'docs');
+    assert.equal(failsafe.indexPath, 'ARCHITECTURE_INDEX.md');
+    assert.equal(failsafe.linkBase, '.');
+    assert.equal(profiles.DEFAULT_INDEX_PATH, 'docs/ARCHITECTURE_INDEX.md', 'existing user-repo defaults do not change');
     assert.equal(failsafe.registryTail, TAIL);
     const elsewhere = profiles.userRepoProfile('design/arch/INDEX.md');
     assert.equal(elsewhere.linkBase, 'design/arch');
@@ -377,7 +380,7 @@ describe('#531 architecture index: one core, FailSafe-repo and user-repo profile
     const legacy = ['design/arch/GOVERNANCE_INDEX.md'];
     const base = { readmeText: '', governanceText: '', tracked };
     const result = core.validate({ ...base,
-      indexText: makeIndex({ rows, globs: ['ARCHITECTURE*.md', 'design/**/*.md'], legacy }) }, profile);
+      indexText: makeIndex({ rows, globs: ['ARCHITECTURE*.md', 'design/**/*.md'], legacy, governanceLink: 'GOVERNANCE_INDEX.md' }) }, profile);
     assert.deepEqual(result.rows.map((r) => r.docPath), ['design/arch/INDEX.md', 'ARCHITECTURE.md']);
     assert.deepEqual(codesOf(result), ['unregistered-normative']);
     const [unreg] = result.problems;
@@ -385,7 +388,7 @@ describe('#531 architecture index: one core, FailSafe-repo and user-repo profile
     assert.match(unreg.detail, /suggestions: design\/arch\/INDEX\.md;/);
     assert.ok(unreg.detail.endsWith('existing: design/arch/INDEX.md#registry'), unreg.detail);
     const broken = core.validate({ ...base, tracked: tracked.slice(0, 3),
-      indexText: makeIndex({ rows, globs: ['ARCHITECTURE*.md'], legacy, prose: 'See [x](MISSING.md).' }) }, profile);
+      indexText: makeIndex({ rows, globs: ['ARCHITECTURE*.md'], legacy, governanceLink: 'GOVERNANCE_INDEX.md', prose: 'See [x](MISSING.md).' }) }, profile);
     assert.deepEqual(lines(broken), ['broken-link: design/arch/INDEX.md: MISSING.md -> design/arch/MISSING.md is not a tracked file']);
   });
 });

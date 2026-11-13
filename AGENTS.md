@@ -10,6 +10,10 @@
 All governance skills are in `.claude/skills/qor-*/SKILL.md`.
 Agent definitions are in `.claude/agents/qor-*.md`.
 
+## Architecture authority
+- Use root `ARCHITECTURE_INDEX.md` to locate the canonical design document for each domain before planning changes.
+- Maintain the single indexed authority; `docs/GOVERNANCE_INDEX.md` separately controls governance artifacts.
+
 ## Rules
 - All writes are subject to EnforcementEngine (FailSafe Extension)
 - Section 4 Razor: max 40 lines/function, 250 lines/file, nesting ≤3
