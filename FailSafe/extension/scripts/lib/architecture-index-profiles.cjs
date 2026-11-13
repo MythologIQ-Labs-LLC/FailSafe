@@ -1,7 +1,7 @@
 /**
  * Validator profiles for the architecture index core (#531 LD2).
  *
- *   failsafeRepoProfile()        this repository: docs/ARCHITECTURE_INDEX.md, README off-ramp,
+ *   failsafeRepoProfile()        this repository: root ARCHITECTURE_INDEX.md, README off-ramp,
  *                                Governance Index registration and the other policy checks on
  *   userRepoProfile(indexPath)   a workspace FailSafe governs: the index path is a setting and
  *                                every FailSafe-only policy check is off
@@ -42,7 +42,7 @@ function makeProfile({ indexPath, readmePath = 'README.md', governancePath = '',
 /** This repository. Its normative and legacy lists live in the index itself, so the defaults are empty. */
 function failsafeRepoProfile() {
   return makeProfile({
-    indexPath: DEFAULT_INDEX_PATH,
+    indexPath: 'ARCHITECTURE_INDEX.md', // FailSafe repo only; user repositories retain docs/ default
     governancePath: 'docs/GOVERNANCE_INDEX.md',
     dualRegistrationPrefix: 'docs/',
     normativeGlobs: [],
