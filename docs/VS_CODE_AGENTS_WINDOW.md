@@ -2,7 +2,7 @@
 
 ## Agentic work first: VS Code 1.146 opportunities and FailSafe v6.1.0 acceptance (2026-11-13)
 
-**Interpretation confirmed by owner:** **agentic work**, meaning AI agents performing delegated development tasks with tool use, approvals, background execution, review and evidence across hosts. This is **not** a Jamstack/web-framework initiative. Source of release priority: [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679); source of Qortara per-skill retirement rule: [#668](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/668). This is research and roadmap alignment, **not** a claim of installed-host compatibility or a substitute for the pending native L3 audit on draft [#682](https://github.com/MythologIQ-Labs-LLC/FailSafe/pull/682).
+**Interpretation confirmed by owner:** **agentic work**, meaning AI agents performing delegated development tasks with tool use, approvals, background execution, review and evidence across hosts. The scope is autonomous and delegated software development across agent hosts, not any single application framework. Source of release priority: [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679); source of Qortara per-skill retirement rule: [#668](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/668). This is research and roadmap alignment, **not** a claim of installed-host compatibility or a substitute for the pending native L3 audit on draft [#682](https://github.com/MythologIQ-Labs-LLC/FailSafe/pull/682).
 
 ### Platform facts verified from Microsoft documentation
 
