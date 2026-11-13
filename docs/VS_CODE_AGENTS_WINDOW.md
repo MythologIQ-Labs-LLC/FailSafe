@@ -1,5 +1,63 @@
 # FailSafe × VS Code Agents Window — Compatibility Snapshot
 
+## Agentic work first: VS Code 1.146 opportunities and FailSafe v6.1.0 acceptance (2026-11-13)
+
+**Interpretation confirmed by owner:** **agentic work**, meaning AI agents performing delegated development tasks with tool use, approvals, background execution, review and evidence across hosts. This is **not** a Jamstack/web-framework initiative. Source of release priority: [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679); source of Qortara per-skill retirement rule: [#668](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/668). This is research and roadmap alignment, **not** a claim of installed-host compatibility or a substitute for the pending native L3 audit on draft [#682](https://github.com/MythologIQ-Labs-LLC/FailSafe/pull/682).
+
+### Platform facts verified from Microsoft documentation
+
+| Surface | Current VS Code direction | FailSafe contract and uncertainty |
+| --- | --- | --- |
+| Copilot harness | VS Code 1.146 has the Copilot SDK-backed harness as default, with Agent Host sessions accessible through editor/Agents window; Local harness deprecated, planned removal February 2027 | **P0 compatibility migration.** Validate installed VSIX in actual Copilot harness, including background work; do not raise `engines.vscode` minimum solely on paper |
+| Chat participants | Extension-provided `@participant` is deprecated and **not supported** by Copilot harness | Replace `@failsafe` user jobs with supported agent plugin, skills, native MCP or editor-backed extension tools. Keep the previous user path only in hosts that actually support it, without false availability |
+| MCP/client portability | Native MCP server works via plugin or native config independently of VS Code; `vscode.lm.registerMcpServerDefinitionProvider` is an editor-connected provider, not a standalone Copilot CLI plugin | **Two explicit routes**, one policy/evidence model: portable Qortara native MCP; VS Code extension integrations for editor-dependent state. Prove tool call and refused call in each advertised host. Do not rely on an interactive MCP `resolve` prompt during background forwarding |
+| Agent hooks | Pre/post tool hooks available in Copilot harness, but preview; command `preToolUse` errors and timeouts have different semantics, with timeouts falling through to normal permission handling | Policy **signal/auxiliary deny**, not universal always-fail-closed boundary. Review effective host/OS permission/sandbox and independent protected write boundary |
+| Worktrees and sessions | Supported harnesses can use isolated Git worktrees; Agent Host supports background task/resume across editor and Agents window | Worktree is a **source identity boundary**, **not an OS security sandbox**. Bind actions to canonical root, repository, exact worktree/commit and verified actor/permission; display session names only as untrusted hints |
+| Automations | Local scheduled agent runs require running agent/host; cloud automations are preview, service/repository/permission-dependent | Disabled-by-default **read-only** work summary or verification candidate, not an autonomous gate signoff, approval, push or release. No cloud egress or recurring spend by default |
+| OpenTelemetry | Copilot agent/tool events and metrics can be exported when configured | Opt-in telemetry correlation and secret redaction; observations are not proof that all writes were intercepted, nor independent audit |
+| Emerging surfaces | Skills over MCP, Agents Inbox, multi-harness model comparison, canvases/MCP Apps and cloud automations have preview/experimental constraints | Treat as adapters and optional experiments; no mandatory preview dependency, duplicate Inbox, private IPC scraping, or claims that extension UI can inject actions into native Inbox |
+
+**Primary authoritative references:** [VS Code 1.146 notes](https://code.visualstudio.com/updates/v1_146), [Local → Copilot harness migration](https://code.visualstudio.com/docs/agents/run/move-to-copilot), [MCP integration API](https://code.visualstudio.com/api/extension-guides/ai/mcp), [agent plugin documentation](https://code.visualstudio.com/docs/agent-customization/agent-plugins), [chat participant migration](https://code.visualstudio.com/docs/agent-customization/migrate-customizations), [hook behavior](https://code.visualstudio.com/docs/agent-customization/hooks), [agent automation documentation](https://code.visualstudio.com/docs/agents/run/automations), [agent security](https://code.visualstudio.com/docs/agents/run/security), and [OTel observability](https://code.visualstudio.com/docs/agents/guides/monitoring-agents). Each feature must be rechecked against its exact installed VS Code build and effective account/host context.
+
+### Architectural division of responsibility
+
+- **VS Code / Agent Host:** session UX, task delegation, model and harness selection, worktrees, native plugin/skills discovery, permissions and supported host automation.
+- **Qortara Logic:** external deterministic development-process engine and `qortara-*` skills, installed through approved native MCP/CLI or a separately authorized hosted route. Five hosted orchestrator skills are **not 25 hosted skill executors**; hosted contract `1.3` excludes local `qortara_status`.
+- **FailSafe:** workspace security and policy enforcement wherever a demonstrably controllable boundary exists; Sentinel and SHIELD observations/refusals; explicit user approvals; evidence identity, provenance, ledger/receipts, protected commits and independent G4 release proof. **None** of these authorities implicitly transfer to a Qortara remote evaluator.
+- **Independent reviewer + solo owner:** a second trained model can adversarially review artifact-bound evidence, but neither its reply nor VS Code model comparison is an owner vote, a cryptographic seal or permission to merge/release.
+
+**Design filter:** avoid building a second Agents window, local task scheduler, orchestration runtime or Qortara engine inside FailSafe. Build the smallest truthful cross-host governance interfaces. The stand-alone FailSafe bridge [#664](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/664) is conditional on a proven unmet FailSafe-only workflow, not a prerequisite for Qortara's native server.
+
+### Proposed v6.1.0 delivery order (owner scheduling, still qualification-gated)
+
+1. **P0 native harness migration (#326, #662):** prove installed VSIX activation, editor-backed commands, extension tools versus native tools, Copilot-only session, detached/background session, missing editor, host/version mismatches. Preserve actual existing support while replacing deprecated `@failsafe`.
+2. **P0 Qortara first real task (#668, #682):** opt-in trusted local `qortara_capabilities` and `qortara_status` via existing MCP client substrate; exact project identity; real successful and denied call; no auto-install/credential transfer; no overwritten Qor receipts. Execute independent native L3 audit before code.
+3. **P0 governance truth (#505/#476/#474/#475):** distinguish observed, warned, refused, prevented, and unverified write operations. For all built-in edit, shell/CLI, external agent and cloud paths, inspect actual interception/permissions; fail covered protected operations at a real gate, and explicitly report bypass/unknown where no enforceable boundary exists.
+4. **P0 provenance and approval correlation:** record host/harness, source/worktree/commit, concrete action and policy/approval decision with independent evidence; never trust session titles, user-agent strings, model prompts or unverified tools as actors. For background/remote agents, refuse action-specific approval if fresh trusted provenance cannot be established.
+5. **P1 native session triage and OTel:** use platform-owned session inbox and worktree view; attach FailSafe-owned risk/approval/check links only through supported interfaces. Optionally ingest redacted OTel spans in the Agents timeline; prove capture disabled by default. No second inbox or broad session data collection.
+6. **P1 controlled autonomous maintenance:** optional disabled read-only automation template for repository governance drift/release-readiness summaries with explicit permissions, cost and host-availability checks; user-approved promotion is separate. Review cloud automation permissions/account/repo limitations.
+7. **P1 independent multi-agent review:** separate author/reviewer authority using exact immutable source revision and distinct agents/harnesses; measured false-positive and defect catch rates; no model majority vote and no self-audit PASS.
+8. **P1 end-to-end agentic development task:** delegated bounded fix in isolated worktree → agent executes approved tools → tests/build run and evidence recorded → fresh independent review → governed PR. Confirm results on a real application and actual host, not a transcript simulation.
+9. **P2 experimental interoperability:** evaluate stable AHP and previews like MCP Apps, Skills over MCP, mixed-harness capabilities and cloud sessions behind an explicit host/feature matrix, with graceful 'unsupported' fallback.
+
+### Required cross-host qualification matrix (no passing status implied)
+
+| Host/user path | What must be demonstrated | Current qualification |
+| --- | --- | --- |
+| Installed VS Code 1.146 Editor + Copilot harness | Actual FailSafe commands and editor-extended tools + Qortara read-only MCP and refusal | **UNTESTED_INSTALLED** |
+| Installed VS Code 1.146 Agents window + Copilot harness | Real background agent session, root/worktree identity, invocation/refusal without implicitly requiring editor | **UNTESTED_INSTALLED** |
+| Native Copilot CLI (outside editor) | Native Qortara plugin/MCP capability and scope, no false claim FailSafe editor host available | **UNTESTED_REAL_CLI** |
+| VS Code Local harness | Existing legacy behavior until planned removal, fallback limitations and migration path | **LEGACY_NOT_NEW_TARGET** |
+| Claude Code, Codex, Cursor | Independent packaging, permission, refusal, session/host matrix; plugin installed isn't guarantee of task success | **UNTESTED_FAILSAFE_INTEGRATION** |
+| Dev Containers / WSL / SSH / remote Agents | Execution-side permission, secrets, root and sandbox limits; trusted network/telemetry boundary | **UNTESTED_REMOTE** |
+| Cloud session/automation | Eligibility, explicit authorization, no local ledger/head assumption, new trust origin and cost bound | **PREVIEW_DEPENDENT** |
+
+**Minimum meaningful acceptance:** A developer can delegate a genuine, bounded task to an agent through the supported host; the agent discovers and uses the approved Qortara/FailSafe capabilities; a prohibited operation is correctly prevented **where enforcement is claimed**, other unprotected paths are disclosed, evidence ties to the actual revision, independent audit stays independent, and preexisting Qor 0.176.1 skills continue until individually qualified replacements have explicit owner acceptance and rollback. **CI PASS by itself never proves this outcome.**
+
+**Roadmap source-of-truth warning:** `docs/roadmap/programs.yaml`, which feeds the Console tracker, still has historical v5.4.3 forecast and outdated masthead text. Treat that as separate **tracker-data reconciliation work**; do **not** arbitrarily append weighted v6.1.0 'completed' phases or edit historical weights to manufacture progress. [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679) is the current feature-release charter; this document is its platform-compatibility appendix.
+
+
+
 ## Owner v6.1.0 scope commitment: Qortara successor integration (2026-11-13)
 
 The owner has committed **Qortara Logic integration to FailSafe v6.1.0**, linked to [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679) P0 and [#668](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/668). This **supersedes the earlier suggestion in this research draft** that v6.1.0 is only a preparatory pilot while the real integration waits for v6.2.0. Version 6.1.0 should deliver at least one **real installed-host workflow**, not a placeholder manifest or imported five-orchestrator skill list: operator-consented, exact-version Qortara native/local or explicitly consented hosted connection; actual read-only status or evidence evaluation with exact project/worktree identity and honest refusal; a retained working Qor path; and a recorded same-task parity result.
