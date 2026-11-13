@@ -1,7 +1,7 @@
 # Managed Architecture Index (ADR, #531)
 
 **Status:** accepted for the first vertical slice (plan `plan-531-architecture-governance.md`, audit PASS at iteration 2); amended for the second slice, architecture authority (plan `plan-531b-architecture-authority.md`, audit PASS at iteration 3; LD7-LD10), and for the B311/B312 residuals, affected decisions and registry links (plan `plan-b311-b312-architecture-residuals.md`, audit PASS at iteration 3; LD11).
-**Registry row:** `managed-architecture-index` in the [Architecture Index](../ARCHITECTURE_INDEX.md).
+**Registry row:** `managed-architecture-index` in the [Architecture Index](../../ARCHITECTURE_INDEX.md).
 **Design source for the view:** the Integrations Catalog renderer (`FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js`).
 
 ## Context
@@ -25,7 +25,7 @@ The pure functions of `check-architecture-index.cjs` move to `FailSafe/extension
 
 | Field | FailSafe-repo profile | User-repo profile |
 |---|---|---|
-| `indexPath` | `docs/ARCHITECTURE_INDEX.md` | setting `failsafe.architecture.indexPath`, default `docs/ARCHITECTURE_INDEX.md` |
+| `indexPath` | `ARCHITECTURE_INDEX.md` (FailSafe root) | setting `failsafe.architecture.indexPath`, default `docs/ARCHITECTURE_INDEX.md` for other repositories |
 | `linkBase` | `posix.dirname(indexPath)` = `docs` | `posix.dirname(indexPath)` |
 | `registryTail` | `existing: <indexPath>#registry` | same rule |
 | default normative globs | the repository's own block | `ARCHITECTURE*.md`, `docs/ARCHITECTURE*.md`, `docs/architecture/**/*.md`, `docs/design/**/*.md`, `docs/adr/**/*.md`, `adr/**/*.md`, `docs/**/*ARCHITECTURE*.md`, `docs/**/*DESIGN*.md` |
