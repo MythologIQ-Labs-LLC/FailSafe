@@ -103,6 +103,19 @@ suite('#548 Console taxonomy (extension host, temp git workspace)', () => {
     }
   });
 
+  // #679: this request exercises the real Console route with the checked-in
+  // manifest copied into the extension-host workspace, without mocking the API.
+  test('planned v6.1.0 remains forecast and unscored in the live tracker response', async () => {
+    const res = await getJson(port, '/api/v1/tracker');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.manifestSource, 'operator');
+    const forecast = (res.body.rcs as Array<{ id: string; state: string; progressEligible?: boolean }>)
+      .find((release) => release.id === 'v6.1.0');
+    assert.ok(forecast, 'the owner roadmap target must remain visible on the release axis');
+    assert.equal(forecast.state, 'forecast', 'a planned release must not be called shipped');
+    assert.equal(forecast.progressEligible, false, 'forecast cannot have a verified weighted snapshot');
+  });
+
   test('the Taxonomy config derives from it with no drift', async () => {
     const res = await getJson(port, '/api/v1/tracker/config');
     assert.equal(res.status, 200);
