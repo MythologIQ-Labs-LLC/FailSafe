@@ -1,0 +1,505 @@
+{
+ "app": "C:/LocalAI/Voice/Chatterbox/demo-v091/app/Sonic Rift",
+ "takes": [
+  {
+   "file": "VO_N1_m3-take1.wav",
+   "expected_key": "VO_N1_",
+   "seconds": 6.27,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 5.66,
+   "words_per_second": 2.83,
+   "peak_dbfs": -4.03,
+   "rms_dbfs": -21.35,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.14,
+   "median_pitch_hz": 128.6,
+   "pitch_range_p10_p90_hz": 68.7,
+   "heard": "Failsafe 6.0.13 adds a simple path from your development console to Stateright.",
+   "missing_words": [
+    "six",
+    "point",
+    "zero",
+    "point",
+    "thirteen",
+    "statewright"
+   ],
+   "extra_words": [
+    "6",
+    "0",
+    "13",
+    "stateright"
+   ],
+   "similarity_to_reference": 0.909,
+   "similarity_to_other_takes": 0.9623
+  },
+  {
+   "file": "VO_N1_m3-take2.wav",
+   "expected_key": "VO_N1_",
+   "seconds": 5.91,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 5.38,
+   "words_per_second": 2.97,
+   "peak_dbfs": -2.45,
+   "rms_dbfs": -21.1,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.1,
+   "median_pitch_hz": 134.7,
+   "pitch_range_p10_p90_hz": 57.8,
+   "heard": "Failsafe 6.0.13 adds a simple path from your development console to Stateright.",
+   "missing_words": [
+    "six",
+    "point",
+    "zero",
+    "point",
+    "thirteen",
+    "statewright"
+   ],
+   "extra_words": [
+    "6",
+    "0",
+    "13",
+    "stateright"
+   ],
+   "similarity_to_reference": 0.9031,
+   "similarity_to_other_takes": 0.9472
+  },
+  {
+   "file": "VO_N1_m3-take3.wav",
+   "expected_key": "VO_N1_",
+   "seconds": 6.42,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 5.82,
+   "words_per_second": 2.75,
+   "peak_dbfs": -4.59,
+   "rms_dbfs": -21.37,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.14,
+   "median_pitch_hz": 138.6,
+   "pitch_range_p10_p90_hz": 85.2,
+   "heard": "Failsafe 6.0.13 adds a simple path from your development console to Stateright.",
+   "missing_words": [
+    "six",
+    "point",
+    "zero",
+    "point",
+    "thirteen",
+    "statewright"
+   ],
+   "extra_words": [
+    "6",
+    "0",
+    "13",
+    "stateright"
+   ],
+   "similarity_to_reference": 0.9093,
+   "similarity_to_other_takes": 0.9684
+  },
+  {
+   "file": "VO_N2_m3-take1.wav",
+   "expected_key": "VO_N2_",
+   "seconds": 4.73,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 3.8,
+   "words_per_second": 3.42,
+   "peak_dbfs": -3.25,
+   "rms_dbfs": -21.56,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.4,
+   "median_pitch_hz": 130.1,
+   "pitch_range_p10_p90_hz": 55.4,
+   "heard": "Open Failsafe in VS Code and launch the console from the command pallet.",
+   "missing_words": [
+    "palette"
+   ],
+   "extra_words": [
+    "pallet"
+   ],
+   "similarity_to_reference": 0.9201,
+   "similarity_to_other_takes": 0.9591
+  },
+  {
+   "file": "VO_N2_m3-take2.wav",
+   "expected_key": "VO_N2_",
+   "seconds": 4.88,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 4.1,
+   "words_per_second": 3.17,
+   "peak_dbfs": -4.52,
+   "rms_dbfs": -22.13,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.38,
+   "median_pitch_hz": 126.0,
+   "pitch_range_p10_p90_hz": 90.3,
+   "heard": "Open Failsafe in VS Code and launch the console from the command pallet.",
+   "missing_words": [
+    "palette"
+   ],
+   "extra_words": [
+    "pallet"
+   ],
+   "similarity_to_reference": 0.8853,
+   "similarity_to_other_takes": 0.9565
+  },
+  {
+   "file": "VO_N2_m3-take3.wav",
+   "expected_key": "VO_N2_",
+   "seconds": 4.88,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 4.12,
+   "words_per_second": 3.16,
+   "peak_dbfs": -4.43,
+   "rms_dbfs": -22.08,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.32,
+   "median_pitch_hz": 125.0,
+   "pitch_range_p10_p90_hz": 82.3,
+   "heard": "Open Failsafe in VS Code and launch the console from the command pallet.",
+   "missing_words": [
+    "palette"
+   ],
+   "extra_words": [
+    "pallet"
+   ],
+   "similarity_to_reference": 0.9158,
+   "similarity_to_other_takes": 0.957
+  },
+  {
+   "file": "VO_N3_m3-take1.wav",
+   "expected_key": "VO_N3_",
+   "seconds": 8.61,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 6.32,
+   "words_per_second": 2.53,
+   "peak_dbfs": -3.86,
+   "rms_dbfs": -22.34,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.02,
+   "median_pitch_hz": 141.1,
+   "pitch_range_p10_p90_hz": 96.6,
+   "heard": "Select Integrations, then Catalog. Here you'll find StateRight AI, clearly labeled as a website handoff.",
+   "missing_words": [
+    "statewright",
+    "i"
+   ],
+   "extra_words": [
+    "stateright",
+    "ai"
+   ],
+   "similarity_to_reference": 0.9155,
+   "similarity_to_other_takes": 0.9679
+  },
+  {
+   "file": "VO_N3_m3-take2.wav",
+   "expected_key": "VO_N3_",
+   "seconds": 7.69,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 5.88,
+   "words_per_second": 2.72,
+   "peak_dbfs": -3.81,
+   "rms_dbfs": -22.74,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.06,
+   "median_pitch_hz": 125.7,
+   "pitch_range_p10_p90_hz": 104.8,
+   "heard": "Select integrations, then catalog. Here you'll find state-right AI clearly labeled as a website handoff.",
+   "missing_words": [
+    "statewright",
+    "i"
+   ],
+   "extra_words": [
+    "state",
+    "right",
+    "ai"
+   ],
+   "similarity_to_reference": 0.9168,
+   "similarity_to_other_takes": 0.962
+  },
+  {
+   "file": "VO_N3_m3-take3.wav",
+   "expected_key": "VO_N3_",
+   "seconds": 8.31,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 6.34,
+   "words_per_second": 2.52,
+   "peak_dbfs": -4.18,
+   "rms_dbfs": -22.26,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.98,
+   "median_pitch_hz": 128.2,
+   "pitch_range_p10_p90_hz": 100.9,
+   "heard": "Select Integrations, then Catalog. Here you'll find Stateright AI, clearly labeled as a website handoff.",
+   "missing_words": [
+    "statewright",
+    "i"
+   ],
+   "extra_words": [
+    "stateright",
+    "ai"
+   ],
+   "similarity_to_reference": 0.9162,
+   "similarity_to_other_takes": 0.9561
+  },
+  {
+   "file": "VO_N4_m3-take1.wav",
+   "expected_key": "VO_N4_",
+   "seconds": 4.54,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 3.7,
+   "words_per_second": 2.97,
+   "peak_dbfs": -3.83,
+   "rms_dbfs": -22.09,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.26,
+   "median_pitch_hz": 127.5,
+   "pitch_range_p10_p90_hz": 86.6,
+   "heard": "Select open state right run history and state right opens in your browser.",
+   "missing_words": [
+    "statewright",
+    "statewright"
+   ],
+   "extra_words": [
+    "state",
+    "right",
+    "state",
+    "right"
+   ],
+   "similarity_to_reference": 0.9116,
+   "similarity_to_other_takes": 0.9577
+  },
+  {
+   "file": "VO_N4_m3-take2.wav",
+   "expected_key": "VO_N4_",
+   "seconds": 4.35,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 3.58,
+   "words_per_second": 3.07,
+   "peak_dbfs": -5.95,
+   "rms_dbfs": -21.86,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.46,
+   "median_pitch_hz": 142.7,
+   "pitch_range_p10_p90_hz": 93.9,
+   "heard": "Select Open StateWrite Run History, and StateWrite opens in your browser.",
+   "missing_words": [
+    "statewright",
+    "statewright"
+   ],
+   "extra_words": [
+    "statewrite",
+    "statewrite"
+   ],
+   "similarity_to_reference": 0.8761,
+   "similarity_to_other_takes": 0.9377
+  },
+  {
+   "file": "VO_N4_m3-take3.wav",
+   "expected_key": "VO_N4_",
+   "seconds": 4.79,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 3.92,
+   "words_per_second": 2.81,
+   "peak_dbfs": -5.21,
+   "rms_dbfs": -21.95,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.4,
+   "median_pitch_hz": 133.9,
+   "pitch_range_p10_p90_hz": 82.7,
+   "heard": "Select open state right run history and state right opens in your browser.",
+   "missing_words": [
+    "statewright",
+    "statewright"
+   ],
+   "extra_words": [
+    "state",
+    "right",
+    "state",
+    "right"
+   ],
+   "similarity_to_reference": 0.8979,
+   "similarity_to_other_takes": 0.9629
+  },
+  {
+   "file": "VO_N5_m3-take1.wav",
+   "expected_key": "VO_N5_",
+   "seconds": 11.62,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 8.56,
+   "words_per_second": 3.39,
+   "peak_dbfs": -3.85,
+   "rms_dbfs": -22.64,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.06,
+   "median_pitch_hz": 127.1,
+   "pitch_range_p10_p90_hz": 70.4,
+   "heard": "StateRite handles sign-in and run history on its own site. Failsafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+   "missing_words": [
+    "statewright"
+   ],
+   "extra_words": [
+    "staterite"
+   ],
+   "similarity_to_reference": 0.9203,
+   "similarity_to_other_takes": 0.9761
+  },
+  {
+   "file": "VO_N5_m3-take2.wav",
+   "expected_key": "VO_N5_",
+   "seconds": 11.14,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 8.18,
+   "words_per_second": 3.55,
+   "peak_dbfs": -3.53,
+   "rms_dbfs": -22.63,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.0,
+   "median_pitch_hz": 137.0,
+   "pitch_range_p10_p90_hz": 67.7,
+   "heard": "StateRite handles sign-in and run history on its own site. Failsafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+   "missing_words": [
+    "statewright"
+   ],
+   "extra_words": [
+    "staterite"
+   ],
+   "similarity_to_reference": 0.9116,
+   "similarity_to_other_takes": 0.9798
+  },
+  {
+   "file": "VO_N5_m3-take3.wav",
+   "expected_key": "VO_N5_",
+   "seconds": 11.75,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 8.64,
+   "words_per_second": 3.36,
+   "peak_dbfs": -4.02,
+   "rms_dbfs": -22.5,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.08,
+   "median_pitch_hz": 135.1,
+   "pitch_range_p10_p90_hz": 90.6,
+   "heard": "StateRite handles sign in and run history on its own site. Failsafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+   "missing_words": [
+    "statewright"
+   ],
+   "extra_words": [
+    "staterite"
+   ],
+   "similarity_to_reference": 0.9197,
+   "similarity_to_other_takes": 0.9823
+  },
+  {
+   "file": "VO_N6_m3-take1.wav",
+   "expected_key": "VO_N6_",
+   "seconds": 7.32,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 5.92,
+   "words_per_second": 2.53,
+   "peak_dbfs": -4.29,
+   "rms_dbfs": -21.53,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.96,
+   "median_pitch_hz": 136.3,
+   "pitch_range_p10_p90_hz": 75.4,
+   "heard": "OpenStateRite run history from Failsafe. Version 6.0.13 is available now.",
+   "missing_words": [
+    "open",
+    "statewright",
+    "six",
+    "point",
+    "zero",
+    "point",
+    "thirteen"
+   ],
+   "extra_words": [
+    "openstaterite",
+    "6",
+    "0",
+    "13"
+   ],
+   "similarity_to_reference": 0.9138,
+   "similarity_to_other_takes": 0.9666
+  },
+  {
+   "file": "VO_N6_m3-take2.wav",
+   "expected_key": "VO_N6_",
+   "seconds": 6.86,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 5.28,
+   "words_per_second": 2.84,
+   "peak_dbfs": -4.41,
+   "rms_dbfs": -21.83,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.06,
+   "median_pitch_hz": 139.4,
+   "pitch_range_p10_p90_hz": 89.1,
+   "heard": "OpenStateRite run history from Failsafe, version 6.0.13 is available now.",
+   "missing_words": [
+    "open",
+    "statewright",
+    "six",
+    "point",
+    "zero",
+    "point",
+    "thirteen"
+   ],
+   "extra_words": [
+    "openstaterite",
+    "6",
+    "0",
+    "13"
+   ],
+   "similarity_to_reference": 0.8942,
+   "similarity_to_other_takes": 0.9668
+  },
+  {
+   "file": "VO_N6_m3-take3.wav",
+   "expected_key": "VO_N6_",
+   "seconds": 6.92,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 5.46,
+   "words_per_second": 2.75,
+   "peak_dbfs": -4.57,
+   "rms_dbfs": -22.18,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 0.96,
+   "median_pitch_hz": 153.8,
+   "pitch_range_p10_p90_hz": 84.7,
+   "heard": "OpenStateRite run history from Failsafe. Version 6.0.13 is available now.",
+   "missing_words": [
+    "open",
+    "statewright",
+    "six",
+    "point",
+    "zero",
+    "point",
+    "thirteen"
+   ],
+   "extra_words": [
+    "openstaterite",
+    "6",
+    "0",
+    "13"
+   ],
+   "similarity_to_reference": 0.9093,
+   "similarity_to_other_takes": 0.967
+  }
+ ]
+}
