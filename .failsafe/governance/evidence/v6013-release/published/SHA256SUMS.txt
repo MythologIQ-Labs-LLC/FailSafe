@@ -1,0 +1,9 @@
+84d64b9144421d0ea8f959ecedda536b58dca310f06f04e781020724b638a6fd  mythologiq-failsafe-6.0.13-win32-x64.vsix
+486c145b67a320b02e518225c66e020ecd14fec2a04ba229bee462d2217bf709  mythologiq-failsafe-6.0.13-win32-arm64.vsix
+d6b24ba1b6372b42cd2c71e5fd7f588e09c93761e6f83962a0527c4bacdf3c85  mythologiq-failsafe-6.0.13-linux-x64.vsix
+b926d794d0854a5230e36d839f61bb4170da525acd14c0216e36077081c4ddfc  mythologiq-failsafe-6.0.13-linux-arm64.vsix
+c8c8d147364317b507476da13a5c2db5e83259f9adb060b5d84f34000b04575d  mythologiq-failsafe-6.0.13-alpine-x64.vsix
+76259e28125be027522286fa856c328301a9122908a0402125b262e24c0c4d26  mythologiq-failsafe-6.0.13-alpine-arm64.vsix
+f2d4b135b0a4ceb444390f8ac80e3b12e766567796bc4680c56ca11cb0de107f  mythologiq-failsafe-6.0.13-darwin-x64.vsix
+d077ac7e32fd10b6fbefa39fe232c5ec225dec61404543346a574c63af95ba05  mythologiq-failsafe-6.0.13-darwin-arm64.vsix
+1b179d725f37e113fa35b9f3d804326636cd27fcc2ca345dfb26c46e06b30c80  FailSafe-v6.0.13-Release-Notes.pdf
