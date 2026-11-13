@@ -29,17 +29,17 @@ meta:
   eyebrow: FailSafe · development tracker
   title: Where the governance surface
   titleEm: actually is
-  sub: Artifact-in-tree progress across FailSafe's active programs — scrub the release axis to see each program's cumulative completion at any version.
+  sub: Evidence-backed releases and explicitly planned agentic work, with no completion credit for unverified objectives.
   preamble: >
     Scoring is artifact-in-tree, not issue status. A phase counts as landed only
     when its code + tests are on `main` and the release it targets has shipped to
     a marketplace — verifiable against META_LEDGER DELIVER entries and git tags,
-    not a checkbox.
+    not a checkbox. The v6.1.0 agentic-work forecast is a release objective,\n    not a scored or delivered feature until governed work is actually verified.
   metaRow:
-    - { label: Released, value: v5.4.2 }
+    - { label: Released, value: v6.0.13 }
     - { label: Marketplaces, value: VS Code + Open VSX }
-    - { label: In-flight, value: AGT installer }
-  footer: Generated from docs/roadmap/programs.yaml + live META_LEDGER/tags. Completion estimates ±~10%. Programs and weights are operator-declared during planning.
+    - { label: In-flight, value: "v6.1.0 agentic governance (planned)" }
+  footer: The bars track historical evidence-anchored program phases. The v6.1.0 agentic-work forecast is intentionally unscored; it cannot be used to claim a feature shipped. Model from docs/roadmap/programs.yaml + live release evidence. Historical program weights are operator-declared.
   # Decisions ledger (§06) — the anti-"feelings" register: every call traces to a
   # requirement + verifiable evidence.
   decisions:
@@ -55,6 +55,15 @@ meta:
     - decision: Forward-only dead-tag recovery — never re-use a burned version tag
       drivenBy: Re-tagging a published version is ambiguous; forward-only stays auditable
       evidence: "v5.2.x + v5.4.x recovery precedent (META_LEDGER)"
+    - decision: Target v6.1.0 for usable agentic-development governance in VS Code Copilot Agent Host
+      drivenBy: Owner release commitment requires a real installed-host Qortara tool and a trustworthy agent workflow, not a catalog-only preview
+      evidence: "FailSafe #679 release charter; #326 installed-host gate; #662 agent-native integration; plan PR #682"
+    - decision: Retain Qor-Logic skills until each corresponding Qortara capability passes parity and owner acceptance
+      drivenBy: A source-level skill mapping or an MCP connection is not evidence of working behavioral replacement
+      evidence: "FailSafe #668 owner-approved succession and rollback gate; frozen Qor #463"
+    - decision: Use native VS Code agent sessions and tools instead of duplicating the host runtime
+      drivenBy: Copilot harness and portable MCP/agent plugins are first-class agentic surfaces, while standalone FailSafe permissions and G4 remain independent
+      evidence: "FailSafe #679; #662; draft PR #685; VS Code 1.146 release notes"
     - decision: Governed, risk-scored MCP/AGT installs — no silent install
       drivenBy: High-capability tools (browser automation, agent governance) need admission control
       evidence: "MCP Catalog #108 scoring; AGT installer run-in-terminal (operator presses enter)"
@@ -66,7 +75,12 @@ meta:
 # v0.1.0 → current — the governance files don't span it). Declare ONLY forecast
 # releases here: future versions not yet shipped / not yet in the changelog.
 rcs:
-  - { id: v5.4.3, state: forecast, tag: planned, note: AGT installer + next integration tranche }
+  - id: v6.1.0
+    state: forecast
+    tag: planned
+    note: Owner-selected feature-release target; no publication date committed
+    summary: "Agentic workflow governance: usable opt-in native Qortara Logic in VS Code Copilot Agent Host, permission/refusal proof, Qor parity preservation and independently reviewed worktree evidence. All deliverables remain unverified until tested."
+    ref: https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679
 
 # Programs MIRROR the verticals — the 7 Console surfaces — so the §01 progress bars
 # and the §02 deep-dive describe the same product structure. Surfaces with no tracked
@@ -80,8 +94,10 @@ programs:
   - { key: integrations, name: Integrations, accent: "#bb9af7" }
   - { key: config,       name: Config,       accent: "#ff9e64" }
 
-# Phases mirror the 7 surfaces. Every phase is evidence-anchored: rc = a real CHANGELOG
-# release; titles trace to FEATURE_INDEX FX rows + CHANGELOG entries.
+# Phases mirror the 7 surfaces. These historical weighted phases anchor to
+# CHANGELOG releases and are not reweighted to imply v6.1.0 completion.
+# Upcoming v6.1.0 goals remain forecast/unscored until separately qualified
+# and accepted through issue #679, #668 and the required release gates.
 phases:
   # Monitor — Overview tab + VS Code sidebar Monitor
   - { prog: monitor, key: SHIELD_TRACKER, rc: v4.6.6, w: 40, title: SHIELD phase tracker, what: Sidebar + Overview render live SHIELD phase progression + compliance grade, parsed from META_LEDGER., benefit: Governance state visible at a glance, current by construction. }
@@ -213,7 +229,7 @@ convergence:
   - left:  { title: FailSafe, body: agent-failsafe adapter + the AGT installer surface. }
     mid:   { glyph: "→", contract: Agent Governance Toolkit }
     right: { title: Microsoft AGT, body: Per-environment governance modules + agent-sre observability. }
-    status: "**AGT installer in flight (v5.4.3)** — agent-failsafe adapter is the external bridge."
+    status: "**AGT installer recorded in v5.4.3 CHANGELOG** — this historical status does not establish current external host parity or independent containment."
 
 # §04 Promotion record — what shipped per program (cross-filters on the deep-dive tab).
 promotion:
@@ -263,7 +279,7 @@ promotion:
     rows:
       - { pill: stg, text: "Bicameral + Open Design L3 write path (v5.1.5)" }
       - { pill: stg, text: "SARIF · MCP Registry · Slack · MCP Catalog (v5.4.2)" }
-      - { pill: x,   text: "Agent Governance Toolkit installer (v5.4.3, in flight)" }
+      - { pill: stg, text: "Agent Governance Toolkit installer (recorded shipped in v5.4.3)" }
   - title: Config
     vert: config
     accent: "#ff9e64"
