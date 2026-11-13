@@ -255,6 +255,7 @@ describe('FX1001 architecture index: golden row', () => {
     const inputs = checker.loadRepoInputs(REPO_ROOT);
     assert.ok(inputs.tracked.length > 500, `git ls-files listed only ${inputs.tracked.length} files`);
     assert.ok(inputs.tracked.includes('ARCHITECTURE_INDEX.md'), 'the index is not tracked (git add -f)');
+    assert.ok(!inputs.tracked.includes('docs/ARCHITECTURE_INDEX.md'), 'old docs index must not remain tracked as a competing authority');
     assert.ok(inputs.tracked.includes('FailSafe/extension/src/test/docs/architecture-index.test.cjs'),
       'this test is not tracked (the docs/ ignore rule matches src/test/docs; git add -f)');
     const result = checker.validate(inputs);
