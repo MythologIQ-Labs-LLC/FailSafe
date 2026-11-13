@@ -18,7 +18,7 @@ const OWNER_SENTENCES = [
   "The operator's `docs/roadmap/tracker-config.yaml`, when present, records intended tracker taxonomy and mappings.",
   "Report disagreements as drift; do not silently reconcile them.",
   "`docs/roadmap/programs.yaml` governs tracker programs and phases.",
-  "`docs/ARCHITECTURE_INDEX.md` governs architectural document authority.",
+  "`ARCHITECTURE_INDEX.md` at the repository root governs architectural document authority. Update its canonical registry rather than creating a competing index.",
 ];
 const PARAGRAPH = `**Product taxonomy and architectural authority:** ${OWNER_SENTENCES.join(" ")}`;
 const OLD_TEXT = ["Tracker taxonomy directive (FX891)", "is the source of truth", "align to that declared taxonomy"];
