@@ -10,7 +10,7 @@ This directory contains the source for the **single FailSafe VS Code/Cursor exte
 
 - [Extension README](extension/README.md): supported user flows, optional integrations, shipped version and limitations.
 - [Root README](../README.md): product positioning, release links and accurate capability boundaries.
-- [Architecture Index](../docs/ARCHITECTURE_INDEX.md): **canonical** architecture/design document authority.
+- [Architecture Index](../ARCHITECTURE_INDEX.md): **canonical** architecture/design document authority.
 - [Governance Index](../docs/GOVERNANCE_INDEX.md): governance artifact authority and historical evidence.
 - [Integration Portfolio](../docs/architecture/INTEGRATION_PORTFOLIO.md): **canonical** feature states, egress, test depth, and outstanding integration defects.
 - [Release verification tooling](../tools/release-verification/README.md): platform and artifact evidence.
@@ -38,4 +38,4 @@ The shared MCP client transport currently serves Bicameral and Open Design. Fail
 
 Marketplace installs are disabled pending isolation and scanner acceptance. GitHub's user-facing check command sends a neutral manual advisory, not a verified SHIELD PASS. Read the [extension README](extension/README.md) and [integration portfolio](../docs/architecture/INTEGRATION_PORTFOLIO.md) before making a feature, availability or security claim.
 
-**Do not revive the obsolete v4.x deployment recipes from repository history.** `docs/ARCHITECTURE_INDEX.md` and current tested scripts take precedence.
+**Do not revive the obsolete v4.x deployment recipes from repository history.** `ARCHITECTURE_INDEX.md` and current tested scripts take precedence.
