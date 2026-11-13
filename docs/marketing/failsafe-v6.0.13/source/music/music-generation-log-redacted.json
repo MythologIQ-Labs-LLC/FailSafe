@@ -1,0 +1,160 @@
+{
+ "theme": "dark",
+ "size": [
+  1600,
+  900
+ ],
+ "shots": [
+  {
+   "name": "music_page",
+   "size": [
+    2400,
+    1350
+   ],
+   "note": ""
+  }
+ ],
+ "dialogs": [],
+ "app": {
+  "version": "0.9.1",
+  "root": "C:\\LocalAI\\Voice\\Chatterbox\\demo-v091\\app\\Sonic Rift",
+  "python": "C:\\LocalAI\\Voice\\Chatterbox\\demo-v091\\app\\Sonic Rift\\.venv\\Scripts\\python.exe",
+  "profile": "C:\\dev\\mythologiq\\failsafe\\_work\\v6012-film\\profiles\\sonic-rift-music"
+ },
+ "caption_chars": 431,
+ "music": {
+  "engine": "ACE-Step 1.5 (2B turbo)",
+  "repo_id": "ACE-Step/Ace-Step1.5",
+  "model_revision": "19671f406d603126926c1b7e2adc169acbcade22",
+  "license": "MIT License",
+  "request": {
+   "engine": "ace_step_15",
+   "prompt": "Calm, modern instrumental underscore for a software product walkthrough. Warm synth pads, a gentle plucked motif, a light muted pulse, subtle sub bass. Steady, confident and minimal, with room for a spoken voice. Resolves softly. No vocals, big drums, swells or drops.",
+   "seconds": 116.0,
+   "instrumental": true,
+   "lyrics": "",
+   "candidates": 3,
+   "seed": 20261110,
+   "bpm": 84,
+   "key": "D major",
+   "time_signature": 4,
+   "genre": "minimal ambient electronic underscore",
+   "mood": "calm, confident, focused",
+   "instrumentation": "warm synth pads, soft plucks, light pulse",
+   "plan": true,
+   "contract_version": 1
+  },
+  "answered": [
+   "Music: 3 take(s) of 116 s with ACE-Step 1.5 (2B turbo)"
+  ],
+  "takes": [
+   {
+    "file": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\music-candidates\\MUSIC_bed_takeA.wav",
+    "take": {
+     "path": "C:\\Users\\<user>\\AppData\\Local\\Temp\\sonic_rift_music_3j62sus4\\take_1_seed20261110.wav",
+     "seed": 20261110,
+     "seconds": 116.0,
+     "sample_rate": 48000,
+     "channels": 2,
+     "elapsed_seconds": 33.12,
+     "metrics": {
+      "seconds": 116.0,
+      "sample_rate": 48000,
+      "integrated_lufs": -16.0,
+      "true_peak_db": -2.49,
+      "clipped_samples": 0,
+      "loudness_range_db": 17.8,
+      "opening_vs_median_db": -25.6
+     },
+     "engine_notes": {
+      "bpm": 84,
+      "keyscale": "D major",
+      "timesignature": "4",
+      "duration": 116
+     }
+    }
+   },
+   {
+    "file": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\music-candidates\\MUSIC_bed_takeB.wav",
+    "take": {
+     "path": "C:\\Users\\<user>\\AppData\\Local\\Temp\\sonic_rift_music_3j62sus4\\take_2_seed20261111.wav",
+     "seed": 20261111,
+     "seconds": 116.0,
+     "sample_rate": 48000,
+     "channels": 2,
+     "elapsed_seconds": 28.86,
+     "metrics": {
+      "seconds": 116.0,
+      "sample_rate": 48000,
+      "integrated_lufs": -16.01,
+      "true_peak_db": -1.1,
+      "clipped_samples": 0,
+      "loudness_range_db": 19.4,
+      "opening_vs_median_db": -20.2
+     },
+     "engine_notes": {
+      "bpm": 84,
+      "keyscale": "D major",
+      "timesignature": "4",
+      "duration": 116
+     }
+    }
+   },
+   {
+    "file": "C:\\dev\\mythologiq\\failsafe\\docs\\marketing\\failsafe-v6.0.12\\audio\\music-candidates\\MUSIC_bed_takeC.wav",
+    "take": {
+     "path": "C:\\Users\\<user>\\AppData\\Local\\Temp\\sonic_rift_music_3j62sus4\\take_3_seed20261112.wav",
+     "seed": 20261112,
+     "seconds": 116.0,
+     "sample_rate": 48000,
+     "channels": 2,
+     "elapsed_seconds": 32.3,
+     "metrics": {
+      "seconds": 116.0,
+      "sample_rate": 48000,
+      "integrated_lufs": -16.02,
+      "true_peak_db": -1.1,
+      "clipped_samples": 0,
+      "loudness_range_db": 12.0,
+      "opening_vs_median_db": -14.0
+     },
+     "engine_notes": {
+      "bpm": 84,
+      "keyscale": "D major",
+      "timesignature": "4",
+      "duration": 116
+     }
+    }
+   }
+  ],
+  "result": {
+   "request": {
+    "engine": "ace_step_15",
+    "prompt": "Calm, modern instrumental underscore for a software product walkthrough. Warm synth pads, a gentle plucked motif, a light muted pulse, subtle sub bass. Steady, confident and minimal, with room for a spoken voice. Resolves softly. No vocals, big drums, swells or drops.",
+    "seconds": 116.0,
+    "instrumental": true,
+    "lyrics": "",
+    "candidates": 3,
+    "seed": 20261110,
+    "bpm": 84,
+    "key": "D major",
+    "time_signature": 4,
+    "genre": "minimal ambient electronic underscore",
+    "mood": "calm, confident, focused",
+    "instrumentation": "warm synth pads, soft plucks, light pulse",
+    "plan": true,
+    "contract_version": 1
+   },
+   "engine": "ace_step_15",
+   "model": "ACE-Step/Ace-Step1.5",
+   "model_revision": "19671f406d603126926c1b7e2adc169acbcade22",
+   "source_revision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+   "license": "MIT License",
+   "device": "cuda",
+   "cancelled": false,
+   "elapsed_seconds": 106.58,
+   "peak_vram_mb": 9928,
+   "contract_version": 1
+  }
+ }
+}

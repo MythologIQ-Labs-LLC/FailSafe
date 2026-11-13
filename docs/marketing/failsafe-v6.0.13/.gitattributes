@@ -1,0 +1,2 @@
+# Media package: store every file byte for byte so manifest.json checksums stay valid.
+* -text

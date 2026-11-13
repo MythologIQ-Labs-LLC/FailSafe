@@ -1,0 +1,119 @@
+{
+  "id": "77d8cf4c811f45d6b3e9ea6c04248453",
+  "title": "FailSafe v6.0.13: Statewright website handoff",
+  "sample_rate": 48000,
+  "tracks": [
+    {
+      "id": "74c61a6304694c9887e940eb0145f14e",
+      "kind": "voice",
+      "name": "Narration",
+      "clips": [
+        {
+          "id": "7d1e52263a344e26aca3787dd669c348",
+          "kind": "voice",
+          "start_frame": 24000,
+          "frame_count": 308104,
+          "asset_id": "voice_83197dfab15e2c15c26006ba4223fecb1dc679c7f5073bbbf980a9638f366a81",
+          "text": "FailSafe 6.0.13 adds a simple path from your development Console to Statewright.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "ca3f2b55427147a997805b1399446fbf",
+          "kind": "voice",
+          "start_frame": 355200,
+          "frame_count": 226936,
+          "asset_id": "voice_4557cf03aa0abcc9dacc682701bc0364a2926f5da5ce380bc27bd9259b3ca98d",
+          "text": "Open FailSafe in VS Code, and launch the Console from the Command Palette.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "e4c206231fd64e969b22ba85e44e06d4",
+          "kind": "voice",
+          "start_frame": 1020144,
+          "frame_count": 399104,
+          "asset_id": "voice_9c3e956666092ccb8bf47acdbdbc31ee61dbc2972e2014044f1579dbfb9b5aca",
+          "text": "Select Integrations, then Catalog. Here you'll find Statewright AI, clearly labeled as a website handoff.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "b430a5d780b442cd9537550309e29d29",
+          "kind": "voice",
+          "start_frame": 1577232,
+          "frame_count": 229798,
+          "asset_id": "voice_8d0e8ac778af527122f21133e73fa454d2667ccc096d37c6bee882e1d9edb550",
+          "text": "Select Open Statewright Run History, and Statewright opens in your browser.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "f11362eb2dd646ed978a93cc03536f1a",
+          "kind": "voice",
+          "start_frame": 1821312,
+          "frame_count": 853610,
+          "asset_id": "voice_cd626a311397da06ee5a8c1a95bb5843f1dbf7690d36f0c3709110f6d044c73a",
+          "text": "Statewright shows its own Run History page. This account has no runs yet. They appear once a workflow is activated in a connected Statewright client. FailSafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "a96f0395f4484f26a28e307cbe86dba5",
+          "kind": "voice",
+          "start_frame": 2706912,
+          "frame_count": 329412,
+          "asset_id": "voice_82b1c16528c0a8e4ca310ed5ac3db1ee77ade176e12acb979582b0cb82b44bbb",
+          "text": "Open Statewright run history from FailSafe. Version 6.0.13 is available now.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        }
+      ],
+      "muted": false,
+      "gain_db": 0.0
+    },
+    {
+      "id": "9cecc0e392d4462d97949bf2fc061c4c",
+      "kind": "sound",
+      "name": "Music bed",
+      "clips": [
+        {
+          "id": "b3dde2e106f743f6aa03f6b939454d84",
+          "kind": "sound",
+          "start_frame": 0,
+          "frame_count": 3086112,
+          "asset_id": "sound_cedea4734dc8",
+          "text": "",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 72000,
+          "fade_out_frames": 144000,
+          "loop": false
+        }
+      ],
+      "muted": false,
+      "gain_db": -12.0
+    }
+  ],
+  "schema_version": 1,
+  "revision": 0,
+  "duck_db": -9.0
+}

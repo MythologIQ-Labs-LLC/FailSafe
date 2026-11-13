@@ -1,0 +1,8 @@
+{
+ "VO_N1_": "FailSafe six point zero point thirteen adds a simple path from your development Console to Statewright.",
+ "VO_N2_": "Open FailSafe in VS Code, and launch the Console from the Command Palette.",
+ "VO_N3_": "Select Integrations, then Catalog. Here you'll find Statewright A I, clearly labeled as a website handoff.",
+ "VO_N4_": "Select Open Statewright Run History, and Statewright opens in your browser.",
+ "VO_N5_": "Statewright shows its own Run History page. This account has no runs yet. They appear once a workflow is activated in a connected Statewright client. FailSafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+ "VO_N6_": "Open Statewright run history from FailSafe. Version six point zero point thirteen is available now."
+}

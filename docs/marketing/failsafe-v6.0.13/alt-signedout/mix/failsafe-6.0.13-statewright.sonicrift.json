@@ -1,0 +1,119 @@
+{
+  "id": "35566509d9f44f6fa9b81dedfdb56a09",
+  "title": "FailSafe v6.0.13: Statewright website handoff",
+  "sample_rate": 48000,
+  "tracks": [
+    {
+      "id": "50e5fca84af14e998177fa19bac44b5a",
+      "kind": "voice",
+      "name": "Narration",
+      "clips": [
+        {
+          "id": "e84843459f53472799681256f6337d5d",
+          "kind": "voice",
+          "start_frame": 24000,
+          "frame_count": 308104,
+          "asset_id": "voice_83197dfab15e2c15c26006ba4223fecb1dc679c7f5073bbbf980a9638f366a81",
+          "text": "FailSafe 6.0.13 adds a simple path from your development Console to Statewright.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "a1bb4370ba444f63a5b963c44a8376d5",
+          "kind": "voice",
+          "start_frame": 355200,
+          "frame_count": 226936,
+          "asset_id": "voice_4557cf03aa0abcc9dacc682701bc0364a2926f5da5ce380bc27bd9259b3ca98d",
+          "text": "Open FailSafe in VS Code, and launch the Console from the Command Palette.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "a8ca867967f54478b8bc28f8a397ba00",
+          "kind": "voice",
+          "start_frame": 1065840,
+          "frame_count": 399104,
+          "asset_id": "voice_9c3e956666092ccb8bf47acdbdbc31ee61dbc2972e2014044f1579dbfb9b5aca",
+          "text": "Select Integrations, then Catalog. Here you'll find Statewright AI, clearly labeled as a website handoff.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "fa645a3dec814a919c7f16ac97183cb4",
+          "kind": "voice",
+          "start_frame": 1622928,
+          "frame_count": 229798,
+          "asset_id": "voice_8d0e8ac778af527122f21133e73fa454d2667ccc096d37c6bee882e1d9edb550",
+          "text": "Select Open Statewright Run History, and Statewright opens in your browser.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "2205561b894f43309962ff96d3bedf68",
+          "kind": "voice",
+          "start_frame": 1909440,
+          "frame_count": 557628,
+          "asset_id": "voice_d58b94226019564fe1214f3e9aa6a09a0db777e13984f6460e3ea307ec194a6b",
+          "text": "Statewright handles sign-in and run history on its own site. FailSafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        },
+        {
+          "id": "21963f9ba3694a6cacd2d787d25d92c9",
+          "kind": "voice",
+          "start_frame": 2559312,
+          "frame_count": 351248,
+          "asset_id": "voice_701a122257cc79554dc284e567bcd05b8e3442e04ac7bce0bf1c66c949f20814",
+          "text": "Open Statewright run history from FailSafe. Version 6.0.13 is available now.",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 0,
+          "fade_out_frames": 0,
+          "loop": false
+        }
+      ],
+      "muted": false,
+      "gain_db": 0.0
+    },
+    {
+      "id": "a2dc39dd7fed46eda12ea3325e5c958e",
+      "kind": "sound",
+      "name": "Music bed",
+      "clips": [
+        {
+          "id": "e999b8a11f2242b68e1b4b911046351e",
+          "kind": "sound",
+          "start_frame": 0,
+          "frame_count": 2967312,
+          "asset_id": "sound_cedea4734dc8",
+          "text": "",
+          "voice_id": "",
+          "gain_db": 0.0,
+          "fade_in_frames": 72000,
+          "fade_out_frames": 144000,
+          "loop": false
+        }
+      ],
+      "muted": false,
+      "gain_db": -12.0
+    }
+  ],
+  "schema_version": 1,
+  "revision": 0,
+  "duck_db": -9.0
+}
