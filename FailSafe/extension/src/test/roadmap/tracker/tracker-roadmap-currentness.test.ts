@@ -58,6 +58,14 @@ suite('FailSafe live roadmap manifest (v6.1.0 #679)', () => {
     assert.equal(roadmap.ref,
       'https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679');
 
+    const logText = fs.readFileSync(resolveTestRepoPath('CHANGELOG.md'), 'utf8');
+    const rendered = buildTrackerModel(manifest, {
+      discoveredReleases: discoverReleases(logText),
+      now: new Date('2026-11-13T15:00:00Z'),
+    });
+    assert.equal(rendered.rcs.find((r) => r.id === 'v6.1.0')?.progressEligible, false,
+      'planned v6.1.0 must show no weighted progress snapshot');
+
     const unverified = new Set((manifest.rcs ?? [])
       .filter((r) => r.state === 'forecast').map((r) => r.id));
     assert.ok(!(manifest.phases ?? []).some((p) => unverified.has(p.rc)),
