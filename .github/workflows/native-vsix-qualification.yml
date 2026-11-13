@@ -14,7 +14,7 @@ name: Native VSIX Platform Qualification
 on:
   workflow_dispatch:
   push:
-    branches: ["release/v*-rc*"]
+    branches: ["release/v*-rc*", "qualification/v6013-native-macos15-20261112"]
 
 concurrency:
   group: native-vsix-qualification-${{ github.ref }}
@@ -124,7 +124,7 @@ jobs:
           - { os: windows-latest, target: win32-x64 }
           - { os: windows-11-arm, target: win32-arm64 }
           - { os: macos-15-intel, target: darwin-x64 }
-          - { os: macos-14, target: darwin-arm64 }
+          - { os: macos-15, target: darwin-arm64 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
