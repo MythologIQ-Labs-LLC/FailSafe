@@ -1,6 +1,6 @@
 # Provenance: FailSafe v6.0.13 Statewright demo reel (preview, GH #673)
 
-**Status: preview for owner review. Not approved, not published, not committed.** This cut shows what Statewright displays to a fresh, signed-out browser profile (its Log in page). The owner later asked for the signed-in, empty Run History page instead. That version has not been recorded yet; see "Open item" at the end.
+**Status: historical signed-out review preview, now committed to public draft PR #680. No website or social promotion is approved.** This cut shows Statewright's signed-out Log in page. The signed-in empty Run History replacement was subsequently recorded; see `../PROVENANCE.md`. The original open item at the end is retained as a historical capture-time note.
 
 ## 1. Software filmed
 
@@ -62,7 +62,7 @@ The narration and cards claim only what the footage and the v6.0.13 code show: a
 
 `SHA256SUMS.txt` lists every file in this folder.
 
-## Open item: signed-in Run History variant
+## Historical open item: signed-in Run History variant (subsequently resolved in the main cut)
 
 The owner asked, through the coordinating session, to show their signed-in, empty Statewright Run History page with the account name and initials blurred. That needs an account session, and this preview does not include it. Everything else is ready:
 
