@@ -20,7 +20,7 @@
 4. For verified SHIELD, compare host-aware command and evidence repository identities, and bind the receipt's repository/API host to the same accepted target. Continue exact-HEAD re-read, verified receipt, trusted chain and 201 confirmation checks. Never turn rejected/neutral evidence into successful SHIELD.
 5. Preserve current fail-closed/local-only UX for missing configuration and the existing redaction of credentials; no default auto-publish or new token use.
 
-## Falsification matrix (test names: GRB-01..07)
+## Falsification matrix (test names: GRB-01..08)
 
 | ID | Positive / negative case | Expected before any network or authority mutation |
 | --- | --- | --- |
@@ -30,7 +30,8 @@
 | GRB-04 | Authorized GHES remote/API pair versus unrelated GHES remote host | Authorized pair can publish, unrelated host refused before GET/POST |
 | GRB-05 | Generic advisory `payload.head_sha != ctx.headSha` | Explicit failure, 0 POST |
 | GRB-06 | SHIELD command context remote host differs from evidence source, slug identical | `context-mismatch`/refusal, 0 SHIELD POST |
-| GRB-07 | Existing verified GitHub SHA/host/receipt, 201 echo, token secrets, fork, local-only | No regression: truthful allowed/refused outcomes and no token exposure |
+| GRB-07 | Caller asks PR-linkage auditor to fetch one repository's PR/issues while Check Run publisher targets another repository | Refuse before any GET/POST; never post a falsely clean PR-linkage result |
+| GRB-08 | Existing verified GitHub SHA/host/receipt, 201 echo, token secrets, fork, local-only | No regression: truthful allowed/refused outcomes and no token exposure |
 
 ## Implementation and proof gates
 
