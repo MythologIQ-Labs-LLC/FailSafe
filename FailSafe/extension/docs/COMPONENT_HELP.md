@@ -1,6 +1,6 @@
 # FailSafe Component Help
 
-> v6.0.12 release candidate (not yet published): the Console, the Monitor sidebar and the SRE view share one theme, chosen in the Console and kept in the VS Code setting `failsafe.console.theme` (#601). Components and operator workflows are otherwise unchanged from v6.0.11.
+> v6.0.13: the Integrations tab adds a Statewright AI card that opens Statewright's own Run History website in your browser; FailSafe sends nothing to Statewright and shows no connection status (#652). Components and operator workflows are otherwise unchanged from v6.0.12 (the Console, the Monitor sidebar and the SRE view share one theme, kept in the VS Code setting `failsafe.console.theme`, #601).
 
 
 Audience: operators using the packaged VS Code extension (`v6.0.10`).
