@@ -156,7 +156,7 @@ describe('FX1001 architecture index: fixtures', () => {
     const [problem, ...rest] = assertOnly(input, 'unregistered-normative');
     assert.equal(rest.length, 0);
     assert.match(problem.detail, /^docs\/architecture\/ARCHITECTURE_NAVIGATION_COPY\.md /);
-    assert.match(problem.detail, /suggestions: docs\\/wiki\\/navigation-architecture-copy\\.md, ARCHITECTURE_INDEX\\.md;/);
+    assert.ok(problem.detail.includes('suggestions: docs/wiki/navigation-architecture-copy.md, ARCHITECTURE_INDEX.md;'), problem.detail);
     assert.ok(problem.detail.endsWith(TAIL), problem.detail);
   });
 
@@ -184,7 +184,7 @@ describe('FX1001 architecture index: fixtures', () => {
     let rival = replaceCell(replaceCell(ROW_GOV, 'id', 'rival'), 'status', 'canonical');
     rival = replaceCell(replaceCell(replaceCell(rival, 'domain', 'ARCHITECTURE Navigation'), 'updated_by', '/qor-plan'), 'doc', '[Readme](README.md)');
     const [problem] = assertOnly(withRow(rival), 'conflicting-canonical');
-    assert.match(problem.detail, /ARCHITECTURE_INDEX\\.md and README\\.md/);
+    assert.ok(problem.detail.includes('ARCHITECTURE_INDEX.md and README.md'), problem.detail);
   });
 
   it('code 6 bad-status', () => {
