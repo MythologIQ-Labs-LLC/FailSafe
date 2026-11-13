@@ -149,7 +149,7 @@ Before recording any proposal, the route re-reads the workspace under the lock a
 
 | Kind | What it is | Its single home | How FailSafe treats it |
 |---|---|---|---|
-| 1. Canonical architecture authority | a registry row with status `canonical`; `proposed` sits under it as intended, not yet accepted, authority | the registry in `docs/ARCHITECTURE_INDEX.md` (or `failsafe.architecture.indexPath`) | competing canonical authority is refused at propose (LD8, LD9); affected decisions list `canonical` and `proposed` rows, each labelled with its status |
+| 1. Canonical architecture authority | a registry row with status `canonical`; `proposed` sits under it as intended, not yet accepted, authority | the FailSafe repository's root `ARCHITECTURE_INDEX.md` (or the configurable `failsafe.architecture.indexPath` in other repositories) | competing canonical authority is refused at propose (LD8, LD9); affected decisions list `canonical` and `proposed` rows, each labelled with its status |
 | 2. Descriptive documentation | a `descriptive` row | the registry | shown and linked; never authority; never an affected decision |
 | 3. Historical or superseded documentation | a `historical` or `superseded` row | the registry | kept for history; never an affected decision |
 | 4. Operator taxonomy (intent) | the programs, verticals and agent mappings the operator intends | `docs/roadmap/tracker-config.yaml` when present (local; Workspace › Taxonomy) | records intent; disagreements with kinds 5 and `docs/roadmap/programs.yaml` are reported as drift, never reconciled |
