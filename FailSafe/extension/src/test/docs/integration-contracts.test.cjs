@@ -974,9 +974,9 @@ function validate(inputs) {
   const rowsById = new Map(reg.rows.map((r) => [r.id, r]));
   const regIds = new Set(reg.rows.map((r) => r.id));
   const want = [
-    ...parsed.map((c) => ({ id: `integration-contract-${c.id}`, domain: `integration-contract-${c.id}`, doc: `architecture/integrations/${c.id}.md`, contract: true, retired: c.retired })),
-    { id: 'integration-portfolio', doc: 'architecture/INTEGRATION_PORTFOLIO.md' },
-    { id: 'integration-scenarios', doc: 'architecture/INTEGRATION_SCENARIOS.md' },
+    ...parsed.map((c) => ({ id: `integration-contract-${c.id}`, domain: `integration-contract-${c.id}`, doc: `docs/architecture/integrations/${c.id}.md`, contract: true, retired: c.retired })),
+    { id: 'integration-portfolio', doc: 'docs/architecture/INTEGRATION_PORTFOLIO.md' },
+    { id: 'integration-scenarios', doc: 'docs/architecture/INTEGRATION_SCENARIOS.md' },
   ];
   for (const w of want) {
     const r = rowsById.get(w.id);
@@ -1181,9 +1181,9 @@ const FX_ARCH = (rows) => ['# Architecture Index', '', '## Registry', '',
   '| id | domain | doc | status | owner | supersedes | related | governance_ref | contract | verification | updated_by |',
   '|---|---|---|---|---|---|---|---|---|---|---|', ...rows, ''].join('\n');
 const FX_ARCH_ROWS = [
-  '| integration-contract-alpha | integration-contract-alpha | [Alpha](architecture/integrations/alpha.md) | canonical | `/qor-plan` | - | integration-portfolio | - | unknown | unknown | `/qor-plan` when alpha changes; moving cited code by more than 3 lines requires updating the citation |',
-  '| integration-portfolio | integration portfolio | [Portfolio](architecture/INTEGRATION_PORTFOLIO.md) | canonical | `/qor-plan` | - | - | - | unknown | unknown | `/qor-plan` |',
-  '| integration-scenarios | integration scenarios | [Scenarios](architecture/INTEGRATION_SCENARIOS.md) | canonical | `/qor-plan` | - | - | - | unknown | unknown | `/qor-plan` |',
+  '| integration-contract-alpha | integration-contract-alpha | [Alpha](docs/architecture/integrations/alpha.md) | canonical | `/qor-plan` | - | integration-portfolio | - | unknown | unknown | `/qor-plan` when alpha changes; moving cited code by more than 3 lines requires updating the citation |',
+  '| integration-portfolio | integration portfolio | [Portfolio](docs/architecture/INTEGRATION_PORTFOLIO.md) | canonical | `/qor-plan` | - | - | - | unknown | unknown | `/qor-plan` |',
+  '| integration-scenarios | integration scenarios | [Scenarios](docs/architecture/INTEGRATION_SCENARIOS.md) | canonical | `/qor-plan` | - | - | - | unknown | unknown | `/qor-plan` |',
 ];
 const FX_GOV = ['# Governance Index', '', '## Tier 2 — Doctrine', '', '| Path | Purpose | Owner |', '|---|---|---|', `| \`${SCENARIOS}\` | s | o |`, '',
   '## Tier 5 — Reference Material', '', '| Path | Purpose |', '|---|---|', `| \`${CONTRACT_DIR}alpha.md\` | a |`, `| \`${PORTFOLIO}\` | p |`, '',
@@ -1594,7 +1594,7 @@ describe('FX1003 B288 retired contracts', () => {
   const ALPHA_ROW = '| [alpha](integrations/alpha.md) | send | verified-shipped | yes | unit | MAINTAIN | 2 |';
   const GAMMA_ROW = (state = 'retired', disp = 'RETIRE') => `| [gamma](integrations/gamma.md) | send | ${state} | no | none | ${disp} | 3 |`;
   const G_LINK = '- [Retirement review](integrations/gamma.md#retirement-review-538)';
-  const ARCH_GAMMA = (status = 'historical') => `| integration-contract-gamma | integration-contract-gamma | [Gamma](architecture/integrations/gamma.md) | ${status} | \`/qor-plan\` | - | integration-portfolio | - | unknown | unknown | never updated: retired 2026-10-19 by B300 |`;
+  const ARCH_GAMMA = (status = 'historical') => `| integration-contract-gamma | integration-contract-gamma | [Gamma](docs/architecture/integrations/gamma.md) | ${status} | \`/qor-plan\` | - | integration-portfolio | - | unknown | unknown | never updated: retired 2026-10-19 by B300 |`;
   const RECON = (connectionKind = 'folded into alpha', catalogKind = 'not an integration: registry') => [
     `| \`${INTEGRATIONS_DIR}catalog/\` | ${catalogKind} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
     `| \`${SRC}/roadmap/ui/\` | ${SAME_ORIGIN} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
