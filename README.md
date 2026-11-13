@@ -11,7 +11,7 @@ Local-first governance, workspace monitoring, and evidence for AI-assisted softw
 [![Latest Release](https://img.shields.io/github/v/release/MythologIQ-Labs-LLC/FailSafe)](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/latest)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 
-Developing FailSafe? Start with the [Architecture Index](docs/ARCHITECTURE_INDEX.md).
+Developing FailSafe? Start with the [Architecture Index](ARCHITECTURE_INDEX.md).
 
 </div>
 
@@ -63,9 +63,9 @@ Newer work on `main` may not yet be available in the marketplace release. Check 
 
 ## For developers and agentic contributors
 
-**Start here: [Architecture Index](docs/ARCHITECTURE_INDEX.md).** It routes you to canonical design documents, existing decisions, related implementation contracts, and verification. Search that index before adding a new architecture document or changing a design boundary.
+**Start here: [Architecture Index](ARCHITECTURE_INDEX.md).** It routes you to canonical design documents, existing decisions, related implementation contracts, and verification. Search that index before adding a new architecture document or changing a design boundary.
 
-- [Architecture Index](docs/ARCHITECTURE_INDEX.md): the design-intent spine and document registration path.
+- [Architecture Index](ARCHITECTURE_INDEX.md): the design-intent spine and document registration path.
 - [Governance Index](docs/GOVERNANCE_INDEX.md): Qor-logic governance artifact authority, tiers, and history.
 - [Contributing](CONTRIBUTING.md): how to make and review contributions.
 - [Integration portfolio](docs/architecture/INTEGRATION_PORTFOLIO.md): value contracts and current integration assessments.
