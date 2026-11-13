@@ -1,5 +1,7 @@
 # FailSafe README technical reference (historical)
 
+**Historical version snapshot:** this archived text refers to v6.0.8 as its then-current release. For the actual published release, current capabilities and the v6.0.13 notes, use the [live repository README](../../README.md) and [GitHub Releases](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases). Do not interpret the historical release label or feature claims below as current.
+
 This document preserves the previous repository README for historical and technical reference. It is **not** the authoritative architecture source. For current architectural decisions and document registration, use [ARCHITECTURE_INDEX.md](../ARCHITECTURE_INDEX.md), and for governance records use [GOVERNANCE_INDEX.md](../GOVERNANCE_INDEX.md). Product introduction and install links live in [README.md](../../README.md).
 
 ---
