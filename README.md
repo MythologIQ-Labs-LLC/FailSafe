@@ -65,6 +65,8 @@ Newer work on `main` may not yet be available in the marketplace release. Check 
 
 **Start here: [Architecture Index](ARCHITECTURE_INDEX.md).** It routes you to canonical design documents, existing decisions, related implementation contracts, and verification. Search that index before adding a new architecture document or changing a design boundary.
 
+**Working on FailSafe itself in VS Code?** Set the *local workspace* setting `failsafe.architecture.indexPath` to `ARCHITECTURE_INDEX.md` to make Workspace → Architecture read this root index. The extension's general default remains `docs/ARCHITECTURE_INDEX.md` for other repositories; without the override, this repository's root index may appear as **present elsewhere**. Local `.vscode/settings.json` is intentionally ignored, so no contributor setting or installed-user preference is silently changed.
+
 - [Architecture Index](ARCHITECTURE_INDEX.md): the design-intent spine and document registration path.
 - [Governance Index](docs/GOVERNANCE_INDEX.md): Qor-logic governance artifact authority, tiers, and history.
 - [Contributing](CONTRIBUTING.md): how to make and review contributions.
