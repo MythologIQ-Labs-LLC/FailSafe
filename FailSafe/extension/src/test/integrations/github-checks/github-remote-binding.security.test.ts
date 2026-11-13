@@ -7,6 +7,7 @@ import {
   createPullRequest, publishCheckRunPayload, type GitHubPostFn,
 } from '../../../integrations/github-checks/github-checks-client';
 import { publishVerifiedShieldCheck } from '../../../integrations/github-checks/shield-check-publish';
+import { publishLinkageCheck } from '../../../integrations/github-checks/pr-linkage-publish';
 import {
   NOW, RECEIPT_KEY, baseScenario, chainOf, keysOf, sourceOf,
 } from '../shield-receipts/fixtures';
@@ -88,6 +89,25 @@ suite('GRB security characterization: GitHub repository identity (#476)', () => 
     );
     assert.equal(res.ok, false, 'wire SHA must match the authorized HEAD');
     assert.deepEqual(c.urls, []);
+  });
+
+  test('GRB-07 PR linkage cannot audit a foreign repository and publish green on the current one', async () => {
+    const reads: string[] = [];
+    const c = posts();
+    const get = async (url: string) => {
+      reads.push(url);
+      if (url.endsWith('/pulls/9')) return { status: 200, body: JSON.stringify({ body: 'Closes #3' }) };
+      return { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }]) };
+    };
+    const res = await publishLinkageCheck({
+      ctx: { remoteUrl: GOOD, headSha: SHA_A },
+      opts: OPTS,
+      owner: 'foreign', repo: 'other-repository', prNumber: 9,
+      get, post: c.post,
+    });
+    assert.equal(res.ok && !res.localOnly, false, 'foreign PR results cannot be attested on this repository');
+    assert.deepEqual(reads, [], 'refuse before reading the unrelated PR/issue set');
+    assert.deepEqual(c.urls, [], 'no green linkage result on the authorized target');
   });
 
   test('GRB-06 SHIELD context host cannot differ from evidence origin with same owner/repo', async () => {
