@@ -6,6 +6,16 @@
 - **Witnessed release ledger.** The governance ledger behind this release is checkpointed with an owner-held, non-exportable TPM key and an independent RFC 3161 timestamp, and the checkpoint is verified before publication (#638). This is release tooling; it adds nothing to the installed extension.
 - Continue and Aider stay disabled (#475). See the changelog for known limitations.
 
+### Use the Statewright website handoff
+
+1. In VS Code or Cursor, open the FailSafe Console with **FailSafe: Open Console (Browser Popout)** or `Ctrl+Alt+F`.
+2. Open **Integrations**, then the **Catalog** view.
+3. Find the **Statewright AI** card labeled **Website handoff**.
+4. Select **Open Statewright Run History**. The link opens `https://statewright.ai/runs` in a new browser tab; sign in with Statewright there if required.
+5. Review workflow runs and transition history **on Statewright's website**. FailSafe does not import those records, show connection status, or govern Statewright execution through this card.
+
+For details and limitations, read the [versioned v6.0.13 release-notes PDF](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/v6.0.13/FailSafe-v6.0.13-Release-Notes.pdf) and the [v6.0.13 changelog](CHANGELOG.md).
+
 ## What's New in v6.0.12
 
 **Released 2026-11-10.** One theme for the whole app: the theme you pick in the Console now also applies to the Monitor sidebar and the SRE view, stays the same in the browser Console and in VS Code, and is kept across reloads and restarts in the VS Code setting `failsafe.console.theme` (#601). Includes the dependency updates merged after v6.0.11.
