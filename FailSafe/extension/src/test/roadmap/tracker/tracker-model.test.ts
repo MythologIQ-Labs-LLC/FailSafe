@@ -191,7 +191,7 @@ suite('tracker-model (B-INT-17)', () => {
       'provisional PR status retains its existing eligibility rule');
   });
 
-  test('buildTrackerModel attaches progressEligible only when now is supplied', () => {
+  test('buildTrackerModel keeps forecasts unscored with or without now', () => {
     const manifest: TrackerManifest = { programs: [{ key: 'c', name: 'C', accent: '#0f0' }], rcs: [] };
     const disc = discoverReleases('## [3.0.0] - 2026-05-01\nx\n## [3.1.0] - 2026-01-01\ny\n');
     const withNow = buildTrackerModel(manifest, { discoveredReleases: disc, now: NOW, minorDays: 60, patchDays: 30 });
@@ -207,6 +207,15 @@ suite('tracker-model (B-INT-17)', () => {
     const candidate = withForecast.rcs.find((r) => r.id === 'v6.1.0');
     assert.ok(candidate, 'forecast release remains in the resolved axis');
     assert.equal(candidate.progressEligible, false, 'forecast does not get a verified progress snapshot');
+
+    const noClockForecast = buildTrackerModel({
+      ...manifest,
+      rcs: [{ id: 'v6.1.0', state: 'forecast', tag: 'planned' }],
+    }, { discoveredReleases: disc });
+    assert.equal(noClockForecast.rcs.find((r) => r.id === 'v6.1.0')?.progressEligible, false,
+      'forecast stays ineligible for snapshot even when a pure caller omits now');
+    assert.equal(noClockForecast.rcs.find((r) => r.id === 'v3.0.0')?.progressEligible, undefined,
+      'prior unclocked production semantics remain unchanged');
   });
 
   test('validateManifest with resolved axis: a phase targeting a DISCOVERED release passes', () => {
