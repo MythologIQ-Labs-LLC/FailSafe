@@ -14,7 +14,7 @@
  * HMAC attestation, not CI-attested.
  */
 
-import { parseRepoSlug, SHIELD_CHECK_NAME } from './github-checks-map';
+import { bindGitRemote, parseRepoIdentity, SHIELD_CHECK_NAME } from './github-checks-map';
 import { resolveApiBase, type GitContext, type GitHubPostFn, type PublishOptions } from './github-checks-client';
 import { postCheckRun, type ShieldCheckRunPayload } from './check-run-transport';
 import { DEFAULT_SHIELD_POLICY, type ShieldPolicy } from '../shield-receipts/shield-policy';
@@ -92,18 +92,20 @@ function configGuard(a: ShieldPublishArgs): ShieldPublishResult | { repo: string
   if (!a.opts.enabled) return notPublished('disabled');
   if (!a.opts.token || !a.opts.token.trim()) return notPublished('no-token');
   if (a.ctx.isFork) return notPublished('fork');
-  const slug = a.ctx.remoteUrl ? parseRepoSlug(a.ctx.remoteUrl) : null;
-  if (!slug) return notPublished('no-remote');
+  if (!a.ctx.remoteUrl) return notPublished('no-remote');
   if (!a.ctx.headSha || !a.ctx.headSha.trim()) return notPublished('no-head');
   const api = resolveApiBase(a.opts.apiBaseUrl);
   if (!api) return notPublished('invalid-api-base-url');
-  return { repo: `${slug.owner}/${slug.repo}`, ...api };
+  const id = bindGitRemote(a.ctx.remoteUrl, api.apiHost, !!a.opts.apiBaseUrl?.trim());
+  if (!id) return notPublished('context-mismatch', 'Git remote host is not bound to the API host');
+  return { repo: `${id.owner}/${id.repo}`, ...api };
 }
 
 const sameRepo = (a: string | undefined, b: string | undefined): boolean => {
-  const x = a ? parseRepoSlug(a) : null;
-  const y = b ? parseRepoSlug(b) : null;
-  return !!x && !!y && `${x.owner}/${x.repo}`.toLowerCase() === `${y.owner}/${y.repo}`.toLowerCase();
+  const x = a ? parseRepoIdentity(a) : null;
+  const y = b ? parseRepoIdentity(b) : null;
+  return !!x && !!y && x.host === y.host &&
+    `${x.owner}/${x.repo}`.toLowerCase() === `${y.owner}/${y.repo}`.toLowerCase();
 };
 
 /** Verify the receipt for HEAD and publish the SHIELD Check Run it supports. Never throws. */
