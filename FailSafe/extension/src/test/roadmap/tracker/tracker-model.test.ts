@@ -185,6 +185,8 @@ suite('tracker-model (B-INT-17)', () => {
   test('isProgramEligible: forecasts get no verified progress snapshot; undated production remains eligible', () => {
     assert.equal(isProgramEligible(rc('v6.1.0', undefined, 'forecast'), { now: NOW, minorDays: 60, patchDays: 30 }), false,
       'future release should remain visible without implying completed work');
+    assert.equal(isProgramEligible(rc('next-feature-release', undefined, 'forecast'), { now: NOW, minorDays: 60, patchDays: 30 }), false,
+      'a non-semver forecast cannot bypass snapshot denial');
     assert.equal(isProgramEligible(rc('v5.9.9', undefined), { now: NOW, minorDays: 60, patchDays: 30 }), true,
       'undated production keeps previous compatibility behavior');
     assert.equal(isProgramEligible(rc('v5.9.9', undefined, 'pr'), { now: NOW, minorDays: 60, patchDays: 30 }), true,
