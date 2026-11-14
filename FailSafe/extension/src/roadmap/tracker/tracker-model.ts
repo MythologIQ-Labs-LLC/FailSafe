@@ -154,13 +154,13 @@ export function isProgramEligible(
   rc: TrackerRc,
   opts: { now: Date; minorDays: number; patchDays: number },
 ): boolean {
+  // State governs evidence eligibility independently of release ID syntax.
+  // A non-semver forecast must not acquire a verified progress snapshot.
+  if (rc.state === 'forecast') return false;
   const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(rc.id);
   if (!m) return true;
   const minor = parseInt(m[2], 10);
   const patch = parseInt(m[3], 10);
-  // A forecast is a future release target, not a completed release snapshot.
-  // The dashboard keeps the anchor visible but marks the bars "no snapshot".
-  if (rc.state === 'forecast') return false;
   if (rc.state !== 'prod') return true;          // provisional staging/PR unchanged
   if (minor === 0 && patch === 0) return true;   // major → full history
   const date = rc.note ? new Date(rc.note) : null;
