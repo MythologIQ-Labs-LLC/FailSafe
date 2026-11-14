@@ -528,6 +528,8 @@ section.sec > h2 .idx{
 .no-snapshot-notice[hidden]{display:none}
 .bars.no-snapshot{opacity:.4;filter:saturate(.6)}
 .bars.no-snapshot .bar-row{box-shadow:none}
+/* Never display an old completed bar as a forecast's progress. */
+.bars.no-snapshot .bar-row .track{visibility:hidden}
 
 /* ============================================================
    4 · §02 VERTICAL DEEP-DIVE TABS
@@ -1601,13 +1603,12 @@ function buildProgramBarsSection(idx) {
     return sec;
   }
 
-  // Eligibility notice — shown when the selected release carries no weighted
-  // program snapshot (older minor/patch outside the retroactive window).
+  // Eligibility notice covers both historical out-of-window releases and
+  // future forecasts. selectRelease assigns the correct reason per release.
   const notice = el("div", "no-snapshot-notice");
   notice.id = "bars-no-snapshot-notice";
   notice.hidden = true;
-  notice.textContent = "Program progress isn’t tracked for this release "
-    + "(older minor/patch outside the retroactive window) — see the release record above.";
+  notice.textContent = "No verified weighted program snapshot is available for this release.";
   sec.appendChild(notice);
 
   const bars = el("div", "bars");
@@ -1722,12 +1723,19 @@ function selectRelease(rcIndex, animate) {
   });
 
   // Eligibility gating — when this release has no weighted snapshot, don't
-  // present a misleading cumulative: surface a notice + de-emphasize the bars,
-  // and HOLD the last eligible bar fills rather than recomputing to this release.
+  // present a misleading cumulative: explain the actual reason, hide the
+  // historical fill, and show n/a rather than a stale completion percentage.
   const barsBox = $("#program-bars");
   const notice = $("#bars-no-snapshot-notice");
   if (barsBox) barsBox.classList.toggle("no-snapshot", !eligible);
-  if (notice) notice.hidden = eligible;
+  if (notice) {
+    notice.hidden = eligible;
+    if (!eligible) notice.textContent = rc.state === "forecast"
+      ? "No verified weighted program snapshot exists for planned " + rc.id
+        + ". Historical program completion does not measure this release's delivery."
+      : "Program progress isn’t tracked for this release "
+        + "(older minor/patch outside the retroactive window) — see the release record above.";
+  }
 
   // recompute each program bar (only when this release has a weighted snapshot)
   const parts = [];
@@ -1740,8 +1748,9 @@ function selectRelease(rcIndex, animate) {
     const asof = row.querySelector('[data-role="asof"]');
 
     if (!eligible) {
-      // No snapshot for this release: keep the last eligible fill/pct in place
-      // (the notice + de-emphasis make clear the numbers don't apply here).
+      // Do not carry a visually completed percentage into an unverified release.
+      // Existing fill width is immaterial: the no-snapshot class hides its track.
+      pct.textContent = "n/a";
       asof.textContent = "no snapshot · " + rc.id;
       parts.push((prog ? (prog.name || prog.key) : progKey) + " (no snapshot)");
       return;

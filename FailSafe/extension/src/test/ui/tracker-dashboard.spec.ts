@@ -324,3 +324,53 @@ test.describe('Development Tracker PDF export (FX888 / Phase 3)', () => {
     await expect(page.locator('#foot')).toBeVisible();
   });
 });
+
+
+// #679 / v6.1.0: a future forecast has no verified weighted snapshot.
+// This exercises the shipped dashboard in Chromium with a production-model
+// payload, including a real timeline selection and a return to shipped data.
+test.describe('Development Tracker forecast integrity (#679)', () => {
+  let controller: ConsoleServerController;
+  test.afterEach(async () => {
+    if (controller) { await controller.close(); await new Promise((r) => setTimeout(r, 50)); }
+  });
+
+  test('planned release hides historical percentages, explains why, and restores production on return', async ({ page }) => {
+    const model = buildTrackerModel(manifest({
+      rcs: [{ id: 'v6.1.0', state: 'forecast', tag: 'planned', summary: 'Native Qortara pilot, unverified' }],
+      phases: [{ prog: 'ci', key: 'SHIP', rc: 'v6.0.13', w: 40, title: 'Verified earlier release' }],
+    }), {
+      discoveredReleases: [{ id: 'v6.0.13', state: 'prod' }],
+      shippedReleaseIds: ['v6.0.13'],
+      now: new Date('2026-11-13T21:00:00Z'),
+    });
+    const forecast = model.rcs.find((rc) => rc.id === 'v6.1.0');
+    expect(forecast?.state).toBe('forecast');
+    expect(forecast?.progressEligible).toBe(false);
+
+    controller = await serveConsoleServerUI();
+    await page.route('**/api/v1/tracker', (route) => route.fulfill({
+      json: { ...model, cadence: 'semver', manifestPresent: true, lint: [], ok: true },
+    }));
+    await page.goto(`${controller.url}/console/tracker`);
+
+    // The real user path first drills into major v6, then selects the future RC.
+    await page.locator('#timeline .tl-node[data-major-key="v6"]').click();
+    await page.locator('#timeline .tl-node').filter({ hasText: 'v6.1.0' }).click();
+    const notice = page.locator('#bars-no-snapshot-notice');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText('planned v6.1.0');
+    await expect(notice).not.toContainText('older minor/patch');
+    await expect(page.locator('#program-bars')).toHaveClass(/no-snapshot/);
+    await expect(page.locator('.bar-row .pct')).toHaveText(['n/a', 'n/a', 'n/a']);
+    await expect(page.locator('.bar-row .track').first()).toBeHidden();
+    await expect(page.locator('.bar-row [data-role="asof"]').first()).toContainText('no snapshot · v6.1.0');
+
+    // Returning to the shipped version must restore actual weighted percentages.
+    await page.locator('#timeline .tl-node').filter({ hasText: 'v6.0.13' }).click();
+    await expect(notice).toBeHidden();
+    await expect(page.locator('#program-bars')).not.toHaveClass(/no-snapshot/);
+    await expect(page.locator('.bar-row .pct').first()).toHaveText('40%');
+    await expect(page.locator('.bar-row .track').first()).toBeVisible();
+  });
+});

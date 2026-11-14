@@ -182,12 +182,18 @@ suite('tracker-model (B-INT-17)', () => {
     assert.equal(isProgramEligible(rc('v5.4.1', '2026-04-15'), { now: NOW, minorDays: 60, patchDays: 30 }), false, 'patch >30d');
   });
 
-  test('isProgramEligible: forecast / undated → eligible (shown)', () => {
-    assert.equal(isProgramEligible(rc('v6.0.0', undefined, 'forecast'), { now: NOW, minorDays: 60, patchDays: 30 }), true);
-    assert.equal(isProgramEligible(rc('v5.9.9', undefined), { now: NOW, minorDays: 60, patchDays: 30 }), true, 'undated → shown');
+  test('isProgramEligible: forecasts get no verified progress snapshot; undated production remains eligible', () => {
+    assert.equal(isProgramEligible(rc('v6.1.0', undefined, 'forecast'), { now: NOW, minorDays: 60, patchDays: 30 }), false,
+      'future release should remain visible without implying completed work');
+    assert.equal(isProgramEligible(rc('next-feature-release', undefined, 'forecast'), { now: NOW, minorDays: 60, patchDays: 30 }), false,
+      'a non-semver forecast cannot bypass snapshot denial');
+    assert.equal(isProgramEligible(rc('v5.9.9', undefined), { now: NOW, minorDays: 60, patchDays: 30 }), true,
+      'undated production keeps previous compatibility behavior');
+    assert.equal(isProgramEligible(rc('v5.9.9', undefined, 'pr'), { now: NOW, minorDays: 60, patchDays: 30 }), true,
+      'provisional PR status retains its existing eligibility rule');
   });
 
-  test('buildTrackerModel attaches progressEligible only when now is supplied', () => {
+  test('buildTrackerModel keeps forecasts unscored with or without now', () => {
     const manifest: TrackerManifest = { programs: [{ key: 'c', name: 'C', accent: '#0f0' }], rcs: [] };
     const disc = discoverReleases('## [3.0.0] - 2026-05-01\nx\n## [3.1.0] - 2026-01-01\ny\n');
     const withNow = buildTrackerModel(manifest, { discoveredReleases: disc, now: NOW, minorDays: 60, patchDays: 30 });
@@ -195,6 +201,23 @@ suite('tracker-model (B-INT-17)', () => {
     assert.equal(withNow.rcs.find((r) => r.id === 'v3.1.0')!.progressEligible, false, 'old minor not eligible');
     const noNow = buildTrackerModel(manifest, { discoveredReleases: disc });
     assert.equal(noNow.rcs[0].progressEligible, undefined, 'no now → undefined (treated eligible by UI)');
+
+    const withForecast = buildTrackerModel({
+      ...manifest,
+      rcs: [{ id: 'v6.1.0', state: 'forecast', tag: 'planned' }],
+    }, { discoveredReleases: disc, now: NOW });
+    const candidate = withForecast.rcs.find((r) => r.id === 'v6.1.0');
+    assert.ok(candidate, 'forecast release remains in the resolved axis');
+    assert.equal(candidate.progressEligible, false, 'forecast does not get a verified progress snapshot');
+
+    const noClockForecast = buildTrackerModel({
+      ...manifest,
+      rcs: [{ id: 'v6.1.0', state: 'forecast', tag: 'planned' }],
+    }, { discoveredReleases: disc });
+    assert.equal(noClockForecast.rcs.find((r) => r.id === 'v6.1.0')?.progressEligible, false,
+      'forecast stays ineligible for snapshot even when a pure caller omits now');
+    assert.equal(noClockForecast.rcs.find((r) => r.id === 'v3.0.0')?.progressEligible, undefined,
+      'prior unclocked production semantics remain unchanged');
   });
 
   test('validateManifest with resolved axis: a phase targeting a DISCOVERED release passes', () => {

@@ -146,17 +146,22 @@ export function discoverReleases(changelogText: string): TrackerRc[] {
  * Tiered program-progress eligibility: the weighted calculator is populated for
  * MAJOR releases across the full history, but for MINOR/PATCH releases only
  * within a recent window (so we don't owe weighted data for every old patch).
- * Pure — `now` is injected. Non-prod (forecast) + undated + unparseable → shown.
+ * Pure — `now` is injected. Forecasts remain on the release axis but
+ * cannot receive a verified weighted snapshot before shipping. Other non-prod
+ * and undated/unparseable records retain their existing eligibility behavior.
  */
 export function isProgramEligible(
   rc: TrackerRc,
   opts: { now: Date; minorDays: number; patchDays: number },
 ): boolean {
+  // State governs evidence eligibility independently of release ID syntax.
+  // A non-semver forecast must not acquire a verified progress snapshot.
+  if (rc.state === 'forecast') return false;
   const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(rc.id);
   if (!m) return true;
   const minor = parseInt(m[2], 10);
   const patch = parseInt(m[3], 10);
-  if (rc.state !== 'prod') return true;          // forecast/planned → always tracked
+  if (rc.state !== 'prod') return true;          // provisional staging/PR unchanged
   if (minor === 0 && patch === 0) return true;   // major → full history
   const date = rc.note ? new Date(rc.note) : null;
   if (!date || Number.isNaN(date.getTime())) return true;
@@ -204,15 +209,17 @@ export function buildTrackerModel(
     return rc; // forecast: no ref unless the manifest declared one
   });
 
-  // Tiered program-progress eligibility (majors always; minors/patches within
-  // their recent window). Computed only when `now` is supplied — the live route
-  // always supplies it; pure callers may omit, leaving progressEligible
-  // undefined (the dashboard treats undefined as eligible for back-compat).
+  // Time-window eligibility for shipped history requires `now` (the live route
+  // always supplies it). Forecasts are never entitled to a verified progress
+  // snapshot, even for pure/offline callers that omit `now`; preserve undefined
+  // for other states without a clock to retain the historical caller contract.
   if (live.now) {
     const minorDays = live.minorDays ?? 60;
     const patchDays = live.patchDays ?? 30;
     const now = live.now;
     rcs = rcs.map((rc) => ({ ...rc, progressEligible: isProgramEligible(rc, { now, minorDays, patchDays }) }));
+  } else {
+    rcs = rcs.map((rc) => rc.state === 'forecast' ? { ...rc, progressEligible: false } : rc);
   }
 
   return {
