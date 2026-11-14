@@ -76,8 +76,9 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
     return;
   }
   const api = resolveApiBase(opts.apiBaseUrl);
-  if (!api || !bindGitRemote(ctx.remoteUrl, api.apiHost, !!opts.apiBaseUrl?.trim())) {
-    vscode.window.showWarningMessage('Git origin is not bound to the approved GitHub API host. No publishing attempted.');
+  const id = api && bindGitRemote(ctx.remoteUrl, api.apiHost, !!opts.apiBaseUrl?.trim());
+  if (!api || !id) {
+    vscode.window.showWarningMessage('Git origin is not bound to the configured GitHub API host. No publishing attempted.');
     return;
   }
 
@@ -85,7 +86,7 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
   // neutral advisory only; the SHIELD check name remains reserved for a
   // future publisher that validates an exact native receipt (#476).
   const consent = await vscode.window.showWarningMessage(
-    'No verified SHIELD audit receipt is available. Only a neutral, non-authoritative manual advisory can be published.',
+    `Only a neutral, non-authoritative advisory can be published. API: ${api.baseUrl}. Repository: ${id.host}/${id.owner}/${id.repo}. The stored GitHub token will be sent to ${api.origin}; PR linkage may also read PR and issue metadata. No SHIELD approval is implied. Publish?`,
     { modal: true },
     'Publish advisory',
   );
