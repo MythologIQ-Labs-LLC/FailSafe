@@ -126,6 +126,7 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
       () => publishLinkageCheck({
         ctx, opts, owner: slug.owner, repo: slug.repo,
         prNumber, get: defaultGitHubGet, post: defaultGitHubPost,
+        freshContext: async () => readGitContext(root),
       }),
     );
     if (!linkage.localOnly && linkage.ok) {
