@@ -302,14 +302,15 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     const run = async (endpoint?: { value: string; scope: EndpointScope }, scope: 'user' | 'workspace' = 'user') => {
       const x = await credentials(TOKEN, endpoint, scope);
       const r = recorder();
+      let prompt = '';
       const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
         workspaceRoot: '/ws', git: async (args, cwd) => {
           const res = await fakeGit(args, cwd);
           return !endpoint && args[0] === 'remote' ? { ...res, stdout: 'https://github.com/o/r.git' } : res;
-        }, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+        }, confirm: async (message) => { prompt = message; return true; }, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
         ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), r.post),
       });
-      return { step: (result as { step: string }).step, sent: r.sent };
+      return { step: (result as { step: string }).step, sent: r.sent, prompt };
     };
     const refused = await run({ value: GHE, scope: 'user' });
     assert.equal(refused.step, 'pushed', 'a forged user-level GHES endpoint cannot use a User token');
@@ -317,6 +318,9 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     const ghe = await run({ value: GHE, scope: 'user' }, 'workspace');
     assert.equal(ghe.step, 'pr');
     assert.deepEqual(ghe.sent.map((s) => [s.method, s.url, s.auth]), [['POST', `${GHE}/repos/o/r/pulls`, `token ${TOKEN}`]]);
+    assert.ok(ghe.prompt.includes(`GitHub PR destination: ${GHE}/repos/o/r`));
+    assert.ok(ghe.prompt.includes('Workspace GitHub token would be sent to https://ghe.example'));
+    assert.ok(!ghe.prompt.includes(TOKEN), 'no credential in operator prompt');
     const dflt = await run();
     assert.deepEqual(dflt.sent.map((s) => s.url), ['https://api.github.com/repos/o/r/pulls']);
   });
