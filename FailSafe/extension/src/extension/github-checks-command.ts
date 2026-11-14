@@ -86,7 +86,7 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
   // neutral advisory only; the SHIELD check name remains reserved for a
   // future publisher that validates an exact native receipt (#476).
   const consent = await vscode.window.showWarningMessage(
-    `Only a neutral, non-authoritative advisory can be published. API: ${api.baseUrl}. Repository: ${id.host}/${id.owner}/${id.repo}. The stored GitHub token will be sent to ${api.origin}; PR linkage may also read PR and issue metadata. No SHIELD approval is implied. Publish?`,
+    `Publish a neutral manual advisory and, if a PR is found, a separate PR-linkage check (success, neutral or failure, never a SHIELD verdict)? API: ${api.baseUrl}. Repository: ${id.host}/${id.owner}/${id.repo}. The stored GitHub token will be sent to ${api.origin}; PR and issue metadata may be read. This is not SHIELD approval.`,
     { modal: true },
     'Publish advisory',
   );
