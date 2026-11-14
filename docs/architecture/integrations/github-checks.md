@@ -92,7 +92,7 @@ Proposed (not built): receipt-to-check edges in the local relationship graph, sp
 ## Customer UI and actions
 
 Command palette: "FailSafe: Publish Manual GitHub Advisory" `FailSafe/extension/package.json:170-171` (`"title": "FailSafe: Publish Manual GitHub Advisory"`).
-The modal displays the resolved API endpoint, Git repository and token destination, and offers only "Publish advisory" `FailSafe/extension/src/extension/github-checks-command.ts:89` (`Only a neutral, non-authoritative advisory can be published`).
+The modal discloses the neutral advisory, optional PR-linkage Check Run (which can succeed without being SHIELD proof), exact API endpoint, Git repository and token destination, and offers only "Publish advisory" `FailSafe/extension/src/extension/github-checks-command.ts:89` (`Publish a neutral manual advisory`).
 The same command also publishes the PR-linkage check when HEAD has a PR `FailSafe/extension/src/extension/github-checks-command.ts:115` (`also publish the PR↔issue linkage check when HEAD has a PR`).
 Status: a Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).
 
