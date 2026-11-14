@@ -75,7 +75,7 @@ The publishable (name, conclusion) pairs are a closed set: the PR-linkage check 
 Any name that normalises to contain "shield" is refused by the generic path `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:42-44` (`.includes('shield')`).
 The payload is copied field by field into a null-prototype object before checking and posting `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:73-76` (`Null prototype at every level`).
 Linkage findings: a fail finding gives failure, a warn finding neutral, none success `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:128-130` (`const conclusion: CheckConclusion = hasFail ? 'failure' : hasWarn ? 'neutral' : 'success';`).
-The repository slug is parsed from the remote URL and the host is ignored `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:47-48` (`The host is ignored.`).
+The Git remote is parsed as a complete HTTPS, SSH or scp identity (host + owner + repo), not a suffix. The publisher binds `github.com` to `api.github.com`; an explicit GHES API host must match the Git remote host before a token-backed GET/POST `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts` (`bindGitRemote`).
 
 ## Persisted artifacts
 
@@ -100,11 +100,12 @@ Status: a Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/m
 
 Enforced: an unverified SHIELD PASS cannot be posted; the SHIELD name with success needs a verified receipt for exactly that commit, repository and API host `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:88-93` (`SHIELD check refused: no verified receipt authority`).
 Enforced: the API base host must equal the target host `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:113-115` (`TARGET_HOST_MISMATCH_ERROR`).
+Enforced in the candidate #476 correction: a generic Check Run payload's `head_sha` must equal the approved local Git HEAD; PR linkage refuses foreign owner/repo before the initial GET and requires the fetched PR `head.sha` to match before issue reads; the SHIELD evidence source and command context must agree on remote host as well as slug `FailSafe/extension/src/integrations/github-checks/`.
 Enforced (main only): the token header is attached only when the request URL's origin equals the API base's origin `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:169-175` (`if (!headers) return { ok: false, error: TARGET_HOST_MISMATCH_ERROR };`).
 Not enforced: a verified SHIELD receipt is bound to the API host without its port `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:92` (`target.apiHost.toLowerCase() !== authority.apiHost`); that publisher has no caller.
 Advisory: the manual advisory and a neutral linkage result do not block a merge; GitHub treats neutral as passing `FailSafe/extension/src/integrations/github-checks/shield-check-publish.ts:7-8` (`GitHub treats neutral as passing for required`).
 Observed only: a failing linkage check blocks only where branch protection requires it, which FailSafe does not configure (unverified).
-Not enforced: the fork guard exists, but the command never sets it, so a fork clone is not detected `FailSafe/extension/src/extension/github-checks-command.ts:39-43` (`function readGitContext(cwd: string): GitContext {`).
+Not enforced: the fork guard exists, but the command never sets it, so a fork clone is not detected `FailSafe/extension/src/extension/github-checks-command.ts:39-43` (`function readGitContext(cwd: string): GitContext {`). The candidate #476 command re-reads origin/HEAD after human consent and before linkage, but cannot cryptographically pin Git refs or prove that source-controlled workspace settings reflect an independently approved GHES binding.
 
 ## Failure, offline, stale and permission semantics
 
