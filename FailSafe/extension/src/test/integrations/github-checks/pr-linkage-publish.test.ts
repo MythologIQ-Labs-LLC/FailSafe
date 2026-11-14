@@ -56,7 +56,7 @@ suite('github-checks publishLinkageCheck (#154 live bridge)', () => {
     let g = 0; let p = 0;
     const get: GitHubGetFn = async () => { g += 1; return { status: 200, body: '[]' }; };
     const post: GitHubPostFn = async () => { p += 1; return { status: 201, body: '{}' }; };
-    const res = await publishLinkageCheck({ ctx: CTX, opts: { enabled: false }, owner: 'a', repo: 'b', prNumber: 1, get, post });
+    const res = await publishLinkageCheck({ ctx: CTX, opts: { enabled: false }, owner: 'a', repo: 'b', prNumber: 1, get, post, freshContext: async () => CTX });
     assert.equal(res.localOnly, true);
     assert.equal(g + p, 0);
   });
@@ -69,7 +69,7 @@ suite('github-checks publishLinkageCheck (#154 live bridge)', () => {
     };
     let posted = '';
     const post: GitHubPostFn = async (_u, _h, body) => { posted = body; return { status: 201, body: JSON.stringify({ id: 42 }) }; };
-    const res = await publishLinkageCheck({ ctx: CTX, opts: OPTS, owner: 'acme', repo: 'widgets', prNumber: 7, get, post });
+    const res = await publishLinkageCheck({ ctx: CTX, opts: OPTS, owner: 'acme', repo: 'widgets', prNumber: 7, get, post, freshContext: async () => CTX });
     assert.equal(res.ok, true);
     assert.equal(res.checkRunId, 42);
     assert.ok(/"conclusion":"failure"/.test(posted), '#4 silent non-close → failure');
@@ -82,14 +82,14 @@ suite('github-checks publishLinkageCheck (#154 live bridge)', () => {
         : { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }]) };
     let posted = '';
     const post: GitHubPostFn = async (_u, _h, body) => { posted = body; return { status: 201, body: JSON.stringify({ id: 1 }) }; };
-    const res = await publishLinkageCheck({ ctx: CTX, opts: OPTS, owner: 'acme', repo: 'widgets', prNumber: 3, get, post });
+    const res = await publishLinkageCheck({ ctx: CTX, opts: OPTS, owner: 'acme', repo: 'widgets', prNumber: 3, get, post, freshContext: async () => CTX });
     assert.equal(res.ok, true);
     assert.ok(/"conclusion":"success"/.test(posted));
   });
 
   test('audit fetch failure ⇒ ok:false, no throw', async () => {
     const get: GitHubGetFn = async () => ({ status: 500, body: '' });
-    const res = await publishLinkageCheck({ ctx: CTX, opts: OPTS, owner: 'acme', repo: 'widgets', prNumber: 7, get, post: okPost });
+    const res = await publishLinkageCheck({ ctx: CTX, opts: OPTS, owner: 'acme', repo: 'widgets', prNumber: 7, get, post: okPost, freshContext: async () => CTX });
     assert.equal(res.ok, false);
     assert.ok(res.error && res.error.length > 0);
   });
