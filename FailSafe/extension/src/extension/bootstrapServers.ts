@@ -68,7 +68,7 @@ async function offerGovernedCommit(
     const result = await runGovernedCommitFlow(action, changed, labels.length ? labels : changed, {
       workspaceRoot,
       git: defaultGitRunner,
-      confirm: async (msg) => (await vscode.window.showInformationMessage(msg, "Yes", "No")) === "Yes",
+      confirm: async (msg) => (await vscode.window.showWarningMessage(msg, { modal: true }, "Yes", "No")) === "Yes",
       recordDeclined: async (info) => {
         try {
           const dir = path.join(workspaceRoot, ".failsafe", "governance");
