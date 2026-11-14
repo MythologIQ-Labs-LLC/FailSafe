@@ -19,7 +19,7 @@ import { publishLinkageCheck } from '../../../integrations/github-checks/pr-link
 import { buildManualAdvisoryPayload } from '../../../integrations/github-checks/github-checks-map';
 import { IntegrationCredentials } from '../../../integrations/credentials/IntegrationCredentials';
 import {
-  endpointRefusalMessage, governedCommitConnection, type EndpointReader, type EndpointScope,
+  githubCustomEndpointRefusalMessage, governedCommitConnection, type EndpointReader, type EndpointScope,
 } from '../../../integrations/credentials/credentialGates';
 import { governedCommitPrStep, runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
 import type { GitRunner } from '../../../extension/governedCommit';
@@ -176,10 +176,10 @@ class RecordingUi {
   warn(message: string): PromiseLike<string | undefined> { this.warnings.push(message); return Promise.resolve(undefined); }
 }
 
-async function credentials(token?: string, endpoint?: { value: string; scope: EndpointScope }) {
+async function credentials(token?: string, endpoint?: { value: string; scope: EndpointScope }, scope: 'user' | 'workspace' = 'user') {
   const creds = new IntegrationCredentials(new FakeSecretStore(), new FakeInspector(), new RecordingLogger());
   await creds.init();
-  if (token) await creds.set('github.token', 'user', token);
+  if (token) await creds.set('github.token', scope, token);
   const endpoints = new FakeEndpoints();
   if (endpoint) endpoints.values.set('failsafe.integrations.github.apiBaseUrl', endpoint);
   return { creds, endpoints, ui: new RecordingUi() };
@@ -276,13 +276,16 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
   test('G7 governedCommitConnection keeps the workspace-endpoint refusal and stays silent without a token', async () => {
     const refused = await credentials(TOKEN, { value: 'https://ghe.evil/api/v3', scope: 'workspace' });
     assert.equal(governedCommitConnection(refused.creds, refused.endpoints, refused.ui), undefined);
-    assert.deepEqual(refused.ui.warnings, [endpointRefusalMessage('GitHub')]);
+    assert.deepEqual(refused.ui.warnings, [githubCustomEndpointRefusalMessage()]);
 
     const none = await credentials();
     assert.equal(governedCommitConnection(none.creds, none.endpoints, none.ui), undefined);
     assert.deepEqual(none.ui.warnings, [], 'no token: no warning');
 
-    const paired = await credentials(TOKEN, { value: GHE, scope: 'user' });
+    const spoofed = await credentials(TOKEN, { value: GHE, scope: 'user' });
+    assert.equal(governedCommitConnection(spoofed.creds, spoofed.endpoints, spoofed.ui), undefined);
+    assert.deepEqual(spoofed.ui.warnings, [githubCustomEndpointRefusalMessage()]);
+    const paired = await credentials(TOKEN, { value: GHE, scope: 'user' }, 'workspace');
     assert.deepEqual(governedCommitConnection(paired.creds, paired.endpoints, paired.ui), { credential: TOKEN, endpoint: GHE });
   });
 
@@ -296,8 +299,8 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
   });
 
   test('G9 the production option helper sends the governed-commit PR to the endpoint paired with the token', async () => {
-    const run = async (endpoint?: { value: string; scope: EndpointScope }) => {
-      const x = await credentials(TOKEN, endpoint);
+    const run = async (endpoint?: { value: string; scope: EndpointScope }, scope: 'user' | 'workspace' = 'user') => {
+      const x = await credentials(TOKEN, endpoint, scope);
       const r = recorder();
       const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
         workspaceRoot: '/ws', git: async (args, cwd) => {
@@ -308,7 +311,10 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
       });
       return { step: (result as { step: string }).step, sent: r.sent };
     };
-    const ghe = await run({ value: GHE, scope: 'user' });
+    const refused = await run({ value: GHE, scope: 'user' });
+    assert.equal(refused.step, 'pushed', 'a forged user-level GHES endpoint cannot use a User token');
+    assert.deepEqual(refused.sent, []);
+    const ghe = await run({ value: GHE, scope: 'user' }, 'workspace');
     assert.equal(ghe.step, 'pr');
     assert.deepEqual(ghe.sent.map((s) => [s.method, s.url, s.auth]), [['POST', `${GHE}/repos/o/r/pulls`, `token ${TOKEN}`]]);
     const dflt = await run();
