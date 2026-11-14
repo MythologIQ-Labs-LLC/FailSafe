@@ -16,7 +16,7 @@
 
 import * as http from 'http';
 import * as https from 'https';
-import { isPublishable, parseRepoSlug, type CheckRunPayload } from './github-checks-map';
+import { bindGitRemote, isPublishable, type CheckRunPayload } from './github-checks-map';
 import { postCheckRun, toWirePayload } from './check-run-transport';
 import { INVALID_API_BASE_ERROR, NOT_PUBLISHABLE_ERROR } from './check-run-errors';
 import { apiBaseFor, githubAuthHeaders } from './github-host-affinity';
@@ -81,13 +81,15 @@ export async function publishCheckRunPayload(
   if (!opts.token || !opts.token.trim()) return { ok: true, localOnly: true, error: 'no token configured' };
   if (ctx.isFork) return { ok: true, localOnly: true, error: 'fork PR context — local-only' };
 
-  const slug = ctx.remoteUrl ? parseRepoSlug(ctx.remoteUrl) : null;
-  if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
+  if (!ctx.remoteUrl) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
   if (!ctx.headSha || !ctx.headSha.trim()) return { ok: true, localOnly: true, error: 'no HEAD sha resolved' };
+  if (wire.head_sha !== ctx.headSha) return { ok: false, error: 'check run HEAD differs from the active Git HEAD' };
 
   const api = apiBaseFor(opts.apiBaseUrl);
   if (!api.ok) return { ok: false, error: api.error };
-  const res = await postCheckRun(wire, { repo: `${slug.owner}/${slug.repo}`, baseUrl: api.base.baseUrl, apiHost: api.base.apiHost }, opts.token, post);
+  const id = bindGitRemote(ctx.remoteUrl, api.base.apiHost, !!opts.apiBaseUrl?.trim());
+  if (!id) return { ok: false, error: 'Git remote is not bound to the configured GitHub API host' };
+  const res = await postCheckRun(wire, { repo: `${id.owner}/${id.repo}`, baseUrl: api.base.baseUrl, apiHost: api.base.apiHost }, opts.token, post);
   return { ok: res.ok, status: res.status, checkRunId: res.checkRunId, error: res.error };
 }
 
@@ -122,13 +124,14 @@ export async function createPullRequest(
   post: GitHubPostFn,
 ): Promise<CreatePullRequestResult> {
   if (!opts.token || !opts.token.trim()) return { ok: true, localOnly: true, error: 'no token configured' };
-  const slug = opts.remoteUrl ? parseRepoSlug(opts.remoteUrl) : null;
-  if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
+  if (!opts.remoteUrl) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
 
-  // #538: a refused base is an error (not a local-only skip); nothing is sent.
+  // No network until the remote's host and the configured API host agree.
   const api = apiBaseFor(opts.apiBaseUrl);
   if (!api.ok) return { ok: false, error: api.error };
-  const url = `${api.base.baseUrl}/repos/${slug.owner}/${slug.repo}/pulls`;
+  const id = bindGitRemote(opts.remoteUrl, api.base.apiHost, !!opts.apiBaseUrl?.trim());
+  if (!id) return { ok: false, error: 'Git remote is not bound to the configured GitHub API host' };
+  const url = `${api.base.baseUrl}/repos/${id.owner}/${id.repo}/pulls`;
   const headers = githubAuthHeaders(api.base, url, opts.token, {
     'Content-Type': 'application/json',
     Accept: 'application/vnd.github+json',

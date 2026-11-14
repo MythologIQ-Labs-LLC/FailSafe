@@ -212,7 +212,7 @@ suite('github-checks client guards (#96)', () => {
   test('custom apiBaseUrl is honored (GHES)', async () => {
     let sentUrl = '';
     const post: GitHubPostFn = async (url) => { sentUrl = url; return { status: 201, body: OK_BODY }; };
-    await publishCheckRunPayload(advisory, CTX, { enabled: true, token: 't', apiBaseUrl: 'https://ghe.acme.com/api/v3/' }, post);
+    await publishCheckRunPayload(advisory, { ...CTX, remoteUrl: 'https://ghe.acme.com/acme/failsafe.git' }, { enabled: true, token: 't', apiBaseUrl: 'https://ghe.acme.com/api/v3/' }, post);
     assert.equal(sentUrl, 'https://ghe.acme.com/api/v3/repos/acme/failsafe/check-runs');
   });
 });

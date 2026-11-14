@@ -7,7 +7,7 @@ import { strict as assert } from 'assert';
 import * as path from 'path';
 import { IntegrationCredentials, secretKey } from '../../../integrations/credentials/IntegrationCredentials';
 import {
-  buildCredentialSnapshot, endpointRefusalMessage, governedCommitConnection, moveMessage, MOVE_ACTION,
+  buildCredentialSnapshot, endpointRefusalMessage, githubCustomEndpointRefusalMessage, governedCommitConnection, moveMessage, MOVE_ACTION,
   notifierConfig, notifyFailureText, optionalCredential, providerConnection, requireCredential,
   unavailableMessage, type EndpointReader, type EndpointScope,
 } from '../../../integrations/credentials/credentialGates';
@@ -90,7 +90,8 @@ suite('requireCredential and providerConnection (FX965 #482)', () => {
   for (const [endpointScope, credScope, allowed] of [
     ['workspace', 'user', false],
     ['workspace', 'workspace', true],
-    ['user', 'user', true],
+    ['user', 'user', false],
+    ['user', 'workspace', true],
     ['default', 'user', true],
   ] as const) {
     test(`endpoint trust: endpoint from ${endpointScope} + ${credScope} credential -> ${allowed ? 'allowed' : 'refused'}`, async () => {
@@ -99,9 +100,25 @@ suite('requireCredential and providerConnection (FX965 #482)', () => {
       if (endpointScope !== 'default') x.endpoints.values.set('failsafe.integrations.github.apiBaseUrl', { value: 'https://ghe.example/api/v3', scope: endpointScope });
       const conn = providerConnection(x.creds, x.endpoints, 'github', x.ui, 'x');
       assert.equal(conn?.credential, allowed ? TOKEN : undefined);
-      assert.deepEqual(x.ui.warnings, allowed ? [] : [endpointRefusalMessage('GitHub')]);
+      assert.deepEqual(x.ui.warnings, allowed ? [] :
+        [githubCustomEndpointRefusalMessage()]);
     });
   }
+
+  test('B290: a Dev Container globalValue cannot authorize user GitHub credentials to another host', async () => {
+    const x = await h();
+    await x.creds.set('github.token', 'user', TOKEN);
+    for (const ep of ['https://ghe.attacker.example/api/v3', 'https://api.github.com.evil/api/v3',
+      'https://api.github.com/other', 'not a URL']) {
+      x.endpoints.values.set('failsafe.integrations.github.apiBaseUrl', { value: ep, scope: 'user' });
+      assert.equal(governedCommitConnection(x.creds, x.endpoints, x.ui), undefined);
+    }
+    assert.deepEqual(x.ui.warnings, Array(4).fill(githubCustomEndpointRefusalMessage()));
+    x.endpoints.values.set('failsafe.integrations.github.apiBaseUrl', {
+      value: 'https://api.github.com', scope: 'user',
+    });
+    assert.equal(providerConnection(x.creds, x.endpoints, 'github', x.ui, 'unconfigured')?.credential, TOKEN);
+  });
 });
 
 suite('integration consumers (FX965 #482)', () => {
@@ -171,7 +188,7 @@ suite('integration consumers (FX965 #482)', () => {
 
     await runGitHubAdvisory(deps);
     assert.deepEqual(published, []);
-    assert.deepEqual(x.ui.warnings, [endpointRefusalMessage('GitHub')]);
+    assert.deepEqual(x.ui.warnings, [githubCustomEndpointRefusalMessage()]);
 
     await x.creds.set('github.token', 'workspace', 'ws_gh_token_4321');
     await runGitHubAdvisory(deps);

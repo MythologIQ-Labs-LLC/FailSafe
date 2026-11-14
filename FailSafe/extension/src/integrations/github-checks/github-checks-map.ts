@@ -44,19 +44,47 @@ export function isShieldFamilyName(name: unknown): boolean {
   return name.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '').includes('shield');
 }
 
-/** Parse `owner/repo` from an https or ssh git remote URL. Returns null on
- *  anything that is not a recognizable GitHub remote. The host is ignored. */
+/** Exact local Git remote identity; never treat a suffix as repository authority. */
+export interface GitRepoIdentity { host: string; owner: string; repo: string }
+
+const REPO_PATH = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/;
+const HOST = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i;
+
+/** Parse only complete HTTPS, SSH and scp Git remotes, without URL normalization smuggling. */
+export function parseRepoIdentity(remoteUrl: string): GitRepoIdentity | null {
+  if (typeof remoteUrl !== 'string') return null;
+  const raw = remoteUrl.trim();
+  const scp = /^git@([^:/\s]+):(.+)$/i.exec(raw);
+  const match = /^(https|ssh):\/\/([^/?#\\\s]+)\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/i.exec(raw);
+  if (!scp && !match) return null;
+  const remotePath = scp ? scp[2] : `${match![3]}/${match![4]}`;
+  const parts = REPO_PATH.exec(remotePath);
+  if (!parts || ['.', '..'].includes(parts[1]) || ['.', '..'].includes(parts[2])) return null;
+  let host = scp?.[1];
+  if (!scp) {
+    let parsed: URL;
+    try { parsed = new URL(raw); } catch { return null; }
+    if (parsed.search || parsed.hash || (parsed.protocol === 'ssh:' && (parsed.username !== 'git' || parsed.password))) return null;
+    if (parsed.port) return null;
+    host = parsed.hostname;
+  }
+  if (!host || !HOST.test(host) || host.startsWith('.') || host.endsWith('.') || host.includes('..')) return null;
+  return { host: host.toLowerCase(), owner: parts[1], repo: parts[2] };
+}
+
+/** Legacy slug parser retains its shape but no longer accepts arbitrary URL suffixes. */
 export function parseRepoSlug(remoteUrl: string): { owner: string; repo: string } | null {
-  if (typeof remoteUrl !== 'string' || !remoteUrl.trim()) return null;
-  const s = remoteUrl.trim();
-  // git@github.com:owner/repo.git  |  ssh://git@github.com/owner/repo.git
-  // https://github.com/owner/repo(.git)  |  https://x-access-token:TOKEN@github.com/owner/repo.git
-  const m = /(?:[:/])([^/:\s]+)\/([^/\s]+?)(?:\.git)?$/.exec(s);
-  if (!m) return null;
-  const owner = m[1];
-  const repo = m[2];
-  if (!owner || !repo || owner.includes('@')) return null;
-  return { owner, repo };
+  const id = parseRepoIdentity(remoteUrl);
+  return id ? { owner: id.owner, repo: id.repo } : null;
+}
+
+/** Check the actual Git remote host against a configured GitHub API host before any I/O. */
+export function bindGitRemote(remoteUrl: string, apiHost: string, customApiBase: boolean): GitRepoIdentity | null {
+  const id = parseRepoIdentity(remoteUrl);
+  if (!id) return null;
+  if (apiHost.toLowerCase() === 'api.github.com') return id.host === 'github.com' ? id : null;
+  if (!customApiBase || ['github.com', 'api.github.com'].includes(id.host)) return null;
+  return id.host === apiHost.toLowerCase() ? id : null;
 }
 
 export interface CheckRunPayload {

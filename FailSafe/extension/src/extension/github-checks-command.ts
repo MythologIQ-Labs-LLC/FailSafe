@@ -9,9 +9,9 @@
 
 import * as vscode from 'vscode';
 import { execFileSync } from 'child_process';
-import { publishCheckRunPayload, defaultGitHubPost, defaultGitHubGet, type GitContext } from '../integrations/github-checks/github-checks-client';
+import { publishCheckRunPayload, defaultGitHubPost, defaultGitHubGet, resolveApiBase, type GitContext } from '../integrations/github-checks/github-checks-client';
 import { publishLinkageCheck } from '../integrations/github-checks/pr-linkage-publish';
-import { buildManualAdvisoryPayload, parseRepoSlug } from '../integrations/github-checks/github-checks-map';
+import { bindGitRemote, buildManualAdvisoryPayload, parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { providerMessage, type IntegrationCredentials } from '../integrations/credentials/IntegrationCredentials';
 import {
   disabledMessage, providerConnection, setCommandHint, type CredentialUi, type EndpointReader,
@@ -75,16 +75,27 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
     vscode.window.showWarningMessage('Could not resolve the git origin remote and HEAD — publishing a check requires both.');
     return;
   }
+  const api = resolveApiBase(opts.apiBaseUrl);
+  const id = api && bindGitRemote(ctx.remoteUrl, api.apiHost, !!opts.apiBaseUrl?.trim());
+  if (!api || !id) {
+    vscode.window.showWarningMessage('Git origin is not bound to the configured GitHub API host. No publishing attempted.');
+    return;
+  }
 
   // A human selection is NOT an independently verified Qor gate. Offer a
   // neutral advisory only; the SHIELD check name remains reserved for a
   // future publisher that validates an exact native receipt (#476).
   const consent = await vscode.window.showWarningMessage(
-    'No verified SHIELD audit receipt is available. Only a neutral, non-authoritative manual advisory can be published.',
+    `Publish a neutral manual advisory and, if a PR is found, a separate PR-linkage check (success, neutral or failure, never a SHIELD verdict)? API: ${api.baseUrl}. Repository: ${id.host}/${id.owner}/${id.repo}. The stored GitHub token will be sent to ${api.origin}; PR and issue metadata may be read. This is not SHIELD approval.`,
     { modal: true },
     'Publish advisory',
   );
   if (consent !== 'Publish advisory') return;
+  const approved = readGitContext(root);
+  if (approved.remoteUrl !== ctx.remoteUrl || approved.headSha !== ctx.headSha) {
+    vscode.window.showWarningMessage('Git origin or HEAD changed during approval. No advisory published.');
+    return;
+  }
 
   const result = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: 'Publishing manual GitHub advisory…' },
@@ -103,6 +114,11 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
 
   // #154: also publish the PR↔issue linkage check when HEAD has a PR — the
   // `Closes #1, #2` footgun guard, beside the SHIELD verdict.
+  const fresh = readGitContext(root);
+  if (fresh.remoteUrl !== ctx.remoteUrl || fresh.headSha !== ctx.headSha) {
+    vscode.window.showWarningMessage('Git origin or HEAD changed before linkage. No PR-linkage check published.');
+    return;
+  }
   const slug = parseRepoSlug(ctx.remoteUrl || '');
   const prNumber = resolvePrNumber(root);
   if (slug && prNumber) {
@@ -111,6 +127,7 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
       () => publishLinkageCheck({
         ctx, opts, owner: slug.owner, repo: slug.repo,
         prNumber, get: defaultGitHubGet, post: defaultGitHubPost,
+        freshContext: async () => readGitContext(root),
       }),
     );
     if (!linkage.localOnly && linkage.ok) {

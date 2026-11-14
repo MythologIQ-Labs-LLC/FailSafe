@@ -28,15 +28,15 @@ An agent can read a PR body, but a GitHub check is visible to every reviewer and
 
 `docs/integrations/INTEGRATION_DOCS_INDEX.md:59` (`Checks: https://docs.github.com/en/rest/checks/runs`) lists the GitHub REST and Checks documentation; the row still sits under "In review" with "PR #147", which is stale.
 Check runs are posted to `POST {base}/repos/{owner}/{repo}/check-runs` `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:168` (`/check-runs`).
-The linkage audit reads `GET /repos/{owner}/{repo}/pulls/{n}` and `GET /repos/{owner}/{repo}/issues?state=all` from the resolved API base `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:201-231` (`issues?state=all&per_page=100&page=`).
+The linkage audit reads `GET /repos/{owner}/{repo}/pulls/{n}` and `GET /repos/{owner}/{repo}/issues?state=all` from the resolved API base `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:235` (`issues?state=all&per_page=100&page=`).
 
 ## Privileges and scopes
 
 Credential: a GitHub token (App installation token or a PAT that the org permits with checks:write) in VS Code Secret Storage `FailSafe/extension/package.json:480-484` (`GitHub token used to create Check Runs`).
 The token rides only the Authorization header, built in one place and only for a request to the API base's own origin (scheme, host and port); main only, not in v6.0.8 `FailSafe/extension/src/integrations/github-checks/github-host-affinity.ts:39-46` (`if (origin !== api.origin) return undefined;`).
 The linkage audit additionally needs read access to the repository's pull requests and issues with the same token `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:202-204` (`githubAuthHeaders(api.base, url, token`).
-A user-level token is never sent to an API base URL that workspace settings chose `FailSafe/extension/src/integrations/credentials/credentialGates.ts:126` (`ep.scope === 'workspace' && e.scope === 'user'`).
-A Dev Container or remote-machine setting reads as user scope, so a repository's dev container can set the API base that a user token is paired with (B290) `FailSafe/extension/src/integrations/credentials/vscodeCredentialAdapters.ts:59` (`const user = text(i?.globalValue);`).
+On this candidate branch, a User-scoped GitHub token is refused for every custom API base, including endpoints disguised as User scope by a Dev Container `FailSafe/extension/src/integrations/credentials/credentialGates.ts:135` (`if (provider === 'github' && e.scope === 'user' &&`).
+The source of B290 is the remote host's `globalValue` reporting as User scope `FailSafe/extension/src/integrations/credentials/credentialGates.ts:33` (`githubCustomEndpointRefusalMessage`); the adapter still reads global settings, and custom GHES access now requires a separate Workspace token and explicit per-action destination consent (not independently authenticated custody).
 The PR number comes from the local gh CLI with its own login `FailSafe/extension/src/extension/github-checks-command.ts:31-33` (`['pr', 'view', '--json', 'number', '-q', '.number']`).
 Minting App installation tokens or posting PR reviews would need App credentials or pull-request write and is marked requires separate approval (unverified: neither is implemented).
 
@@ -44,10 +44,10 @@ Minting App installation tokens or posting PR reviews would need App credentials
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| check-publish | verified-shipped | `publishCheckRunPayload` `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:68` (`export async function publishCheckRunPayload(`) | `FailSafe/extension/src/extension/main.ts:266` (`registerGitHubChecksCommand(context, credentials.creds, credentials.endpoints)`) | `FailSafe/extension/src/test/integrations/github-checks/github-checks.test.ts` (unit) | Neutral manual advisory only `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:76-81` (`conclusion: 'neutral',`) |
-| pr-linkage-check | verified-shipped | `publishLinkageCheck` `FailSafe/extension/src/integrations/github-checks/pr-linkage-publish.ts:31` (`export async function publishLinkageCheck(`) | `FailSafe/extension/src/extension/github-checks-command.ts:111` (`() => publishLinkageCheck({`) | `FailSafe/extension/src/test/integrations/github-checks/pr-linkage-publish.test.ts` (unit) | In v6.0.8 the reads ignore the API base URL (F11). Main differs (unreleased): see linkage-api-base |
+| check-publish | verified-shipped | `publishCheckRunPayload` `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:68` (`export async function publishCheckRunPayload(`) | `FailSafe/extension/src/extension/main.ts:266` (`registerGitHubChecksCommand(context, credentials.creds, credentials.endpoints)`) | `FailSafe/extension/src/test/integrations/github-checks/github-checks.test.ts` (unit) | Neutral manual advisory only `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:109` (`conclusion: 'neutral',`) |
+| pr-linkage-check | verified-shipped | `publishLinkageCheck` `FailSafe/extension/src/integrations/github-checks/pr-linkage-publish.ts:56` (`export async function publishLinkageCheck(`) | `FailSafe/extension/src/extension/github-checks-command.ts:127` (`() => publishLinkageCheck({`) | `FailSafe/extension/src/test/integrations/github-checks/pr-linkage-publish.test.ts` (unit) | In v6.0.8 the reads ignore the API base URL (F11). Main differs (unreleased): see linkage-api-base |
 | verified-shield-check | shipped-inert | `publishVerifiedShieldCheck` `FailSafe/extension/src/integrations/github-checks/shield-check-publish.ts:110` (`export async function publishVerifiedShieldCheck(`) | none | none | Absent call site: no source file imports it, and a docs test holds the READMEs to that `FailSafe/extension/src/test/docs/integration-claims.test.cjs:122-128` (`No command publishes a verified SHIELD check yet`) |
-| linkage-api-base | main-unreleased | `runLinkageAudit` `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:198` (`const api = apiBaseFor(opts.apiBaseUrl);`) | `FailSafe/extension/src/integrations/github-checks/pr-linkage-publish.ts:38` (`apiBaseUrl: args.opts.apiBaseUrl`) | `FailSafe/extension/src/test/integrations/github-checks/github-token-egress.test.ts` (unit) | The linkage reads go to the resolved base, and a 3xx is a failure (B265). Main only, not in v6.0.8 |
+| linkage-api-base | main-unreleased | `runLinkageAudit` `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:198` (`const api = apiBaseFor(opts.apiBaseUrl);`) | `FailSafe/extension/src/integrations/github-checks/pr-linkage-publish.ts:62` (`apiBaseUrl: args.opts.apiBaseUrl`) | `FailSafe/extension/src/test/integrations/github-checks/github-token-egress.test.ts` (unit) | The linkage reads go to the resolved base, and a 3xx is a failure (B265). Main only, not in v6.0.8 |
 | token-host-affinity | main-unreleased | `githubAuthHeaders` `FailSafe/extension/src/integrations/github-checks/github-host-affinity.ts:39` (`export function githubAuthHeaders(`) | `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:169` (`githubAuthHeaders(api.base, url, token`) | `FailSafe/extension/src/test/integrations/github-checks/github-token-egress.test.ts` (unit) | The only builder of the token header; also used by the linkage audit and the PR create. Main only, not in v6.0.8 |
 | transport-port | main-unreleased | `githubRequestOptions` `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:165` (`export function githubRequestOptions(`) | `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:239` (`sendGitHubRequest(url, 'POST', headers, body)`) | `FailSafe/extension/src/test/integrations/github-checks/github-token-egress.test.ts` (unit) | Keeps the base URL port (B279); https, or http only on this machine. Main only, not in v6.0.8 |
 | commit-status-fallback | proposed | none | none | none | Not implemented (unverified beyond the absence of a statuses endpoint in the owned files) |
@@ -61,8 +61,8 @@ For the linkage audit: the PR body and up to ten pages of the repository's issue
 
 ## Outbound fields and egress
 
-Repository content: no; the advisory body is fixed text `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:82-85` (`Operator-published notice only.`).
-Metadata: yes, the repository slug, the HEAD SHA, the check name and conclusion, gated by the enable setting, a stored token and a modal consent `FailSafe/extension/src/extension/github-checks-command.ts:82-87` (`'Publish advisory',`).
+Repository content: no; the advisory body is fixed text `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:112` (`Operator-published notice only.`).
+Metadata: yes, the repository slug, the HEAD SHA, the check name and conclusion, gated by the enable setting, a stored token and a modal consent `FailSafe/extension/src/extension/github-checks-command.ts:91` (`'Publish advisory',`).
 The linkage check summary carries issue numbers and finding text only `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:140-141` (`Carries only issue numbers +`).
 Graph relationships: yes, the PR-to-issue closing links are reported back to GitHub as the linkage check `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:148-153` (`name: 'FailSafe: PR Linkage',`).
 Governance evidence: no on main; a verified SHIELD summary with receipt digests exists only in the unwired publisher `FailSafe/extension/src/integrations/github-checks/shield-check-publish.ts:55-65` (`attestation: local HMAC (not CI-attested)`).
@@ -75,12 +75,12 @@ The publishable (name, conclusion) pairs are a closed set: the PR-linkage check 
 Any name that normalises to contain "shield" is refused by the generic path `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:42-44` (`.includes('shield')`).
 The payload is copied field by field into a null-prototype object before checking and posting `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:73-76` (`Null prototype at every level`).
 Linkage findings: a fail finding gives failure, a warn finding neutral, none success `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:128-130` (`const conclusion: CheckConclusion = hasFail ? 'failure' : hasWarn ? 'neutral' : 'success';`).
-The repository slug is parsed from the remote URL and the host is ignored `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:47-48` (`The host is ignored.`).
+The Git remote is parsed as a complete HTTPS, SSH or scp identity (host + owner + repo), not a suffix. The publisher binds `github.com` to `api.github.com`; an explicit GHES API host must match the Git remote host before a token-backed GET/POST `FailSafe/extension/src/integrations/github-checks/github-checks-map.ts:82` (`export function bindGitRemote(`).
 
 ## Persisted artifacts
 
 None in the workspace or in GitHub beyond the posted check runs (unverified beyond the absence of file writes in the owned files).
-Health evidence of the last advisory publish is kept in VS Code workspace state `FailSafe/extension/src/extension/github-checks-command.ts:93` (`recordIntegrationHealth('github-checks', ...healthFromGitHubPublish(result));`).
+Health evidence of the last advisory publish is kept in VS Code workspace state `FailSafe/extension/src/extension/github-checks-command.ts:104` (`recordIntegrationHealth('github-checks', ...healthFromGitHubPublish(result));`).
 The unwired SHIELD publisher accepts a `recordPublication` callback that no caller supplies `FailSafe/extension/src/integrations/github-checks/shield-check-publish.ts:48` (`recordPublication?: (p: ShieldPublication) => void`).
 
 ## Graph links
@@ -92,19 +92,20 @@ Proposed (not built): receipt-to-check edges in the local relationship graph, sp
 ## Customer UI and actions
 
 Command palette: "FailSafe: Publish Manual GitHub Advisory" `FailSafe/extension/package.json:170-171` (`"title": "FailSafe: Publish Manual GitHub Advisory"`).
-A modal warning says no verified receipt exists and offers only "Publish advisory" `FailSafe/extension/src/extension/github-checks-command.ts:82-86` (`No verified SHIELD audit receipt is available.`).
-The same command also publishes the PR-linkage check when HEAD has a PR `FailSafe/extension/src/extension/github-checks-command.ts:104-108` (`also publish the PR↔issue linkage check when HEAD has a PR`).
+The modal discloses the neutral advisory, optional PR-linkage Check Run (which can succeed without being SHIELD proof), exact API endpoint, Git repository and token destination, and offers only "Publish advisory" `FailSafe/extension/src/extension/github-checks-command.ts:89` (`Publish a neutral manual advisory`).
+The same command also publishes the PR-linkage check when HEAD has a PR `FailSafe/extension/src/extension/github-checks-command.ts:115` (`also publish the PR↔issue linkage check when HEAD has a PR`).
 Status: a Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).
 
 ## Governance policy and enforceability limits
 
 Enforced: an unverified SHIELD PASS cannot be posted; the SHIELD name with success needs a verified receipt for exactly that commit, repository and API host `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:88-93` (`SHIELD check refused: no verified receipt authority`).
 Enforced: the API base host must equal the target host `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:113-115` (`TARGET_HOST_MISMATCH_ERROR`).
+Enforced in the candidate #476 correction: generic Check Run payload SHA is compared with the local Git HEAD `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:86` (`wire.head_sha !== ctx.headSha`); PR linkage refuses foreign owner/repo before GET `FailSafe/extension/src/integrations/github-checks/pr-linkage-publish.ts:47` (`args.owner.toLowerCase()`); and the verified SHIELD context/source remote hosts must match `FailSafe/extension/src/integrations/github-checks/shield-check-publish.ts:104` (`const sameRepo = `).
 Enforced (main only): the token header is attached only when the request URL's origin equals the API base's origin `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:169-175` (`if (!headers) return { ok: false, error: TARGET_HOST_MISMATCH_ERROR };`).
 Not enforced: a verified SHIELD receipt is bound to the API host without its port `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:92` (`target.apiHost.toLowerCase() !== authority.apiHost`); that publisher has no caller.
 Advisory: the manual advisory and a neutral linkage result do not block a merge; GitHub treats neutral as passing `FailSafe/extension/src/integrations/github-checks/shield-check-publish.ts:7-8` (`GitHub treats neutral as passing for required`).
 Observed only: a failing linkage check blocks only where branch protection requires it, which FailSafe does not configure (unverified).
-Not enforced: the fork guard exists, but the command never sets it, so a fork clone is not detected `FailSafe/extension/src/extension/github-checks-command.ts:39-43` (`function readGitContext(cwd: string): GitContext {`).
+Not enforced: the fork guard exists, but the command never sets it, so a fork clone is not detected `FailSafe/extension/src/extension/github-checks-command.ts:39-43` (`function readGitContext(cwd: string): GitContext {`). The candidate #476 command re-reads origin/HEAD after an operator approval dialog, and the linkage publisher requires another Git read **after** the issue audit and **before** POST. It displays the exact GHES destination, but cannot independently authenticate the person who approves it or cryptographically pin Git refs (unverified).
 
 ## Failure, offline, stale and permission semantics
 
@@ -131,13 +132,13 @@ Live-service test: none (unverified).
 
 ## Recommended disposition
 
-Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The advisory and linkage checks work and are tested, and the transport refuses an unverified SHIELD PASS by construction. The customer value the review named, a SHIELD verdict a required check can trust, exists in code but has no caller; finishing it depends on native receipt attestation (the shield-receipts contract). The F11 base-URL defect and the dropped port are fixed on main (unreleased, #538); the unset fork guard and the dev-container endpoint pairing (B290) still affect what is sent where.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The advisory and linkage checks work and are tested, and the transport refuses an unverified SHIELD PASS by construction. The customer value the review named, a SHIELD verdict a required check can trust, exists in code but has no caller; finishing it depends on native receipt attestation (the shield-receipts contract). The F11 base-URL defect and the dropped port are fixed on main (unreleased, #538); the unset fork guard and the unmitigated dev-container endpoint pairing on main (B290) still affects token safety; the #691 candidate refuses User-scoped GitHub tokens for custom endpoints, but installed-host custody remains unverified.
 
 ## Open defects
 
 [B265] Fixed on main, unreleased (#538): the PR-linkage audit sent the GitHub token to api.github.com even when a GitHub Enterprise API base URL was configured (F11); it now takes the base `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:165-176` (`export interface LinkageRunOptions {`).
 Observed outside the LD3 list, filed as B278 (see Other findings in the portfolio): The fork guard `isFork` is never set by the command, although the setting text says fork-PR contexts degrade to local-only `FailSafe/extension/package.json:474-477` (`fork-PR contexts degrade to local-only`).
 Fixed on main, unreleased (#538): B279, the default GitHub transports dropped the base URL's port `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:172` (`port: u.port ? Number(u.port) : undefined,`).
-Filed as B290 (#538): a Dev Container or remote-machine `failsafe.integrations.github.apiBaseUrl` reads as user scope and is paired with the user token `FailSafe/extension/src/integrations/credentials/vscodeCredentialAdapters.ts:59` (`const user = text(i?.globalValue);`).
+B290 (#538, prospective #691 fix): a Dev Container or remote-machine `failsafe.integrations.github.apiBaseUrl` can appear as a User setting; this candidate refuses the unsafe User-token/custom-endpoint pairing `FailSafe/extension/src/integrations/credentials/credentialGates.ts:136` (`endpoint && endpoint.replace`) (host-origin qualification unverified).
 Not covered: with VS Code's proxy support a resolved proxy may replace the transport's agent, so the loopback address check for an http base may not run (unverified).
 The documentation index row is stale (still "In review", PR #147) `docs/integrations/INTEGRATION_DOCS_INDEX.md:59` (`**GitHub Checks** (#96)`).

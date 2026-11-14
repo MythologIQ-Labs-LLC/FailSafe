@@ -32,8 +32,8 @@ The flow posts to `/repos/<owner>/<repo>/pulls` `FailSafe/extension/src/integrat
 
 Git: the operator's own git credentials, used by `git push -u origin <branch>` through the trusted git resolver `FailSafe/extension/src/extension/governedCommit.ts:122` (`const pushed = await git(['push', '-u', 'origin', req.branch], cwd);`).
 GitHub: the `github.token` credential from Secret Storage, sent as an Authorization header for the PR POST, and on main only to the API base's own origin `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:132` (`githubAuthHeaders(api.base, url, opts.token`).
-The token is read without checking `failsafe.integrations.github.enabled` `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90-91` (`export function governedCommitConnection(`).
-In v6.0.8 the PR request always went to api.github.com, because the wiring passed no API base URL. On main (unreleased, #538) the token and the endpoint come from the same credential gate, so the PR goes to the configured GitHub Enterprise base and a user token is never sent to a workspace-set endpoint `FailSafe/extension/src/extension/bootstrapServers.ts:81` (`governedCommitPrStep(governedCommitConnection(`).
+The token is read without checking `failsafe.integrations.github.enabled` `FailSafe/extension/src/integrations/credentials/credentialGates.ts:96` (`export function governedCommitConnection(`).
+In v6.0.8 the PR request always went to api.github.com. On main (#538), the token and endpoint share a credential gate and User tokens cannot use a Workspace-provided endpoint. On this prospective #691 branch, custom GHES API bases require a Workspace-scoped token even if a Dev Container presents its custom endpoint as a User setting `FailSafe/extension/src/integrations/credentials/credentialGates.ts:135` (`if (provider === 'github' && e.scope === 'user' &&`); the modal consent displays the destination `FailSafe/extension/src/extension/governedCommitFlow.ts:103` (`GitHub PR destination:`) and does not authorize native SHIELD. `FailSafe/extension/src/extension/bootstrapServers.ts:81` (`governedCommitPrStep(governedCommitConnection(`).
 A refused base (an `http://` base for a host that is not this machine, or one with credentials, a query or a fragment) makes no request: `createPullRequest` returns an error, not a local-only skip, and the flow reports the branch as pushed with that error as its warning `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:129-130` (`if (!api.ok) return { ok: false, error: api.error };`).
 Needed scopes: pull-request write on the repository `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:142` (`pull-request write permission`).
 
@@ -59,13 +59,13 @@ From GitHub: the PR's `html_url` and `number` `FailSafe/extension/src/integratio
 Repository content: yes, the commit of the changed paths is pushed to origin, gated by the Yes and No prompt `FailSafe/extension/src/extension/governedCommit.ts:100-101` (`await git(['add', '-A', '--', ...req.paths], cwd);`).
 Metadata: yes, a PR with title `chore(<action>): workspace cleanup`, a body listing the changes, and the head and base branch, gated by the prompt and a stored token `FailSafe/extension/src/extension/governedCommitFlow.ts:66-71` (`prTitle: `).
 Graph relationships: no (unverified: no graph code exists).
-Governance evidence: the PR body says it was automated by FailSafe and operator-confirmed `FailSafe/extension/src/extension/governedCommitFlow.ts:63` (`(operator-confirmed)`).
+Governance evidence: the PR body says it was automated by FailSafe and operator-confirmed `FailSafe/extension/src/extension/governedCommitFlow.ts:68` (`(operator-confirmed)`).
 The enable setting of the GitHub integration does not gate any of this (see F18) `FailSafe/extension/src/extension/bootstrapServers.ts:81` (`governedCommitConnection(credentials.creds, credentials.endpoints, credentials.ui)`).
 
 ## Transformations
 
-The branch is `fix/<action>-<timestamp>` `FailSafe/extension/src/extension/governedCommitFlow.ts:60` (`const branch = `).
-The commit message is `chore(<action>): apply N workspace change(s)` with one bullet per label `FailSafe/extension/src/extension/governedCommitFlow.ts:62-63` (`const message = `).
+The branch is `fix/<action>-<timestamp>` `FailSafe/extension/src/extension/governedCommitFlow.ts:65` (`const branch = `).
+The commit message is `chore(<action>): apply N workspace change(s)` with one bullet per label `FailSafe/extension/src/extension/governedCommitFlow.ts:67` (`const message = `).
 Credential userinfo in http(s) URLs is replaced by `***` to the last `@` `FailSafe/extension/src/extension/governedCommit.ts:80-83` (`return text.replace(`).
 
 ## Persisted artifacts
@@ -82,7 +82,7 @@ Proposed: change to commit to PR to receipt, specified in `docs/architecture/INT
 
 ## Customer UI and actions
 
-A non-modal information message asks "Commit, push & open a PR for them?" with Yes and No `FailSafe/extension/src/extension/bootstrapServers.ts:71` (`confirm: async (msg) => (await vscode.window.showInformationMessage(msg, "Yes", "No")) === "Yes",`).
+A modal warning asks "Commit, push & open a PR for them?" with Yes and No, and presents the GitHub Enterprise token destination when configured `FailSafe/extension/src/extension/bootstrapServers.ts:71` (`showWarningMessage(msg, { modal: true }`).
 The outcome is reported as opened, pushed with a compare URL, or committed locally `FailSafe/extension/src/extension/bootstrapServers.ts:84-87` (`opened ${r.prUrl}`).
 A decline is written to the FailSafe output channel `FailSafe/extension/src/extension/bootstrapServers.ts:87` (`commit declined`).
 
@@ -93,8 +93,8 @@ The link offer is a modal VS Code dialog through the shared operator confirmer, 
 Enforced: nothing is committed without a Yes `FailSafe/extension/src/extension/governedCommitFlow.ts:55-61` (`if (!approved) {`).
 Disclosed: files that were already staged before the run are included in the commit, and the link dialog counts them ("N - M file(s) outside those paths were already staged") `FailSafe/extension/src/extension/governedCommitLink.ts:54` (`outside those paths were already staged`).
 Enforced: only the named paths are staged `FailSafe/extension/src/extension/governedCommit.ts:100` (`'add', '-A', '--', ...req.paths`).
-Observed: the prompt is a non-modal message; any answer other than Yes, including dismissing it, is taken as No and recorded as a decline `FailSafe/extension/src/extension/bootstrapServers.ts:71` (`=== "Yes",`).
-Advisory: the GitHub integration's enable setting is not consulted; a stored token is enough to open a PR (F18) `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90` (`Without one the commit is still made; only the PR step is skipped.`).
+Observed on protected main: the confirmation is non-modal. On the candidate #691 branch the prompt is modal; dismissal still counts as a decline `FailSafe/extension/src/extension/bootstrapServers.ts:71` (`showWarningMessage(msg, { modal: true }`).
+Advisory: the GitHub integration's enable setting is not consulted; a stored token is enough to open a PR (F18) `FailSafe/extension/src/integrations/credentials/credentialGates.ts:95` (`Without one the commit is still made; only the PR step is skipped.`).
 Advisory: if the commit fails after the branch was created, the workspace is left on the new branch `FailSafe/extension/src/extension/governedCommit.ts:104-106` (`commit failed: `).
 
 ## Failure, offline, stale and permission semantics
@@ -115,8 +115,8 @@ Installed-extension test: no test runs the real git, a real remote or GitHub for
 
 ## Recommended disposition
 
-Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The ladder is careful and tested, but its PR step is gated only by token presence, not by the GitHub integration's enable setting, and the confirmation is a non-modal message. Gate the PR step on the enable setting and make the prompt modal, then maintain.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE** as a work-queue disposition, not release acceptance. On this candidate, modal confirmation is implemented, but the PR step remains independent of `failsafe.integrations.github.enabled` (F18), so that separate governance decision remains open `FailSafe/extension/src/extension/bootstrapServers.ts:71` (`showWarningMessage(msg, { modal: true }`).
 
 ## Open defects
 
-F18, the PR step does not check `failsafe.integrations.github.enabled`: [B270] `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90-91` (`export function governedCommitConnection(`).
+F18, the PR step does not check `failsafe.integrations.github.enabled`: [B270] `FailSafe/extension/src/integrations/credentials/credentialGates.ts:96` (`export function governedCommitConnection(`).
