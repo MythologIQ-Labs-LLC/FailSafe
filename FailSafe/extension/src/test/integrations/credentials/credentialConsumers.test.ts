@@ -188,7 +188,7 @@ suite('integration consumers (FX965 #482)', () => {
 
     await runGitHubAdvisory(deps);
     assert.deepEqual(published, []);
-    assert.deepEqual(x.ui.warnings, [endpointRefusalMessage('GitHub')]);
+    assert.deepEqual(x.ui.warnings, [githubCustomEndpointRefusalMessage()]);
 
     await x.creds.set('github.token', 'workspace', 'ws_gh_token_4321');
     await runGitHubAdvisory(deps);
