@@ -36,7 +36,7 @@ function recorder(prStatus = 200) {
   const sent: Sent[] = [];
   const get: GitHubGetFn = async (url, headers) => {
     sent.push({ method: 'GET', url, auth: headers.Authorization });
-    if (/\/pulls\/\d+$/.test(url)) return { status: prStatus, body: prStatus === 200 ? JSON.stringify({ body: 'Closes #1' }) : '' };
+    if (/\/pulls\/\d+$/.test(url)) return { status: prStatus, body: prStatus === 200 ? JSON.stringify({ body: 'Closes #1', head: { sha: 'abc123' } }) : '' };
     return { status: 200, body: JSON.stringify([{ number: 1, state: 'open' }]) };
   };
   const post: GitHubPostFn = async (url, headers) => {
@@ -299,7 +299,10 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
       const x = await credentials(TOKEN, endpoint);
       const r = recorder();
       const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-        workspaceRoot: '/ws', git: fakeGit, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+        workspaceRoot: '/ws', git: async (args) => {
+          const res = await fakeGit(args);
+          return !endpoint && args[0] === 'remote' ? { ...res, stdout: 'https://github.com/o/r.git' } : res;
+        }, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
         ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), r.post),
       });
       return { step: (result as { step: string }).step, sent: r.sent };
