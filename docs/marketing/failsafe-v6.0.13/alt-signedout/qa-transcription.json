@@ -1,0 +1,25 @@
+{
+ "heard": "Failsafe 6.0.13 adds a simple path from your development console to Stateright. Open Failsafe in VS Code and launch the console from the command palette. Select Integrations then Catalog. Here you'll find Stateright AI, clearly labeled as a website handoff. Select open state right run history and state right opens in your browser. State right handles sign in and run history on its own site. Failsafe does not import that history or enforce those workflows. This card is a link, not a connection. Open state right run history from Failsafe. Version 6.0.13 is available now.",
+ "script_words": 95,
+ "heard_words": 99,
+ "missing": [
+  "statewright",
+  "statewright",
+  "statewright",
+  "statewright",
+  "statewright",
+  "statewright"
+ ],
+ "extra": [
+  "stateright",
+  "stateright",
+  "state",
+  "right",
+  "state",
+  "right",
+  "state",
+  "right",
+  "state",
+  "right"
+ ]
+}

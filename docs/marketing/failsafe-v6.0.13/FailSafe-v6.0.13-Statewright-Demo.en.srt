@@ -1,0 +1,55 @@
+1
+00:00:00,500 --> 00:00:07,219
+FailSafe 6.0.13 adds a simple path from
+your development Console to Statewright.
+
+2
+00:00:07,457 --> 00:00:12,428
+Open FailSafe in VS Code, and launch
+the Console from the Command Palette.
+
+3
+00:00:21,341 --> 00:00:23,830
+Select Integrations, then Catalog.
+
+4
+00:00:24,529 --> 00:00:29,868
+Here you'll find Statewright AI,
+clearly labeled as a website handoff.
+
+5
+00:00:32,940 --> 00:00:37,946
+Select Open Statewright Run History,
+and Statewright opens in your browser.
+
+6
+00:00:37,999 --> 00:00:40,785
+Statewright shows its
+own Run History page.
+
+7
+00:00:41,450 --> 00:00:43,142
+This account has no runs yet.
+
+8
+00:00:43,192 --> 00:00:47,998
+They appear once a workflow is activated
+in a connected Statewright client.
+
+9
+00:00:48,737 --> 00:00:52,657
+FailSafe does not import that
+history or enforce those workflows.
+
+10
+00:00:53,325 --> 00:00:56,028
+This card is a link, not a connection.
+
+11
+00:00:56,459 --> 00:00:59,335
+Open Statewright run
+history from FailSafe.
+
+12
+00:01:00,001 --> 00:01:03,557
+Version 6.0.13 is available now.

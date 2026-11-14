@@ -1,0 +1,72 @@
+{
+ "sonic_rift_version": "0.9.1",
+ "app": "C:\\LocalAI\\Voice\\Chatterbox\\demo-v091\\app\\Sonic Rift",
+ "project": "failsafe-6.0.13-statewright.sonicrift.json",
+ "export": "export-failsafe-6.0.13-statewright",
+ "cues": [
+  {
+   "scene": "N1",
+   "take": "VO_N1_m3-take3.wav",
+   "source_rate": 24000,
+   "seconds": 6.419,
+   "start": 0.5,
+   "end": 6.919,
+   "asset_id": "voice_83197dfab15e2c15c26006ba4223fecb1dc679c7f5073bbbf980a9638f366a81"
+  },
+  {
+   "scene": "N2",
+   "take": "VO_N2_m3-take1.wav",
+   "source_rate": 24000,
+   "seconds": 4.728,
+   "start": 7.4,
+   "end": 12.128,
+   "asset_id": "voice_4557cf03aa0abcc9dacc682701bc0364a2926f5da5ce380bc27bd9259b3ca98d"
+  },
+  {
+   "scene": "N3",
+   "take": "VO_N3_m3-take3.wav",
+   "source_rate": 24000,
+   "seconds": 8.315,
+   "start": 22.205,
+   "end": 30.52,
+   "asset_id": "voice_9c3e956666092ccb8bf47acdbdbc31ee61dbc2972e2014044f1579dbfb9b5aca"
+  },
+  {
+   "scene": "N4",
+   "take": "VO_N4_m3-take3.wav",
+   "source_rate": 24000,
+   "seconds": 4.787,
+   "start": 33.811,
+   "end": 38.598,
+   "asset_id": "voice_8d0e8ac778af527122f21133e73fa454d2667ccc096d37c6bee882e1d9edb550"
+  },
+  {
+   "scene": "N5",
+   "take": "VO_N5_m3-take1.wav",
+   "source_rate": 24000,
+   "seconds": 11.617,
+   "start": 39.78,
+   "end": 51.397,
+   "asset_id": "voice_d58b94226019564fe1214f3e9aa6a09a0db777e13984f6460e3ea307ec194a6b"
+  },
+  {
+   "scene": "N6",
+   "take": "VO_N6_m3-take1.wav",
+   "source_rate": 24000,
+   "seconds": 7.318,
+   "start": 53.319,
+   "end": 60.637,
+   "asset_id": "voice_701a122257cc79554dc284e567bcd05b8e3442e04ac7bce0bf1c66c949f20814"
+  }
+ ],
+ "music": {
+  "take": "MUSIC_bed_takeC.wav",
+  "sound_library_asset": "cedea4734dc8",
+  "track_gain_db": -12.0,
+  "duck_db": -9.0,
+  "seconds": 61.819,
+  "fade_in_s": 1.5,
+  "fade_out_s": 3.0
+ },
+ "export_result": "preview-signedout\\build\\mix\\export-failsafe-6.0.13-statewright\\manifest.json"
+}
