@@ -103,7 +103,7 @@ suite('GRB security characterization: GitHub repository identity (#476)', () => 
       ctx: { remoteUrl: GOOD, headSha: SHA_A },
       opts: OPTS,
       owner: 'foreign', repo: 'other-repository', prNumber: 9,
-      get, post: c.post,
+      get, post: c.post, freshContext: async () => ({ remoteUrl: GOOD, headSha: SHA_A }),
     });
     assert.equal(res.ok && !res.localOnly, false, 'foreign PR results cannot be attested on this repository');
     assert.deepEqual(reads, [], 'refuse before reading the unrelated PR/issue set');
@@ -135,6 +135,7 @@ suite('GRB security characterization: GitHub repository identity (#476)', () => 
     const res = await publishLinkageCheck({
       ctx: { remoteUrl: GOOD, headSha: SHA_A }, opts: OPTS,
       owner: 'acme', repo: 'failsafe', prNumber: 9, get, post: c.post,
+      freshContext: async () => ({ remoteUrl: GOOD, headSha: SHA_A }),
     });
     assert.equal(res.ok, false);
     assert.equal(reads.length, 1, 'one authorized PR metadata read, no issue read');
@@ -154,6 +155,40 @@ suite('GRB security characterization: GitHub repository identity (#476)', () => 
       remoteUrl: 'https://ghe.example/acme/failsafe.git', headSha: SHA_A,
     }, OPTS, c.post);
     assert.equal(res.ok, false, 'unconfigured GHES host must not reuse the default public token');
+    assert.deepEqual(c.urls, []);
+  });
+
+  test('GRB-10 a Git HEAD move during the issue audit refuses the later POST', async () => {
+    const seen: string[] = [];
+    const c = posts();
+    const get = async (url: string) => {
+      seen.push(url);
+      if (url.endsWith('/pulls/9')) {
+        return { status: 200, body: JSON.stringify({ head: { sha: SHA_A }, body: 'Closes #3' }) };
+      }
+      return { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }]) };
+    };
+    const res = await publishLinkageCheck({
+      ctx: { remoteUrl: GOOD, headSha: SHA_A }, opts: OPTS,
+      owner: 'acme', repo: 'failsafe', prNumber: 9, get, post: c.post,
+      freshContext: async () => ({ remoteUrl: GOOD, headSha: SHA_B }),
+    });
+    assert.equal(seen.length, 2, 'the approved PR and issue reads completed before the race');
+    assert.equal(res.ok, false, 'the stale HEAD cannot be posted after a branch move');
+    assert.deepEqual(c.urls, [], 'no stale or false-green Check Run published');
+  });
+
+  test('GRB-11 recheck failure never becomes an authorized linkage Check Run', async () => {
+    const c = posts();
+    const get = async (url: string) => url.endsWith('/pulls/9')
+      ? { status: 200, body: JSON.stringify({ head: { sha: SHA_A }, body: 'Closes #3' }) }
+      : { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }]) };
+    const res = await publishLinkageCheck({
+      ctx: { remoteUrl: GOOD, headSha: SHA_A }, opts: OPTS,
+      owner: 'acme', repo: 'failsafe', prNumber: 9, get, post: c.post,
+      freshContext: async () => { throw new Error('not an allowed authority'); },
+    });
+    assert.equal(res.ok, false);
     assert.deepEqual(c.urls, []);
   });
 
