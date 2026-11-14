@@ -13,6 +13,8 @@
 import { commitPushOpenPr, type GitRunner, type GovernedCommitResult } from './governedCommit';
 import type { GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import type { Connection } from '../integrations/credentials/credentialGates';
+import { bindGitRemote } from '../integrations/github-checks/github-checks-map';
+import { apiBaseFor } from '../integrations/github-checks/github-host-affinity';
 
 export interface GovernedFlowDeps {
   workspaceRoot: string;
@@ -51,8 +53,9 @@ export async function runGovernedCommitFlow(
   if (changedPaths.length === 0) return { step: 'noop' };
 
   const architecture = await architectureNote(deps, changedPaths);
+  const destination = await githubDestinationNote(deps);
   const approved = await deps.confirm(
-    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?${architecture}`,
+    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?${architecture}${destination}`,
   );
   if (!approved) {
     await deps.recordDeclined({ action, changes: executedLabels, at: deps.now() });
@@ -85,6 +88,22 @@ export function governedCommitPrStep(
   connection: Connection | undefined, post: GitHubPostFn,
 ): Pick<GovernedFlowDeps, 'post' | 'token' | 'apiBaseUrl'> {
   return { post, token: connection?.credential, apiBaseUrl: connection?.endpoint };
+}
+
+/** Display any custom GitHub destination before consenting to commit, push and PR. */
+async function githubDestinationNote(deps: GovernedFlowDeps): Promise<string> {
+  if (!deps.post || !deps.token || !deps.apiBaseUrl?.trim()) return '';
+  const api = apiBaseFor(deps.apiBaseUrl);
+  if (!api.ok) return ' GitHub PR API destination is invalid; authenticated PR publishing will be refused.';
+  try {
+    const remote = await deps.git(['remote', 'get-url', 'origin'], deps.workspaceRoot);
+    const id = remote.code === 0
+      ? bindGitRemote(remote.stdout.trim(), api.base.apiHost, true) : null;
+    if (!id) return ' GitHub PR remote/API identity cannot be confirmed; authenticated PR publishing will be refused.';
+    return ` GitHub PR destination: ${api.base.baseUrl}/repos/${id.owner}/${id.repo} (remote ${id.host}). The Workspace GitHub token would be sent to ${api.base.origin}.`;
+  } catch {
+    return ' GitHub PR destination cannot be read; authenticated PR publishing will be refused.';
+  }
 }
 
 /**
