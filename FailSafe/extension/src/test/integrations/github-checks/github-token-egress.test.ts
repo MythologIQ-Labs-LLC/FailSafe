@@ -65,7 +65,7 @@ suite('#538 GitHub token host affinity (B265, B279)', () => {
   test('G1 with a GHE base, the linkage check reads and publishes on the GHE origin only, token on each', async () => {
     const r = recorder();
     const res = await publishLinkageCheck({
-      ctx: CTX, opts: { enabled: true, token: TOKEN, apiBaseUrl: GHE }, owner: 'acme', repo: 'widgets', prNumber: 9, get: r.get, post: r.post,
+      ctx: CTX, opts: { enabled: true, token: TOKEN, apiBaseUrl: GHE }, owner: 'acme', repo: 'widgets', prNumber: 9, get: r.get, post: r.post, freshContext: async () => ({ remoteUrl: 'https://github.com/acme/widgets', headSha: 'abc123' }), freshContext: async () => CTX,
     });
     assert.equal(res.ok, true);
     assert.deepEqual(r.sent.map((s) => `${s.method} ${new URL(s.url).origin}`), [
