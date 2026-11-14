@@ -1,6 +1,6 @@
 # Prospective security plan: bind GitHub repository identity before publishing (#476, v6.1.0)
 
-**Status:** PROPOSED; security regression evidence only; native `/qor-plan`, independent `/qor-audit` PASS and implementation authorization **not yet obtained**.
+**Status:** PROPOSED; security regression evidence only; recorded native `/qor-plan`, an adversarial `/qor-audit` PASS (separate reviewer optional) and implementation authorization **not yet obtained**.
 **Source base:** `main@4157b5a2bb775bf09d08f54e8652bde7fbaa4425`, 2026-11-13. **Proposed risk:** L3, because a Checks API POST can change branch gate results. **Owner:** solo FailSafe maintainer. **Bound issues:** #476 (SHIELD truth), #474 (integration conformance), #679 (v6.1.0), #538 (GitHub token host affinity).
 **This PR contains only the plan and intentionally failing security-characterization tests.** No runtime protection, release/governance ledger, artifact, tag or published version is modified. Red tests must NOT be merged into main as-is.
 
@@ -11,6 +11,12 @@
 - `shield-check-publish.ts:sameRepo` compares *only* case-folded `owner/repo` slugs from the command context and the independently sourced repository remote. Two different hosts with the same slug therefore compare equal. `shield-evidence.ts:repoOf` independently drops the host. A valid SHA / session receipt and API-host field are required for verified SHIELD; this report does **not** claim those checks can be bypassed by an unprivileged actor.
 - Existing `github-host-affinity.ts` correctly restricts **token egress** to the configured API URL origin. It does **not** prove the repository named by an untrusted remote actually belongs to that origin. Do not regress the existing no-cross-origin-token safeguard while fixing identity.
 - GitHub Enterprise Server is an existing supported configuration (`github-token-egress.test.ts` uses `ghe.example`). Do not "fix" this by rejecting all non-`github.com` hosts, blindly equating an arbitrary API domain to an arbitrary Git remote, or silently disabling GHES.
+
+## Owner-approved adversarial audit option (2026-11-14)
+
+Under the solo owner's decision recorded on [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679), a **source-bound adversarial audit** can substitute for a separate independent *reviewer*. It must disclose self-review, identify exact plan/head/write set, investigate host trust, no-network refusal, SHA and PR identity binding, preserve GitHub Enterprise Server support, try to falsify each GRB assertion, and issue a binary PASS/VETO with failures and evidence. Report tests only as executed when they actually ran. Any security-blocking finding is VETO. This substitution does **not** create a native /qor-audit gate record or waive `AGENTS.md`'s recorded PASS requirement; an authorized native operator must still register the lifecycle gate or report `NATIVE_GATE_NOT_RECORDED`. Owner GO, published SHIELD authority and G4 release controls are separate. A plan review is not proof the vulnerable runtime has been fixed.
+
+The exact source baseline in this draft is historical. Before a recorded gate or implementation, compare against current protected main and bind the reviewed source revision; no stale-head approval.
 
 ## Prospective contract (for native audit before implementing)
 
