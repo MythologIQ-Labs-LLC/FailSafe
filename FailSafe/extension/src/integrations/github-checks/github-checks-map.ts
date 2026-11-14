@@ -54,7 +54,7 @@ const HOST = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i;
 export function parseRepoIdentity(remoteUrl: string): GitRepoIdentity | null {
   if (typeof remoteUrl !== 'string') return null;
   const raw = remoteUrl.trim();
-  const scp = /^git@([^:\/\s]+):(.+)$/i.exec(raw);
+  const scp = /^git@([^:/\s]+):(.+)$/i.exec(raw);
   const match = /^(https|ssh):\/\/([^/?#\\\s]+)\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/i.exec(raw);
   if (!scp && !match) return null;
   const remotePath = scp ? scp[2] : `${match![3]}/${match![4]}`;
