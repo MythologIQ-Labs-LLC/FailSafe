@@ -66,6 +66,18 @@ function tags() {
 }
 
 describe('FX938 SYSTEM_STATE Tier 1 currency', () => {
+  it('links to the live PR queue rather than freezing obsolete branches as current work', () => {
+    const header = systemState().split('\n---\n', 1)[0];
+    assert.match(header, /^\*\*Current development:\*\*/m,
+      'current development must be separately labeled from historical local review');
+    assert.match(header, /^\*\*Live pull-request queue:\*\*.*github\.com\/MythologIQ-Labs-LLC\/FailSafe\/pulls/m,
+      'PR status must point to the live repository, not a frozen numbered snapshot');
+    assert.doesNotMatch(header, /^\*\*Active local review:\*\*/m,
+      'a historical local branch must not continue presenting as the active review');
+    assert.doesNotMatch(header, /^\*\*Open PRs:\*\*/m,
+      'a static document cannot certify which numbered PRs remain open');
+  });
+
   it('declares a Current Release matching the extension package.json version', () => {
     const declared = currentReleaseMarker(systemState());
     const pkg = JSON.parse(fs.readFileSync(EXT_PKG, 'utf8')).version;
