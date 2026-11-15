@@ -325,6 +325,55 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     assert.deepEqual(dflt.sent.map((s) => s.url), ['https://api.github.com/repos/o/r/pulls']);
   });
 
+  test('GRB-12 GHES origin changed after the operator consent never becomes a push or PR', async () => {
+    const r = recorder();
+    let remote = 'https://ghe.example/o/r.git';
+    let pushes = 0;
+    const git: GitRunner = async (args, cwd) => {
+      if (args[0] === 'remote') return { code: 0, stdout: remote, stderr: '' };
+      if (args[0] === 'push') pushes++;
+      return fakeGit(args, cwd);
+    };
+    const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+      workspaceRoot: '/ws', git,
+      confirm: async (message) => {
+        assert.ok(message.includes('GitHub PR destination: https://ghe.example/api/v3/repos/o/r'));
+        remote = 'https://ghe.example/other/repository.git';
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+      post: r.post, token: TOKEN, apiBaseUrl: GHE,
+    });
+    assert.equal(result.step, 'committed');
+    assert.equal(pushes, 0, 'no push to a repo different from the approved destination');
+    assert.deepEqual(r.sent, [], 'no token-backed API call');
+    assert.match('warning' in result ? result.warning ?? '' : '', /origin changed or was unverified/);
+  });
+
+  test('GRB-13 GHES origin changed during push blocks credential-backed PR', async () => {
+    const r = recorder();
+    let remote = 'https://ghe.example/o/r.git';
+    let pushes = 0;
+    const git: GitRunner = async (args, cwd) => {
+      if (args[0] === 'remote') return { code: 0, stdout: remote, stderr: '' };
+      const res = await fakeGit(args, cwd);
+      if (args[0] === 'push') {
+        pushes++;
+        remote = 'https://ghe.example/other/repository.git';
+      }
+      return res;
+    };
+    const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+      workspaceRoot: '/ws', git, confirm: async () => true,
+      recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+      post: r.post, token: TOKEN, apiBaseUrl: GHE,
+    });
+    assert.equal(result.step, 'pushed', 'the git push may have completed before the mutation was observed');
+    assert.equal(pushes, 1);
+    assert.deepEqual(r.sent, [], 'post-push origin change must block credential-backed PR');
+    assert.match('warning' in result ? result.warning ?? '' : '', /origin changed after approved push/);
+  });
+
   test('S9 a refused base is an error result, and the governed commit reports it as a pushed branch with that warning', async () => {
     const r = recorder();
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
