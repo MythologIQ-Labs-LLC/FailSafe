@@ -55,7 +55,7 @@ export async function runGovernedCommitFlow(
   const architecture = await architectureNote(deps, changedPaths);
   const destination = await githubDestinationNote(deps);
   const approved = await deps.confirm(
-    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?${architecture}${destination}`,
+    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?${architecture}${destination.label}`,
   );
   if (!approved) {
     await deps.recordDeclined({ action, changes: executedLabels, at: deps.now() });
@@ -69,7 +69,8 @@ export async function runGovernedCommitFlow(
 
   const result = await commitPushOpenPr(
     { workspaceRoot: deps.workspaceRoot, paths: changedPaths, branch, message, base: deps.base || 'main', prTitle: `chore(${action}): workspace cleanup`, prBody },
-    { git: deps.git, post: deps.post, token: deps.token, apiBaseUrl: deps.apiBaseUrl },
+    { git: deps.git, post: deps.post, token: deps.token, apiBaseUrl: deps.apiBaseUrl,
+      requireExactRemoteApproval: destination.required, approvedRemoteUrl: destination.approvedRemoteUrl },
   );
   // #532 (plan-532c LD7b): offer the bound commit for linking; the offer never changes the result.
   if (deps.linkCommit && result.commitSha && (result.step === 'committed' || result.step === 'pushed' || result.step === 'pr')) {
@@ -90,19 +91,39 @@ export function governedCommitPrStep(
   return { post, token: connection?.credential, apiBaseUrl: connection?.endpoint };
 }
 
-/** Display any custom GitHub destination before consenting to commit, push and PR. */
-async function githubDestinationNote(deps: GovernedFlowDeps): Promise<string> {
-  if (!deps.post || !deps.token || !deps.apiBaseUrl?.trim()) return '';
+/** A custom GHES token destination requires an exact operator-approved Git remote. */
+interface GitHubDestinationApproval {
+  label: string;
+  required: boolean;
+  approvedRemoteUrl?: string;
+}
+
+/** The UI displays an exact approved destination; a failed preflight never authorizes a later target. */
+async function githubDestinationNote(deps: GovernedFlowDeps): Promise<GitHubDestinationApproval> {
+  if (!deps.post || !deps.token || !deps.apiBaseUrl?.trim()) return { label: '', required: false };
   const api = apiBaseFor(deps.apiBaseUrl);
-  if (!api.ok) return ' GitHub PR API destination is invalid; authenticated PR publishing will be refused.';
+  if (!api.ok) return {
+    label: ' GitHub PR API destination is invalid; authenticated PR publishing will be refused.',
+    required: true,
+  };
   try {
     const remote = await deps.git(['remote', 'get-url', 'origin'], deps.workspaceRoot);
-    const id = remote.code === 0
-      ? bindGitRemote(remote.stdout.trim(), api.base.apiHost, true) : null;
-    if (!id) return ' GitHub PR remote/API identity cannot be confirmed; authenticated PR publishing will be refused.';
-    return ` GitHub PR destination: ${api.base.baseUrl}/repos/${id.owner}/${id.repo} (remote ${id.host}). The Workspace GitHub token would be sent to ${api.base.origin}.`;
+    const remoteUrl = remote.code === 0 ? remote.stdout.trim() : '';
+    const id = bindGitRemote(remoteUrl, api.base.apiHost, true);
+    if (!id) return {
+      label: ' GitHub PR remote/API identity cannot be confirmed; authenticated PR publishing will be refused.',
+      required: true,
+    };
+    return {
+      label: ` GitHub PR destination: ${api.base.baseUrl}/repos/${id.owner}/${id.repo} (remote ${id.host}). The Workspace GitHub token would be sent to ${api.base.origin}.`,
+      required: true,
+      approvedRemoteUrl: remoteUrl,
+    };
   } catch {
-    return ' GitHub PR destination cannot be read; authenticated PR publishing will be refused.';
+    return {
+      label: ' GitHub PR destination cannot be read; authenticated PR publishing will be refused.',
+      required: true,
+    };
   }
 }
 
