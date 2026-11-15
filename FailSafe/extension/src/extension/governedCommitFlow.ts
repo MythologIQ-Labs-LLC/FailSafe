@@ -104,7 +104,7 @@ async function githubDestinationNote(deps: GovernedFlowDeps): Promise<GitHubDest
   const api = apiBaseFor(deps.apiBaseUrl);
   if (!api.ok) return {
     label: ' GitHub PR API destination is invalid; authenticated PR publishing will be refused.',
-    required: true,
+    required: false, // invalid API cannot receive a token; preserve the operator-approved git push
   };
   try {
     const remote = await deps.git(['remote', 'get-url', 'origin'], deps.workspaceRoot);
