@@ -42,6 +42,9 @@ export interface GovernedCommitDeps {
   post?: GitHubPostFn;
   token?: string;
   apiBaseUrl?: string;
+  /** Only for a custom GHES token destination approved before confirmation. */
+  requireExactRemoteApproval?: boolean;
+  approvedRemoteUrl?: string;
 }
 
 export type GovernedCommitStep = 'not-a-repo' | 'noop' | 'committed' | 'pushed' | 'pr';
@@ -118,6 +121,10 @@ export async function commitPushOpenPr(
   // Redacted copy for anything that leaves this function; `remoteUrl` itself stays
   // intact for slug parsing and the PR call.
   const safeRemoteUrl = redactUrlCredentials(remoteUrl);
+  if (deps.requireExactRemoteApproval && (!deps.approvedRemoteUrl || deps.approvedRemoteUrl !== remoteUrl)) {
+    return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
+      warning: 'Git origin changed or was unverified after GHES destination approval; no push or PR attempted' });
+  }
 
   const pushed = await git(['push', '-u', 'origin', req.branch], cwd);
   if (pushed.code !== 0) {
@@ -127,6 +134,13 @@ export async function commitPushOpenPr(
   const cmp = compareUrl(remoteUrl, req.base, req.branch);
   if (!deps.post || !deps.token || !deps.token.trim()) {
     return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp, warning: 'no GitHub token — branch pushed; open the PR manually' });
+  }
+  if (deps.requireExactRemoteApproval) {
+    const again = await git(['remote', 'get-url', 'origin'], cwd);
+    if (again.code !== 0 || again.stdout.trim() !== deps.approvedRemoteUrl) {
+      return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
+        warning: 'Git origin changed after approved push; credential-backed PR refused' });
+    }
   }
 
   const pr = await createPullRequest(
