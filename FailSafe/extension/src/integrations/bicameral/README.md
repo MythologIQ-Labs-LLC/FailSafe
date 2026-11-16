@@ -8,6 +8,10 @@
 - **Official docs:** Upstream repo `BicameralAI/bicameral-mcp` (see contract review) · MCP — https://modelcontextprotocol.io
 - **Backlog:** B-BIC-* cluster, B-INT-2, B-INT-3, B-INT-4
 
+## Compatibility notice (2026-11-16)
+
+**Legacy adapter, development frozen for v6.1.0.** The shipped scope below is evidence of FailSafe's historical Python MCP implementation, **not** proof that it works with the current upstream Bicameral release. Upstream has moved to an MCP-to-local-daemon `ToolRequest` v2 boundary, with daemon-owned review/signoff and retired direct MCP ratification. The consolidated product has not yet issued a unified release. Do not automatically install, upgrade or assume compatibility with current upstream; do not replace its authority model with a local FailSafe interpretation. The owner has deferred new Bicameral-specific development pending [#692](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/692), including a native Windows installed-host compatibility and authority review. Existing opt-in behavior is unchanged by this documentation-only notice.
+
 ## What it does
 FailSafe spawns the Bicameral MCP server over stdio and wraps its tool surface in a typed client built on the shared `McpClientHost` substrate. Drift results are bridged into FailSafe's L3 approval queue (one entry per newly-drifted decision; an L3 verdict auto-ratifies or rejects upstream) and mirrored into the Risk Register. When a tier-3 action is queued for L3, the integration runs `bicameral.preflight` against the target file and attaches drift evidence to the pending approval. A periodic, read-only GitHub poll surfaces upstream release + open-issue counts on the Integrations card. The connection fails closed if the server reports a version below the supported floor.
 
