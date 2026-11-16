@@ -125,6 +125,16 @@ export async function commitPushOpenPr(
     return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
       warning: 'Git origin changed or was unverified after GHES destination approval; no push or PR attempted' });
   }
+  if (deps.requireExactRemoteApproval) {
+    // Git's pushurl and pushInsteadOf may resolve to a different destination
+    // from the fetch URL, even when origin's name and fetch URL stay unchanged.
+    // --all refuses multiple push targets rather than sending to extra hosts.
+    const pushTargets = await git(['remote', 'get-url', '--push', '--all', 'origin'], cwd);
+    if (pushTargets.code !== 0 || pushTargets.stdout.trim() !== deps.approvedRemoteUrl) {
+      return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
+        warning: 'Git push destination differs from the approved GHES remote; no push or PR attempted' });
+    }
+  }
 
   const pushed = await git(['push', '-u', 'origin', req.branch], cwd);
   if (pushed.code !== 0) {
