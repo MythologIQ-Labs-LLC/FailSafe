@@ -1,0 +1,214 @@
+# Prospective /qor-plan: FailSafe 6.1.0, Qortara Logic native read-only status pilot (#668)
+
+**Status:** PROPOSED, AWAITING NATIVE GOVERNANCE AUDIT. This Markdown file is an implementation-intent artifact, **not** a recorded /qor-plan gate, approved intent lock, native /qor-audit PASS, release authorization, install consent or completed test evidence.
+**Authoring date:** 2026-11-13. **Iteration:** 0 (candidate for operator-native plan registration).
+**Base:** FailSafe main `26c1161adc440c00ee29c6b053bb5953d27e8a38` (published 6.0.13 source).
+**Branch:** `plan/v610-668-qortara-native-status-pilot`; **target:** `main`, **feature release:** 6.1.0.
+**Owner authority:** [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679) P0 and [#668](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/668) no-retirement-before-proof. [#662](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/662) agent-host work; [#463](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/463) frozen 0.176.1. This is an additive first slice, not wholesale Qor replacement.
+**Risk:** proposed **L3**, due to creating an executable child process, resolving a project root, consuming governance evidence, potential host credential exposure, proprietary dependency and false ALLOW claims; auditor may raise requirements.
+**Native gate sequence (not performed here):** prospective /qor-plan registration -> native /qor-audit PASS using the owner-authorized adversarial-review method bound to this revision/plan -> /qor-implement on separately approved feature branch -> tests and /qor-substantiate -> owner GO for integration and eventual release. Do not fabricate any of these records.
+
+## Live-main drift checkpoint (2026-11-13)
+
+After this plan branch was cut, FailSafe `main` advanced from `26c1161adc440c00ee29c6b053bb5953d27e8a38` to `3fc19439e4b57f3bbba8db1ba092882ceb73528b`. The GitHub compare reports **13 additional commits**, including post-publication v6.0.13 evidence, VSIX qualification runner changes, README/release/status/ledger updates and a lockfile change. It does **not** list edits to the planned native MCP client implementation modules, but the ledger, issue baseline and public docs **did change**. The plan's base line above remains the truthful branch-base identity; it is **not** a claim that main is still at that SHA. Before the native audit and any code branch, re-fetch current main and ledger, reconcile applicability/authority, rebase/recreate from current main through the protected PR workflow, and bind the audit to the resulting exact source SHA. This source comparison is not a governance audit.
+
+## Upstream and host-authority drift checkpoint (2026-11-14; prospective, not an audit)
+
+- Qortara Logic upstream advanced from the originally surveyed `1ac98bd27ba321d81e925759ac144dedb41cec8c` through `725c5854` to `b98aa3b0df159cb37d335a906e763af0d8e3de9e`. Since `725c5854`, merged PRs #286 / #291 / #293 added mandatory root architecture routing, owner-register impact detection and host-verifiable owner-signed architecture acceptance. These are **upstream source developments**, not a pinned licensable native distribution, installed-host qualification or accepted FailSafe integration. Re-evaluate exact native status contracts against the artifact actually selected at audit.
+- Upstream `docs/adr/0026-host-trusted-architecture-acceptance.md` explicitly remains an **owner-directed implementation candidate**, not independently accepted or deployed enforcement. Its host check binds subject-owner key, exact revision/paths/digest, accepted governance tip and separate-principal custody; signed or structurally valid source alone never grants execution authorization. Same-user agent access to an operator-private profile is **not** a strong authority boundary. Do not equate Qortara architecture acceptance with FailSafe's separately governed root `ARCHITECTURE_INDEX.md` or with `qor-status` parity.
+- The connected hosted Qortara tool still reports engine `0.1.0.dev0`, contract `1.3`, backend `2e75eca1daba6860dff9b1b124553f29da9dbe27`, twelve read-only tools and `hostedExecutionEnabled=false`. It explicitly excludes local `qortara_status`; neither hosted introspection nor the latest upstream source proves a native Windows VS Code agent host call. GitHub's Qortara Logic release list is empty, so a source commit is not an approved binary artifact.
+- **Scope separation:** Phase B remains only opt-in, local read-only `qortara_capabilities` and `qortara_status`, with zero authority to permit writes or retire skills. Broader architecture-owner parity and signed decision custody are a later **separately audited and accepted** successor capability. For a status observation that reports architecture acceptance, label unverified host custody `unverified` and refuse to derive a global `PASS` or a Qor-retirement decision. Add eventual parity negatives for stale owner tip, wrong subject/key, dirty ADR, same-user custody spoofing and no privileged host enforcement under #668.
+- The plan branch's FailSafe base remains published `26c1161...`, while current protected main advanced to `0c0e30e042f628455c2a7f4d1287b5efd9d3ecfc` as of this checkpoint. Before native `/qor-plan` registration or implementation, reconcile the full base-to-main diff and re-bind the approved exact source, code write set, trust boundary and reviewer. This prospective note is not a signed governance receipt, license approval or consent to run the launcher.
+
+## Live source-bound implementation hazard checkpoint (2026-11-16; browser research, not native acceptance)
+
+**Observed exact baselines:** FailSafe protected `main@0c0e30e042f628455c2a7f4d1287b5efd9d3ecfc`; source-only Qortara `MythologIQ-Labs-LLC/qortara-logic@fea6b4560ef0cbc55f1a272615399dd8f34e7024`. The Qortara GitHub releases list was empty; `pyproject.toml` declares `0.1.0.dev0` / Python `>=3.11`. This new source checkpoint does **not** replace this branch's original base SHA, establish an approved wheel/install, or register a native plan. Reconcile these source identities again on the actual audit day; this branch may be stale against current `main`.
+
+- **Exact protocol/output:** Qortara `src/qortara_logic_runtime/gates.py:status()` returns `{ session_id, phases, next_phase, ledger, plan_bound }`. `ledger` contains its own `ok`, error/events/tip fields, while `plan_bound` may be **null** if no audit and plan are present. There is **no top-level `PASS`**, no echoed canonical repository root, and no global write grant. FailSafe must track and independently verify the user-approved root, parse/validate these fields and preserve `null`/unavailable rather than promote `ledger.ok`, `next_phase`, a tool listing or an audit's textual PASS into a merged governance approval. A `status` response is a *report*, never a substitute for `qortara verify` or the native Qor audit.
+- **Tools and dispatch:** `chatgpt_readonly_profile.py` explicitly exposes **13** read-only names, not just the two proposed FailSafe pilot names. The upstream server's `--read-only` restricts its own dispatch to that wider set, including `qortara_gate_run`; it does **not** enforce FailSafe's smaller pilot contract. FailSafe's shared `McpClientHost.ts` has a `preCallGate(name)` that executes *before* `client.callTool`, plus a `runtimeGuard`. Require the FailSafe-owned strict equality allowlist `qortara_capabilities` and `qortara_status` in the actual dispatch path; filter presentation separately and reject all future/unknown names even if advertised by upstream. Never treat `tools/list` or `--read-only` as the only boundary.
+- **Explicit root versus fallback:** upstream `project_root.resolve` prioritizes `--root` and `QORTARA_PROJECT_ROOT`, refuses them if they conflict, then tries `CLAUDE_PROJECT_DIR`, MCP roots or CWD fallback. The pilot must supply one owner-approved canonical `--root` and an isolated/controlled environment and CWD, remove or reject conflicting inherited root overrides, and verify worktree identity independently **before** any local status call. The Python subprocess must never take root authority from an agent message, a project `pyproject.toml`, `PYTHONPATH`, host CWD or server-supplied result.
+- **Windows executable boundary:** current FailSafe `McpClientHost.assertLaunchableCommand` requires an absolute, existing regular-file command, and on Windows a `.exe`. The Qortara `qortara-logic-mcp` entry-point script therefore cannot be assumed to launch directly as a Windows executable. The audited implementation must prove a trusted absolute `python.exe` + *argv array* launch of `-m qortara_logic_plugin.mcp_server --root <authorized-realpath> --read-only` using a verified isolated interpreter/package. Investigate and test Python's isolated mode (`-I`), user-site/import shadowing, env filtering, and whether the approved package works there. **This is a candidate invocation, not a verified runnable command**, and never permission to spawn from a workspace-controlled path.
+- **Transport and refusal shape:** upstream local MCP tool failures can arrive as `isError: true` with `structuredContent.outcome=refused`, or as JSON-RPC errors for unknown tools. FailSafe's generic `McpClientHost` converts `isError` to an exception after its optional guard. Preserve the typed refusal reason without publishing raw secrets; error, malformed response, session absent, stale root, cancellation and timeout must be distinct from a valid clean report.
+- **Distribution and custody:** no released wheel is evidenced by the upstream GitHub releases list. Neither a source commit nor the hosted service's contract is permission to auto-download, install or bundle the internal Qortara package. Obtain owner-approved license, exact immutable wheel SHA, command resolution, Python interpreter/custody evidence and rollback *before* any executable work.
+
+**Audit-time stop point:** If the installed Copilot Agent Host lacks a qualified native MCP lifecycle or exact approved distribution, record `NATIVE_GATE_NOT_RECORDED` / `UNSUPPORTED`. Do not reinterpret a shell invocation or hosted plugin call as an installed host result. The extra negative cases QST-17..20 below are binding on the later implementation audit; none has been executed by this plan revision.
+
+## Proposed frozen Qortara plugin boundary: FS-QORTARA-NATIVE-STATUS/1.0 (owner direction 2026-11-16)
+
+**Policy:** Freeze the **FailSafe-facing native plugin/adapter contract and its privileges**, not the Qortara Logic implementation, hosted API, or rapidly evolving backend. This is a *proposed v6.1.0 consumer contract for native audit*, not a declaration that a binary or native host has qualified. It does not supersede Qortara's canonical host-adapter contract or authorize a new distributed plugin.
+
+**Source snapshot:** Qortara `main@782e22d8ed84fb52170d75f7fe5ef94da70d757a`; `src/qortara_logic_plugin/host_contract.py` blob `0eb1462697b92967458d44a2f8f9096ff5f2b670` declares **native `CONTRACT_VERSION = "1.0"`**. Its `capabilities.describe` operation maps to `qortara_capabilities`; `lifecycle.inspect` maps to `qortara_status`. `qortara_capabilities` accepts a `contract_version` argument, and current server checks **major compatibility only**, so the consumer must perform its *own* stricter exact-version/semantic check. Qortara's hosted contract **1.3 is different** and provides neither native execution nor local `qortara_status`. Native host contract 1.0, hosted 1.3 and the engine's `0.1.0.dev0` version are three **different version axes**; never compare them as if interchangeable.
+
+### Frozen surface (no implicit feature expansion)
+
+| Boundary | FailSafe v1.0 consumer rule | Backend freedom |
+| --- | --- | --- |
+| Protocol | **Local stdio MCP only**; negotiate a tested version with bounded messages and explicit timeout, with exact root and approved interpreter/executable custody | Backend internals and independent hosted transports may evolve without granting this pilot remote or write access |
+| Discovery | Require `qortara_capabilities({"contract_version":"1.0"})`; validate `contract_version === "1.0"`, `transport === "stdio"`, `operations["capabilities.describe"]` and `operations["lifecycle.inspect"]` SUPPORTED and mapped to the two required tools, and `project_root.status === "RESOLVED"` with `source === "argument"`; treat reported `path` as **lexically normalized only**, independently resolve its realpath/Windows junction identity and require it to match the operator-approved worktree | Bound response size/depth before parsing; unknown operation descriptors or tool descriptions are **untrusted metadata**, never commands or authorization |
+| Dispatch | Exact **two-tool** allowlist: `qortara_capabilities` and `qortara_status`; all other names, including upstream read-only `qortara_gate_run`, are rejected by FailSafe's `preCallGate` before `client.callTool` | New backend tool names may appear without automatically becoming available to FailSafe |
+| Status shape | Validate `qortara_status()` fields: `session_id: string\|null`; `phases: object` with bounded per-phase values; `next_phase: string\|null`; `ledger: object` with `ok: boolean` and bounded event/tip/error data; `plan_bound: boolean\|null`. Reject unknown *required-field types*, oversized/deep payloads and `isError`, preserve source errors and the difference between absent, unknown, stale and refused | Extra non-authoritative fields may be ignored after size/depth checks, but never used as authority, evidence substitution or a feature flag |
+| Authority | `qortara_status` is an **observation**, never release/SHIELD/L3 approval or `/qor-audit` PASS; no Qor skill disablement and no `.qor`, `.qortara` or `.failsafe` mutation | Independent Qortara lifecycle, policy and evidence features may be built without extending FailSafe's authority |
+| Provenance | Bind approved immutable interpreter/package/wheel SHA256, native `1.0` contract version, tested protocol, approved root/worktree and FailSafe VSIX SHA **per installed invocation**; fail on mismatch | Backends may update, but a new binary digest/version requires a separately approved compatibility and provenance record, not silent adoption |
+
+**FailSafe-owned result model (proposed, not an upstream on-wire schema):** expose only the existing planned statuses `not-configured | available-read-only | unsupported | untrusted | unavailable | invalid-result` plus bounded source-specific status/refusal details and artifact/root provenance. `available-read-only` means a validated local *observation path* exists, **not** that Qortara's plan/audit, ledger or any release gate is green. Keep `plan_bound: null` intact. No synthetic global `PASS`. Do not require Qortara to add a new response envelope just for FailSafe in v1.0; map its existing `structuredContent` under a strict local parser.
+
+### Frozen wire fixtures and consumer-owned validation oracle
+
+**This is a test oracle, not a claim of running the provider:** Observed at Qortara source `782e22d8ed84fb52170d75f7fe5ef94da70d757a`, `tools.py` blob `e857a145243d589bb9bca34fd6957d362f69ecac`, `host_contract.py` blob `0eb1462697b92967458d44a2f8f9096ff5f2b670`, and `project_root.py` blob `cc46dd855a673e476b7b17d38fef5d8aeaf0bccf`. No test was run using this plan's new fixtures.
+
+```json
+{
+  "consumer_contract": "FS-QORTARA-NATIVE-STATUS/1.0",
+  "provider_native_contract": "1.0",
+  "transport": "local-stdio-mcp",
+  "tools": {
+    "qortara_capabilities": {
+      "request": {"contract_version": "1.0"},
+      "inputSchema": {
+        "type": "object",
+        "properties": {"contract_version": {"type": "string"}},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    "qortara_status": {
+      "request": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  },
+  "pre_dispatch_allowlist": ["qortara_capabilities", "qortara_status"]
+}
+```
+
+**Validate on the actual approved executable:** Obtain `tools/list` under the tested MCP protocol and verify that each required tool is unique and advertises the above exact input-schema shape; reject collisions, changed required arguments, extra accepted arguments, malformed schemas, and missing tools. Additional upstream **different** tool names may be ignored as untrusted discovery metadata, never included in FailSafe's own tool list/dispatch allowlist. Discovery success alone cannot authorize a call. `qortara_capabilities` must return valid `structuredContent` with native exact `contract_version: "1.0"`, `transport: "stdio"`, `operations.capabilities.describe.status: "SUPPORTED"` and tools including `qortara_capabilities`; `operations.lifecycle.inspect.status: "SUPPORTED"` with tool `qortara_status`. Do not require all operation descriptors to match verbatim because Qortara is allowed to add metadata; do refuse any required-field type/meaning change.
+
+**Root is not a verified attestation:** Qortara's `project_root._check()` computes `real = canon(path)` to test excluded locations, but returns `Resolution(path, source)`, where `path` is normalized lexically, **not guaranteed to equal `os.path.realpath(path)`**. The upstream response `project_root.path` is therefore evidence of the *selected argument*, not an authenticated inode/file-ID or a symlink-free workspace proof. FailSafe must choose and canonicalize the operator-approved workspace independently, reject policy-forbidden symlinks/reparse points, bind a filesystem identity/revision as available, compare the actual resolved launcher argument and response with that trusted root, and revalidate before and after the status call. Windows case, junction, UNC, path normalization, and retarget races must not result in cross-workspace status being presented as approved. If filesystem identity cannot be verified, report `untrusted` rather than a positive observed status. Avoid treating a mere string-equality comparison as defense against a hostile same-user actor; full OS-level isolation still requires native acceptance.
+
+**Refusal and response oracle:** `qortara_status` uses zero arguments; on success `structuredContent` is the bounded `session_id/phases/next_phase/ledger/plan_bound` report described above. The protocol may return `isError:true` and a structured `outcome: refused` with a root error; unknown method can be a JSON-RPC error. Both are negative outcomes, not successes. A clean transport with `ledger.ok: false` is *not* an intact ledger. A clean transport with `plan_bound: null` is *not* a verified plan. Reject unexpected `status` type changes while tolerating non-authoritative extra fields under payload limits.
+
+**Version/protocol snapshot:** Pin a native MCP initialize protocol version and require the server's actual negotiated `protocolVersion` to match the approved fixture. Current Qortara `mcp_server.py` selects the first supported protocol if the requested one is unsupported, so a successful initialize by itself does **not** prove protocol equivalence. A protocol downgrade/forward-skew is `unsupported` until separately qualified. Bind the selected MCP SDK version alongside tool JSON-schema and wheel/launcher digest in the admission record.
+
+### Version policy, future extension seam and rollout
+
+1. **Freeze initial acceptance to native contract exactly `1.0`** and two calls. No wildcard dependency, moving `main` checkout, automatic plugin upgrade, or hosted fallback. A native server reporting `1.1` or `2.0` is **UNSUPPORTED** until a tested, owner-approved compatibility record explicitly admits it; the upstream server's major-only check does not waive this.
+2. **Compatible backend change without FailSafe expansion:** upstream may add internal features and additional MCP tools or non-authoritative fields. FailSafe's two-tool security boundary remains unchanged. Admission of a newly built binary, even with contract `1.0`, requires exact digest/rights, canonical schema/negative fixture replay and Windows host proof. No unreviewed downgrade, implicit activation or source-of-truth migration.
+3. **Additive consumer contract `1.x` (future):** only after a separate issue, bounded `/qor-plan` and adversarial `/qor-audit`, explicit operator feature flag, exact version/capability negotiation, unchanged v1.0 denial guarantees, positive/negative tests, installed host result and owner GO. Keep additional *read-only* operations opt-in and per-tool allowlisted; unsupported hosts simply retain the frozen v1.0 behavior.
+4. **Breaking/privileged change `2.0+` (future):** any authorization, execution/write, installation, remote egress, different root-custody model, evidence interpretation or Qor retirement is a **separate governed security architecture and migration**, never a minor extension or backend-driven flag. If a backend needs such a change, return `unsupported` and keep existing Qor behavior.
+5. **Compatibility evidence register:** for each admitted provider build record `provider_contract_version`, `consumer_contract_version`, engine/package SHA, tool-name/argument/result schema digests, trusted root source, host/protocol versions, tested refusal fixtures, decision/owner/date and rollback. Evidence may link #668's existing canonical succession register, but should not create a duplicate authority database. Keep the last approved build available for rollback; if none exists, report unconfigured/unavailable rather than pulling an update.
+6. **Pinned-provider change monitoring:** compare upstream native schema and tool roster against approved snapshot during qualification/upgrade PRs, **not** on every normal user session and not by automatically adopting hosted changes. A schema diff or changed status semantics must result in explicit FAIL/REVIEW, not silent widening. New backend capabilities may be discovered as *untrusted informational data* until independently accepted.
+
+### Frozen contract falsification tests (implementation phase; not run)
+
+| ID | Attack or drift | Required outcome |
+| --- | --- | --- |
+| QST-21 | Native advertises `1.1` (upstream's major-1 check accepts `1.0` request), or `2.0` (upstream rejects a major-1 request), or a malformed version | FailSafe refuses every **unapproved exact version** regardless of upstream handshake result |
+| QST-22 | New read-only/privileged tools or operation metadata appear after upstream backend update | No additional FailSafe callable tool, write permission, transport or status success; two-tool allowlist unchanged |
+| QST-23 | Same `1.0` version with altered `status` field type/semantics, missing root, malformed `structuredContent`, `plan_bound:null` or oversized extra metadata | Strict local parser/size limit refuses or preserves unknown; no synthetic PASS or leaked root |
+| QST-24 | Backend binary is rebuilt or substituted without changing reported version/contract | Digest/provenance mismatch refuses before launch, with explicit operator-approved update/rollback path |
+| QST-25 | Operator opts into a future read-only feature, then turns it off or rolls back backend | v1.0 remains functional/denied as before; no implicit activation, Qor retirement, stale session authority or persistent privilege |
+| QST-26 | Provider returns a normalized path that traverses a symlink/junction; attacker retargets between capability lookup and status, including Windows UNC/case edge cases | Independent realpath and filesystem-identity comparison refuses wrong/changed target; no claim that upstream `project_root.path` is a canonical attestation |
+| QST-27 | Same tool names but altered MCP input schemas or duplicate allowed-tool declarations; unrecognized protocol gets server fallback | FailSafe refuses schema/protocol skew before any status call; fixed allowlist and parser are not bypassed |
+
+**First implementation sign-off:** require the exact native 1.0 contract and response-shape fixture to be captured from the approved local artifact; a real Windows/VS Code Agent Host positive/refusal roundtrip; QST-01..27 qualification; and owner-authorized native L3 governance. **Architectural publication gate:** if this proposed boundary becomes an accepted normative FailSafe integration contract, register it as a separately scoped *canonical* Qortara consumer document in the root `ARCHITECTURE_INDEX.md` and the required Governance Index tier **in the same governed change**, with one canonical owner/domain, explicit relation to but no retirement of `integration-contract-qor-logic-consumer`, and validator evidence per the root index rules. Do not bury a shipped security contract only inside an unaccepted `.failsafe` plan, create a duplicate canonical owner, or mark Qor superseded without per-skill proof. This section only freezes the proposed interface and leaves Qortara's backend development independent.
+
+## Owner-approved adversarial audit option (2026-11-14)
+
+The solo owner authorized a rigorous **adversarial audit in place of a separate independent reviewer** (decision recorded on [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679)). An adversarial reviewer may be the author if self-review is disclosed; it must explicitly hunt for contradictory evidence, missing installed-host paths, refusal/rollback failures, root/permission confusion, Qor parity gaps, unsupported distribution/license claims and test illusions. Bind exact target source/plan, report actual tests versus planned tests, record specific findings, and issue PASS or VETO without conditional clearance.
+
+This changes **reviewer independence**, not the existence of the recorded native `/qor-plan` and `/qor-audit` lifecycle requirements in `AGENTS.md`. A separately authenticated human/model is not mandatory for the review, but no source-only comment or hosted Qortara evaluator counts as a native gate record. If the native host is unavailable, report `NATIVE_GATE_NOT_RECORDED`. Continue to require a separately approved local artifact, a real installed Copilot Agent Host, tested refusal and rollback, owner GO, and per-capability Qor-retirement proof. Architecture owner acceptance never grants execution authority.
+
+## User outcome / acceptance boundary
+
+A developer using an **installed** FailSafe 6.1.0 VSIX in a real **VS Code 1.146 Copilot Agent Host** may **explicitly opt in** to an approved, version-pinned native Qortara Logic integration. The host can run one **real** bounded **read-only** `qortara_status` (or `qortara status`) against an explicitly authorized isolated repository/worktree. FailSafe reports the Qortara engine/artifact source, actual active workspace and the tool's authoritative refusal or result, and can compare that with the legacy frozen Qor status on the same revision **without deleting or replacing any Qor skill or receipt**. The opt-in pilot is not accepted until the installed VSIX/host test and at least one meaningful negative case pass. A source `SKILL.md`, five hosted orchestrators, `tools/list`, unit tests or documentation alone is not acceptance.
+
+**First-slice exclusions:** no Qor skill retirement; no new long-lived `qor-preflight` wrapper; no metadata bulk rewrite of `ql-*`; no runtime `qortara install`/uninstall/force; no Qortara hosted OAuth/token exchange; no automatic network egress; no governance gate write, release/owner approval, seal, historical import, `.qortara` mutation or `.failsafe` editing; no replacement of FailSafe Sentinel, SHIELD, TrustEngine, LedgerManager, BreakGlass, G4 or its native MCP (B209). The exact source/contract and approved license/distribution must be verified before any subprocess invocation.
+
+## Exact source and existing reuse
+
+| Owner | Source observed | Obligation |
+| --- | --- | --- |
+| FailSafe | `FailSafe/extension/src/qorlogic/QorLogicSkillIngestor.ts`, `qorHostReceiptVerify.ts`, `hostLayouts.ts`, `consumer/`; frozen wheel 0.176.1, tested-against marker 0.169.0 | Keep current APIs and verified on-disk installed-receipt behavior; never promote the tested-against marker without a real conformance PASS |
+| FailSafe | `FailSafe/extension/src/integrations/mcp/McpClientHost.ts` (inspect actual path), `src/integrations/bicameral/BicameralMcpClient.ts`, `src/integrations/open-design/OpenDesignMcpClient.ts` | Reuse existing MCP client host, timeout/idle/dispose and explicit pre-call allowlist, rather than build a new transport; check exact path on target revision |
+| FailSafe | `FailSafe/extension/src/extension/bootstrapQorLogic.ts` | It builds **FailSafe-local** ledger, policy, trust and shadow services, not the Qor Python skills; leave unchanged |
+| Qortara | `qortara-logic@1ac98bd27ba321d81e925759ac144dedb41cec8c`, `src/qortara_logic_plugin/mcp_server.py`, `chatgpt_readonly_profile.py`, `src/qortara_logic_runtime/cli.py`, `src/qortara_logic_runtime/install.py` | Local stdio server exists, `--read-only` restricts discovery+dispatch; local `qortara_status` and `qortara_capabilities` are available, but **remote hosted MCP does not serve `qortara_status`**. Qortara writes its own `.qortara-installed.json` receipts; do not assume compatibility with `.qorlogic-installed.json` |
+| Frozen Qor | `Qor-logic@40a8b38b99ca470773a95536bcd6aac81e37c156:qor/skills/memory/qor-status/SKILL.md`, blob `9879126de1ac1fec10073482af31f60b56093ee6` | Preflight `governance-health`, damaged/incomplete blocking, legacy artifact presence/risk route, index drift and tone are behaviors to account for |
+| Qortara | `skill-source/skills/qortara-status/SKILL.md`, blob `eb49acef723be7bd3873ff041013a26fd627ecd3` | Reports `.qortara` session/phase/verdict/audit-plan binding and ledger tip; does **not** expressly perform frozen legacy `governance-health` and Governance Index drift checks |
+| FailSafe-local | `.agents/skills/qor-status/SKILL.md`, blob `c0bbf18a52a4615e36066f4434866e10af533b46`; `.gemini/commands/qor-status.toml`, blob `7237c230364ee9c9528127d56d656890f023f147` | The local `.agents` variant has obsolete doubled `ql-status` metadata and uses a different audit path. Do not treat the two source variants as one verified runtime. Preserve existing supported host flows |
+
+**Unverified at plan time:** actual package wheel checksum/distribution rights, live Windows native CLI version or host install, actual Qortara `status` structured response shape against current source and supported protocol, installed 6.1.0 VSIX result, Qor 0.176.1 updated conformance, operator-authenticated workspace root, native /qor-audit receipt. No conclusions from this research alone.
+
+## Implementation phases after native audit PASS
+
+### Phase A: dependency and trust admission (no customer behavior yet)
+
+1. Resolve the exact Qortara 0.1.0.dev0 or later **approved, immutable distribution artifact**, SHA-256, Python 3.11+ interpreter, package version, trust/legal rights and signing/provenance. Engine source SHA is not proof of wheel identity; **do not fetch from PyPI or clone automatically**. A private repository cannot be bundled with Apache-2.0 VSIX by assumption.
+2. Preflight an operator-provided **absolute, independently trusted** launcher/interpreter path outside the workspace; no shell, no bare command resolution through mutable PATH, no site-packages imported from the project directory, no agent-supplied environment, no project-driven `uv` configuration or auto-download, no model/API credential leakage. Apply existing Python interpreter safety and process abstraction; disclose if source code requires unimplemented safeguards.
+3. Read but do not create/repair original `.qorlogic-installed.json`, and separately recognize Qortara `.qortara-installed.json`. Explicit reject if evidence roots, existing skills, symlinks, ownership, permissions, corrupted receipts or host namespaces collide. `qortara install --dry-run` may help in later phase **only after** approved runtime provenance; this slice never runs install.
+4. Record exact local Qortara `qortara_capabilities` tool contract, Qortara version and allowed `qortara_status` existence; fail when contract is unrecognized, no project root, unsupported host or no verified runtime. Do **not** equate hosted contract 1.3 with native protocol/version conformance.
+
+### Phase B: minimal FailSafe-owned read-only integration
+
+1. Add a small opt-in native Qortara **client adapter** under `FailSafe/extension/src/integrations/` in a named bounded module; exact module path selected during audit, preserving existing `McpClientHost` ownership. Reuse the current MCP SDK and `StdioClientTransport`. Avoid a second MCP implementation or an HTTP bridge.
+2. Disabled by default; operator explicitly enables/configures **per workspace** under a reviewable user-owned trust surface. A workspace file or agent cannot silently elevate a command path or enablement. Provide a non-connected `unavailable/unconfigured` status by default; no subprocess at extension activation.
+3. The **only permitted calls** for Phase B are `qortara_capabilities` and `qortara_status`, both through local MCP `--read-only`. Every other tool name (including `qortara_record_gate`, install/uninstall, release, tag, exec, and unknown future tools) is blocked **before transport**. Filter both discovery-visible labels and dispatch calls; host transport allowlist must not trust a capability string returned by the Qortara server.
+4. For status, bind the **realpath/canonical workspace and worktree**, log the provenance source without leaking secrets or raw repository contents, reject wrong/no/ambiguous project root, and present the **original source-specific verdict/refusal**. Failure/timeout/revoke must not become `active`, `PASS`, `available` or grant implicit write permission.
+5. Expose bounded developer-visible statuses: `not-configured`, `available-read-only`, `unsupported`, `untrusted`, `unavailable`, `invalid-result`. Distinguish a valid Qortara `.qortara` status from a frozen `.qor`/FailSafe status, not a synthetic combined PASS. No ledger or skill file mutation.
+
+### Phase C: equivalence and installed host (separate acceptance from Phase B)
+
+1. Use one **throwaway repository** at pinned Git SHA with independent `.qor`, `.failsafe` and `.qortara` evidence, and separately qualified frozen Qor and native Qortara artifacts. Invoke the true predecessor `qor-status` workflow and Qortara `qortara-status` via supported host behavior, not only handwritten simulation.
+2. Verify legacy `governance-health` damaged/incomplete distinction; missing first-use vs altered ledger; Governance Index drift; plan risk-grade routing; tampered/forged audit PASS; Qortara changed-plan `plan_bound=false`, invalid chain, wrong-root and unavailable cases. Old and new outputs need **equivalent user-safety decisions**, not matching strings. If Qortara does not cover a legacy diagnostic, FailSafe must continue owning and exposing that diagnostic or keep the predecessor skill active.
+3. Prove **real installed VS Code 1.146 Copilot Agent Host** invocation plus denied call; test older supported VS Code, offline/network loss, operator cancellation, uninstall/rollback, fresh install and upgrade from v6.0.13, Windows path/permission races and both good/bad receipt checks. Run analogous tests on other hosts **only if** their support is claimed; do not infer Cursor/Antigravity compatibility from VS Code.
+4. Write a row in #668's **single canonical succession register** with exact engine/wheel/skill/host SHA, positive/negative evidence, documented adversarial reviewer (independent reviewer optional under #679), explicit owner decision, rollback, and status. **No `qor-status` retirement in this first implementation PR.** Its independent succession approval is separate from the plugin integration's approval.
+
+## Falsification tests (required implementation test inventory, QST-01..27)
+
+| ID | Test input or mutation | Required outcome |
+| --- | --- | --- |
+| QST-01 | Feature disabled/unconfigured on extension activation | **Zero subprocess launches, zero network requests, no added skill files** |
+| QST-02 | Trusted approved launcher, clean isolated root, local MCP `initialize`, `tools/list`, capabilities and status | Read-only local status, exact contract provenance, no workspace mutation |
+| QST-03 | Untrusted or project-root-planted Python/uv/launcher path or unpinned/mismatched package | **Refuse before process launch** and before reading project credentials |
+| QST-04 | Operator-provided path escaping selected root via symlink/junction, or worktree/root switch during call | Refuse with correct root evidence; cannot access another workspace |
+| QST-05 | `tools/call` attempt for `qortara_record_gate`, release/tag, arbitrary new or unknown MCP method | Host-side pre-dispatch **block**; no effect even if server advertises it |
+| QST-06 | Forged, malformed, oversized, missing, stale or wrong-version MCP response; `isError` true | Typed `invalid-result`/`unsupported`/refused; no false healthy status |
+| QST-07 | MCP client disconnect, server exit, timeout and operator cancel | Bounded cleanup, status unavailable, no retry-as-ALLOW |
+| QST-08 | Existing frozen `.qorlogic-installed.json` and exact checked files | Snapshot hashes unchanged; no new install/uninstall or false 'retired' label |
+| QST-09 | Changed plan bytes after audit, incorrect verdict body 'PASS', malformed chain, damaged predecessor governance | Fail-visible/refusal; not `ready` or `PASS` |
+| QST-10 | `qor-status` source vs `qortara-status` with valid repo but legacy diagnostics only | Explicit `not-fully-equivalent`; retain Qor routes and warnings |
+| QST-11 | Revoke or disable opt-in; change worktree to different SHA | Old status not reusable as current authority; clean disconnect, no host leakage |
+| QST-12 | Real installed target VSIX (Windows VS Code 1.146 Copilot) and earlier version supported by engines.vscode | Document successful/unsupported native skills and MCP behavior with actual host details |
+| QST-13 | Qortara BLOCK and Qor ALLOW on identical task | No fallback or merged ALLOW; show disagreement and stop |
+| QST-14 | Partial install/upgrade failure or protected path collision | No partial skill overwrite, no forged receipt, independent manual recovery |
+| QST-15 | Arbitrary tool description/prompt injection in MCP result or repo files | Data remains untrusted; no script execution, elevated approval or release action |
+| QST-16 | Binary changed but claimed version unchanged; wheel/hash mismatch | Reject, not accepted as equivalent or installed-ready |
+
+| QST-17 | Upstream `--read-only` lists/accepts `qortara_gate_run` or any third read-only tool; caller asks FailSafe to dispatch it | FailSafe `preCallGate` **refuses before MCP `callTool`**; discovery may not grant authority |
+| QST-18 | Conflicting inherited `QORTARA_PROJECT_ROOT`, `CLAUDE_PROJECT_DIR`, CWD, or MCP roots; swapped worktree/reparse-point root | No cross-root read or stale result; explicit operator-approved `--root` binding/refusal and no implicit fallback |
+| QST-19 | Windows `qortara-logic-mcp` script or a workspace-planted `python.exe`/module shadow; injected `PYTHONPATH`/user site | Refuse unsafe launcher; only independently trusted absolute `.exe` with verified isolated package, argv and environment may launch |
+| QST-20 | `qortara_status` returns `plan_bound: null`, `ledger.ok: true`, no session, wrong type, or plausible `next_phase` | Preserve report/unknown/refusal, never synthesize an audit `PASS`, verified root or write authorization |
+
+**Additional frozen-contract cases QST-21..27 are specified in the v1.0 contract section above.**
+
+**Red-team mutation checks:** remove client pre-call allowlist, replace status `unavailable` with `ready`, trust MCP result root instead of verified root, silently permit auto-install, skip receipt/no-symlink check, treat GitHub/source mapping as per-skill PASS, and disable Qor when Qortara is up. Each mutant must fail a named behavioral or installed scenario. A green unit test alone does not establish host acceptance.
+
+## Evidence, rollback and stop rules
+
+- **Before code:** register this exact plan through native Qor governance; native L3 /qor-audit PASS with disclosed adversarial review bound to resulting immutable plan+head, including architecture/ownership and licensing. If audit cannot be executed in this chat host, record BLOCKED_NATIVE_AUDIT, not a fabricated PASS.
+- **At implementation:** separate `feat/668-...` branch, bounded modules and tests, no changes to protected/released v6.0.13 SHA, no customer-visible runtime disabled/removed without approval. Mandatory focused tests plus `npm run compile`, lint, `npm run test:node`, installed-host workflow, and target-specific `validate:vsix` / eight-platform packaging as applicable. Record exact commands/versions and outcomes, including negative results and remaining risks.
+- **At review:** disclosed adversarial reviewer (same-author review permitted under #679) binds a recorded native PASS to actual head SHA; require owner approval before merge, enablement, skill succession, tag or publication.
+- **Rollback:** turn off opt-in and dispose native Qortara client, leaving original Qor 0.176.1 package, `.qorlogic-installed.json`, source-managed `qor-*` assets and FailSafe G4 store unchanged. Validate rollback in installed VSIX and active agent session. A denial from one engine must not be bypassed by using the other.
+- **Stop:** missing approved/licensable native artifact, unexplained package/process identity, any receipt collision or mutation, root confusion, inability to demonstrate genuine local call/refusal, missing agent host access or a governance VETO. Declare exact blocker and keep first slice unshipped.
+
+## Success criteria for this plan's completion
+
+1. A real authorized customer-style host can configure, invoke and stop **read-only native Qortara status** without unapproved writes or network contact, and sees truthful provenance/refusal.
+2. The integrated adapter has explicit absence/error/attack behavior and **does not** change FailSafe's frozen Qor package or local governance substrate.
+3. A source-bound, adversarially reviewed **parity gap report** (at minimum `qor-status` against `qortara-status`) is recorded in #668; it does not claim per-skill retirement.
+4. Installed Windows VS Code 1.146 evidence, regression test results, rollback proof and owner authorization are recorded at exact artifact SHA. If unavailable, the PR remains draft and the missing gate is reported, without suggesting release is complete.
+
+**No release date or cutover is authorized by this plan. v6.1.0 is the owner-selected target, not a waiver of quality.**
