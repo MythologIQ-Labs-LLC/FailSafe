@@ -374,6 +374,34 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     assert.match('warning' in result ? result.warning ?? '' : '', /origin changed after approved push/);
   });
 
+  test('GRB-14 an alternate pushurl or multiple push targets cannot redirect an approved GHES push', async () => {
+    const approved = 'https://ghe.example/o/r.git';
+    for (const pushTargets of [
+      'https://ghe.attacker.invalid/other/repository.git',
+      `${approved}\nhttps://ghe.attacker.invalid/other/repository.git`,
+    ]) {
+      const r = recorder();
+      let pushes = 0;
+      const git: GitRunner = async (args, cwd) => {
+        if (args[0] === 'remote' && args.includes('--push')) {
+          return { code: 0, stdout: pushTargets, stderr: '' };
+        }
+        if (args[0] === 'remote') return { code: 0, stdout: approved, stderr: '' };
+        if (args[0] === 'push') pushes++;
+        return fakeGit(args, cwd);
+      };
+      const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+        workspaceRoot: '/ws', git, confirm: async () => true,
+        recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+        post: r.post, token: TOKEN, apiBaseUrl: GHE,
+      });
+      assert.equal(result.step, 'committed', pushTargets);
+      assert.equal(pushes, 0, 'no push through a different pushurl or extra target');
+      assert.deepEqual(r.sent, [], 'no credential-backed GitHub PR');
+      assert.match('warning' in result ? result.warning ?? '' : '', /push destination differs/);
+    }
+  });
+
   test('S9 a refused base is an error result, and the governed commit reports it as a pushed branch with that warning', async () => {
     const r = recorder();
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
