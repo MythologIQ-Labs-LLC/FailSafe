@@ -1,6 +1,6 @@
 # Bicameral MCP integration
 
-> One-line: connects FailSafe to a local Bicameral MCP server so decision-drift, preflight conflicts, and ratification verdicts flow into FailSafe's L3 approval queue and Risk Register — turning Bicameral's decision graph into governed, auditable enforcement events.
+> Legacy scope: optional local Bicameral v1 MCP transport, historical decision/drift and review routes, and partially wired governance mediators. Drift-to-L3 is inert on current main; compatibility with Bicameral's newer daemon-backed ToolRequest v2 is not qualified.
 
 - **Pattern:** mcp
 - **Direction:** governed execution (MCP stdio subprocess) + read-only upstream poll
