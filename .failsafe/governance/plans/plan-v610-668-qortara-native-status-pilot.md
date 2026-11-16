@@ -65,7 +65,7 @@ After this plan branch was cut, FailSafe `main` advanced from `26c1161adc440c00e
 
 | ID | Attack or drift | Required outcome |
 | --- | --- | --- |
-| QST-21 | Native advertises version `1.1` or `2.0` but upstream `check_version("1.0")` would accept it by major | FailSafe refuses *unapproved version* despite upstream accepting the handshake |
+| QST-21 | Native advertises `1.1` (upstream's major-1 check accepts `1.0` request), or `2.0` (upstream rejects a major-1 request), or a malformed version | FailSafe refuses every **unapproved exact version** regardless of upstream handshake result |
 | QST-22 | New read-only/privileged tools or operation metadata appear after upstream backend update | No additional FailSafe callable tool, write permission, transport or status success; two-tool allowlist unchanged |
 | QST-23 | Same `1.0` version with altered `status` field type/semantics, missing root, malformed `structuredContent`, `plan_bound:null` or oversized extra metadata | Strict local parser/size limit refuses or preserves unknown; no synthetic PASS or leaked root |
 | QST-24 | Backend binary is rebuilt or substituted without changing reported version/contract | Digest/provenance mismatch refuses before launch, with explicit operator-approved update/rollback path |
