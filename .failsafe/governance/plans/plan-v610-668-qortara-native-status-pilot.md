@@ -1,12 +1,12 @@
 # Prospective /qor-plan: FailSafe 6.1.0, Qortara Logic native read-only status pilot (#668)
 
-**Status:** PROPOSED, AWAITING NATIVE GOVERNANCE AUDIT. This Markdown file is an implementation-intent artifact, **not** a recorded /qor-plan gate, approved intent lock, independent /qor-audit PASS, release authorization, install consent or completed test evidence.
+**Status:** PROPOSED, AWAITING NATIVE GOVERNANCE AUDIT. This Markdown file is an implementation-intent artifact, **not** a recorded /qor-plan gate, approved intent lock, native /qor-audit PASS, release authorization, install consent or completed test evidence.
 **Authoring date:** 2026-11-13. **Iteration:** 0 (candidate for operator-native plan registration).
 **Base:** FailSafe main `26c1161adc440c00ee29c6b053bb5953d27e8a38` (published 6.0.13 source).
 **Branch:** `plan/v610-668-qortara-native-status-pilot`; **target:** `main`, **feature release:** 6.1.0.
 **Owner authority:** [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679) P0 and [#668](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/668) no-retirement-before-proof. [#662](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/662) agent-host work; [#463](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/463) frozen 0.176.1. This is an additive first slice, not wholesale Qor replacement.
 **Risk:** proposed **L3**, due to creating an executable child process, resolving a project root, consuming governance evidence, potential host credential exposure, proprietary dependency and false ALLOW claims; auditor may raise requirements.
-**Native gate sequence (not performed here):** prospective /qor-plan registration -> independent /qor-audit PASS bound to this revision/plan -> /qor-implement on separately approved feature branch -> tests and /qor-substantiate -> owner GO for integration and eventual release. Do not fabricate any of these records.
+**Native gate sequence (not performed here):** prospective /qor-plan registration -> native /qor-audit PASS using the owner-authorized adversarial-review method bound to this revision/plan -> /qor-implement on separately approved feature branch -> tests and /qor-substantiate -> owner GO for integration and eventual release. Do not fabricate any of these records.
 
 ## Live-main drift checkpoint (2026-11-13)
 
@@ -68,7 +68,7 @@ A developer using an **installed** FailSafe 6.1.0 VSIX in a real **VS Code 1.146
 1. Use one **throwaway repository** at pinned Git SHA with independent `.qor`, `.failsafe` and `.qortara` evidence, and separately qualified frozen Qor and native Qortara artifacts. Invoke the true predecessor `qor-status` workflow and Qortara `qortara-status` via supported host behavior, not only handwritten simulation.
 2. Verify legacy `governance-health` damaged/incomplete distinction; missing first-use vs altered ledger; Governance Index drift; plan risk-grade routing; tampered/forged audit PASS; Qortara changed-plan `plan_bound=false`, invalid chain, wrong-root and unavailable cases. Old and new outputs need **equivalent user-safety decisions**, not matching strings. If Qortara does not cover a legacy diagnostic, FailSafe must continue owning and exposing that diagnostic or keep the predecessor skill active.
 3. Prove **real installed VS Code 1.146 Copilot Agent Host** invocation plus denied call; test older supported VS Code, offline/network loss, operator cancellation, uninstall/rollback, fresh install and upgrade from v6.0.13, Windows path/permission races and both good/bad receipt checks. Run analogous tests on other hosts **only if** their support is claimed; do not infer Cursor/Antigravity compatibility from VS Code.
-4. Write a row in #668's **single canonical succession register** with exact engine/wheel/skill/host SHA, positive/negative evidence, independent reviewer, explicit owner decision, rollback, and status. **No `qor-status` retirement in this first implementation PR.** Its independent succession approval is separate from the plugin integration's approval.
+4. Write a row in #668's **single canonical succession register** with exact engine/wheel/skill/host SHA, positive/negative evidence, documented adversarial reviewer (independent reviewer optional under #679), explicit owner decision, rollback, and status. **No `qor-status` retirement in this first implementation PR.** Its independent succession approval is separate from the plugin integration's approval.
 
 ## Falsification tests (required implementation test inventory)
 
@@ -95,9 +95,9 @@ A developer using an **installed** FailSafe 6.1.0 VSIX in a real **VS Code 1.146
 
 ## Evidence, rollback and stop rules
 
-- **Before code:** register this exact plan through native Qor governance; independent L3 /qor-audit PASS bound to resulting immutable plan+head, including architecture/ownership and licensing. If audit cannot be executed in this chat host, record BLOCKED_NATIVE_AUDIT, not a fabricated PASS.
+- **Before code:** register this exact plan through native Qor governance; native L3 /qor-audit PASS with disclosed adversarial review bound to resulting immutable plan+head, including architecture/ownership and licensing. If audit cannot be executed in this chat host, record BLOCKED_NATIVE_AUDIT, not a fabricated PASS.
 - **At implementation:** separate `feat/668-...` branch, bounded modules and tests, no changes to protected/released v6.0.13 SHA, no customer-visible runtime disabled/removed without approval. Mandatory focused tests plus `npm run compile`, lint, `npm run test:node`, installed-host workflow, and target-specific `validate:vsix` / eight-platform packaging as applicable. Record exact commands/versions and outcomes, including negative results and remaining risks.
-- **At review:** independent reviewer who did not author the code binds PASS to actual head SHA; require owner approval before merge, enablement, skill succession, tag or publication.
+- **At review:** disclosed adversarial reviewer (same-author review permitted under #679) binds a recorded native PASS to actual head SHA; require owner approval before merge, enablement, skill succession, tag or publication.
 - **Rollback:** turn off opt-in and dispose native Qortara client, leaving original Qor 0.176.1 package, `.qorlogic-installed.json`, source-managed `qor-*` assets and FailSafe G4 store unchanged. Validate rollback in installed VSIX and active agent session. A denial from one engine must not be bypassed by using the other.
 - **Stop:** missing approved/licensable native artifact, unexplained package/process identity, any receipt collision or mutation, root confusion, inability to demonstrate genuine local call/refusal, missing agent host access or a governance VETO. Declare exact blocker and keep first slice unshipped.
 
@@ -105,7 +105,7 @@ A developer using an **installed** FailSafe 6.1.0 VSIX in a real **VS Code 1.146
 
 1. A real authorized customer-style host can configure, invoke and stop **read-only native Qortara status** without unapproved writes or network contact, and sees truthful provenance/refusal.
 2. The integrated adapter has explicit absence/error/attack behavior and **does not** change FailSafe's frozen Qor package or local governance substrate.
-3. A source-bound, independently reviewed **parity gap report** (at minimum `qor-status` against `qortara-status`) is recorded in #668; it does not claim per-skill retirement.
+3. A source-bound, adversarially reviewed **parity gap report** (at minimum `qor-status` against `qortara-status`) is recorded in #668; it does not claim per-skill retirement.
 4. Installed Windows VS Code 1.146 evidence, regression test results, rollback proof and owner authorization are recorded at exact artifact SHA. If unavailable, the PR remains draft and the missing gate is reported, without suggesting release is complete.
 
 **No release date or cutover is authorized by this plan. v6.1.0 is the owner-selected target, not a waiver of quality.**
