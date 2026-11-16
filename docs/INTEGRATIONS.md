@@ -6,6 +6,8 @@ What each integration does for the customer, what leaves the machine and which o
 
 ## Bicameral MCP (v1)
 
+> **Compatibility notice (November 16, 2026):** This section documents FailSafe's **legacy** Bicameral v1 MCP integration, not a currently qualified connection to the restructured upstream Bicameral product. Bicameral's current MCP client forwards ToolRequest v2 to a separate local daemon, whose authority and review/signoff contract differs from the direct `bicameral.ratify` interface described below. The upstream consolidated product has no unified release and its Windows installed lifecycle is unqualified. **Do not use this historical setup/ratify guidance as authorization to install, upgrade, or connect a newer upstream version.** Bicameral-specific development is deferred for FailSafe v6.1.0 under [#692](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/692); the older opt-in code is retained without new compatibility claims.
+
 [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) maintains a per-workspace ledger of design decisions plus drift detection between those decisions and the code that bound them. When connected, FailSafe surfaces decision history, drifted bindings, and a one-click ratify/reject affordance for each open decision.
 
 ### Solo vs Team mode
