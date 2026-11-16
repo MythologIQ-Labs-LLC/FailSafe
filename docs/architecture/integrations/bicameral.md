@@ -2,14 +2,6 @@
 
 Contract id: `bicameral` (registry row `integration-contract-bicameral`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
-## Current compatibility and investment status (2026-11-16)
-
-**DEFERRED by owner direction:** Bicameral-specific implementation and compatibility development are frozen for FailSafe v6.1.0; see [#692](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/692). The `COMPLETE` recommendation below records the **historical October 18** work-queue decision only, not today's priority. This document describes FailSafe's **legacy** source and test surface; it does not certify interoperability with current Bicameral packages or a running daemon. No FailSafe runtime behavior is changed by this notice.
-
-**Upstream contract drift:** FailSafe's adapter assumes `bicameral-mcp>=0.14,<0.16`, local `.bicameral/config.yaml`, direct `bicameral.drift`/`bicameral.ratify`, and decision-to-L3/ledger mediators. The current public [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) instead acts as a thin client to the local Rust daemon using `ToolRequest(command + AuthorityContext)` v2 and daemon-authored `ToolResponse`. Direct MCP `ratify` is retired; current review and signoff are daemon-owned. The [consolidated Bicameral repository](https://github.com/BicameralAI/bicameral) reports no unified product release and unfinished end-to-end governed lifecycle. Current Windows installed-host conformance is unverified.
-
-**Safety and re-entry:** Do not treat a successful legacy unit test, source presence, or discovery call as proof of new upstream compatibility; do not auto-install, auto-upgrade, migrate, or map old ratification into new daemon authority. Preserve the current opt-in/default-off connection path and historical code until a separately scoped, governed compatibility or retirement decision. Reopen only when #692's pinned distribution, supported Windows/VS Code host path, capability and refusal contract, root/permission custody, two-way authority division, rollback and user-value gates are satisfied. Address any demonstrated safety bug separately, without expanding the frozen feature scope.
-
 Legacy review: none; `docs/research/integrations/` has no Bicameral review.
 
 **Owned files:**
@@ -23,6 +15,14 @@ Legacy review: none; `docs/research/integrations/` has no Bicameral review.
 - `FailSafe/extension/src/roadmap/routes/bicameralToolRoutes.ts`
 
 Shared modules it uses (reconciled in the portfolio, not owned here): `FailSafe/extension/src/integrations/mcp/` (the MCP stdio client host, shared with open-design).
+
+## Current compatibility and investment status (2026-11-16)
+
+**DEFERRED by owner direction:** Bicameral-specific implementation and compatibility development are frozen for FailSafe v6.1.0; see [#692](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/692). The `COMPLETE` recommendation below records the **historical October 18** work-queue decision only, not today's priority. This document describes FailSafe's **legacy** source and test surface; it does not certify interoperability with current Bicameral packages or a running daemon. No FailSafe runtime behavior is changed by this notice.
+
+**Upstream contract drift:** FailSafe's adapter assumes `bicameral-mcp>=0.14,<0.16`, local `.bicameral/config.yaml`, direct `bicameral.drift`/`bicameral.ratify`, and decision-to-L3/ledger mediators. The current public [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) instead acts as a thin client to the local Rust daemon using `ToolRequest(command + AuthorityContext)` v2 and daemon-authored `ToolResponse`. Direct MCP `ratify` is retired; current review and signoff are daemon-owned. The [consolidated Bicameral repository](https://github.com/BicameralAI/bicameral) reports no unified product release and unfinished end-to-end governed lifecycle. Current Windows installed-host conformance is unverified.
+
+**Safety and re-entry:** Do not treat a successful legacy unit test, source presence, or discovery call as proof of new upstream compatibility; do not auto-install, auto-upgrade, migrate, or map old ratification into new daemon authority. Preserve the current opt-in/default-off connection path and historical code until a separately scoped, governed compatibility or retirement decision. Reopen only when #692's pinned distribution, supported Windows/VS Code host path, capability and refusal contract, root/permission custody, two-way authority division, rollback and user-value gates are satisfied. Address any demonstrated safety bug separately, without expanding the frozen feature scope.
 
 ## Customer job
 
