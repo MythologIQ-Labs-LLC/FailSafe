@@ -277,7 +277,7 @@ suite('integration consumers (FX965 #482)', () => {
       if (a[0] === 'rev-parse' && a.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
       if (a[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
       if (a[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
-  if (a[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20261015000000', stderr: '' };
+      if (a[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20261015000000', stderr: '' };
       if (a[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
       return { code: 0, stdout: '', stderr: '' };
     };
