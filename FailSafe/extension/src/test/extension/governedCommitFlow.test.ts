@@ -12,6 +12,7 @@ function defaultFor(args: string[]): { code: number; stdout: string; stderr: str
   if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
   if (args[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (args[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
+  if (args[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20260610120000', stderr: '' };
   if (args[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
   return { code: 0, stdout: '', stderr: '' };
 }
