@@ -216,6 +216,29 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
+  test('a typed review note survives an async repaint and posts exactly once before the draft is cleared (#703)', async () => {
+    const ctx = setupDom();
+    try {
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      await renderer.refresh();
+      const oldInput = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+      oldInput.value = 'keep this note';
+      oldInput.dispatchEvent(new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('input', { bubbles: true }));
+
+      // This recreates reviewControls, just as an overlapping API refresh does in the real UI.
+      await renderer.refresh();
+      const newInput = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+      assert.notEqual(newInput, oldInput, 'the refresh must replace the actual input');
+      assert.equal(newInput.value, 'keep this note', 'unsent text must not disappear during a refresh');
+      (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+      await new Promise((res) => setTimeout(res, 20));
+      assert.deepEqual(ctx.posted, [
+        { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'keep this note' } },
+      ], 'only the real typed note may be recorded');
+      assert.equal((ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement).value, '', 'a successful post clears the private draft');
+    } finally { ctx.cleanup(); }
+  });
+
   test('the legend names all six statuses with distinct chips', async () => {
     const ctx = setupDom();
     try {
