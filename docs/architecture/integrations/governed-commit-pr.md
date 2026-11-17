@@ -108,6 +108,12 @@ Push failed (offline or no permission): committed, with the redacted push error 
 422 (PR exists or branch missing): pushed, with a compare URL `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:144-146` (`GitHub rejected the PR (422)`).
 Any thrown error in the offer is logged and the command result is unchanged `FailSafe/extension/src/extension/bootstrapServers.ts:89-91` (`governed-commit offer failed`).
 
+## Branch/index identity before egress (candidate #691)
+
+**New development correction, not yet native-audited or installed-host qualified:** `commitPushOpenPr` now refuses to stage, commit, push or create an authenticated PR if both the fresh branch checkout and existing-branch fallback fail, or if `git symbolic-ref --quiet --short HEAD` does not name the intended branch. Both checks precede `git add`. A nonzero `git add` result also stops the ladder before commit/egress, even when earlier Git operations may have staged a subset. FailSafe does not automatically discard or reset the operator's index.
+
+These refusal paths return `step: 'noop'` with an explicit warning rather than falsely reporting a committed or pushed branch. Regression cases live in `FailSafe/extension/src/test/extension/governedCommit.test.ts` under `#476 pre-egress branch/index identity`; production Git runner coverage must still be independently confirmed on the supported Windows extension host. This guard is a correctness boundary for the existing operator-approved flow, not a guarantee against arbitrary same-OS-principal Git configuration races.
+
 ## End-to-end scenario and measurable acceptance
 
 Scenario: run FailSafe Organize, answer Yes, and find a `fix/organize-<timestamp>` branch with one commit of exactly the changed files, pushed, and a PR whose URL is shown `FailSafe/extension/src/test/extension/governedCommitFlow.test.ts:51` (`approved + token → drives the ladder to a PR; branch is timestamp-stamped`).
