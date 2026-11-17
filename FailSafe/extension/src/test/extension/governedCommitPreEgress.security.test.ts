@@ -49,7 +49,7 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     };
     const r = await commitPushOpenPr(REQ, { git, token: 'fixture-token', post: okPost });
     assert.equal(r.step, 'noop');
-    assert.match(r.warning || '', /branch.*(mismatch|verify|select)/i);
+    assert.match(r.warning || '', /branch.*verif/i);
     assert.equal(calls.filter((a) => ['add', 'commit', 'push', 'remote'].includes(a[0])).length, 0);
   });
 
