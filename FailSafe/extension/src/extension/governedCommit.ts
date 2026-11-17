@@ -96,11 +96,27 @@ export async function commitPushOpenPr(
   const status = await git(['status', '--porcelain', '--', ...req.paths], cwd);
   if (status.code === 0 && status.stdout.trim() === '') return { step: 'noop' };
 
-  // Create the branch (fall back to switching to it if it already exists).
+  // A failed branch switch must never fall through to staging or committing on
+  // the original branch. The fallback is supported only for an existing branch.
   const branched = await git(['checkout', '-b', req.branch], cwd);
-  if (branched.code !== 0) await git(['checkout', req.branch], cwd);
+  if (branched.code !== 0) {
+    const switched = await git(['checkout', req.branch], cwd);
+    if (switched.code !== 0) {
+      return { step: 'noop', branch: req.branch, warning: 'target branch checkout failed; no changes committed or pushed' };
+    }
+  }
+  // A zero exit code is not itself proof that the intended branch is active.
+  const active = await git(['symbolic-ref', '--quiet', '--short', 'HEAD'], cwd);
+  if (active.code !== 0 || active.stdout.trim() !== req.branch) {
+    return { step: 'noop', branch: req.branch, warning: 'target branch identity verification failed; no changes committed or pushed' };
+  }
 
-  await git(['add', '-A', '--', ...req.paths], cwd);
+  const staged = await git(['add', '-A', '--', ...req.paths], cwd);
+  if (staged.code !== 0) {
+    // git add can have staged a subset before failing. Refuse to commit any
+    // pre-existing/partial index, and leave inspection/recovery to the owner.
+    return { step: 'noop', branch: req.branch, warning: 'git staging failed; no commit or push attempted (inspect the index for partial staging)' };
+  }
   const before = await readBeforeCommit(git, cwd);
   const committed = await git(['commit', '--cleanup=verbatim', '-m', req.message], cwd);
   if (committed.code !== 0) {
