@@ -11,6 +11,7 @@ function defaultFor(args: string[]): GitResp {
   if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
   if (args[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (args[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
+  if (args[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-123', stderr: '' };
   if (args[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
   return { code: 0, stdout: '', stderr: '' };
 }
@@ -95,7 +96,9 @@ suite('commitPushOpenPr — credential redaction (#241 F-3)', () => {
 
   test('push stderr echoing a credentialed url → warning is redacted', async () => {
     const r = await commitPushOpenPr(REQ, {
-      git: withRemote(CRED, (a) =>
+      // Use a clean authorized fetch/push target; the *error text* still
+      // contains a fake credential and must be redacted before surfacing.
+      git: gitWith((a) =>
         a[0] === 'push' ? { code: 1, stderr: `fatal: Authentication failed for '${CRED}/'` } : undefined),
     });
     assert.equal(r.step, 'committed');
@@ -103,11 +106,19 @@ suite('commitPushOpenPr — credential redaction (#241 F-3)', () => {
     assert.match(r.warning || '', /push failed: fatal: Authentication failed for 'https:\/\/\*\*\*@github\.com\/o\/r\.git\/'/);
   });
 
-  test('redaction leaves the slug-derived compare url and PR creation intact', async () => {
-    const r = await commitPushOpenPr(REQ, { git: withRemote(CRED), post: okPost, token: 'tok' });
-    assert.equal(r.step, 'pr');
-    assert.equal(r.prUrl, 'https://github.com/o/r/pull/9');
-    assert.equal(r.compareUrl, 'https://github.com/o/r/compare/main...fix/organize-123');
+  test('credential-bearing Git fetch URL is redacted and cannot authorize outbound push or PR', async () => {
+    let posts = 0;
+    const calls: string[][] = [];
+    const g = withRemote(CRED);
+    const r = await commitPushOpenPr(REQ, {
+      git: async (args, cwd) => { calls.push(args); return g(args, cwd); },
+      token: 'tok', post: async () => { posts++; return { status: 201, body: '{}' }; },
+    });
+    assert.equal(r.step, 'committed');
+    assert.equal(r.remoteUrl, 'https://***@github.com/o/r.git');
+    assert.equal(r.prUrl, undefined);
+    assert.equal(posts, 0);
+    assert.equal(calls.filter(c => c[0] === 'push').length, 0);
   });
 
   test('ssh remotes are untouched — `git@` is a username, not a secret', async () => {
