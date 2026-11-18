@@ -19,7 +19,7 @@ import { publishLinkageCheck } from '../../../integrations/github-checks/pr-link
 import { buildManualAdvisoryPayload } from '../../../integrations/github-checks/github-checks-map';
 import { IntegrationCredentials } from '../../../integrations/credentials/IntegrationCredentials';
 import {
-  endpointRefusalMessage, governedCommitConnection, type EndpointReader, type EndpointScope,
+  githubCustomEndpointRefusalMessage, governedCommitConnection, type EndpointReader, type EndpointScope,
 } from '../../../integrations/credentials/credentialGates';
 import { governedCommitPrStep, runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
 import type { GitRunner } from '../../../extension/governedCommit';
@@ -36,7 +36,7 @@ function recorder(prStatus = 200) {
   const sent: Sent[] = [];
   const get: GitHubGetFn = async (url, headers) => {
     sent.push({ method: 'GET', url, auth: headers.Authorization });
-    if (/\/pulls\/\d+$/.test(url)) return { status: prStatus, body: prStatus === 200 ? JSON.stringify({ body: 'Closes #1' }) : '' };
+    if (/\/pulls\/\d+$/.test(url)) return { status: prStatus, body: prStatus === 200 ? JSON.stringify({ body: 'Closes #1', head: { sha: 'abc123' } }) : '' };
     return { status: 200, body: JSON.stringify([{ number: 1, state: 'open' }]) };
   };
   const post: GitHubPostFn = async (url, headers) => {
@@ -65,7 +65,7 @@ suite('#538 GitHub token host affinity (B265, B279)', () => {
   test('G1 with a GHE base, the linkage check reads and publishes on the GHE origin only, token on each', async () => {
     const r = recorder();
     const res = await publishLinkageCheck({
-      ctx: CTX, opts: { enabled: true, token: TOKEN, apiBaseUrl: GHE }, owner: 'acme', repo: 'widgets', prNumber: 9, get: r.get, post: r.post,
+      ctx: CTX, opts: { enabled: true, token: TOKEN, apiBaseUrl: GHE }, owner: 'acme', repo: 'widgets', prNumber: 9, get: r.get, post: r.post, freshContext: async () => CTX,
     });
     assert.equal(res.ok, true);
     assert.deepEqual(r.sent.map((s) => `${s.method} ${new URL(s.url).origin}`), [
@@ -92,6 +92,7 @@ suite('#538 GitHub token host affinity (B265, B279)', () => {
     const res = await publishLinkageCheck({
       ctx: { remoteUrl: 'https://github.com/acme/widgets', headSha: 'abc123' },
       opts: { enabled: true, token: TOKEN }, owner: 'acme', repo: 'widgets', prNumber: 9, get: r.get, post: r.post,
+      freshContext: async () => ({ remoteUrl: 'https://github.com/acme/widgets', headSha: 'abc123' }),
     });
     assert.equal(res.ok, true);
     assert.deepEqual(r.sent.map((s) => `${s.method} ${new URL(s.url).origin}`), [
@@ -175,10 +176,10 @@ class RecordingUi {
   warn(message: string): PromiseLike<string | undefined> { this.warnings.push(message); return Promise.resolve(undefined); }
 }
 
-async function credentials(token?: string, endpoint?: { value: string; scope: EndpointScope }) {
+async function credentials(token?: string, endpoint?: { value: string; scope: EndpointScope }, scope: 'user' | 'workspace' = 'user') {
   const creds = new IntegrationCredentials(new FakeSecretStore(), new FakeInspector(), new RecordingLogger());
   await creds.init();
-  if (token) await creds.set('github.token', 'user', token);
+  if (token) await creds.set('github.token', scope, token);
   const endpoints = new FakeEndpoints();
   if (endpoint) endpoints.values.set('failsafe.integrations.github.apiBaseUrl', endpoint);
   return { creds, endpoints, ui: new RecordingUi() };
@@ -188,6 +189,7 @@ const fakeGit: GitRunner = async (a) => {
   if (a[0] === 'rev-parse' && a.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
   if (a[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (a[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
+  if (a[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20261018000000', stderr: '' };
   if (a[0] === 'remote') return { code: 0, stdout: 'https://ghe.example/o/r.git', stderr: '' };
   return { code: 0, stdout: '', stderr: '' };
 };
@@ -275,13 +277,16 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
   test('G7 governedCommitConnection keeps the workspace-endpoint refusal and stays silent without a token', async () => {
     const refused = await credentials(TOKEN, { value: 'https://ghe.evil/api/v3', scope: 'workspace' });
     assert.equal(governedCommitConnection(refused.creds, refused.endpoints, refused.ui), undefined);
-    assert.deepEqual(refused.ui.warnings, [endpointRefusalMessage('GitHub')]);
+    assert.deepEqual(refused.ui.warnings, [githubCustomEndpointRefusalMessage()]);
 
     const none = await credentials();
     assert.equal(governedCommitConnection(none.creds, none.endpoints, none.ui), undefined);
     assert.deepEqual(none.ui.warnings, [], 'no token: no warning');
 
-    const paired = await credentials(TOKEN, { value: GHE, scope: 'user' });
+    const spoofed = await credentials(TOKEN, { value: GHE, scope: 'user' });
+    assert.equal(governedCommitConnection(spoofed.creds, spoofed.endpoints, spoofed.ui), undefined);
+    assert.deepEqual(spoofed.ui.warnings, [githubCustomEndpointRefusalMessage()]);
+    const paired = await credentials(TOKEN, { value: GHE, scope: 'user' }, 'workspace');
     assert.deepEqual(governedCommitConnection(paired.creds, paired.endpoints, paired.ui), { credential: TOKEN, endpoint: GHE });
   });
 
@@ -295,30 +300,117 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
   });
 
   test('G9 the production option helper sends the governed-commit PR to the endpoint paired with the token', async () => {
-    const run = async (endpoint?: { value: string; scope: EndpointScope }) => {
-      const x = await credentials(TOKEN, endpoint);
+    const run = async (endpoint?: { value: string; scope: EndpointScope }, scope: 'user' | 'workspace' = 'user') => {
+      const x = await credentials(TOKEN, endpoint, scope);
       const r = recorder();
+      let prompt = '';
       const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-        workspaceRoot: '/ws', git: fakeGit, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+        workspaceRoot: '/ws', git: async (args, cwd) => {
+          const res = await fakeGit(args, cwd);
+          return !endpoint && args[0] === 'remote' ? { ...res, stdout: 'https://github.com/o/r.git' } : res;
+        }, confirm: async (message) => { prompt = message; return true; }, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
         ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), r.post),
       });
-      return { step: (result as { step: string }).step, sent: r.sent };
+      return { step: (result as { step: string }).step, sent: r.sent, prompt };
     };
-    const ghe = await run({ value: GHE, scope: 'user' });
+    const refused = await run({ value: GHE, scope: 'user' });
+    assert.equal(refused.step, 'committed', 'unpaired GHES remote must not use User credentials or push without an approved destination');
+    assert.deepEqual(refused.sent, []);
+    const ghe = await run({ value: GHE, scope: 'user' }, 'workspace');
     assert.equal(ghe.step, 'pr');
     assert.deepEqual(ghe.sent.map((s) => [s.method, s.url, s.auth]), [['POST', `${GHE}/repos/o/r/pulls`, `token ${TOKEN}`]]);
+    assert.ok(ghe.prompt.includes('Git push destination: https://ghe.example/o/r.git'));
+    assert.ok(ghe.prompt.includes('Authenticated PR API: https://ghe.example'));
+    assert.ok(!ghe.prompt.includes(TOKEN), 'no credential in operator prompt');
     const dflt = await run();
     assert.deepEqual(dflt.sent.map((s) => s.url), ['https://api.github.com/repos/o/r/pulls']);
   });
 
-  test('S9 a refused base is an error result, and the governed commit reports it as a pushed branch with that warning', async () => {
+  test('GRB-12 GHES origin changed after the operator consent never becomes a push or PR', async () => {
+    const r = recorder();
+    let remote = 'https://ghe.example/o/r.git';
+    let pushes = 0;
+    const git: GitRunner = async (args, cwd) => {
+      if (args[0] === 'remote') return { code: 0, stdout: remote, stderr: '' };
+      if (args[0] === 'push') pushes++;
+      return fakeGit(args, cwd);
+    };
+    const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+      workspaceRoot: '/ws', git,
+      confirm: async (message) => {
+        assert.ok(message.includes('Git push destination: https://ghe.example/o/r.git'));
+        remote = 'https://ghe.example/other/repository.git';
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+      post: r.post, token: TOKEN, apiBaseUrl: GHE,
+    });
+    assert.equal(result.step, 'committed');
+    assert.equal(pushes, 0, 'no push to a repo different from the approved destination');
+    assert.deepEqual(r.sent, [], 'no token-backed API call');
+    assert.match('warning' in result ? result.warning ?? '' : '', /Git fetch or effective push destination changed or was not approved/);
+  });
+
+  test('GRB-13 GHES origin changed during push blocks credential-backed PR', async () => {
+    const r = recorder();
+    let remote = 'https://ghe.example/o/r.git';
+    let pushes = 0;
+    const git: GitRunner = async (args, cwd) => {
+      if (args[0] === 'remote') return { code: 0, stdout: remote, stderr: '' };
+      const res = await fakeGit(args, cwd);
+      if (args[0] === 'push') {
+        pushes++;
+        remote = 'https://ghe.example/other/repository.git';
+      }
+      return res;
+    };
+    const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+      workspaceRoot: '/ws', git, confirm: async () => true,
+      recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+      post: r.post, token: TOKEN, apiBaseUrl: GHE,
+    });
+    assert.equal(result.step, 'pushed', 'the git push may have completed before the mutation was observed');
+    assert.equal(pushes, 1);
+    assert.deepEqual(r.sent, [], 'post-push origin change must block credential-backed PR');
+    assert.match('warning' in result ? result.warning ?? '' : '', /Git origin changed after the approved push/);
+  });
+
+  test('GRB-14 an alternate pushurl or multiple push targets cannot redirect an approved GHES push', async () => {
+    const approved = 'https://ghe.example/o/r.git';
+    for (const pushTargets of [
+      'https://ghe.attacker.invalid/other/repository.git',
+      `${approved}\nhttps://ghe.attacker.invalid/other/repository.git`,
+    ]) {
+      const r = recorder();
+      let pushes = 0;
+      const git: GitRunner = async (args, cwd) => {
+        if (args[0] === 'remote' && args.includes('--push')) {
+          return { code: 0, stdout: pushTargets, stderr: '' };
+        }
+        if (args[0] === 'remote') return { code: 0, stdout: approved, stderr: '' };
+        if (args[0] === 'push') pushes++;
+        return fakeGit(args, cwd);
+      };
+      const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+        workspaceRoot: '/ws', git, confirm: async () => true,
+        recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+        post: r.post, token: TOKEN, apiBaseUrl: GHE,
+      });
+      assert.equal(result.step, 'committed', pushTargets);
+      assert.equal(pushes, 0, 'no push through a different pushurl or extra target');
+      assert.deepEqual(r.sent, [], 'no credential-backed GitHub PR');
+      assert.match('warning' in result ? result.warning ?? '' : '', /(push destination differs|must resolve exactly one push destination)/);
+    }
+  });
+
+  test('S9 invalid untrusted GHES API base blocks both Git push and authenticated PR', async () => {
     const r = recorder();
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
       workspaceRoot: '/ws', git: fakeGit, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
       post: r.post, token: TOKEN, apiBaseUrl: 'http://ghe.example/api/v3',
     }) as { step: string; warning?: string };
     assert.equal(r.sent.length, 0);
-    assert.equal(result.step, 'pushed');
-    assert.match(result.warning ?? '', /https:\/\//);
+    assert.equal(result.step, 'committed');
+    assert.match(result.warning ?? '', /GitHub API destination is invalid/);
   });
 });

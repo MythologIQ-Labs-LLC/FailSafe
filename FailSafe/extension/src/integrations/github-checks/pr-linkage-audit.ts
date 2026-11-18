@@ -209,7 +209,11 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
   try {
     const prRes = await get(`${base}/pulls/${opts.prNumber}`);
     if (failed(prRes.status)) return { ok: false, error: `GitHub PR fetch failed (HTTP ${prRes.status}).` };
-    const body = (JSON.parse(prRes.body || '{}') as { body?: string }).body ?? '';
+    const pr = JSON.parse(prRes.body || '{}') as { body?: string; head?: { sha?: string } };
+    if (typeof pr.head?.sha !== 'string' || pr.head.sha !== opts.headSha) {
+      return { ok: false, error: 'GitHub PR head does not match the authorized local HEAD' };
+    }
+    const body = typeof pr.body === 'string' ? pr.body : '';
 
     // #241 Tranche C D-3 (FX914): paginate the issue set (per_page=100
     // returned only page 1, producing FALSE 'already closed' findings for

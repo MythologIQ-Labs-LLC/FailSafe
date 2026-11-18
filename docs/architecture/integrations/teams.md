@@ -31,7 +31,7 @@ The payload is a message with one Adaptive Card 1.5 attachment `FailSafe/extensi
 
 Credential: one Teams Workflows webhook URL in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:435-437` (`Plain-text settings are no longer read`).
 The webhook URL grants posting to its target channel `FailSafe/extension/package.json:437` (`it grants posting to the target channel`).
-A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:186-190` (`if (!enabled) return { enabled: false };`).
+A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:205-209` (`if (!enabled) return { enabled: false };`).
 The URL is redacted from failure diagnostics `FailSafe/extension/src/integrations/notify-event.ts:39-41` (`return text.split(webhookUrl).join('[webhook]');`).
 The workflow belongs to a person, not a channel, and the code does not check for a co-owner (unverified beyond reading the owned files).
 Remote approval from Teams is blocked in v1 and marked requires separate approval `FailSafe/extension/src/integrations/teams/teams-notify.ts:8-10` (`remote approval is BLOCKED in v1`).
@@ -99,7 +99,7 @@ Advisory: delivery is best effort; a lost post is reported locally, not retried 
 ## Failure, offline, stale and permission semantics
 
 Disabled or no webhook: nothing is sent and nothing recorded `FailSafe/extension/src/integrations/teams/teams-sender.ts:49-50` (`return { ok: false, skipped: true };`).
-Enabled with no stored webhook: one warning naming the credential command `FailSafe/extension/src/integrations/credentials/credentialGates.ts:193-197` (`notifications are enabled but no webhook is stored.`).
+Enabled with no stored webhook: one warning naming the credential command `FailSafe/extension/src/integrations/credentials/credentialGates.ts:211-215` (`notifications are enabled but no webhook is stored.`).
 Throttled (429): a distinct throttled result recorded as rate limited `FailSafe/extension/src/integrations/teams/teams-health.ts:13` (`return ['failing', 'rate_limited'];`).
 Offline: a transport error or the 5-second timeout is a network failure `FailSafe/extension/src/integrations/teams/TeamsNotifier.ts:32` (`timeout: 5000,`).
 Stale: health older than seven days shows the card as stale `FailSafe/extension/src/integrations/catalog/integration-health.ts:48` (`export const HEALTH_STALE_MS = 7 * 24 * 60 * 60 * 1000;`).

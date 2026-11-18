@@ -23,6 +23,7 @@ import { spawn } from 'child_process';
 import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
+import { inspectPushBinding } from './githubPushBinding';
 
 export type GitRunner = (args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
 
@@ -42,6 +43,10 @@ export interface GovernedCommitDeps {
   post?: GitHubPostFn;
   token?: string;
   apiBaseUrl?: string;
+  /** Operator approval of the exact fetch and effective push destinations. */
+  requireExactRemoteApproval?: boolean;
+  approvedRemoteUrl?: string;
+  approvedPushUrl?: string;
 }
 
 export type GovernedCommitStep = 'not-a-repo' | 'noop' | 'committed' | 'pushed' | 'pr';
@@ -91,13 +96,33 @@ export async function commitPushOpenPr(
   if (isRepo.code !== 0 || isRepo.stdout.trim() !== 'true') return { step: 'not-a-repo' };
 
   const status = await git(['status', '--porcelain', '--', ...req.paths], cwd);
-  if (status.code === 0 && status.stdout.trim() === '') return { step: 'noop' };
+  if (status.code !== 0) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'git status failed; no branch changes, commit, push or PR attempted' };
+  }
+  if (status.stdout.trim() === '') return { step: 'noop' };
 
-  // Create the branch (fall back to switching to it if it already exists).
+  // A failed branch switch must never fall through to staging or committing on
+  // the original branch. The fallback is supported only for an existing branch.
   const branched = await git(['checkout', '-b', req.branch], cwd);
-  if (branched.code !== 0) await git(['checkout', req.branch], cwd);
+  if (branched.code !== 0) {
+    const switched = await git(['checkout', req.branch], cwd);
+    if (switched.code !== 0) {
+      return { step: 'noop', branch: req.branch, warning: 'target branch checkout failed; no changes committed or pushed' };
+    }
+  }
+  // A zero exit code is not itself proof that the intended branch is active.
+  const active = await git(['symbolic-ref', '--quiet', '--short', 'HEAD'], cwd);
+  if (active.code !== 0 || active.stdout.trim() !== req.branch) {
+    return { step: 'noop', branch: req.branch, warning: 'target branch identity verification failed; no changes committed or pushed' };
+  }
 
-  await git(['add', '-A', '--', ...req.paths], cwd);
+  const staged = await git(['add', '-A', '--', ...req.paths], cwd);
+  if (staged.code !== 0) {
+    // git add can have staged a subset before failing. Refuse to commit any
+    // pre-existing/partial index, and leave inspection/recovery to the owner.
+    return { step: 'noop', branch: req.branch, warning: 'git staging failed; no commit or push attempted (inspect the index for partial staging)' };
+  }
   const before = await readBeforeCommit(git, cwd);
   const committed = await git(['commit', '--cleanup=verbatim', '-m', req.message], cwd);
   if (committed.code !== 0) {
@@ -118,6 +143,21 @@ export async function commitPushOpenPr(
   // Redacted copy for anything that leaves this function; `remoteUrl` itself stays
   // intact for slug parsing and the PR call.
   const safeRemoteUrl = redactUrlCredentials(remoteUrl);
+  // A fetch remote is not the push authority: pushurl / pushInsteadOf may
+  // target another host, even on default public GitHub with no PR token.
+  const binding = await inspectPushBinding(git, cwd, remoteUrl, deps.apiBaseUrl);
+  if (!binding.ok) {
+    return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
+      warning: binding.error + '; no push or PR attempted' });
+  }
+  // The direct API must not accept a rewritten push target without a prior
+  // operator approval. The UI explicitly approves both URLs when available.
+  const expectedPush = deps.requireExactRemoteApproval ? deps.approvedPushUrl : remoteUrl;
+  if (!expectedPush || binding.pushUrl !== expectedPush ||
+      (deps.requireExactRemoteApproval && deps.approvedRemoteUrl !== remoteUrl)) {
+    return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
+      warning: 'Git fetch or effective push destination changed or was not approved; no push or PR attempted' });
+  }
 
   const pushed = await git(['push', '-u', 'origin', req.branch], cwd);
   if (pushed.code !== 0) {
@@ -127,6 +167,18 @@ export async function commitPushOpenPr(
   const cmp = compareUrl(remoteUrl, req.base, req.branch);
   if (!deps.post || !deps.token || !deps.token.trim()) {
     return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp, warning: 'no GitHub token — branch pushed; open the PR manually' });
+  }
+  // Recheck both identities before token egress. The Git push and this
+  // recheck cannot be made atomic against hostile concurrent config writes.
+  const again = await git(['remote', 'get-url', 'origin'], cwd);
+  if (again.code !== 0 || again.stdout.trim() !== remoteUrl) {
+    return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
+      warning: 'Git origin changed after the approved push; authenticated PR refused' });
+  }
+  const fresh = await inspectPushBinding(git, cwd, remoteUrl, deps.apiBaseUrl);
+  if (!fresh.ok || fresh.pushUrl !== binding.pushUrl) {
+    return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
+      warning: 'Git push destination changed after the approved push; authenticated PR refused' });
   }
 
   const pr = await createPullRequest(

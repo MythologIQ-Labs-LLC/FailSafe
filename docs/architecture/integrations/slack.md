@@ -31,7 +31,7 @@ The message is built as Block Kit header, section and context blocks `FailSafe/e
 
 Credential: one Slack incoming-webhook URL held in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:424-426` (`Plain-text settings are no longer read`).
 The webhook URL grants posting to its one channel and nothing else `FailSafe/extension/package.json:426` (`it grants posting to the target channel`).
-A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:186-190` (`if (!enabled) return { enabled: false };`).
+A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:205-209` (`if (!enabled) return { enabled: false };`).
 The URL is redacted from any failure diagnostic `FailSafe/extension/src/integrations/notify-event.ts:39-41` (`return text.split(webhookUrl).join('[webhook]');`).
 Interactive approval from Slack would need a full Slack app with signed callbacks and is marked requires separate approval `FailSafe/extension/src/integrations/slack/slack-notify.ts:5-8` (`Approval decisions are NOT actioned in Slack`).
 
@@ -96,7 +96,7 @@ Advisory: delivery is best effort; a lost post is reported locally, not retried 
 ## Failure, offline, stale and permission semantics
 
 Disabled or no webhook: nothing is sent and nothing recorded `FailSafe/extension/src/integrations/slack/slack-sender.ts:35-36` (`return { ok: false, skipped: true };`).
-Enabled with no stored webhook: one warning naming the credential command `FailSafe/extension/src/integrations/credentials/credentialGates.ts:193-197` (`notifications are enabled but no webhook is stored.`).
+Enabled with no stored webhook: one warning naming the credential command `FailSafe/extension/src/integrations/credentials/credentialGates.ts:211-215` (`notifications are enabled but no webhook is stored.`).
 Non-2xx: an HTTP failure result, 429 recorded as rate limited `FailSafe/extension/src/integrations/slack/slack-health.ts:13-14` (`if (r.status === 429) return ['failing', 'rate_limited'];`).
 Offline: a transport error or the 5-second timeout is a network failure `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:31` (`timeout: 5000,`).
 Stale: health older than seven days shows the card as stale `FailSafe/extension/src/integrations/catalog/integration-health.ts:48` (`export const HEALTH_STALE_MS = 7 * 24 * 60 * 60 * 1000;`).

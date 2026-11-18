@@ -12,10 +12,12 @@ function defaultFor(args: string[]): { code: number; stdout: string; stderr: str
   if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
   if (args[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (args[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
+  if (args[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20260610120000', stderr: '' };
   if (args[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
   return { code: 0, stdout: '', stderr: '' };
 }
 const git: GitRunner = async (args) => defaultFor(args);
+const DEST = ' Git push destination: https://github.com/o/r.git. Repository: github.com/o/r.';
 
 function baseDeps(over: Partial<GovernedFlowDeps>): GovernedFlowDeps {
   return {
@@ -125,6 +127,7 @@ suite('runGovernedCommitFlow — linkCommit (#532 B286)', () => {
 // unchanged and a Yes still commits.
 suite('runGovernedCommitFlow - affected architecture decisions (B311)', () => {
   const BASE = 'FailSafe organize applied 1 change(s). Commit, push & open a PR for them?';
+
   const withDescribe = (describe: unknown, prompts: string[], extra: Partial<GovernedFlowDeps> = {}) =>
     baseDeps({ confirm: async (m) => { prompts.push(m); return true; }, describeArchitecture: describe, ...extra } as Partial<GovernedFlowDeps>);
 
@@ -137,13 +140,13 @@ suite('runGovernedCommitFlow - affected architecture decisions (B311)', () => {
     }, prompts));
     assert.deepEqual(seen, [['.gitignore']]);
     assert.equal(prompts[0], `${BASE} Architecture decisions these files touch (warn-only): ` +
-      'a: r1 (canonical, "d") docs/A.md, via contract; b: r2 (proposed, "d") docs/B.md, via document; and 1 more.');
+      'a: r1 (canonical, "d") docs/A.md, via contract; b: r2 (proposed, "d") docs/B.md, via document; and 1 more.' + DEST);
   });
 
   test('no lines: the prompt is unchanged', async () => {
     const prompts: string[] = [];
     await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], withDescribe(async () => [], prompts));
-    assert.equal(prompts[0], BASE);
+    assert.equal(prompts[0], BASE + DEST);
   });
 
   test('a throwing or rejecting describe leaves the prompt unchanged, and Yes still commits', async () => {
@@ -153,7 +156,7 @@ suite('runGovernedCommitFlow - affected architecture decisions (B311)', () => {
       const r = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], withDescribe(describe, prompts, {
         git: async (a) => { if (a[0] === 'commit') committed = true; return defaultFor(a); },
       }));
-      assert.equal(prompts[0], BASE);
+      assert.equal(prompts[0], BASE + DEST);
       assert.equal(committed, true);
       assert.notEqual((r as { step: string }).step, 'declined');
     }
@@ -190,7 +193,7 @@ suite('runGovernedCommitFlow - affected architecture decisions through describe 
     assert.ok(!p.includes('\u202E'), 'no raw RLO in the prompt');
     const long = p.split('; ').find((s) => s.startsWith('src/LLL')) ?? '';
     assert.ok(Array.from(long).length <= 240 && long.endsWith('...'), long);
-    assert.ok(p.endsWith('; and 1 more.'), p);
+    assert.ok(p.endsWith('; and 1 more.' + DEST), p);
     assert.ok(!p.includes('src/b.ts: b '), 'the fourth line is not shown');
   });
 });

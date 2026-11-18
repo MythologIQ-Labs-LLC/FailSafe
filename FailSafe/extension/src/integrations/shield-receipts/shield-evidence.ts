@@ -9,7 +9,7 @@
  * prefixes; no detail carries a path, artifact text or key material.
  */
 
-import { parseRepoSlug } from '../github-checks/github-checks-map';
+import { bindGitRemote, parseRepoSlug } from '../github-checks/github-checks-map';
 import { hasEntryHeader, lastSessionSeal } from './ledger-seal';
 import { parseQorSidecar, qorPayloadDigest, qorSign, hex64Equal, type QorSidecar } from './qor-provenance';
 import type { ShieldPolicy } from './shield-policy';
@@ -71,7 +71,7 @@ export function parseInstant(v: unknown, utcOnly = false): number | undefined {
   return Number.isFinite(ms) ? ms : undefined;
 }
 
-/** The lowercased owner/repo of an origin URL; the host is ignored. */
+/** Legacy slug helper; never sufficient for a verified host binding on its own. */
 export function repoOf(remoteUrl: string | undefined): string | undefined {
   const slug = remoteUrl ? parseRepoSlug(remoteUrl) : null;
   return slug ? `${slug.owner}/${slug.repo}`.toLowerCase() : undefined;
@@ -140,8 +140,11 @@ export interface EvidenceInput {
 async function checkBinding(i: EvidenceInput): Promise<ShieldFailure | undefined> {
   const r = i.receipt;
   if (r.commitSha !== i.head) return rejected('commit-mismatch', `step 6: receipt names ${short(r.commitSha)}, HEAD is ${short(i.head)}`);
-  const repo = repoOf(await i.src.remoteUrl());
-  if (!repo) return neutral('no-remote', 'step 7: origin does not parse to a GitHub owner/repo');
+  const remote = await i.src.remoteUrl();
+  if (!remote) return neutral('no-remote', 'step 7: origin does not parse to a GitHub owner/repo');
+  const id = bindGitRemote(remote, i.apiHost, i.apiHost.toLowerCase() !== 'api.github.com');
+  if (!id) return rejected('host-mismatch', 'step 7: origin host is not bound to the verification API host');
+  const repo = `${id.owner}/${id.repo}`.toLowerCase();
   if (r.repo.toLowerCase() !== repo) return rejected('repo-mismatch', 'step 7: receipt repo differs from origin');
   if (r.apiHost !== i.apiHost.toLowerCase()) return rejected('host-mismatch', 'step 7: receipt apiHost differs from the publish API host');
   return undefined;
