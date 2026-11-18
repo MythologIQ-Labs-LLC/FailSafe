@@ -131,9 +131,9 @@ export async function commitPushOpenPr(
   const head = await git(['rev-parse', '--short', 'HEAD'], cwd);
   const commit = head.stdout.trim();
   const bound = await bindCommit(git, cwd, req, before);
-  const withBinding = <T extends GovernedCommitResult>(r: T): T => ('sha' in bound
-    ? { ...r, commitSha: bound.sha }
-    : { ...r, warning: [r.warning, `commit not bound to this run (${bound.reason}); it is not offered for linking`].filter(Boolean).join('\n') });
+  if (!('sha' in bound)) return { step: 'committed', branch: req.branch, commit, warning:
+    `commit not bound to this run (${bound.reason}); no push or PR attempted` };
+  const withBinding = <T extends GovernedCommitResult>(r: T): T => ({ ...r, commitSha: bound.sha });
 
   const remote = await git(['remote', 'get-url', 'origin'], cwd);
   if (remote.code !== 0 || !remote.stdout.trim()) {

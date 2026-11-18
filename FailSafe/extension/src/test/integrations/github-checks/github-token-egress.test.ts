@@ -187,6 +187,12 @@ async function credentials(token?: string, endpoint?: { value: string; scope: En
 
 const fakeGit: GitRunner = async (a) => {
   if (a[0] === 'rev-parse' && a.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
+  const bindingOp = a.join(' ');
+  if (bindingOp === 'rev-parse --verify --quiet HEAD') return { code: 0, stdout: 'a'.repeat(40), stderr: '' };
+  if (bindingOp === 'rev-parse --verify HEAD') return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp.startsWith('rev-parse --verify --quiet refs/heads/')) return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp === 'write-tree') return { code: 0, stdout: '7'.repeat(40), stderr: '' };
+  if (a[0] === 'log') return { code: 0, stdout: '7'.repeat(40) + '\0' + 'a'.repeat(40) + '\0' + "chore(organize): apply 1 workspace change(s)\n\n- x" + '\n', stderr: '' };
   if (a[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (a[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
   if (a[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20261018000000', stderr: '' };
