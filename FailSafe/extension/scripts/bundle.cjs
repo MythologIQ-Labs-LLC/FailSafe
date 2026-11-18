@@ -16,22 +16,26 @@ function copyDir(source, target) {
   fs.cpSync(source, target, { recursive: true });
 }
 
-function vendorWhisper() {
-  const srcDir = path.join(root, "node_modules", "@xenova", "transformers", "dist");
-  const destDir = path.join(root, "src", "roadmap", "ui", "vendor", "whisper");
-  const files = ["transformers.min.js", "ort-wasm-simd.wasm", "ort-wasm-simd-threaded.wasm"];
-
-  fs.mkdirSync(destDir, { recursive: true });
-  let copied = 0;
-  for (const file of files) {
-    const src = path.join(srcDir, file);
-    const dest = path.join(destDir, file);
-    if (!fs.existsSync(dest) && fs.existsSync(src)) {
-      fs.copyFileSync(src, dest);
-      copied++;
+function verifyVendoredVoiceAssets() {
+  // The browser assets are shipped from committed vendor files, not installed
+  // by core npm ci. Re-vendoring is explicit: npm run vendor:voice (#707).
+  const required = [
+    'piper/piper.min.js',
+    'piper/piper_phonemize.wasm',
+    'piper/piper_phonemize.data',
+    'whisper/transformers.min.js',
+    'whisper/ort-wasm-simd.wasm',
+    'whisper/ort-wasm-simd-threaded.wasm',
+  ];
+  for (const relative of required) {
+    const file = path.join(root, 'src', 'roadmap', 'ui', 'vendor', relative);
+    let stat;
+    try { stat = fs.lstatSync(file); }
+    catch { throw new Error('Missing browser voice asset: ' + relative + '. Run npm run vendor:voice'); }
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0) {
+      throw new Error('Invalid browser voice asset: ' + relative + '. Run npm run vendor:voice');
     }
   }
-  if (copied > 0) console.log(`  Vendored ${copied} Whisper file(s)`);
 }
 
 function sanitizeBetterSqlite3Metadata() {
@@ -127,8 +131,8 @@ async function main() {
   // Post-bundle sanitization for socket.dev compliance
   sanitizeBundleNewFunction();
 
-  // Auto-vendor Whisper (Transformers.js) files before UI copy
-  vendorWhisper();
+  // Voice files are maintained by the explicit pinned vendor:voice command.
+  verifyVendoredVoiceAssets();
   sanitizeVendorPatterns();
   sanitizeBetterSqlite3Metadata();
 
