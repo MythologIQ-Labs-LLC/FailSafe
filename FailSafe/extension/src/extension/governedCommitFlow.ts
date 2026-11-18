@@ -10,11 +10,10 @@
  * PURE wiring over injected deps (confirm / git / ledger / clock) — testable, no vscode.
  */
 
-import { commitPushOpenPr, type GitRunner, type GovernedCommitResult } from './governedCommit';
+import { commitPushOpenPr, redactUrlCredentials, type GitRunner, type GovernedCommitResult } from './governedCommit';
 import type { GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import type { Connection } from '../integrations/credentials/credentialGates';
-import { bindGitRemote } from '../integrations/github-checks/github-checks-map';
-import { apiBaseFor } from '../integrations/github-checks/github-host-affinity';
+import { inspectPushBinding } from './githubPushBinding';
 
 export interface GovernedFlowDeps {
   workspaceRoot: string;
@@ -70,7 +69,8 @@ export async function runGovernedCommitFlow(
   const result = await commitPushOpenPr(
     { workspaceRoot: deps.workspaceRoot, paths: changedPaths, branch, message, base: deps.base || 'main', prTitle: `chore(${action}): workspace cleanup`, prBody },
     { git: deps.git, post: deps.post, token: deps.token, apiBaseUrl: deps.apiBaseUrl,
-      requireExactRemoteApproval: destination.required, approvedRemoteUrl: destination.approvedRemoteUrl },
+      requireExactRemoteApproval: destination.required, approvedRemoteUrl: destination.approvedRemoteUrl,
+      approvedPushUrl: destination.approvedPushUrl },
   );
   // #532 (plan-532c LD7b): offer the bound commit for linking; the offer never changes the result.
   if (deps.linkCommit && result.commitSha && (result.step === 'committed' || result.step === 'pushed' || result.step === 'pr')) {
@@ -91,39 +91,34 @@ export function governedCommitPrStep(
   return { post, token: connection?.credential, apiBaseUrl: connection?.endpoint };
 }
 
-/** A custom GHES token destination requires an exact operator-approved Git remote. */
+/** Every push requires approval of the effective destination, even without a PR token. */
 interface GitHubDestinationApproval {
   label: string;
   required: boolean;
   approvedRemoteUrl?: string;
+  approvedPushUrl?: string;
 }
 
-/** The UI displays an exact approved destination; a failed preflight never authorizes a later target. */
 async function githubDestinationNote(deps: GovernedFlowDeps): Promise<GitHubDestinationApproval> {
-  if (!deps.post || !deps.token || !deps.apiBaseUrl?.trim()) return { label: '', required: false };
-  const api = apiBaseFor(deps.apiBaseUrl);
-  if (!api.ok) return {
-    label: ' GitHub PR API destination is invalid; authenticated PR publishing will be refused.',
-    required: false, // invalid API cannot receive a token; preserve the operator-approved git push
+  const refused: GitHubDestinationApproval = {
+    label: ' Git push destination could not be verified; any accepted changes remain local.',
+    required: true,
   };
   try {
     const remote = await deps.git(['remote', 'get-url', 'origin'], deps.workspaceRoot);
-    const remoteUrl = remote.code === 0 ? remote.stdout.trim() : '';
-    const id = bindGitRemote(remoteUrl, api.base.apiHost, true);
-    if (!id) return {
-      label: ' GitHub PR remote/API identity cannot be confirmed; authenticated PR publishing will be refused.',
-      required: true,
-    };
-    return {
-      label: ` GitHub PR destination: ${api.base.baseUrl}/repos/${id.owner}/${id.repo} (remote ${id.host}). The Workspace GitHub token would be sent to ${api.base.origin}.`,
-      required: true,
-      approvedRemoteUrl: remoteUrl,
-    };
+    if (remote.code !== 0 || !remote.stdout.trim()) return refused;
+    const remoteUrl = remote.stdout.trim();
+    const binding = await inspectPushBinding(deps.git, deps.workspaceRoot, remoteUrl, deps.apiBaseUrl);
+    if (!binding.ok) return refused;
+    const label = ' Git push destination: ' + redactUrlCredentials(binding.pushUrl) +
+      '. Repository: ' + binding.identity.host + '/' + binding.identity.owner + '/' + binding.identity.repo + '.';
+    const api = deps.post && deps.token?.trim()
+      ? ' Authenticated PR API: ' + binding.apiOrigin + '.'
+      : '';
+    return { label: label + api, required: true,
+      approvedRemoteUrl: remoteUrl, approvedPushUrl: binding.pushUrl };
   } catch {
-    return {
-      label: ' GitHub PR destination cannot be read; authenticated PR publishing will be refused.',
-      required: true,
-    };
+    return refused;
   }
 }
 
