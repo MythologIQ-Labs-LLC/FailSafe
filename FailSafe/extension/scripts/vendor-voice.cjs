@@ -109,7 +109,7 @@ function stageVoiceOutputs(outputs, root, io, token, staged) {
     throw new Error('voice vendor root must be a real directory');
   }
   for (const [rel, bytes] of outputs) {
-    if (!/^(piper|whisper)\\/[A-Za-z0-9_.-]+$/.test(rel)) throw new Error('invalid vendor destination');
+    if (!/^(piper|whisper)\/[A-Za-z0-9_.-]+$/.test(rel)) throw new Error('invalid vendor destination');
     const target = path.join(root, rel);
     const dir = path.dirname(target);
     io.mkdirSync(dir, { recursive: true });
