@@ -10,9 +10,10 @@
  * PURE wiring over injected deps (confirm / git / ledger / clock) — testable, no vscode.
  */
 
-import { commitPushOpenPr, type GitRunner, type GovernedCommitResult } from './governedCommit';
+import { commitPushOpenPr, redactUrlCredentials, type GitRunner, type GovernedCommitResult } from './governedCommit';
 import type { GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import type { Connection } from '../integrations/credentials/credentialGates';
+import { inspectPushBinding } from './githubPushBinding';
 
 export interface GovernedFlowDeps {
   workspaceRoot: string;
@@ -51,8 +52,9 @@ export async function runGovernedCommitFlow(
   if (changedPaths.length === 0) return { step: 'noop' };
 
   const architecture = await architectureNote(deps, changedPaths);
+  const destination = await githubDestinationNote(deps);
   const approved = await deps.confirm(
-    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?${architecture}`,
+    `FailSafe ${action} applied ${changedPaths.length} change(s). Commit, push & open a PR for them?${architecture}${destination.label}`,
   );
   if (!approved) {
     await deps.recordDeclined({ action, changes: executedLabels, at: deps.now() });
@@ -66,7 +68,9 @@ export async function runGovernedCommitFlow(
 
   const result = await commitPushOpenPr(
     { workspaceRoot: deps.workspaceRoot, paths: changedPaths, branch, message, base: deps.base || 'main', prTitle: `chore(${action}): workspace cleanup`, prBody },
-    { git: deps.git, post: deps.post, token: deps.token, apiBaseUrl: deps.apiBaseUrl },
+    { git: deps.git, post: deps.post, token: deps.token, apiBaseUrl: deps.apiBaseUrl,
+      requireExactRemoteApproval: destination.required, approvedRemoteUrl: destination.approvedRemoteUrl,
+      approvedPushUrl: destination.approvedPushUrl },
   );
   // #532 (plan-532c LD7b): offer the bound commit for linking; the offer never changes the result.
   if (deps.linkCommit && result.commitSha && (result.step === 'committed' || result.step === 'pushed' || result.step === 'pr')) {
@@ -85,6 +89,37 @@ export function governedCommitPrStep(
   connection: Connection | undefined, post: GitHubPostFn,
 ): Pick<GovernedFlowDeps, 'post' | 'token' | 'apiBaseUrl'> {
   return { post, token: connection?.credential, apiBaseUrl: connection?.endpoint };
+}
+
+/** Every push requires approval of the effective destination, even without a PR token. */
+interface GitHubDestinationApproval {
+  label: string;
+  required: boolean;
+  approvedRemoteUrl?: string;
+  approvedPushUrl?: string;
+}
+
+async function githubDestinationNote(deps: GovernedFlowDeps): Promise<GitHubDestinationApproval> {
+  const refused: GitHubDestinationApproval = {
+    label: ' Git push destination could not be verified; any accepted changes remain local.',
+    required: true,
+  };
+  try {
+    const remote = await deps.git(['remote', 'get-url', 'origin'], deps.workspaceRoot);
+    if (remote.code !== 0 || !remote.stdout.trim()) return refused;
+    const remoteUrl = remote.stdout.trim();
+    const binding = await inspectPushBinding(deps.git, deps.workspaceRoot, remoteUrl, deps.apiBaseUrl);
+    if (!binding.ok) return refused;
+    const label = ' Git push destination: ' + redactUrlCredentials(binding.pushUrl) +
+      '. Repository: ' + binding.identity.host + '/' + binding.identity.owner + '/' + binding.identity.repo + '.';
+    const api = deps.post && deps.token?.trim()
+      ? ' Authenticated PR API: ' + binding.apiOrigin + '.'
+      : '';
+    return { label: label + api, required: true,
+      approvedRemoteUrl: remoteUrl, approvedPushUrl: binding.pushUrl };
+  } catch {
+    return refused;
+  }
 }
 
 /**
