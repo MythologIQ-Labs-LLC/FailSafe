@@ -257,7 +257,7 @@ suite('commitPushOpenPr — commit binding (#532 B286)', () => {
   });
   test('unverified new commit never reaches remote push or authenticated PR', async () => {
     const cases: Array<[string, Script]> = [
-      ['foreign parent', { log: `${TREE}\\0${'c'.repeat(40)}\\0${MSG}\\n` }],
+      ['foreign parent', { log: `${TREE}\0${'c'.repeat(40)}\0${MSG}\n` }],
       ['unreadable staged tree', { tree: 'invalid' }],
       ['wrong branch tip', { tip: 'c'.repeat(40) }],
       ['unreadable pre-commit HEAD', { pre: { code: 128, stdout: '', stderr: 'failure' } }],
