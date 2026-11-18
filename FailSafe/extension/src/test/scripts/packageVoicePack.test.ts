@@ -1,6 +1,4 @@
-// Build-pipeline test for scripts/package-voice-pack.cjs.
-// Plan: docs/plan-qor-voice-substrate-extraction.md Phase 4.
-
+// #707/#710: fail-closed Voice Pack producer tests (six-asset contract).
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -9,116 +7,96 @@ import { createHash } from 'crypto';
 import * as cp from 'child_process';
 
 const SCRIPT = path.join(__dirname, '..', '..', '..', 'scripts', 'package-voice-pack.cjs');
-
-function mkTempDir(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+const REQUIRED = [
+  'piper/piper.min.js',
+  'piper/piper_phonemize.wasm',
+  'piper/piper_phonemize.data',
+  'whisper/transformers.min.js',
+  'whisper/ort-wasm-simd.wasm',
+  'whisper/ort-wasm-simd-threaded.wasm',
+];
+function fixture(run: (root: string) => void) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-producer-'));
+  try { run(root); }
+  finally { fs.rmSync(root, { recursive: true, force: true }); }
 }
-
-function sha256OfFile(p: string): string {
-  return createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+function seed(root: string) {
+  const source = path.join(root, 'dist', 'extension', 'ui', 'vendor');
+  for (const rel of REQUIRED) {
+    const file = path.join(source, ...rel.split('/'));
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, 'fixture:' + rel);
+  }
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '6.0.13' }));
+  return source;
 }
-
-function runScript(env: NodeJS.ProcessEnv): cp.SpawnSyncReturns<string> {
-  return cp.spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8', env: { ...process.env, ...env } });
-}
-
-suite('package-voice-pack.cjs', () => {
-
-  test('reads from dist/extension/ui/vendor/{piper,whisper} and writes dist/failsafe-voice-pack-<version>.tar.gz', () => {
-    const repoRoot = mkTempDir('failsafe-pack-asm-');
-    try {
-      const distVendorDir = path.join(repoRoot, 'dist', 'extension', 'ui', 'vendor');
-      fs.mkdirSync(path.join(distVendorDir, 'piper'), { recursive: true });
-      fs.mkdirSync(path.join(distVendorDir, 'whisper'), { recursive: true });
-      fs.writeFileSync(path.join(distVendorDir, 'piper', 'piper.min.js'), 'PIPER-JS', 'utf8');
-      fs.writeFileSync(path.join(distVendorDir, 'whisper', 'transformers.min.js'), 'TRANSFORMERS-JS', 'utf8');
-      fs.writeFileSync(path.join(repoRoot, 'package.json'), JSON.stringify({ version: '5.2.0' }), 'utf8');
-
-      const r = runScript({ FAILSAFE_REPO_ROOT: repoRoot });
-      assert.strictEqual(r.status, 0, `script exit 0; stderr=${r.stderr}`);
-
-      const tarball = path.join(repoRoot, 'dist', 'failsafe-voice-pack-5.2.0.tar.gz');
-      assert.ok(fs.existsSync(tarball), 'tarball written');
-    } finally {
-      fs.rmSync(repoRoot, { recursive: true, force: true });
-    }
+function execute(root: string) {
+  return cp.spawnSync(process.execPath, [SCRIPT], {
+    encoding: 'utf8', env: { ...process.env, FAILSAFE_REPO_ROOT: root },
   });
+}
+function digest(file: string) {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+suite('package-voice-pack.cjs exact asset inventory #707', () => {
+  test('positive producer creates archive and sha256 with exactly six required assets', () => fixture(root => {
+    const source = seed(root);
+    fs.writeFileSync(path.join(source, 'piper', 'VENDOR.md'), 'metadata not executable');
+    const result = execute(root);
+    assert.equal(result.status, 0, result.stderr);
+    const tarball = path.join(root, 'dist', 'failsafe-voice-pack-6.0.13.tar.gz');
+    assert.ok(fs.existsSync(tarball));
+    const checksum = fs.readFileSync(tarball + '.sha256', 'utf8').trim().split(/\s+/)[0];
+    assert.equal(checksum, digest(tarball));
 
-  test('manifest.json inside the tarball lists every expected file with correct sha256', () => {
-    const repoRoot = mkTempDir('failsafe-pack-asm-manifest-');
+    const extract = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-verify-'));
     try {
-      const distVendorDir = path.join(repoRoot, 'dist', 'extension', 'ui', 'vendor');
-      fs.mkdirSync(path.join(distVendorDir, 'piper'), { recursive: true });
-      fs.mkdirSync(path.join(distVendorDir, 'whisper'), { recursive: true });
-      fs.writeFileSync(path.join(distVendorDir, 'piper', 'a.js'), 'AAA', 'utf8');
-      fs.writeFileSync(path.join(distVendorDir, 'whisper', 'b.wasm'), 'BBB', 'utf8');
-      fs.writeFileSync(path.join(repoRoot, 'package.json'), JSON.stringify({ version: '5.2.0' }), 'utf8');
-
-      const r = runScript({ FAILSAFE_REPO_ROOT: repoRoot });
-      assert.strictEqual(r.status, 0, `script exit 0; stderr=${r.stderr}`);
-
-      const extractDir = mkTempDir('failsafe-pack-asm-extract-');
-      try {
-        const tarball = path.join(repoRoot, 'dist', 'failsafe-voice-pack-5.2.0.tar.gz');
-        // Portable extraction (plan-240 LD4a): --force-local is GNU-only and
-        // rejected by bsdtar 3.8.x, so spawn with cwd = the tarball's dir and
-        // a basename `-f` arg (no drive-letter path hits tar's `host:path`
-        // remote heuristic); keep forward-slash normalization for `-C`.
-        const ex = cp.spawnSync('tar', [
-          '-xzf', path.basename(tarball),
-          '-C', extractDir.replace(/\\/g, '/'),
-        ], { encoding: 'utf8', cwd: path.dirname(tarball) });
-        assert.strictEqual(ex.status, 0, `tar -xzf exit 0; stderr=${ex.stderr}`);
-
-        const manifestPath = path.join(extractDir, 'voice-pack.manifest.json');
-        assert.ok(fs.existsSync(manifestPath), 'manifest in tarball');
-        const m = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-        assert.strictEqual(m.version, '5.2.0');
-        assert.deepStrictEqual(m.expectedFiles.sort(), ['piper/a.js', 'whisper/b.wasm']);
-        assert.strictEqual(m.sha256['piper/a.js'], sha256OfFile(path.join(distVendorDir, 'piper', 'a.js')));
-        assert.strictEqual(m.sha256['whisper/b.wasm'], sha256OfFile(path.join(distVendorDir, 'whisper', 'b.wasm')));
-      } finally {
-        fs.rmSync(extractDir, { recursive: true, force: true });
+      const unpack = cp.spawnSync('tar', ['-xzf', path.basename(tarball), '-C', extract], {
+        cwd: path.dirname(tarball), encoding: 'utf8',
+      });
+      assert.equal(unpack.status, 0, unpack.stderr);
+      const manifest = JSON.parse(fs.readFileSync(path.join(extract, 'voice-pack.manifest.json'), 'utf8'));
+      assert.equal(manifest.version, '6.0.13');
+      assert.deepEqual([...manifest.expectedFiles].sort(), [...REQUIRED].sort());
+      assert.equal(fs.existsSync(path.join(extract, 'piper', 'VENDOR.md')), false);
+      for (const rel of REQUIRED) {
+        assert.equal(manifest.sha256[rel], digest(path.join(source, ...rel.split('/'))));
+        assert.equal(digest(path.join(extract, ...rel.split('/'))), manifest.sha256[rel]);
       }
     } finally {
-      fs.rmSync(repoRoot, { recursive: true, force: true });
+      fs.rmSync(extract, { recursive: true, force: true });
     }
-  });
+  }));
 
-  test('companion .sha256 file matches the tarball digest', () => {
-    const repoRoot = mkTempDir('failsafe-pack-asm-sha-');
-    try {
-      const distVendorDir = path.join(repoRoot, 'dist', 'extension', 'ui', 'vendor');
-      fs.mkdirSync(path.join(distVendorDir, 'piper'), { recursive: true });
-      fs.writeFileSync(path.join(distVendorDir, 'piper', 'p.js'), 'P', 'utf8');
-      fs.writeFileSync(path.join(repoRoot, 'package.json'), JSON.stringify({ version: '5.2.0' }), 'utf8');
+  test('missing Piper asset causes a nonzero result and no successful tarball', () => fixture(root => {
+    const source = seed(root);
+    fs.rmSync(path.join(source, 'piper', 'piper.min.js'));
+    const result = execute(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /required voice asset missing/);
+    assert.equal(fs.existsSync(path.join(root, 'dist', 'failsafe-voice-pack-6.0.13.tar.gz')), false);
+  }));
 
-      const r = runScript({ FAILSAFE_REPO_ROOT: repoRoot });
-      assert.strictEqual(r.status, 0);
+  test('missing Whisper asset fails before packaging', () => fixture(root => {
+    const source = seed(root);
+    fs.rmSync(path.join(source, 'whisper', 'transformers.min.js'));
+    const result = execute(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /required voice asset missing/);
+  }));
 
-      const tarball = path.join(repoRoot, 'dist', 'failsafe-voice-pack-5.2.0.tar.gz');
-      const sha256File = `${tarball}.sha256`;
-      assert.ok(fs.existsSync(sha256File), '.sha256 file written');
+  test('zero-byte required asset is refused', () => fixture(root => {
+    const source = seed(root);
+    fs.writeFileSync(path.join(source, 'piper', 'piper_phonemize.wasm'), '');
+    const result = execute(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /required voice asset invalid/);
+  }));
 
-      const declared = fs.readFileSync(sha256File, 'utf8').trim().split(/\s+/)[0];
-      const actual = sha256OfFile(tarball);
-      assert.strictEqual(declared, actual);
-    } finally {
-      fs.rmSync(repoRoot, { recursive: true, force: true });
-    }
-  });
-
-  test('errors clearly when source vendor dir is missing', () => {
-    const repoRoot = mkTempDir('failsafe-pack-asm-missing-');
-    try {
-      fs.writeFileSync(path.join(repoRoot, 'package.json'), JSON.stringify({ version: '5.2.0' }), 'utf8');
-      // No dist/extension/ui/vendor/ created.
-
-      const r = runScript({ FAILSAFE_REPO_ROOT: repoRoot });
-      assert.notStrictEqual(r.status, 0, 'script must exit non-zero');
-      assert.match(r.stderr, /vendor|missing|not found/i, 'descriptive error on stderr');
-    } finally {
-      fs.rmSync(repoRoot, { recursive: true, force: true });
-    }
-  });
+  test('absent vendor root is an explicit failure', () => fixture(root => {
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '6.0.13' }));
+    const result = execute(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /vendor source dir not found/);
+  }));
 });
