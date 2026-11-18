@@ -57,13 +57,13 @@ function main() {
     // Cleanup is best-effort, but any failure still exits nonzero.
     try {
       const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
-      if (/^\\d+\\.\\d+\\.\\d+$/.test(String(pkg.version || ''))) {
+      if (/^\d+\.\d+\.\d+$/.test(String(pkg.version || ''))) {
         const candidate = path.join(REPO_ROOT, 'dist', `failsafe-voice-pack-${pkg.version}.tar.gz`);
         fs.rmSync(candidate, { force: true });
         fs.rmSync(candidate + '.sha256', { force: true });
       }
     } catch (cleanupErr) {
-      process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\\n');
+      process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\n');
     }
     process.stderr.write(`[package-voice-pack] ERROR: ${err.message || err}\n`);
     process.exit(1);
