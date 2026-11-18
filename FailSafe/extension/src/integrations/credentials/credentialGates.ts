@@ -29,6 +29,11 @@ export const endpointRefusalMessage = (provider: string): string =>
   `This workspace's settings set the ${provider} endpoint, but the credential is your user-level one. ` +
   'FailSafe will not send it there. Set a Workspace credential for this workspace, or move the endpoint setting to User settings.';
 
+/** #476 B290: do not promote a remote-host User setting to host-approved GitHub Enterprise trust. */
+export const githubCustomEndpointRefusalMessage = (): string =>
+  'A User-scoped GitHub token cannot be sent to a custom GitHub API endpoint, even when that endpoint looks like a User setting in a Dev Container. ' +
+  'Store a separate Workspace-scoped GitHub token, then approve its exact API destination when prompted.';
+
 export const setCommandHint = (label: string): string => `Run "${SET_COMMAND_TITLE}" to store the ${label}.`;
 
 export const disabledMessage = (feature: string, enabledKey: string, label: string): string =>
@@ -91,7 +96,8 @@ export function optionalCredential(
 export function governedCommitConnection(creds: IntegrationCredentials, endpoints: EndpointReader, ui: CredentialUi): Connection | undefined {
   const c = checkConnection(creds, endpoints, 'github');
   if (c.ok) return c.connection;
-  if (c.refusedEndpoint) tell(ui, endpointRefusalMessage(descriptor('github.token').provider), false);
+  if (c.refusal === 'custom-github') tell(ui, githubCustomEndpointRefusalMessage(), false);
+  else if (c.refusal === 'workspace') tell(ui, endpointRefusalMessage(descriptor('github.token').provider), false);
   else explain(c.e, 'github.token', ui, undefined);
   return undefined;
 }
@@ -115,15 +121,24 @@ export const ENDPOINTS: Readonly<Record<EndpointProvider, { credential: Credenti
 
 export interface Connection { credential: string; endpoint?: string }
 
-type ConnectionCheck = { ok: true; connection: Connection } | { ok: false; refusedEndpoint: boolean; e: Evaluation };
+type ConnectionCheck = { ok: true; connection: Connection } |
+  { ok: false; refusal: 'none' | 'workspace' | 'custom-github'; e: Evaluation };
 
 function checkConnection(creds: IntegrationCredentials, endpoints: EndpointReader, provider: EndpointProvider): ConnectionCheck {
   const { credential, setting } = ENDPOINTS[provider];
   const e = evaluate(creds, credential);
-  if (e.kind !== 'value') return { ok: false, refusedEndpoint: false, e };
+  if (e.kind !== 'value') return { ok: false, refusal: 'none', e };
   const ep = endpoints.endpoint(setting);
   const endpoint = ep.value?.trim() || undefined;
-  if (endpoint && ep.scope === 'workspace' && e.scope === 'user') return { ok: false, refusedEndpoint: true, e };
+  // The remote extension host can expose Dev Container settings as globalValue.
+  // Treat only the unmodified public GitHub base as suitable for a User token.
+  if (provider === 'github' && e.scope === 'user' &&
+      endpoint && endpoint.replace(/\/$/, '') !== 'https://api.github.com') {
+    return { ok: false, refusal: 'custom-github', e };
+  }
+  if (endpoint && ep.scope === 'workspace' && e.scope === 'user') {
+    return { ok: false, refusal: 'workspace', e };
+  }
   return { ok: true, connection: { credential: e.value, endpoint } };
 }
 
@@ -135,7 +150,8 @@ export function providerConnection(
   const c = checkConnection(creds, endpoints, provider);
   if (c.ok) return c.connection;
   const id = ENDPOINTS[provider].credential;
-  if (c.refusedEndpoint) tell(ui, endpointRefusalMessage(descriptor(id).provider), false);
+  if (c.refusal === 'custom-github') tell(ui, githubCustomEndpointRefusalMessage(), false);
+  else if (c.refusal === 'workspace') tell(ui, endpointRefusalMessage(descriptor(id).provider), false);
   else explain(c.e, id, ui, notConfigured);
   return undefined;
 }
