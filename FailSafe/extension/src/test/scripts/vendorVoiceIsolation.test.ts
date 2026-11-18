@@ -81,4 +81,15 @@ suite('voice vendor isolation #707', () => {
     assert.deepEqual(warnings, []);
     assert.equal(fs.readFileSync(path.join(root, 'vendor', 'piper', 'piper.min.js'), 'utf8'), 'NEW');
   }));
+  test('Whisper re-vendoring applies the same deterministic browser sanitization', () => {
+    const before = Buffer.from(
+      'var mod=eval("quire".replace(/^/,"re"))(moduleName);if(mod&&(mod.length||Object.keys(mod).length))return mod; new Function("return this")',
+    );
+    const after = vendorTool.sanitizeWhisperBrowserBundle(before).toString('utf8');
+    assert.equal(after.includes('eval("quire"'), false);
+    assert.equal(after.includes('new Function("return this")'), false);
+    assert.ok(after.includes('var mod=null'));
+    assert.ok(after.includes('(function(){return this})()'));
+  });
+
 });
