@@ -23,6 +23,7 @@ import { spawn } from 'child_process';
 import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
+import { inspectPushBinding } from './githubPushBinding';
 
 export type GitRunner = (args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
 
@@ -42,9 +43,10 @@ export interface GovernedCommitDeps {
   post?: GitHubPostFn;
   token?: string;
   apiBaseUrl?: string;
-  /** Only for a custom GHES token destination approved before confirmation. */
+  /** Operator approval of the exact fetch and effective push destinations. */
   requireExactRemoteApproval?: boolean;
   approvedRemoteUrl?: string;
+  approvedPushUrl?: string;
 }
 
 export type GovernedCommitStep = 'not-a-repo' | 'noop' | 'committed' | 'pushed' | 'pr';
@@ -137,19 +139,20 @@ export async function commitPushOpenPr(
   // Redacted copy for anything that leaves this function; `remoteUrl` itself stays
   // intact for slug parsing and the PR call.
   const safeRemoteUrl = redactUrlCredentials(remoteUrl);
-  if (deps.requireExactRemoteApproval && (!deps.approvedRemoteUrl || deps.approvedRemoteUrl !== remoteUrl)) {
+  // A fetch remote is not the push authority: pushurl / pushInsteadOf may
+  // target another host, even on default public GitHub with no PR token.
+  const binding = await inspectPushBinding(git, cwd, remoteUrl, deps.apiBaseUrl);
+  if (!binding.ok) {
     return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
-      warning: 'Git origin changed or was unverified after GHES destination approval; no push or PR attempted' });
+      warning: binding.error + '; no push or PR attempted' });
   }
-  if (deps.requireExactRemoteApproval) {
-    // Git's pushurl and pushInsteadOf may resolve to a different destination
-    // from the fetch URL, even when origin's name and fetch URL stay unchanged.
-    // --all refuses multiple push targets rather than sending to extra hosts.
-    const pushTargets = await git(['remote', 'get-url', '--push', '--all', 'origin'], cwd);
-    if (pushTargets.code !== 0 || pushTargets.stdout.trim() !== deps.approvedRemoteUrl) {
-      return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
-        warning: 'Git push destination differs from the approved GHES remote; no push or PR attempted' });
-    }
+  // The direct API must not accept a rewritten push target without a prior
+  // operator approval. The UI explicitly approves both URLs when available.
+  const expectedPush = deps.requireExactRemoteApproval ? deps.approvedPushUrl : remoteUrl;
+  if (!expectedPush || binding.pushUrl !== expectedPush ||
+      (deps.requireExactRemoteApproval && deps.approvedRemoteUrl !== remoteUrl)) {
+    return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
+      warning: 'Git fetch or effective push destination changed or was not approved; no push or PR attempted' });
   }
 
   const pushed = await git(['push', '-u', 'origin', req.branch], cwd);
@@ -161,12 +164,17 @@ export async function commitPushOpenPr(
   if (!deps.post || !deps.token || !deps.token.trim()) {
     return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp, warning: 'no GitHub token — branch pushed; open the PR manually' });
   }
-  if (deps.requireExactRemoteApproval) {
-    const again = await git(['remote', 'get-url', 'origin'], cwd);
-    if (again.code !== 0 || again.stdout.trim() !== deps.approvedRemoteUrl) {
-      return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
-        warning: 'Git origin changed after approved push; credential-backed PR refused' });
-    }
+  // Recheck both identities before token egress. The Git push and this
+  // recheck cannot be made atomic against hostile concurrent config writes.
+  const again = await git(['remote', 'get-url', 'origin'], cwd);
+  if (again.code !== 0 || again.stdout.trim() !== remoteUrl) {
+    return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
+      warning: 'Git origin changed after the approved push; authenticated PR refused' });
+  }
+  const fresh = await inspectPushBinding(git, cwd, remoteUrl, deps.apiBaseUrl);
+  if (!fresh.ok || fresh.pushUrl !== binding.pushUrl) {
+    return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
+      warning: 'Git push destination changed after the approved push; authenticated PR refused' });
   }
 
   const pr = await createPullRequest(
