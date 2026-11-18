@@ -21,6 +21,24 @@ function defaultFor(args: string[]): GitResp {
 const okPost: GitHubPostFn = async () => ({ status: 201, body: JSON.stringify({ html_url: 'https://github.com/o/r/pull/9', number: 9 }) });
 
 suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
+  test('failed git status refuses before branch selection, staging or external egress', async () => {
+    const calls: string[][] = [];
+    let posts = 0;
+    const git: GitRunner = async (args) => {
+      calls.push(args);
+      if (args[0] === 'status') return { code: 1, stdout: '', stderr: 'repository status unavailable' };
+      return defaultFor(args);
+    };
+    const result = await commitPushOpenPr(REQ, {
+      git, token: 'fixture-token',
+      post: async () => { posts++; return { status: 201, body: '{}' }; },
+    });
+    assert.equal(result.step, 'noop');
+    assert.match(result.warning || '', /git status failed/i);
+    assert.equal(posts, 0);
+    assert.equal(calls.filter(a => ['checkout', 'add', 'commit', 'push', 'remote'].includes(a[0])).length, 0);
+  });
+
   test('both branch checkout attempts fail: no staging, commit, push or authenticated PR', async () => {
     const calls: string[][] = [];
     let posts = 0;
