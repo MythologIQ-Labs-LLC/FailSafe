@@ -152,12 +152,20 @@ export async function commitPushOpenPr(
     return { step: 'noop', branch: req.branch, warning: 'git staging failed; no commit or push attempted (inspect the index for partial staging)' };
   }
   // git add may have succeeded while another actor staged an unrelated file.
-  // Start at the repository root, not cwd: a workspace may be a subdirectory.
-  // The only permitted staged paths are the selected literal paths and their
-  // descendants (for directory selections). Preserve the index on refusal.
+  // The inclusion pathspec covers the whole repo. Resolve each exclusion from
+  // the same root; unprefixed exclusions here silently reject valid commits in
+  // nested workspaces, or fail to describe their authorized files.
+  const scope = await git(['rev-parse', '--show-prefix'], cwd);
+  const prefix = scope.stdout.replace(/\r?\n$/, '');
+  if (scope.code !== 0 || prefix.startsWith('/') || prefix.startsWith('\\') ||
+    /^[A-Za-z]:/.test(prefix) || /[\r\n\0]/.test(prefix) ||
+    prefix.split(/[\\/]/).some(segment => segment === '.' || segment === '..')) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'repository-relative scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+  }
   const outsideSelection = await git([
     'diff', '--cached', '--quiet', '--exit-code', '--', ':(top)',
-    ...req.paths.map((path) => `:(exclude,literal)${path}`),
+    ...req.paths.map((path) => `:(exclude,top,literal)${prefix}${path}`),
   ], cwd);
   if (outsideSelection.code !== 0) return { step: 'noop', branch: req.branch,
     warning: outsideSelection.code === 1
