@@ -839,11 +839,12 @@
     "package": "node ./scripts/package-target.cjs --host",
     "package:target": "node ./scripts/package-target.cjs",
     "package:all-targets": "node ./scripts/package-all-targets.cjs --out dist-vsix",
-    "vendor:piper": "node ./scripts/vendor-piper.cjs",
+    "vendor:piper": "node ./scripts/vendor-voice.cjs --piper-only",
     "test:node": "node ./scripts/run-node-tests.cjs",
     "test:runner-coverage": "node ./scripts/check-test-runner-coverage.cjs",
     "test:citation-parity": "node ./scripts/check-plan-citation-parity.cjs --structure-only",
-    "governance:ledger-fork": "node ./scripts/check-ledger-fork.cjs --repo-root ../.."
+    "governance:ledger-fork": "node ./scripts/check-ledger-fork.cjs --repo-root ../..",
+    "vendor:voice": "node ./scripts/vendor-voice.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
@@ -861,12 +862,10 @@
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.9.2",
-    "@xenova/transformers": "^2.17.2",
     "ajv": "^8.17.1",
     "esbuild": "^0.28.1",
     "eslint": "^8.50.0",
     "jsdom": "^27.0.1",
-    "piper-tts-web": "1.1.2",
     "typescript": "^5.2.0"
   },
   "dependencies": {
