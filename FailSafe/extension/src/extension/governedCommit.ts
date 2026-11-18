@@ -98,7 +98,9 @@ export async function commitPushOpenPr(
   // A bare `git add -A --` has repository-wide reach. Refuse empty or
   // non-filename input rather than treating absence of paths as broad authority.
   if (!Array.isArray(req.paths) || req.paths.length === 0 || req.paths.some(path =>
-    typeof path !== 'string' || !path.trim() || path.includes('\0'))) {
+    typeof path !== 'string' || !path.trim() || path.includes('\0') ||
+    path.startsWith('/') || path.startsWith('\\') || /^[A-Za-z]:/.test(path) ||
+    path.split(/[\\/]/).some(segment => segment === '.' || segment === '..'))) {
     return { step: 'noop', branch: req.branch,
       warning: 'invalid selected paths; no status, branch, commit, push or PR attempted' };
   }

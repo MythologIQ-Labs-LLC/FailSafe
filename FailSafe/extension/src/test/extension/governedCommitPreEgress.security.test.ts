@@ -31,6 +31,13 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     ['empty path set', []],
     ['blank filename', ['']],
     ['NUL in filename', ['docs/unsafe\u0000name']],
+    ['root dot', ['.']],
+    ['root dot slash', ['./']],
+    ['parent-normalized directory', ['docs/..']],
+    ['parent-normalized file', ['docs/../private.txt']],
+    ['parent outside repository', ['../outside.txt']],
+    ['absolute POSIX path', ['/private.txt']],
+    ['absolute Windows drive path', ['C:\\repo\\private.txt']],
   ] as const) {
     test(`#715 ${label} refuses before any status, checkout, add, commit, push or PR`, async () => {
       const calls: string[][] = [];
