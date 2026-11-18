@@ -149,6 +149,27 @@ suite('#532 governed commit link (B286)', () => {
     });
   }
 
+  test('#715: unexpected staging after selected git add cannot be committed or published', async () => {
+    const before = git(ws.root, 'rev-parse', 'HEAD');
+    fs.mkdirSync(path.join(ws.root, 'notes'), { recursive: true });
+    fs.writeFileSync(path.join(ws.root, 'notes', 'unexpected.txt'), 'unselected private work\n');
+    let injected = 0;
+    const result = await governedCommit((inner) => async (args, cwd) => {
+      const response = await inner(args, cwd);
+      if (args[0] === 'add' && response.code === 0) {
+        git(cwd, 'add', '--', 'notes/unexpected.txt');
+        injected++;
+      }
+      return response;
+    });
+    assert.equal(injected, 1, 'the unexpected index mutation occurred after add');
+    assert.equal(result.step, 'noop', JSON.stringify(result));
+    assert.equal(result.sha, undefined);
+    assert.match(result.warning || '', /staged changes outside selected paths/i);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), before, 'no unauthorized commit');
+    assert.match(git(ws.root, 'diff', '--cached', '--name-only'), /notes\/unexpected\.txt/, 'index is preserved for operator review');
+  });
+
   test('#715: clean index on an unborn branch still permits a bound root commit', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-index-unborn-'));
     try {
