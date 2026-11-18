@@ -98,18 +98,55 @@ suite('#532 governed commit link (B286)', () => {
     assert.doesNotMatch(c.shown[0].detail, /already staged/);
   });
 
-  test('a file staged before the run is included in the commit and the dialog says so', async () => {
+  test('#715: pre-staged unrelated content refuses automated commit and remains staged', async () => {
     await importedIntent(service);
     fs.mkdirSync(path.join(ws.root, 'notes'), { recursive: true });
     fs.writeFileSync(path.join(ws.root, 'notes', 'extra.txt'), 'staged earlier\n');
     git(ws.root, 'add', '--', 'notes/extra.txt');
+    const before = git(ws.root, 'diff', '--cached', '--name-status');
+    const head = git(ws.root, 'rev-parse', 'HEAD');
     const run = await governedCommit();
-    assert.ok(run.sha, JSON.stringify(run));
-    const c = confirmer('approved');
-    assert.equal((await offer(run.sha, c.confirm)).outcome, 'linked');
-    assert.match(c.shown[0].detail, /Files in this commit: 2; within the paths FailSafe staged: 1/);
-    assert.match(c.shown[0].detail, /1 file\(s\) outside those paths were already staged before FailSafe committed and are included/);
+    assert.equal(run.step, 'noop');
+    assert.equal(run.sha, undefined);
+    assert.match(run.warning || '', /pre-existing staged/i);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), head);
+    assert.equal(git(ws.root, 'diff', '--cached', '--name-status'), before);
+    assert.equal(git(ws.root, 'branch', '--list', 'fix/organize-20261019120000'), '');
+    assert.equal(historyLines().filter(line => line.includes('"LINKED"')).length, 0);
   });
+
+  test('#715: a partially staged selected file is preserved and refuses auto-commit', async () => {
+    fs.writeFileSync(path.join(ws.root, 'docs', 'new.md'), '# Staged version\n');
+    git(ws.root, 'add', '--', 'docs/new.md');
+    fs.writeFileSync(path.join(ws.root, 'docs', 'new.md'), '# Unstaged newer version\n');
+    const staged = git(ws.root, 'show', ':docs/new.md');
+    const head = git(ws.root, 'rev-parse', 'HEAD');
+    const run = await governedCommit();
+    assert.equal(run.step, 'noop');
+    assert.equal(run.sha, undefined);
+    assert.match(run.warning || '', /pre-existing staged/i);
+    assert.equal(git(ws.root, 'show', ':docs/new.md'), staged);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), head);
+  });
+
+  for (const mode of ['staged deletion', 'staged rename'] as const) {
+    test(`#715: ${mode} in unrelated paths refuses without disturbing the index`, async () => {
+      if (mode === 'staged deletion') {
+        fs.rmSync(path.join(ws.root, 'docs', 'architecture', 'RUNTIME.md'));
+        git(ws.root, 'add', '-u', '--', 'docs/architecture/RUNTIME.md');
+      } else {
+        git(ws.root, 'mv', 'docs/architecture/RUNTIME.md', 'docs/architecture/RUNTIME-renamed.md');
+      }
+      const before = git(ws.root, 'diff', '--cached', '--name-status');
+      const head = git(ws.root, 'rev-parse', 'HEAD');
+      const run = await governedCommit();
+      assert.equal(run.step, 'noop');
+      assert.equal(run.sha, undefined);
+      assert.match(run.warning || '', /pre-existing staged/i);
+      assert.equal(git(ws.root, 'diff', '--cached', '--name-status'), before);
+      assert.equal(git(ws.root, 'rev-parse', 'HEAD'), head);
+    });
+  }
 
   test('a directory path counts the files under it as staged by FailSafe', async () => {
     await importedIntent(service);
