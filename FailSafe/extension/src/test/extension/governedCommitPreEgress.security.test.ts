@@ -45,7 +45,52 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     assert.equal(calls.filter(a => ['checkout', 'add', 'commit', 'push', 'remote'].includes(a[0])).length, 0);
   });
 
-  test('both branch checkout attempts fail: no staging, commit, push or authenticated PR', async () => {
+  for (const [label, exit, warning] of [
+    ['unrelated index entries already staged', 1, /pre-existing staged changes/i],
+    ['unreadable staged index', 128, /staged index could not be verified/i],
+  ] as const) {
+    test(`#715 ${label}: no branch switch, stage, commit, push or PR`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const git: GitRunner = async (args) => {
+        calls.push(args);
+        if (args[0] === 'diff' && args.includes('--cached')) return { code: exit, stdout: '', stderr: '' };
+        return defaultFor(args);
+      };
+      const r = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(r.step, 'noop');
+      assert.match(r.warning || '', warning);
+      assert.equal(posts, 0);
+      assert.equal(calls.filter(x => ['checkout', 'add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
+    });
+  }
+
+  test('#715: checkout hook stages content: second index gate refuses before git add/commit/egress', async () => {
+    const calls: string[][] = [];
+    let scans = 0;
+    let posts = 0;
+    const git: GitRunner = async (args) => {
+      calls.push(args);
+      if (args[0] === 'diff' && args.includes('--cached')) {
+        scans++;
+        return { code: scans === 2 ? 1 : 0, stdout: '', stderr: '' };
+      }
+      return defaultFor(args);
+    };
+    const r = await commitPushOpenPr(REQ, {
+      git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+    });
+    assert.equal(r.step, 'noop');
+    assert.match(r.warning || '', /staged changes appeared during checkout/i);
+    assert.equal(scans, 2);
+    assert.ok(calls.some(x => x[0] === 'checkout'));
+    assert.equal(calls.filter(x => ['add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
+    assert.equal(posts, 0);
+  });
+
+    test('both branch checkout attempts fail: no staging, commit, push or authenticated PR', async () => {
     const calls: string[][] = [];
     let posts = 0;
     const git: GitRunner = async (args) => {

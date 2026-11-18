@@ -102,6 +102,15 @@ export async function commitPushOpenPr(
   }
   if (status.stdout.trim() === '') return { step: 'noop' };
 
+  // An automated commit cannot silently include content staged before this offer.
+  // Git diff --cached returns 0 for an empty index (including unborn HEAD), 1 for
+  // staged content and >1 on errors; only 0 authorizes the next step.
+  const initialIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--'], cwd);
+  if (initialIndex.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: initialIndex.code === 1
+      ? 'pre-existing staged changes require manual review; no branch, commit, push or PR attempted'
+      : 'staged index could not be verified; no branch, commit, push or PR attempted' };
+
   // A failed branch switch must never fall through to staging or committing on
   // the original branch. The fallback is supported only for an existing branch.
   const branched = await git(['checkout', '-b', req.branch], cwd);
@@ -116,6 +125,13 @@ export async function commitPushOpenPr(
   if (active.code !== 0 || active.stdout.trim() !== req.branch) {
     return { step: 'noop', branch: req.branch, warning: 'target branch identity verification failed; no changes committed or pushed' };
   }
+
+  // A checkout hook may have staged different content; refuse before touching it.
+  const switchedIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--'], cwd);
+  if (switchedIndex.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: switchedIndex.code === 1
+      ? 'staged changes appeared during checkout; no add, commit, push or PR attempted'
+      : 'staged index could not be verified after checkout; no add, commit, push or PR attempted' };
 
   const staged = await git(['add', '-A', '--', ...req.paths], cwd);
   if (staged.code !== 0) {
