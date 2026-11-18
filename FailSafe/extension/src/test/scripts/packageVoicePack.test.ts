@@ -93,6 +93,24 @@ suite('package-voice-pack.cjs exact asset inventory #707', () => {
     assert.match(result.stderr, /required voice asset invalid/);
   }));
 
+  test('failed repack removes stale previously valid artifacts for the same version', () => fixture(root => {
+    const source = seed(root);
+    const first = execute(root);
+    assert.equal(first.status, 0, first.stderr);
+    const tarball = path.join(root, 'dist', 'failsafe-voice-pack-6.0.13.tar.gz');
+    assert.equal(fs.existsSync(tarball), true);
+    assert.equal(fs.existsSync(tarball + '.sha256'), true);
+
+    // An operator must never mistake yesterday's archive for a successful
+    // repack when a required input has gone missing.
+    fs.rmSync(path.join(source, 'whisper', 'transformers.min.js'));
+    const second = execute(root);
+    assert.notEqual(second.status, 0);
+    assert.match(second.stderr, /required voice asset missing/);
+    assert.equal(fs.existsSync(tarball), false, 'stale archive must not be publishable');
+    assert.equal(fs.existsSync(tarball + '.sha256'), false, 'stale checksum must not be publishable');
+  }));
+
   test('absent vendor root is an explicit failure', () => fixture(root => {
     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '6.0.13' }));
     const result = execute(root);
