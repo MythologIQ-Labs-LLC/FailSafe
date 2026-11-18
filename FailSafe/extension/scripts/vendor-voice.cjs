@@ -98,7 +98,7 @@ function sanitizeWhisperBrowserBundle(bytes) {
     'var mod=eval("quire".replace(/^/,"re"))(moduleName);if(mod&&(mod.length||Object.keys(mod).length))return mod',
     'var mod=null',
   );
-  code = code.replace(/new Function\\("return this"\\)/g, '(function(){return this})()');
+  code = code.split('new Function("return this")').join('(function(){return this})()');
   return Buffer.from(code, 'utf8');
 }
 
