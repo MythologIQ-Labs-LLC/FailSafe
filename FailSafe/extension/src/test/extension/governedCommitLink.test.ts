@@ -170,6 +170,27 @@ suite('#532 governed commit link (B286)', () => {
     assert.match(git(ws.root, 'diff', '--cached', '--name-only'), /notes\/unexpected\.txt/, 'index is preserved for operator review');
   });
 
+  test('#715: nested workspace with only requested file staged succeeds, not a false-positive off-scope refusal', async () => {
+    const before = git(ws.root, 'rev-parse', 'HEAD');
+    const nested = path.join(ws.root, 'docs');
+    fs.writeFileSync(path.join(nested, 'nested-allowed.md'), '# Selected content\n');
+    const calls: string[][] = [];
+    const r = await commitPushOpenPr({
+      workspaceRoot: nested, paths: ['nested-allowed.md'],
+      branch: 'fix/nested-workspace-allowed', message: 'test selected only',
+      base: 'main', prTitle: 'test', prBody: '',
+    }, {
+      git: async (args, cwd) => { calls.push(args); return defaultGitRunner(args, cwd); },
+    });
+    assert.equal(r.step, 'committed', JSON.stringify(r));
+    assert.ok(r.commitSha, 'the local commit must be source-bound');
+    assert.notEqual(git(ws.root, 'rev-parse', 'HEAD'), before);
+    assert.equal(git(ws.root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/nested-allowed.md');
+    assert.ok(calls.some(args => args.join(' ') === 'rev-parse --show-prefix'),
+      'the scope guard must resolve the subdirectory relative to the repository root');
+    assert.equal(git(ws.root, 'diff', '--cached', '--name-only'), '');
+  });
+
   test('#715: post-add guard checks entire repository when workspace is a nested directory', async () => {
     const before = git(ws.root, 'rev-parse', 'HEAD');
     const nested = path.join(ws.root, 'docs');

@@ -148,6 +148,34 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     assert.equal(calls.filter((a) => ['add', 'commit', 'push', 'remote'].includes(a[0])).length, 0);
   });
 
+  for (const [label, prefix] of [
+    ['unreadable repository scope', null],
+    ['parent-traversal scope', '../parent/'],
+    ['absolute scope', '/private/'],
+  ] as const) {
+    test(`#715 ${label} after git add refuses without committing or publishing`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const git: GitRunner = async (args) => {
+        calls.push(args);
+        if (args.join(' ') === 'rev-parse --show-prefix') {
+          return prefix === null
+            ? { code: 128, stdout: '', stderr: 'not available' }
+            : { code: 0, stdout: prefix + '\n', stderr: '' };
+        }
+        return defaultFor(args);
+      };
+      const result = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(result.step, 'noop');
+      assert.match(result.warning ?? '', /repository-relative scope could not be verified/i);
+      assert.ok(calls.some(a => a.join(' ') === 'rev-parse --show-prefix'));
+      assert.equal(calls.filter(a => ['commit', 'push', 'remote'].includes(a[0])).length, 0);
+      assert.equal(posts, 0);
+    });
+  }
+
   for (const [label, exit, reason] of [
     ['unexpected staged path', 1, /staged changes outside selected paths/i],
     ['unreadable post-add index', 128, /staged scope could not be verified/i],
