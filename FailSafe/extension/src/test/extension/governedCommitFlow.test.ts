@@ -17,6 +17,7 @@ function defaultFor(args: string[]): { code: number; stdout: string; stderr: str
   return { code: 0, stdout: '', stderr: '' };
 }
 const git: GitRunner = async (args) => defaultFor(args);
+const DEST = ' Git push destination: https://github.com/o/r.git. Repository: github.com/o/r.';
 
 function baseDeps(over: Partial<GovernedFlowDeps>): GovernedFlowDeps {
   return {
@@ -126,7 +127,7 @@ suite('runGovernedCommitFlow — linkCommit (#532 B286)', () => {
 // unchanged and a Yes still commits.
 suite('runGovernedCommitFlow - affected architecture decisions (B311)', () => {
   const BASE = 'FailSafe organize applied 1 change(s). Commit, push & open a PR for them?';
-  const DEST = ' Git push destination: https://github.com/o/r.git. Repository: github.com/o/r.';
+
   const withDescribe = (describe: unknown, prompts: string[], extra: Partial<GovernedFlowDeps> = {}) =>
     baseDeps({ confirm: async (m) => { prompts.push(m); return true; }, describeArchitecture: describe, ...extra } as Partial<GovernedFlowDeps>);
 
