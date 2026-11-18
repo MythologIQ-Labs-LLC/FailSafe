@@ -11,7 +11,15 @@ const { createHash } = require('crypto');
 const { spawnSync } = require('child_process');
 
 const REPO_ROOT = process.env.FAILSAFE_REPO_ROOT || path.resolve(__dirname, '..');
-const VENDOR_SOURCE_DIRS = ['piper', 'whisper'];
+const REQUIRED_ASSETS = Object.freeze([
+  'piper/piper.min.js',
+  'piper/piper_phonemize.wasm',
+  'piper/piper_phonemize.data',
+  'whisper/transformers.min.js',
+  'whisper/ort-wasm-simd.wasm',
+  'whisper/ort-wasm-simd-threaded.wasm',
+]);
+const MAX_ASSET_BYTES = 75 * 1024 * 1024;
 
 main();
 
@@ -53,34 +61,23 @@ function readVersion() {
 
 function collectFiles(vendorSourceRoot, stagingDir) {
   if (!fs.existsSync(vendorSourceRoot)) {
-    throw new Error(`vendor source dir not found: ${vendorSourceRoot}`);
+    throw new Error('vendor source dir not found: ' + vendorSourceRoot);
   }
   const collected = [];
-  for (const sub of VENDOR_SOURCE_DIRS) {
-    const subSrc = path.join(vendorSourceRoot, sub);
-    if (!fs.existsSync(subSrc)) continue;
-    walkAndCopy(subSrc, sub, stagingDir, collected);
-  }
-  if (collected.length === 0) {
-    throw new Error(`vendor dirs empty under ${vendorSourceRoot} — no piper/whisper files found`);
+  for (const rel of REQUIRED_ASSETS) {
+    const absSrc = path.join(vendorSourceRoot, ...rel.split('/'));
+    let stat;
+    try { stat = fs.lstatSync(absSrc); }
+    catch { throw new Error('required voice asset missing: ' + rel); }
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0 || stat.size > MAX_ASSET_BYTES) {
+      throw new Error('required voice asset invalid: ' + rel);
+    }
+    const absDest = path.join(stagingDir, ...rel.split('/'));
+    fs.mkdirSync(path.dirname(absDest), { recursive: true });
+    fs.copyFileSync(absSrc, absDest, fs.constants.COPYFILE_EXCL);
+    collected.push({ rel, abs: absSrc });
   }
   return collected;
-}
-
-function walkAndCopy(absSrcDir, relPrefix, stagingDir, collected) {
-  for (const entry of fs.readdirSync(absSrcDir, { withFileTypes: true })) {
-    const absSrc = path.join(absSrcDir, entry.name);
-    const relPath = `${relPrefix}/${entry.name}`;
-    const absDest = path.join(stagingDir, relPath);
-    if (entry.isDirectory()) {
-      fs.mkdirSync(absDest, { recursive: true });
-      walkAndCopy(absSrc, relPath, stagingDir, collected);
-    } else if (entry.isFile()) {
-      fs.mkdirSync(path.dirname(absDest), { recursive: true });
-      fs.copyFileSync(absSrc, absDest);
-      collected.push({ rel: relPath, abs: absSrc });
-    }
-  }
 }
 
 function writeManifest(stagingDir, version, collected) {
