@@ -90,6 +90,18 @@ function extractApprovedArchiveMembers(tarballPath, entries) {
   return extracted;
 }
 
+function sanitizeWhisperBrowserBundle(bytes) {
+  // Preserve the pre-existing vendor sanitization policy in bundle.cjs so
+  // re-vendoring and ordinary builds are deterministic and no eval shim ships.
+  let code = bytes.toString('utf8');
+  code = code.replace(
+    'var mod=eval("quire".replace(/^/,"re"))(moduleName);if(mod&&(mod.length||Object.keys(mod).length))return mod',
+    'var mod=null',
+  );
+  code = code.replace(/new Function\\("return this"\\)/g, '(function(){return this})()');
+  return Buffer.from(code, 'utf8');
+}
+
 function commitOutputs(outputs, root = VENDOR, io = fs) {
   const token = crypto.randomBytes(12).toString('hex');
   const staged = [];
@@ -156,7 +168,8 @@ async function main() {
       fs.writeFileSync(tarball, bytes, { flag: 'wx', mode: 0o600 });
       for (const [dest, contents] of extractApprovedArchiveMembers(tarball, pkg.outputs)) {
         if (outputs.has(dest)) throw new Error('duplicate voice vendor destination');
-        outputs.set(dest, contents);
+        outputs.set(dest, dest === 'whisper/transformers.min.js'
+          ? sanitizeWhisperBrowserBundle(contents) : contents);
       }
     }
     const warnings = commitOutputs(outputs);
@@ -166,5 +179,5 @@ async function main() {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
-module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, commitOutputs };
+module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, commitOutputs };
 if (require.main === module) main().catch(err => { console.error('[vendor:voice] ' + err.message); process.exitCode = 1; });
