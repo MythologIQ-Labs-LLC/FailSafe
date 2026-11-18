@@ -102,56 +102,84 @@ function sanitizeWhisperBrowserBundle(bytes) {
   return Buffer.from(code, 'utf8');
 }
 
-function commitOutputs(outputs, root = VENDOR, io = fs) {
-  const token = crypto.randomBytes(12).toString('hex');
-  const staged = [];
-  const moved = [];
-  const promoted = [];
-  try {
-    for (const [rel, bytes] of outputs) {
-      if (!/^(piper|whisper)\/[A-Za-z0-9_.-]+$/.test(rel)) throw new Error('invalid vendor destination');
-      const target = path.join(root, rel);
-      const dir = path.dirname(target);
-      io.mkdirSync(dir, { recursive: true });
-      if (io.lstatSync(dir).isSymbolicLink()) throw new Error('vendor directory is a symlink');
-      if (io.existsSync(target) && !io.lstatSync(target).isFile()) throw new Error('unexpected vendor destination type');
-      const pending = target + '.new-' + token;
-      const backup = target + '.old-' + token;
-      if (io.existsSync(pending) || io.existsSync(backup)) throw new Error('voice vendor transaction collision');
-      io.writeFileSync(pending, bytes, { flag: 'wx', mode: 0o600 });
-      staged.push({ target, pending, backup });
-    }
-    for (const item of staged) {
-      if (io.existsSync(item.target)) {
-        io.renameSync(item.target, item.backup);
-        moved.push(item);
-      }
-      io.renameSync(item.pending, item.target);
-      promoted.push(item);
-    }
-  } catch (err) {
-    const failures = [];
-    for (const item of promoted.reverse()) {
-      try { io.rmSync(item.target, { force: true }); }
-      catch (e) { failures.push(e); }
-    }
-    for (const item of moved.reverse()) {
-      try { io.renameSync(item.backup, item.target); }
-      catch (e) { failures.push(e); }
-    }
-    if (failures.length) throw new AggregateError([err, ...failures], 'voice vendor failed, recovery may be required');
-    throw err;
-  } finally {
-    for (const item of staged) {
-      try { io.rmSync(item.pending, { force: true }); } catch { /* cleanup only */ }
-    }
+function stageVoiceOutputs(outputs, root, io, token, staged) {
+  io.mkdirSync(root, { recursive: true });
+  const rootStat = io.lstatSync(root);
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
+    throw new Error('voice vendor root must be a real directory');
   }
+  for (const [rel, bytes] of outputs) {
+    if (!/^(piper|whisper)\\/[A-Za-z0-9_.-]+$/.test(rel)) throw new Error('invalid vendor destination');
+    const target = path.join(root, rel);
+    const dir = path.dirname(target);
+    io.mkdirSync(dir, { recursive: true });
+    if (io.lstatSync(dir).isSymbolicLink()) throw new Error('vendor directory is a symlink');
+    if (io.existsSync(target) && !io.lstatSync(target).isFile()) {
+      throw new Error('unexpected vendor destination type');
+    }
+    const pending = target + '.new-' + token;
+    const backup = target + '.old-' + token;
+    if (io.existsSync(pending) || io.existsSync(backup)) throw new Error('voice vendor transaction collision');
+    // Record first: writeFileSync can create a partial file before throwing.
+    staged.push({ target, pending, backup });
+    io.writeFileSync(pending, bytes, { flag: 'wx', mode: 0o600 });
+  }
+}
+
+function promoteVoiceOutputs(staged, io, moved, promoted) {
+  for (const item of staged) {
+    if (io.existsSync(item.target)) {
+      io.renameSync(item.target, item.backup);
+      moved.push(item);
+    }
+    io.renameSync(item.pending, item.target);
+    promoted.push(item);
+  }
+}
+
+function restoreVoiceOutputs(io, moved, promoted) {
+  const failures = [];
+  for (const item of promoted.reverse()) {
+    try { io.rmSync(item.target, { force: true }); }
+    catch (e) { failures.push(e); }
+  }
+  for (const item of moved.reverse()) {
+    try { io.renameSync(item.backup, item.target); }
+    catch (e) { failures.push(e); }
+  }
+  return failures;
+}
+
+function cleanupVoiceOutputs(io, staged, moved) {
+  for (const item of staged) {
+    try { io.rmSync(item.pending, { force: true }); }
+    catch { /* unpromoted staging cleanup best-effort */ }
+  }
+  if (!moved) return [];
   const warnings = [];
   for (const item of moved) {
     try { io.rmSync(item.backup, { force: true }); }
     catch (e) { warnings.push('stale backup: ' + item.backup + ' (' + String(e) + ')'); }
   }
   return warnings;
+}
+
+function commitOutputs(outputs, root = VENDOR, io = fs) {
+  const token = crypto.randomBytes(12).toString('hex');
+  const staged = [];
+  const moved = [];
+  const promoted = [];
+  try {
+    stageVoiceOutputs(outputs, root, io, token, staged);
+    promoteVoiceOutputs(staged, io, moved, promoted);
+  } catch (err) {
+    const failures = restoreVoiceOutputs(io, moved, promoted);
+    if (failures.length) throw new AggregateError([err, ...failures], 'voice vendor failed, recovery may be required');
+    throw err;
+  } finally {
+    cleanupVoiceOutputs(io, staged);
+  }
+  return cleanupVoiceOutputs(io, [], moved);
 }
 
 async function main() {
