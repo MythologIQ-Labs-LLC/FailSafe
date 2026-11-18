@@ -75,7 +75,9 @@ function collectFiles(vendorSourceRoot, stagingDir) {
     const absDest = path.join(stagingDir, ...rel.split('/'));
     fs.mkdirSync(path.dirname(absDest), { recursive: true });
     fs.copyFileSync(absSrc, absDest, fs.constants.COPYFILE_EXCL);
-    collected.push({ rel, abs: absSrc });
+    // Hash the exact staged bytes that will enter the archive, not a source
+    // file that could change after copy.
+    collected.push({ rel, abs: absDest });
   }
   return collected;
 }
