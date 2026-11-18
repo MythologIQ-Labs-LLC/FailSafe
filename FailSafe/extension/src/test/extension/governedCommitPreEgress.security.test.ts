@@ -30,7 +30,7 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
   for (const [label, paths] of [
     ['empty path set', []],
     ['blank filename', ['']],
-    ['NUL in filename', ['docs/unsafe\\u0000name']],
+    ['NUL in filename', ['docs/unsafe\u0000name']],
   ] as const) {
     test(`#715 ${label} refuses before any status, checkout, add, commit, push or PR`, async () => {
       const calls: string[][] = [];
