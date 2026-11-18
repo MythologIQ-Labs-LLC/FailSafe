@@ -141,6 +141,31 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     assert.equal(calls.filter((a) => ['add', 'commit', 'push', 'remote'].includes(a[0])).length, 0);
   });
 
+  for (const [label, exit, reason] of [
+    ['unexpected staged path', 1, /staged changes outside selected paths/i],
+    ['unreadable post-add index', 128, /staged scope could not be verified/i],
+  ] as const) {
+    test(`#715 ${label} after git add blocks commit, push and PR`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const git: GitRunner = async (args) => {
+        calls.push(args);
+        if (args[0] === 'diff' && args.includes(':(top)')) return { code: exit, stdout: '', stderr: '' };
+        return defaultFor(args);
+      };
+      const r = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(r.step, 'noop');
+      assert.match(r.warning ?? '', reason);
+      assert.ok(calls.some(args => args[0] === 'add'), 'staging succeeded before the injected index change');
+      assert.ok(calls.some(args => args[0] === 'diff' && args.includes(':(top)')),
+        'scope check covers entire repository, not just workspace cwd');
+      assert.equal(calls.filter(args => ['commit', 'push', 'remote'].includes(args[0])).length, 0);
+      assert.equal(posts, 0);
+    });
+  }
+
   test('failed git add must not commit unrelated index state or publish', async () => {
     const calls: string[][] = [];
     let posts = 0;

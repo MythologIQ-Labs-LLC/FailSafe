@@ -149,6 +149,19 @@ export async function commitPushOpenPr(
     // pre-existing/partial index, and leave inspection/recovery to the owner.
     return { step: 'noop', branch: req.branch, warning: 'git staging failed; no commit or push attempted (inspect the index for partial staging)' };
   }
+  // git add may have succeeded while another actor staged an unrelated file.
+  // Start at the repository root, not cwd: a workspace may be a subdirectory.
+  // The only permitted staged paths are the selected literal paths and their
+  // descendants (for directory selections). Preserve the index on refusal.
+  const outsideSelection = await git([
+    'diff', '--cached', '--quiet', '--exit-code', '--', ':(top)',
+    ...req.paths.map((path) => `:(exclude,literal)${path}`),
+  ], cwd);
+  if (outsideSelection.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: outsideSelection.code === 1
+      ? 'staged changes outside selected paths detected after git add; no commit, push or PR attempted (inspect index)'
+      : 'staged scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+
   const before = await readBeforeCommit(git, cwd);
   const committed = await git(['commit', '--cleanup=verbatim', '-m', req.message], cwd);
   if (committed.code !== 0) {
