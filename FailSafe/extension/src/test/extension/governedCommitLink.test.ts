@@ -170,6 +170,36 @@ suite('#532 governed commit link (B286)', () => {
     assert.match(git(ws.root, 'diff', '--cached', '--name-only'), /notes\/unexpected\.txt/, 'index is preserved for operator review');
   });
 
+  test('#715: post-add guard checks entire repository when workspace is a nested directory', async () => {
+    const before = git(ws.root, 'rev-parse', 'HEAD');
+    const nested = path.join(ws.root, 'docs');
+    fs.writeFileSync(path.join(nested, 'nested-new.md'), '# Requested change\n');
+    fs.mkdirSync(path.join(ws.root, 'notes'), { recursive: true });
+    fs.writeFileSync(path.join(ws.root, 'notes', 'outside.txt'), 'unrelated root work\n');
+    const calls: string[][] = [];
+    const result = await commitPushOpenPr({
+      workspaceRoot: nested, paths: ['nested-new.md'],
+      branch: 'fix/nested-workspace-index', message: 'test nested staging',
+      base: 'main', prTitle: 'test', prBody: '',
+    }, {
+      git: async (args, cwd) => {
+        calls.push(args);
+        const reply = await defaultGitRunner(args, cwd);
+        if (args[0] === 'add' && reply.code === 0) {
+          git(ws.root, 'add', '--', 'notes/outside.txt');
+        }
+        return reply;
+      },
+    });
+    assert.equal(result.step, 'noop', JSON.stringify(result));
+    assert.match(result.warning || '', /staged changes outside selected paths/i);
+    assert.ok(calls.some(args => args[0] === 'diff' && args.includes(':(top)')),
+      'scope check must include staged files outside nested cwd');
+    assert.equal(calls.filter(args => ['commit', 'push', 'remote'].includes(args[0])).length, 0);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), before);
+    assert.match(git(ws.root, 'diff', '--cached', '--name-only'), /notes\/outside\.txt/);
+  });
+
   test('#715: clean index on an unborn branch still permits a bound root commit', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-index-unborn-'));
     try {
