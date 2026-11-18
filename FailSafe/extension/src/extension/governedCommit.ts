@@ -95,12 +95,33 @@ export async function commitPushOpenPr(
   const isRepo = await git(['rev-parse', '--is-inside-work-tree'], cwd);
   if (isRepo.code !== 0 || isRepo.stdout.trim() !== 'true') return { step: 'not-a-repo' };
 
-  const status = await git(['status', '--porcelain', '--', ...req.paths], cwd);
+  // A bare `git add -A --` has repository-wide reach. Refuse empty or
+  // non-filename input rather than treating absence of paths as broad authority.
+  if (!Array.isArray(req.paths) || req.paths.length === 0 || req.paths.some(path =>
+    typeof path !== 'string' || !path.trim() || path.includes('\0') ||
+    path.startsWith('/') || path.startsWith('\\') || /^[A-Za-z]:/.test(path) ||
+    path.split(/[\\/]/).some(segment => segment === '.' || segment === '..'))) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'invalid selected paths; no status, branch, commit, push or PR attempted' };
+  }
+
+  // Git pathspec magic must never reinterpret an operator-selected filename.
+  const literalPaths = req.paths.map((path) => `:(literal)${path}`);
+  const status = await git(['status', '--porcelain', '--', ...literalPaths], cwd);
   if (status.code !== 0) {
     return { step: 'noop', branch: req.branch,
       warning: 'git status failed; no branch changes, commit, push or PR attempted' };
   }
   if (status.stdout.trim() === '') return { step: 'noop' };
+
+  // An automated commit cannot silently include content staged before this offer.
+  // Git diff --cached returns 0 for an empty index (including unborn HEAD), 1 for
+  // staged content and >1 on errors; only 0 authorizes the next step.
+  const initialIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--'], cwd);
+  if (initialIndex.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: initialIndex.code === 1
+      ? 'pre-existing staged changes require manual review; no branch, commit, push or PR attempted'
+      : 'staged index could not be verified; no branch, commit, push or PR attempted' };
 
   // A failed branch switch must never fall through to staging or committing on
   // the original branch. The fallback is supported only for an existing branch.
@@ -117,12 +138,40 @@ export async function commitPushOpenPr(
     return { step: 'noop', branch: req.branch, warning: 'target branch identity verification failed; no changes committed or pushed' };
   }
 
-  const staged = await git(['add', '-A', '--', ...req.paths], cwd);
+  // A checkout hook may have staged different content; refuse before touching it.
+  const switchedIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--'], cwd);
+  if (switchedIndex.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: switchedIndex.code === 1
+      ? 'staged changes appeared during checkout; no add, commit, push or PR attempted'
+      : 'staged index could not be verified after checkout; no add, commit, push or PR attempted' };
+
+  const staged = await git(['add', '-A', '--', ...literalPaths], cwd);
   if (staged.code !== 0) {
     // git add can have staged a subset before failing. Refuse to commit any
     // pre-existing/partial index, and leave inspection/recovery to the owner.
     return { step: 'noop', branch: req.branch, warning: 'git staging failed; no commit or push attempted (inspect the index for partial staging)' };
   }
+  // git add may have succeeded while another actor staged an unrelated file.
+  // The inclusion pathspec covers the whole repo. Resolve each exclusion from
+  // the same root; unprefixed exclusions here silently reject valid commits in
+  // nested workspaces, or fail to describe their authorized files.
+  const scope = await git(['rev-parse', '--show-prefix'], cwd);
+  const prefix = scope.stdout.replace(/\r?\n$/, '');
+  if (scope.code !== 0 || prefix.startsWith('/') || prefix.startsWith('\\') ||
+    /^[A-Za-z]:/.test(prefix) || /[\r\n\0]/.test(prefix) ||
+    prefix.split(/[\\/]/).some(segment => segment === '.' || segment === '..')) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'repository-relative scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+  }
+  const outsideSelection = await git([
+    'diff', '--cached', '--quiet', '--exit-code', '--', ':(top)',
+    ...req.paths.map((path) => `:(exclude,top,literal)${prefix}${path}`),
+  ], cwd);
+  if (outsideSelection.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: outsideSelection.code === 1
+      ? 'staged changes outside selected paths detected after git add; no commit, push or PR attempted (inspect index)'
+      : 'staged scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+
   const before = await readBeforeCommit(git, cwd);
   const committed = await git(['commit', '--cleanup=verbatim', '-m', req.message], cwd);
   if (committed.code !== 0) {

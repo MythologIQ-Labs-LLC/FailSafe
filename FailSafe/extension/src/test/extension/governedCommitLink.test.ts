@@ -11,9 +11,10 @@
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
+import { commitPushOpenPr, defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
 import { runGovernedCommitFlow, type GovernedFlowDeps } from '../../extension/governedCommitFlow';
 import { governedCommitLinker, offerCommittedUnderLink } from '../../extension/governedCommitLink';
 import { DELIVERY_LINK_TITLES, type OperatorActionRequest, type OperatorConfirmation } from '../../extension/operatorConfirmation';
@@ -98,17 +99,182 @@ suite('#532 governed commit link (B286)', () => {
     assert.doesNotMatch(c.shown[0].detail, /already staged/);
   });
 
-  test('a file staged before the run is included in the commit and the dialog says so', async () => {
+  test('#715: pre-staged unrelated content refuses automated commit and remains staged', async () => {
     await importedIntent(service);
     fs.mkdirSync(path.join(ws.root, 'notes'), { recursive: true });
     fs.writeFileSync(path.join(ws.root, 'notes', 'extra.txt'), 'staged earlier\n');
     git(ws.root, 'add', '--', 'notes/extra.txt');
+    const before = git(ws.root, 'diff', '--cached', '--name-status');
+    const head = git(ws.root, 'rev-parse', 'HEAD');
     const run = await governedCommit();
-    assert.ok(run.sha, JSON.stringify(run));
-    const c = confirmer('approved');
-    assert.equal((await offer(run.sha, c.confirm)).outcome, 'linked');
-    assert.match(c.shown[0].detail, /Files in this commit: 2; within the paths FailSafe staged: 1/);
-    assert.match(c.shown[0].detail, /1 file\(s\) outside those paths were already staged before FailSafe committed and are included/);
+    assert.equal(run.step, 'noop');
+    assert.equal(run.sha, undefined);
+    assert.match(run.warning || '', /pre-existing staged/i);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), head);
+    assert.equal(git(ws.root, 'diff', '--cached', '--name-status'), before);
+    assert.equal(git(ws.root, 'branch', '--list', 'fix/organize-20261019120000'), '');
+    assert.equal(historyLines().filter(line => line.includes('"LINKED"')).length, 0);
+  });
+
+  test('#715: a partially staged selected file is preserved and refuses auto-commit', async () => {
+    fs.writeFileSync(path.join(ws.root, 'docs', 'new.md'), '# Staged version\n');
+    git(ws.root, 'add', '--', 'docs/new.md');
+    fs.writeFileSync(path.join(ws.root, 'docs', 'new.md'), '# Unstaged newer version\n');
+    const staged = git(ws.root, 'show', ':docs/new.md');
+    const head = git(ws.root, 'rev-parse', 'HEAD');
+    const run = await governedCommit();
+    assert.equal(run.step, 'noop');
+    assert.equal(run.sha, undefined);
+    assert.match(run.warning || '', /pre-existing staged/i);
+    assert.equal(git(ws.root, 'show', ':docs/new.md'), staged);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), head);
+  });
+
+  for (const mode of ['staged deletion', 'staged rename'] as const) {
+    test(`#715: ${mode} in unrelated paths refuses without disturbing the index`, async () => {
+      if (mode === 'staged deletion') {
+        fs.rmSync(path.join(ws.root, 'docs', 'architecture', 'RUNTIME.md'));
+        git(ws.root, 'add', '-u', '--', 'docs/architecture/RUNTIME.md');
+      } else {
+        git(ws.root, 'mv', 'docs/architecture/RUNTIME.md', 'docs/architecture/RUNTIME-renamed.md');
+      }
+      const before = git(ws.root, 'diff', '--cached', '--name-status');
+      const head = git(ws.root, 'rev-parse', 'HEAD');
+      const run = await governedCommit();
+      assert.equal(run.step, 'noop');
+      assert.equal(run.sha, undefined);
+      assert.match(run.warning || '', /pre-existing staged/i);
+      assert.equal(git(ws.root, 'diff', '--cached', '--name-status'), before);
+      assert.equal(git(ws.root, 'rev-parse', 'HEAD'), head);
+    });
+  }
+
+  test('#715: unexpected staging after selected git add cannot be committed or published', async () => {
+    const before = git(ws.root, 'rev-parse', 'HEAD');
+    fs.mkdirSync(path.join(ws.root, 'notes'), { recursive: true });
+    fs.writeFileSync(path.join(ws.root, 'notes', 'unexpected.txt'), 'unselected private work\n');
+    let injected = 0;
+    const result = await governedCommit((inner) => async (args, cwd) => {
+      const response = await inner(args, cwd);
+      if (args[0] === 'add' && response.code === 0) {
+        git(cwd, 'add', '--', 'notes/unexpected.txt');
+        injected++;
+      }
+      return response;
+    });
+    assert.equal(injected, 1, 'the unexpected index mutation occurred after add');
+    assert.equal(result.step, 'noop', JSON.stringify(result));
+    assert.equal(result.sha, undefined);
+    assert.match(result.warning || '', /staged changes outside selected paths/i);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), before, 'no unauthorized commit');
+    assert.match(git(ws.root, 'diff', '--cached', '--name-only'), /notes\/unexpected\.txt/, 'index is preserved for operator review');
+  });
+
+  test('#715: nested workspace with only requested file staged succeeds, not a false-positive off-scope refusal', async () => {
+    const before = git(ws.root, 'rev-parse', 'HEAD');
+    const nested = path.join(ws.root, 'docs');
+    fs.writeFileSync(path.join(nested, 'nested-allowed.md'), '# Selected content\n');
+    const calls: string[][] = [];
+    const r = await commitPushOpenPr({
+      workspaceRoot: nested, paths: ['nested-allowed.md'],
+      branch: 'fix/nested-workspace-allowed', message: 'test selected only',
+      base: 'main', prTitle: 'test', prBody: '',
+    }, {
+      git: async (args, cwd) => { calls.push(args); return defaultGitRunner(args, cwd); },
+    });
+    assert.equal(r.step, 'committed', JSON.stringify(r));
+    assert.ok(r.commitSha, 'the local commit must be source-bound');
+    assert.notEqual(git(ws.root, 'rev-parse', 'HEAD'), before);
+    assert.equal(git(ws.root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/nested-allowed.md');
+    assert.ok(calls.some(args => args.join(' ') === 'rev-parse --show-prefix'),
+      'the scope guard must resolve the subdirectory relative to the repository root');
+    assert.equal(git(ws.root, 'diff', '--cached', '--name-only'), '');
+  });
+
+  test('#715: post-add guard checks entire repository when workspace is a nested directory', async () => {
+    const before = git(ws.root, 'rev-parse', 'HEAD');
+    const nested = path.join(ws.root, 'docs');
+    fs.writeFileSync(path.join(nested, 'nested-new.md'), '# Requested change\n');
+    fs.mkdirSync(path.join(ws.root, 'notes'), { recursive: true });
+    fs.writeFileSync(path.join(ws.root, 'notes', 'outside.txt'), 'unrelated root work\n');
+    const calls: string[][] = [];
+    const result = await commitPushOpenPr({
+      workspaceRoot: nested, paths: ['nested-new.md'],
+      branch: 'fix/nested-workspace-index', message: 'test nested staging',
+      base: 'main', prTitle: 'test', prBody: '',
+    }, {
+      git: async (args, cwd) => {
+        calls.push(args);
+        const reply = await defaultGitRunner(args, cwd);
+        if (args[0] === 'add' && reply.code === 0) {
+          git(ws.root, 'add', '--', 'notes/outside.txt');
+        }
+        return reply;
+      },
+    });
+    assert.equal(result.step, 'noop', JSON.stringify(result));
+    assert.match(result.warning || '', /staged changes outside selected paths/i);
+    assert.ok(calls.some(args => args[0] === 'diff' && args.includes(':(top)')),
+      'scope check must include staged files outside nested cwd');
+    assert.equal(calls.filter(args => ['commit', 'push', 'remote'].includes(args[0])).length, 0);
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), before);
+    assert.match(git(ws.root, 'diff', '--cached', '--name-only'), /notes\/outside\.txt/);
+  });
+
+  test('#715: clean index on an unborn branch still permits a bound root commit', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-index-unborn-'));
+    try {
+      git(root, 'init', '-q');
+      git(root, 'config', 'user.name', 'FailSafe-Test');
+      git(root, 'config', 'user.email', 'test@failsafe.invalid');
+      git(root, 'config', 'commit.gpgsign', 'false');
+      const hooks = path.join(root, 'disabled-hooks');
+      fs.mkdirSync(hooks);
+      git(root, 'config', 'core.hooksPath', hooks);
+      fs.writeFileSync(path.join(root, 'first.md'), '# Initial\n');
+      const r = await runGovernedCommitFlow('organize', ['first.md'], ['Add first.md'], {
+        workspaceRoot: root, git: defaultGitRunner, confirm: async () => true,
+        recordDeclined: async () => {}, now: () => '2026-10-19T12:00:00.000Z',
+      });
+      assert.equal(r.step, 'committed', JSON.stringify(r));
+      assert.equal('commitSha' in r ? r.commitSha : undefined, git(root, 'rev-parse', 'HEAD'));
+      assert.equal(git(root, 'rev-list', '--count', 'HEAD'), '1');
+      assert.equal(git(root, 'show', '--pretty=format:', '--name-only', 'HEAD'), 'first.md');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  for (const selected of ['.', 'docs/..']) {
+    test(`#715: Git-normalized root selection '${selected}' refuses before any staging`, async () => {
+      const before = git(ws.root, 'rev-parse', 'HEAD');
+      fs.writeFileSync(path.join(ws.root, 'private.txt'), 'unrelated private work\n');
+      const r = await commitPushOpenPr({
+        workspaceRoot: ws.root, paths: [selected], branch: 'fix/unsafe-root-selector',
+        message: 'test root selection', base: 'main', prTitle: 'test', prBody: '',
+      }, { git: defaultGitRunner });
+      assert.equal(r.step, 'noop', JSON.stringify(r));
+      assert.match(r.warning || '', /invalid selected paths/i);
+      assert.equal(git(ws.root, 'rev-parse', 'HEAD'), before);
+      assert.equal(git(ws.root, 'branch', '--list', 'fix/unsafe-root-selector'), '');
+      assert.equal(git(ws.root, 'diff', '--cached', '--name-only'), '');
+      assert.equal(git(ws.root, 'status', '--porcelain', '--', 'private.txt'), '?? private.txt');
+    });
+  }
+
+  test('#715: Git pathspec magic must not expand a selected literal filename into unrelated files', async () => {
+    const previous = git(ws.root, 'rev-parse', 'HEAD');
+    fs.writeFileSync(path.join(ws.root, 'private.txt'), 'unrelated private work\n');
+    const r = await commitPushOpenPr({
+      workspaceRoot: ws.root, paths: [':(glob)**'],
+      branch: 'fix/untrusted-pathspec', message: 'test', base: 'main',
+      prTitle: 'test', prBody: '',
+    }, { git: defaultGitRunner });
+    assert.equal(r.step, 'noop', JSON.stringify(r));
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), previous);
+    assert.equal(git(ws.root, 'branch', '--list', 'fix/untrusted-pathspec'), '');
+    assert.equal(git(ws.root, 'diff', '--cached', '--name-only'), '');
+    assert.equal(git(ws.root, 'status', '--porcelain', '--', 'private.txt'), '?? private.txt');
   });
 
   test('a directory path counts the files under it as staged by FailSafe', async () => {

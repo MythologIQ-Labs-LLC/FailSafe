@@ -27,6 +27,32 @@ function defaultFor(args: string[]): GitResp {
 const okPost: GitHubPostFn = async () => ({ status: 201, body: JSON.stringify({ html_url: 'https://github.com/o/r/pull/9', number: 9 }) });
 
 suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
+  for (const [label, paths] of [
+    ['empty path set', []],
+    ['blank filename', ['']],
+    ['NUL in filename', ['docs/unsafe\u0000name']],
+    ['root dot', ['.']],
+    ['root dot slash', ['./']],
+    ['parent-normalized directory', ['docs/..']],
+    ['parent-normalized file', ['docs/../private.txt']],
+    ['parent outside repository', ['../outside.txt']],
+    ['absolute POSIX path', ['/private.txt']],
+    ['absolute Windows drive path', ['C:\\repo\\private.txt']],
+  ] as const) {
+    test(`#715 ${label} refuses before any status, checkout, add, commit, push or PR`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const result = await commitPushOpenPr({ ...REQ, paths: [...paths] }, {
+        git: async (args) => { calls.push(args); return defaultFor(args); },
+        token: 'fixture-token', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(result.step, 'noop');
+      assert.match(result.warning ?? '', /invalid selected paths/i);
+      assert.equal(posts, 0);
+      assert.equal(calls.filter(x => ['status', 'checkout', 'add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
+    });
+  }
+
   test('failed git status refuses before branch selection, staging or external egress', async () => {
     const calls: string[][] = [];
     let posts = 0;
@@ -45,7 +71,52 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     assert.equal(calls.filter(a => ['checkout', 'add', 'commit', 'push', 'remote'].includes(a[0])).length, 0);
   });
 
-  test('both branch checkout attempts fail: no staging, commit, push or authenticated PR', async () => {
+  for (const [label, exit, warning] of [
+    ['unrelated index entries already staged', 1, /pre-existing staged changes/i],
+    ['unreadable staged index', 128, /staged index could not be verified/i],
+  ] as const) {
+    test(`#715 ${label}: no branch switch, stage, commit, push or PR`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const git: GitRunner = async (args) => {
+        calls.push(args);
+        if (args[0] === 'diff' && args.includes('--cached')) return { code: exit, stdout: '', stderr: '' };
+        return defaultFor(args);
+      };
+      const r = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(r.step, 'noop');
+      assert.match(r.warning || '', warning);
+      assert.equal(posts, 0);
+      assert.equal(calls.filter(x => ['checkout', 'add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
+    });
+  }
+
+  test('#715: checkout hook stages content: second index gate refuses before git add/commit/egress', async () => {
+    const calls: string[][] = [];
+    let scans = 0;
+    let posts = 0;
+    const git: GitRunner = async (args) => {
+      calls.push(args);
+      if (args[0] === 'diff' && args.includes('--cached')) {
+        scans++;
+        return { code: scans === 2 ? 1 : 0, stdout: '', stderr: '' };
+      }
+      return defaultFor(args);
+    };
+    const r = await commitPushOpenPr(REQ, {
+      git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+    });
+    assert.equal(r.step, 'noop');
+    assert.match(r.warning || '', /staged changes appeared during checkout/i);
+    assert.equal(scans, 2);
+    assert.ok(calls.some(x => x[0] === 'checkout'));
+    assert.equal(calls.filter(x => ['add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
+    assert.equal(posts, 0);
+  });
+
+    test('both branch checkout attempts fail: no staging, commit, push or authenticated PR', async () => {
     const calls: string[][] = [];
     let posts = 0;
     const git: GitRunner = async (args) => {
@@ -76,6 +147,59 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     assert.match(r.warning || '', /branch.*verif/i);
     assert.equal(calls.filter((a) => ['add', 'commit', 'push', 'remote'].includes(a[0])).length, 0);
   });
+
+  for (const [label, prefix] of [
+    ['unreadable repository scope', null],
+    ['parent-traversal scope', '../parent/'],
+    ['absolute scope', '/private/'],
+  ] as const) {
+    test(`#715 ${label} after git add refuses without committing or publishing`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const git: GitRunner = async (args) => {
+        calls.push(args);
+        if (args.join(' ') === 'rev-parse --show-prefix') {
+          return prefix === null
+            ? { code: 128, stdout: '', stderr: 'not available' }
+            : { code: 0, stdout: prefix + '\n', stderr: '' };
+        }
+        return defaultFor(args);
+      };
+      const result = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(result.step, 'noop');
+      assert.match(result.warning ?? '', /repository-relative scope could not be verified/i);
+      assert.ok(calls.some(a => a.join(' ') === 'rev-parse --show-prefix'));
+      assert.equal(calls.filter(a => ['commit', 'push', 'remote'].includes(a[0])).length, 0);
+      assert.equal(posts, 0);
+    });
+  }
+
+  for (const [label, exit, reason] of [
+    ['unexpected staged path', 1, /staged changes outside selected paths/i],
+    ['unreadable post-add index', 128, /staged scope could not be verified/i],
+  ] as const) {
+    test(`#715 ${label} after git add blocks commit, push and PR`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const git: GitRunner = async (args) => {
+        calls.push(args);
+        if (args[0] === 'diff' && args.includes(':(top)')) return { code: exit, stdout: '', stderr: '' };
+        return defaultFor(args);
+      };
+      const r = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(r.step, 'noop');
+      assert.match(r.warning ?? '', reason);
+      assert.ok(calls.some(args => args[0] === 'add'), 'staging succeeded before the injected index change');
+      assert.ok(calls.some(args => args[0] === 'diff' && args.includes(':(top)')),
+        'scope check covers entire repository, not just workspace cwd');
+      assert.equal(calls.filter(args => ['commit', 'push', 'remote'].includes(args[0])).length, 0);
+      assert.equal(posts, 0);
+    });
+  }
 
   test('failed git add must not commit unrelated index state or publish', async () => {
     const calls: string[][] = [];
