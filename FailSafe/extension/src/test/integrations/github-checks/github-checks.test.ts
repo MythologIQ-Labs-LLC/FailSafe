@@ -33,12 +33,13 @@ suite('github-checks map (#96)', () => {
     assert.match(p.output.summary, /no independent qor audit/i);
   });
 
-  test('parseRepoSlug handles https / ssh / token-embedded / .git, rejects garbage', () => {
+  test('parseRepoSlug allows credential-free https / ssh and rejects token-bearing remotes', () => {
     assert.deepEqual(parseRepoSlug('https://github.com/acme/failsafe'), { owner: 'acme', repo: 'failsafe' });
     assert.deepEqual(parseRepoSlug('https://github.com/acme/failsafe.git'), { owner: 'acme', repo: 'failsafe' });
     assert.deepEqual(parseRepoSlug('git@github.com:acme/failsafe.git'), { owner: 'acme', repo: 'failsafe' });
     assert.deepEqual(parseRepoSlug('ssh://git@github.com/acme/failsafe.git'), { owner: 'acme', repo: 'failsafe' });
-    assert.deepEqual(parseRepoSlug('https://x-access-token:TOKEN@github.com/acme/failsafe.git'), { owner: 'acme', repo: 'failsafe' });
+    assert.equal(parseRepoSlug('https://x-access-token:TOKEN@github.com/acme/failsafe.git'), null);
+    assert.equal(parseRepoSlug('https://TOKEN@github.com/acme/failsafe.git'), null);
     assert.equal(parseRepoSlug('not a url'), null);
     assert.equal(parseRepoSlug(''), null);
   });
