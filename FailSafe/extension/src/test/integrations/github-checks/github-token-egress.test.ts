@@ -314,13 +314,13 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
       return { step: (result as { step: string }).step, sent: r.sent, prompt };
     };
     const refused = await run({ value: GHE, scope: 'user' });
-    assert.equal(refused.step, 'pushed', 'a forged user-level GHES endpoint cannot use a User token');
+    assert.equal(refused.step, 'committed', 'unpaired GHES remote must not use User credentials or push without an approved destination');
     assert.deepEqual(refused.sent, []);
     const ghe = await run({ value: GHE, scope: 'user' }, 'workspace');
     assert.equal(ghe.step, 'pr');
     assert.deepEqual(ghe.sent.map((s) => [s.method, s.url, s.auth]), [['POST', `${GHE}/repos/o/r/pulls`, `token ${TOKEN}`]]);
-    assert.ok(ghe.prompt.includes(`GitHub PR destination: ${GHE}/repos/o/r`));
-    assert.ok(ghe.prompt.includes('Workspace GitHub token would be sent to https://ghe.example'));
+    assert.ok(ghe.prompt.includes('Git push destination: https://ghe.example/o/r.git'));
+    assert.ok(ghe.prompt.includes('Authenticated PR API: https://ghe.example'));
     assert.ok(!ghe.prompt.includes(TOKEN), 'no credential in operator prompt');
     const dflt = await run();
     assert.deepEqual(dflt.sent.map((s) => s.url), ['https://api.github.com/repos/o/r/pulls']);
@@ -338,7 +338,7 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
       workspaceRoot: '/ws', git,
       confirm: async (message) => {
-        assert.ok(message.includes('GitHub PR destination: https://ghe.example/api/v3/repos/o/r'));
+        assert.ok(message.includes('Git push destination: https://ghe.example/o/r.git'));
         remote = 'https://ghe.example/other/repository.git';
         return true;
       },
@@ -348,7 +348,7 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     assert.equal(result.step, 'committed');
     assert.equal(pushes, 0, 'no push to a repo different from the approved destination');
     assert.deepEqual(r.sent, [], 'no token-backed API call');
-    assert.match('warning' in result ? result.warning ?? '' : '', /origin changed or was unverified/);
+    assert.match('warning' in result ? result.warning ?? '' : '', /Git fetch or effective push destination changed or was not approved/);
   });
 
   test('GRB-13 GHES origin changed during push blocks credential-backed PR', async () => {
@@ -372,7 +372,7 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     assert.equal(result.step, 'pushed', 'the git push may have completed before the mutation was observed');
     assert.equal(pushes, 1);
     assert.deepEqual(r.sent, [], 'post-push origin change must block credential-backed PR');
-    assert.match('warning' in result ? result.warning ?? '' : '', /origin changed after approved push/);
+    assert.match('warning' in result ? result.warning ?? '' : '', /Git origin changed after the approved push/);
   });
 
   test('GRB-14 an alternate pushurl or multiple push targets cannot redirect an approved GHES push', async () => {
@@ -399,18 +399,18 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
       assert.equal(result.step, 'committed', pushTargets);
       assert.equal(pushes, 0, 'no push through a different pushurl or extra target');
       assert.deepEqual(r.sent, [], 'no credential-backed GitHub PR');
-      assert.match('warning' in result ? result.warning ?? '' : '', /push destination differs/);
+      assert.match('warning' in result ? result.warning ?? '' : '', /(push destination differs|must resolve exactly one push destination)/);
     }
   });
 
-  test('S9 a refused base is an error result, and the governed commit reports it as a pushed branch with that warning', async () => {
+  test('S9 invalid untrusted GHES API base blocks both Git push and authenticated PR', async () => {
     const r = recorder();
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
       workspaceRoot: '/ws', git: fakeGit, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
       post: r.post, token: TOKEN, apiBaseUrl: 'http://ghe.example/api/v3',
     }) as { step: string; warning?: string };
     assert.equal(r.sent.length, 0);
-    assert.equal(result.step, 'pushed');
-    assert.match(result.warning ?? '', /https:\/\//);
+    assert.equal(result.step, 'committed');
+    assert.match(result.warning ?? '', /GitHub API destination is invalid/);
   });
 });
