@@ -148,6 +148,30 @@ suite('#532 governed commit link (B286)', () => {
     });
   }
 
+  test('#715: clean index on an unborn branch still permits a bound root commit', async () => {
+    const root = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-index-unborn-'));
+    try {
+      git(root, 'init', '-q');
+      git(root, 'config', 'user.name', 'FailSafe-Test');
+      git(root, 'config', 'user.email', 'test@failsafe.invalid');
+      git(root, 'config', 'commit.gpgsign', 'false');
+      const hooks = path.join(root, 'disabled-hooks');
+      fs.mkdirSync(hooks);
+      git(root, 'config', 'core.hooksPath', hooks);
+      fs.writeFileSync(path.join(root, 'first.md'), '# Initial\n');
+      const r = await runGovernedCommitFlow('organize', ['first.md'], ['Add first.md'], {
+        workspaceRoot: root, git: defaultGitRunner, confirm: async () => true,
+        recordDeclined: async () => {}, now: () => '2026-10-19T12:00:00.000Z',
+      });
+      assert.equal(r.step, 'committed', JSON.stringify(r));
+      assert.equal('commitSha' in r ? r.commitSha : undefined, git(root, 'rev-parse', 'HEAD'));
+      assert.equal(git(root, 'rev-list', '--count', 'HEAD'), '1');
+      assert.equal(git(root, 'show', '--pretty=format:', '--name-only', 'HEAD'), 'first.md');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test('a directory path counts the files under it as staged by FailSafe', async () => {
     await importedIntent(service);
     const run = await governedCommit();
