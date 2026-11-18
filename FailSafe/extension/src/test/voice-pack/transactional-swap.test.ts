@@ -29,8 +29,8 @@ function old(final: string) {
 function opsWithRename(fails: (from: string, to: string) => boolean): VoiceSwapOps {
   return {
     ...fs,
-    renameSync(from: string, to: string) {
-      if (fails(from, to)) throw Object.assign(new Error('injected rename failure'), { code: 'EIO' });
+    renameSync(from: fs.PathLike, to: fs.PathLike) {
+      if (fails(String(from), String(to))) throw Object.assign(new Error('injected rename failure'), { code: 'EIO' });
       fs.renameSync(from, to);
     },
   };
@@ -100,7 +100,7 @@ suite('voice-pack transactional replacement #710', () => {
     const d = dirs(root); old(d.final);
     const ops: VoiceSwapOps = {
       ...fs,
-      rmSync(target: fs.PathLike, options: fs.RmOptions) {
+      rmSync(target: fs.PathLike, options?: fs.RmOptions) {
         if (String(target).endsWith('.old-h')) throw new Error('injected backup cleanup failure');
         fs.rmSync(target, options);
       },
@@ -115,7 +115,7 @@ suite('voice-pack transactional replacement #710', () => {
     const d = dirs(root);
     const ops: VoiceSwapOps = {
       ...fs,
-      rmSync(target: fs.PathLike, options: fs.RmOptions) {
+      rmSync(target: fs.PathLike, options?: fs.RmOptions) {
         if (String(target) === d.stage) throw new Error('injected staging cleanup failure');
         fs.rmSync(target, options);
       },
