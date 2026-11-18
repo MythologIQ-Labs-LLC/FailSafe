@@ -267,7 +267,7 @@ suite('commitPushOpenPr — commit binding (#532 B286)', () => {
       const underlying = bindGit(script, calls);
       let posts = 0;
       const git: GitRunner = async (args, cwd) => {
-        if (args[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
+        if (args[0] === 'remote') { calls.push(args); return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' }; }
         return underlying(args, cwd);
       };
       const result = await commitPushOpenPr(REQ, {
