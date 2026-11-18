@@ -20,6 +20,7 @@ const reply = (stdout = '', code = 0): GitReply => ({ stdout, code, stderr: '' }
 function mockGit(opts: { fetch?: string; pushes?: string[]; remoteFailure?: boolean } = {}) {
   const calls: string[][] = [];
   let reads = 0;
+  let lastMessage = REQUEST.message;
   const git: GitRunner = async (args) => {
     calls.push(args);
     if (args[0] === 'remote') {
@@ -31,6 +32,13 @@ function mockGit(opts: { fetch?: string; pushes?: string[]; remoteFailure?: bool
       return reply(opts.fetch || FETCH);
     }
     if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return reply('true');
+    const bindingOp = args.join(' ');
+    if (bindingOp === 'rev-parse --verify --quiet HEAD') return reply('a'.repeat(40));
+    if (bindingOp === 'rev-parse --verify HEAD') return reply('b'.repeat(40));
+    if (bindingOp.startsWith('rev-parse --verify --quiet refs/heads/')) return reply('b'.repeat(40));
+    if (bindingOp === 'write-tree') return reply('7'.repeat(40));
+    if (args[0] === 'commit') { lastMessage = String(args[args.indexOf('-m') + 1]); return reply(); }
+    if (args[0] === 'log') return reply('7'.repeat(40) + '\0' + 'a'.repeat(40) + '\0' + lastMessage + '\n');
     if (args[0] === 'status') return reply(' M file.txt');
     if (args[0] === 'symbolic-ref') return reply(BRANCH);
     return reply('');

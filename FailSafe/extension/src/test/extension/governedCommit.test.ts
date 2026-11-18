@@ -9,6 +9,12 @@ type GitResp = { code: number; stdout: string; stderr: string };
 
 function defaultFor(args: string[]): GitResp {
   if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
+  const bindingOp = args.join(' ');
+  if (bindingOp === 'rev-parse --verify --quiet HEAD') return { code: 0, stdout: 'a'.repeat(40), stderr: '' };
+  if (bindingOp === 'rev-parse --verify HEAD') return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp.startsWith('rev-parse --verify --quiet refs/heads/')) return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp === 'write-tree') return { code: 0, stdout: '7'.repeat(40), stderr: '' };
+  if (args[0] === 'log') return { code: 0, stdout: '7'.repeat(40) + '\0' + 'a'.repeat(40) + '\0' + REQ.message + '\n', stderr: '' };
   if (args[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (args[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
   if (args[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-123', stderr: '' };
@@ -249,4 +255,31 @@ suite('commitPushOpenPr — commit binding (#532 B286)', () => {
     assert.equal(r.commitSha, undefined);
     assert.match(r.warning ?? '', /not bound/);
   });
+  test('unverified new commit never reaches remote push or authenticated PR', async () => {
+    const cases: Array<[string, Script]> = [
+      ['foreign parent', { log: `${TREE}\\0${'c'.repeat(40)}\\0${MSG}\\n` }],
+      ['unreadable staged tree', { tree: 'invalid' }],
+      ['wrong branch tip', { tip: 'c'.repeat(40) }],
+      ['unreadable pre-commit HEAD', { pre: { code: 128, stdout: '', stderr: 'failure' } }],
+    ];
+    for (const [label, script] of cases) {
+      const calls: string[][] = [];
+      const underlying = bindGit(script, calls);
+      let posts = 0;
+      const git: GitRunner = async (args, cwd) => {
+        if (args[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
+        return underlying(args, cwd);
+      };
+      const result = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(result.step, 'committed', label);
+      assert.equal(result.commitSha, undefined, label);
+      assert.match(result.warning ?? '', /not bound to this run.*no push or PR attempted/, label);
+      assert.equal(calls.some(a => a[0] === 'push'), false, label);
+      assert.equal(calls.some(a => a[0] === 'remote'), false, label);
+      assert.equal(posts, 0, label);
+    }
+  });
+
 });
