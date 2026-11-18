@@ -75,6 +75,43 @@ suite('voice vendor isolation #707', () => {
     assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
   }));
 
+  test('partial staged write is removed, previous browser asset remains unchanged', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'OLD');
+    const ops = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, opts?: fs.WriteFileOptions) {
+        if (String(file).includes('.new-')) {
+          fs.writeFileSync(file, 'PARTIAL', { flag: 'wx' });
+          throw new Error('simulated disk-full after partial staging');
+        }
+        fs.writeFileSync(file, data, opts);
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, ops,
+    ), /simulated disk-full/);
+    assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
+    assert.deepEqual(fs.readdirSync(dir).filter(x => x.includes('.new-') || x.includes('.old-')), []);
+  }));
+
+  test('vendor root symlink is refused before writing any assets', function () {
+    if (process.platform === 'win32') this.skip(); // Windows symlink privileges vary.
+    temporary(root => {
+      const outside = path.join(root, 'outside');
+      fs.mkdirSync(outside);
+      const vendor = path.join(root, 'vendor');
+      fs.symlinkSync(outside, vendor, 'dir');
+      assert.throws(() => vendorTool.commitOutputs(
+        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor,
+      ), /vendor root must be a real directory/);
+      assert.deepEqual(fs.readdirSync(outside), []);
+    });
+  });
+
   test('write transaction updates pinned browser assets successfully', () => temporary(root => {
     const outputs = new Map([['piper/piper.min.js', Buffer.from('NEW')]]);
     const warnings = vendorTool.commitOutputs(outputs, path.join(root, 'vendor'));
