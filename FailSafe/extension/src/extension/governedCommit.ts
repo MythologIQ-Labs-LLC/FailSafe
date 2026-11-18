@@ -95,6 +95,14 @@ export async function commitPushOpenPr(
   const isRepo = await git(['rev-parse', '--is-inside-work-tree'], cwd);
   if (isRepo.code !== 0 || isRepo.stdout.trim() !== 'true') return { step: 'not-a-repo' };
 
+  // A bare `git add -A --` has repository-wide reach. Refuse empty or
+  // non-filename input rather than treating absence of paths as broad authority.
+  if (!Array.isArray(req.paths) || req.paths.length === 0 || req.paths.some(path =>
+    typeof path !== 'string' || !path.trim() || path.includes('\0'))) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'invalid selected paths; no status, branch, commit, push or PR attempted' };
+  }
+
   // Git pathspec magic must never reinterpret an operator-selected filename.
   const literalPaths = req.paths.map((path) => `:(literal)${path}`);
   const status = await git(['status', '--porcelain', '--', ...literalPaths], cwd);

@@ -27,6 +27,25 @@ function defaultFor(args: string[]): GitResp {
 const okPost: GitHubPostFn = async () => ({ status: 201, body: JSON.stringify({ html_url: 'https://github.com/o/r/pull/9', number: 9 }) });
 
 suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
+  for (const [label, paths] of [
+    ['empty path set', []],
+    ['blank filename', ['']],
+    ['NUL in filename', ['docs/unsafe\u0000name']],
+  ] as const) {
+    test(`#715 ${label} refuses before any status, checkout, add, commit, push or PR`, async () => {
+      const calls: string[][] = [];
+      let posts = 0;
+      const result = await commitPushOpenPr({ ...REQ, paths: [...paths] }, {
+        git: async (args) => { calls.push(args); return defaultFor(args); },
+        token: 'fixture-token', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(result.step, 'noop');
+      assert.match(result.warning ?? '', /invalid selected paths/i);
+      assert.equal(posts, 0);
+      assert.equal(calls.filter(x => ['status', 'checkout', 'add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
+    });
+  }
+
   test('failed git status refuses before branch selection, staging or external egress', async () => {
     const calls: string[][] = [];
     let posts = 0;
