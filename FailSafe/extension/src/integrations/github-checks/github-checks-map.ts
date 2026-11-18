@@ -64,7 +64,10 @@ export function parseRepoIdentity(remoteUrl: string): GitRepoIdentity | null {
   if (!scp) {
     let parsed: URL;
     try { parsed = new URL(raw); } catch { return null; }
-    if (parsed.search || parsed.hash || (parsed.protocol === 'ssh:' && (parsed.username !== 'git' || parsed.password))) return null;
+    // Git credentials come from the operator's credential helper or SSH, not
+    // userinfo embedded in a fetch URL that could be logged or redirected.
+    if (parsed.search || parsed.hash || (parsed.protocol === 'https:' && (parsed.username || parsed.password)) ||
+        (parsed.protocol === 'ssh:' && (parsed.username !== 'git' || parsed.password))) return null;
     if (parsed.port) return null;
     host = parsed.hostname;
   }
