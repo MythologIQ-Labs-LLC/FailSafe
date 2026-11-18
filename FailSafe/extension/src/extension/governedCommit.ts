@@ -96,7 +96,11 @@ export async function commitPushOpenPr(
   if (isRepo.code !== 0 || isRepo.stdout.trim() !== 'true') return { step: 'not-a-repo' };
 
   const status = await git(['status', '--porcelain', '--', ...req.paths], cwd);
-  if (status.code === 0 && status.stdout.trim() === '') return { step: 'noop' };
+  if (status.code !== 0) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'git status failed; no branch changes, commit, push or PR attempted' };
+  }
+  if (status.stdout.trim() === '') return { step: 'noop' };
 
   // A failed branch switch must never fall through to staging or committing on
   // the original branch. The fallback is supported only for an existing branch.
