@@ -14,7 +14,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
+import { commitPushOpenPr, defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
 import { runGovernedCommitFlow, type GovernedFlowDeps } from '../../extension/governedCommitFlow';
 import { governedCommitLinker, offerCommittedUnderLink } from '../../extension/governedCommitLink';
 import { DELIVERY_LINK_TITLES, type OperatorActionRequest, type OperatorConfirmation } from '../../extension/operatorConfirmation';
@@ -171,6 +171,21 @@ suite('#532 governed commit link (B286)', () => {
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test('#715: Git pathspec magic must not expand a selected literal filename into unrelated files', async () => {
+    const previous = git(ws.root, 'rev-parse', 'HEAD');
+    fs.writeFileSync(path.join(ws.root, 'private.txt'), 'unrelated private work\n');
+    const r = await commitPushOpenPr({
+      workspaceRoot: ws.root, paths: [':(glob)**'],
+      branch: 'fix/untrusted-pathspec', message: 'test', base: 'main',
+      prTitle: 'test', prBody: '',
+    }, { git: defaultGitRunner });
+    assert.equal(r.step, 'noop', JSON.stringify(r));
+    assert.equal(git(ws.root, 'rev-parse', 'HEAD'), previous);
+    assert.equal(git(ws.root, 'branch', '--list', 'fix/untrusted-pathspec'), '');
+    assert.equal(git(ws.root, 'diff', '--cached', '--name-only'), '');
+    assert.equal(git(ws.root, 'status', '--porcelain', '--', 'private.txt'), '?? private.txt');
   });
 
   test('a directory path counts the files under it as staged by FailSafe', async () => {
