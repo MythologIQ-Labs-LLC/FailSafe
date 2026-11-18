@@ -224,6 +224,23 @@ suite('#532 governed commit link (B286)', () => {
     }
   });
 
+  for (const selected of ['.', 'docs/..']) {
+    test(`#715: Git-normalized root selection '${selected}' refuses before any staging`, async () => {
+      const before = git(ws.root, 'rev-parse', 'HEAD');
+      fs.writeFileSync(path.join(ws.root, 'private.txt'), 'unrelated private work\n');
+      const r = await commitPushOpenPr({
+        workspaceRoot: ws.root, paths: [selected], branch: 'fix/unsafe-root-selector',
+        message: 'test root selection', base: 'main', prTitle: 'test', prBody: '',
+      }, { git: defaultGitRunner });
+      assert.equal(r.step, 'noop', JSON.stringify(r));
+      assert.match(r.warning || '', /invalid selected paths/i);
+      assert.equal(git(ws.root, 'rev-parse', 'HEAD'), before);
+      assert.equal(git(ws.root, 'branch', '--list', 'fix/unsafe-root-selector'), '');
+      assert.equal(git(ws.root, 'diff', '--cached', '--name-only'), '');
+      assert.equal(git(ws.root, 'status', '--porcelain', '--', 'private.txt'), '?? private.txt');
+    });
+  }
+
   test('#715: Git pathspec magic must not expand a selected literal filename into unrelated files', async () => {
     const previous = git(ws.root, 'rev-parse', 'HEAD');
     fs.writeFileSync(path.join(ws.root, 'private.txt'), 'unrelated private work\n');
