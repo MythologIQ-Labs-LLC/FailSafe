@@ -29,6 +29,14 @@ function main() {
     const distDir = path.join(REPO_ROOT, 'dist');
     fs.mkdirSync(distDir, { recursive: true });
 
+    // Never leave a previous same-version release candidate available if a
+    // later packaging attempt fails before producing new verified assets.
+    // All failures must leave *neither* a publishable archive nor checksum.
+    const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
+    const checksumPath = `${tarballPath}.sha256`;
+    fs.rmSync(tarballPath, { force: true });
+    fs.rmSync(checksumPath, { force: true });
+
     const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-voice-pack-build-'));
     try {
       const vendorSourceRoot = path.join(REPO_ROOT, 'dist', 'extension', 'ui', 'vendor');
@@ -36,7 +44,6 @@ function main() {
 
       writeManifest(stagingDir, version, collected);
 
-      const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
       runTarCreate(stagingDir, tarballPath);
       writeSha256(tarballPath);
 
@@ -46,6 +53,18 @@ function main() {
       fs.rmSync(stagingDir, { recursive: true, force: true });
     }
   } catch (err) {
+    // A partial tarball or stale checksum is not a valid release candidate.
+    // Cleanup is best-effort, but any failure still exits nonzero.
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+      if (/^\\d+\\.\\d+\\.\\d+$/.test(String(pkg.version || ''))) {
+        const candidate = path.join(REPO_ROOT, 'dist', `failsafe-voice-pack-${pkg.version}.tar.gz`);
+        fs.rmSync(candidate, { force: true });
+        fs.rmSync(candidate + '.sha256', { force: true });
+      }
+    } catch (cleanupErr) {
+      process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\\n');
+    }
     process.stderr.write(`[package-voice-pack] ERROR: ${err.message || err}\n`);
     process.exit(1);
   }
