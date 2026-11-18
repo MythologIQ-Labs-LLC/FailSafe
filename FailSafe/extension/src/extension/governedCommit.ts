@@ -95,7 +95,9 @@ export async function commitPushOpenPr(
   const isRepo = await git(['rev-parse', '--is-inside-work-tree'], cwd);
   if (isRepo.code !== 0 || isRepo.stdout.trim() !== 'true') return { step: 'not-a-repo' };
 
-  const status = await git(['status', '--porcelain', '--', ...req.paths], cwd);
+  // Git pathspec magic must never reinterpret an operator-selected filename.
+  const literalPaths = req.paths.map((path) => `:(literal)${path}`);
+  const status = await git(['status', '--porcelain', '--', ...literalPaths], cwd);
   if (status.code !== 0) {
     return { step: 'noop', branch: req.branch,
       warning: 'git status failed; no branch changes, commit, push or PR attempted' };
@@ -133,7 +135,7 @@ export async function commitPushOpenPr(
       ? 'staged changes appeared during checkout; no add, commit, push or PR attempted'
       : 'staged index could not be verified after checkout; no add, commit, push or PR attempted' };
 
-  const staged = await git(['add', '-A', '--', ...req.paths], cwd);
+  const staged = await git(['add', '-A', '--', ...literalPaths], cwd);
   if (staged.code !== 0) {
     // git add can have staged a subset before failing. Refuse to commit any
     // pre-existing/partial index, and leave inspection/recovery to the owner.
