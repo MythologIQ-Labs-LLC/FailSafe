@@ -82,7 +82,7 @@ suite('commitPushOpenPr — governed Organize ladder', () => {
     const git: GitRunner = async (args) => { calls.push(args); return defaultFor(args); };
     await commitPushOpenPr(REQ, { git, post: okPost, token: 'tok' });
     const add = calls.find((c) => c[0] === 'add');
-    assert.deepEqual(add, ['add', '-A', '--', '.gitignore', '.editorconfig', 'prs.json']);
+    assert.deepEqual(add, ['add', '-A', '--', ':(literal).gitignore', ':(literal).editorconfig', ':(literal)prs.json']);
   });
 });
 
