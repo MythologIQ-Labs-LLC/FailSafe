@@ -11,6 +11,7 @@
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
@@ -149,7 +150,7 @@ suite('#532 governed commit link (B286)', () => {
   }
 
   test('#715: clean index on an unborn branch still permits a bound root commit', async () => {
-    const root = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-index-unborn-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-index-unborn-'));
     try {
       git(root, 'init', '-q');
       git(root, 'config', 'user.name', 'FailSafe-Test');
