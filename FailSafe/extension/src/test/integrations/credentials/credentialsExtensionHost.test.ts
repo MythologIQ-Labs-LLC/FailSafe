@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { IntegrationCredentials, secretKey } from '../../../integrations/credentials/IntegrationCredentials';
-import { endpointRefusalMessage, providerConnection } from '../../../integrations/credentials/credentialGates';
+import { endpointRefusalMessage, githubCustomEndpointRefusalMessage, providerConnection } from '../../../integrations/credentials/credentialGates';
 import { migrateCredentials } from '../../../integrations/credentials/credentialMigration';
 import {
   createConfigurationInspector, createEndpointReader, workspaceIdentity,
@@ -16,7 +16,8 @@ import { FakeSecretStore, RecordingLogger } from './fakes';
 
 const TOKEN_KEY = 'failsafe.integrations.jira.apiToken';
 const BASE_KEY = 'failsafe.integrations.jira.baseUrl';
-const TOUCHED = [TOKEN_KEY, BASE_KEY];
+const GITHUB_BASE_KEY = 'failsafe.integrations.github.apiBaseUrl';
+const TOUCHED = [TOKEN_KEY, BASE_KEY, GITHUB_BASE_KEY];
 const { Global, Workspace } = vscode.ConfigurationTarget;
 
 const cfg = () => vscode.workspace.getConfiguration();
@@ -89,4 +90,34 @@ suite('integration credentials in the extension host (FX962/FX965 #482)', () => 
       credential: 'user_secret_jira_token_3', endpoint: 'https://me.atlassian.net',
     });
   });
+  test('B290 host: real VS Code globalValue GHES setting cannot redirect a User GitHub token', async () => {
+    // The test CLI launches this host with a disposable --user-data-dir and HOME.
+    // No real secrets, GitHub tokens or network operations are used.
+    const { creds } = await fresh();
+    await creds.set('github.token', 'user', 'fake_user_token_host_b290');
+    const messages: string[] = [];
+    const ui = { warn: (message: string) => { messages.push(message); } };
+    const attackerBase = 'https://ghe.attacker.invalid/api/v3';
+
+    await cfg().update(GITHUB_BASE_KEY, attackerBase, Global);
+    assert.equal(cfg().inspect(GITHUB_BASE_KEY)?.globalValue, attackerBase);
+    assert.equal(providerConnection(creds, createEndpointReader(), 'github', ui, 'not configured'), undefined);
+    assert.deepEqual(messages, [githubCustomEndpointRefusalMessage()],
+      'globalValue is not proof that the remote host approved a custom API destination');
+
+    // Default public GitHub remains allowed for User scope.
+    await cfg().update(GITHUB_BASE_KEY, 'https://api.github.com', Global);
+    assert.deepEqual(providerConnection(creds, createEndpointReader(), 'github', ui, 'not configured'), {
+      credential: 'fake_user_token_host_b290', endpoint: 'https://api.github.com',
+    });
+
+    // A separate Workspace credential remains eligible for explicitly scoped GHES.
+    await cfg().update(GITHUB_BASE_KEY, undefined, Global);
+    await cfg().update(GITHUB_BASE_KEY, 'https://ghe.example/api/v3', Workspace);
+    await creds.set('github.token', 'workspace', 'fake_workspace_token_host_b290');
+    assert.deepEqual(providerConnection(creds, createEndpointReader(), 'github', ui, 'not configured'), {
+      credential: 'fake_workspace_token_host_b290', endpoint: 'https://ghe.example/api/v3',
+    });
+  });
+
 });
