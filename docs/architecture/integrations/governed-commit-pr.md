@@ -7,6 +7,7 @@ No legacy review in `docs/research/integrations/` covers this flow; the GitHub r
 **Owned files:**
 - `FailSafe/extension/src/extension/governedCommit.ts`
 - `FailSafe/extension/src/extension/governedCommitFlow.ts`
+- `FailSafe/extension/src/extension/githubPushBinding.ts`
 
 Not owned here: the pull-request POST `createPullRequest` lives in `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts` (github-checks), the token and endpoint gate `governedCommitConnection` in `FailSafe/extension/src/integrations/credentials/credentialGates.ts` (shared credentials module), and the wiring `offerGovernedCommit` in `FailSafe/extension/src/extension/bootstrapServers.ts`.
 
