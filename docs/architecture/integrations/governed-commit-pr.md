@@ -115,11 +115,13 @@ Any thrown error in the offer is logged and the command result is unchanged `Fai
 
 These refusal paths return `step: 'noop'` with an explicit warning rather than falsely reporting a committed or pushed branch. Regression cases live in `FailSafe/extension/src/test/extension/governedCommit.test.ts` under `#476 pre-egress branch/index identity`; production Git runner coverage must still be independently confirmed on the supported Windows extension host. This guard is a correctness boundary for the existing operator-approved flow, not a guarantee against arbitrary same-OS-principal Git configuration races.
 
+**Stacked #716 provenance refusal (development candidate, not yet qualified):** if the newly created commit cannot be bound to its pre-commit HEAD, staged tree, expected message, and target branch tip, FailSafe keeps the commit local and refuses remote push and PR publication `FailSafe/extension/src/extension/governedCommit.ts:134-135` (`commit not bound to this run`). This does not settle the **existing index-ownership contract**: pre-staged files outside the selected paths can still enter the commit. Issue #715 tracks the explicit governance decision and real-Git acceptance needed before claiming that only selected files were committed.
+
 ## End-to-end scenario and measurable acceptance
 
-Scenario: run FailSafe Organize, answer Yes, and find a `fix/organize-<timestamp>` branch with one commit of exactly the changed files, pushed, and a PR whose URL is shown `FailSafe/extension/src/test/extension/governedCommitFlow.test.ts:51` (`approved + token → drives the ladder to a PR; branch is timestamp-stamped`).
-Metric: zero commits on No, exactly one commit on Yes, staged paths equal to the changed set (threshold: exact) `FailSafe/extension/src/test/extension/governedCommit.test.ts:73` (`stages exactly the named paths`).
-Existing test: `FailSafe/extension/src/test/extension/governedCommit.test.ts:28` (`commitPushOpenPr — governed Organize ladder`) (unit), with injected git and POST.
+Scenario: run FailSafe Organize, answer Yes, and find a `fix/organize-<timestamp>` branch with one commit of exactly the changed files, pushed, and a PR whose URL is shown `FailSafe/extension/src/test/extension/governedCommitFlow.test.ts:59` (`approved + token → drives the ladder to a PR; branch is timestamp-stamped`).
+Metric: zero commits on No, exactly one commit on Yes, staged paths equal to the changed set (threshold: exact) `FailSafe/extension/src/test/extension/governedCommit.test.ts:80` (`stages exactly the named paths`).
+Existing test: `FailSafe/extension/src/test/extension/governedCommit.test.ts:35` (`commitPushOpenPr — governed Organize ladder`) (unit), with injected git and POST.
 Installed-extension test: no test runs the real git, a real remote or GitHub for this flow (unverified).
 
 ## Recommended disposition

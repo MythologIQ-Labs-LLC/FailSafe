@@ -10,6 +10,12 @@ import type { GitRunner } from '../../extension/governedCommit';
 
 function defaultFor(args: string[]): { code: number; stdout: string; stderr: string } {
   if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
+  const bindingOp = args.join(' ');
+  if (bindingOp === 'rev-parse --verify --quiet HEAD') return { code: 0, stdout: 'a'.repeat(40), stderr: '' };
+  if (bindingOp === 'rev-parse --verify HEAD') return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp.startsWith('rev-parse --verify --quiet refs/heads/')) return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp === 'write-tree') return { code: 0, stdout: '7'.repeat(40), stderr: '' };
+  if (args[0] === 'log') return { code: 0, stdout: '7'.repeat(40) + '\0' + 'a'.repeat(40) + '\0' + "chore(organize): apply 2 workspace change(s)\n\n- Create .editorconfig\n- Add patterns" + '\n', stderr: '' };
   if (args[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (args[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
   if (args[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20260610120000', stderr: '' };
