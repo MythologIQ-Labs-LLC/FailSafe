@@ -57,7 +57,7 @@ From GitHub: the PR's `html_url` and `number` `FailSafe/extension/src/integratio
 
 ## Outbound fields and egress
 
-Repository content: yes, the commit of the changed paths is pushed to origin, gated by the Yes and No prompt `FailSafe/extension/src/extension/governedCommit.ts:146` (`const staged = await git(['add', '-A', '--', ...req.paths], cwd);`).
+Repository content: yes, the commit of the changed paths is pushed to origin, gated by the Yes and No prompt `FailSafe/extension/src/extension/governedCommit.ts:146` (`const staged = await git(['add', '-A', '--', ...literalPaths], cwd);`).
 Metadata: yes, a PR with title `chore(<action>): workspace cleanup`, a body listing the changes, and the head and base branch, gated by the prompt and a stored token `FailSafe/extension/src/extension/governedCommitFlow.ts:66-71` (`prTitle: `).
 Graph relationships: no (unverified: no graph code exists).
 Governance evidence: the PR body says it was automated by FailSafe and operator-confirmed `FailSafe/extension/src/extension/governedCommitFlow.ts:67` (`(operator-confirmed)`).
