@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { installVoicePack } from "../../voice-pack/install-handler";
 import {
-  buildFixturePackTar, installFetchStub, makeInstallFixture, sha256OfBytes,
+  buildFixturePackEntries, buildFixturePackTar, buildFixtureTar, installFetchStub, makeInstallFixture, sha256OfBytes,
   unstubFetch, type InstallFixture,
 } from "./voice-pack-install-test-helpers";
 
@@ -52,7 +52,25 @@ suite("voice-pack install-handler — installVoicePack", () => {
 
 suite("voice-pack install-handler — installVoicePack", () => {
   registerVoicePackInstallHooks();
-  test("success atomically installs the verified staging pack", async () => {
+  test("adversarial tar member is refused before replacing prior installed pack", async () => {
+    const finalDir = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.mkdirSync(finalDir, { recursive: true });
+    fs.writeFileSync(path.join(finalDir, "sentinel.txt"), "PRESERVED");
+    const bytes = buildFixtureTar([...buildFixturePackEntries(), {
+      name: "../outside", body: "malicious",
+    }]);
+    installFetchStub([
+      { url: /failsafe-voice-pack-5\\.2\\.0\\.tar\\.gz$/, body: bytes },
+      { url: /\\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\\n` },
+    ]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: fixture.globalStoragePath, version: "5.2.0" }),
+      /tar extract refused/,
+    );
+    assert.equal(fs.readFileSync(path.join(finalDir, "sentinel.txt"), "utf8"), "PRESERVED");
+  });
+
+  test("success recoverably installs the verified staging pack", async () => {
     const bytes = buildFixturePackTar();
     installFetchStub([
       { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
