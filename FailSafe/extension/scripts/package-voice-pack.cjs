@@ -9,9 +9,18 @@ const fs = require('fs');
 const path = require('path');
 const { createHash } = require('crypto');
 const { spawnSync } = require('child_process');
+const { assertVendorAncestry } = require('./vendor-voice.cjs');
 
 const REPO_ROOT = process.env.FAILSAFE_REPO_ROOT || path.resolve(__dirname, '..');
-const VENDOR_SOURCE_DIRS = ['piper', 'whisper'];
+const REQUIRED_ASSETS = Object.freeze([
+  'piper/piper.min.js',
+  'piper/piper_phonemize.wasm',
+  'piper/piper_phonemize.data',
+  'whisper/transformers.min.js',
+  'whisper/ort-wasm-simd.wasm',
+  'whisper/ort-wasm-simd-threaded.wasm',
+]);
+const MAX_ASSET_BYTES = 75 * 1024 * 1024;
 
 main();
 
@@ -21,6 +30,14 @@ function main() {
     const distDir = path.join(REPO_ROOT, 'dist');
     fs.mkdirSync(distDir, { recursive: true });
 
+    // Never leave a previous same-version release candidate available if a
+    // later packaging attempt fails before producing new verified assets.
+    // All failures must leave *neither* a publishable archive nor checksum.
+    const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
+    const checksumPath = `${tarballPath}.sha256`;
+    fs.rmSync(tarballPath, { force: true });
+    fs.rmSync(checksumPath, { force: true });
+
     const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-voice-pack-build-'));
     try {
       const vendorSourceRoot = path.join(REPO_ROOT, 'dist', 'extension', 'ui', 'vendor');
@@ -28,7 +45,6 @@ function main() {
 
       writeManifest(stagingDir, version, collected);
 
-      const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
       runTarCreate(stagingDir, tarballPath);
       writeSha256(tarballPath);
 
@@ -38,6 +54,18 @@ function main() {
       fs.rmSync(stagingDir, { recursive: true, force: true });
     }
   } catch (err) {
+    // A partial tarball or stale checksum is not a valid release candidate.
+    // Cleanup is best-effort, but any failure still exits nonzero.
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+      if (/^\d+\.\d+\.\d+$/.test(String(pkg.version || ''))) {
+        const candidate = path.join(REPO_ROOT, 'dist', `failsafe-voice-pack-${pkg.version}.tar.gz`);
+        fs.rmSync(candidate, { force: true });
+        fs.rmSync(candidate + '.sha256', { force: true });
+      }
+    } catch (cleanupErr) {
+      process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\n');
+    }
     process.stderr.write(`[package-voice-pack] ERROR: ${err.message || err}\n`);
     process.exit(1);
   }
@@ -53,34 +81,27 @@ function readVersion() {
 
 function collectFiles(vendorSourceRoot, stagingDir) {
   if (!fs.existsSync(vendorSourceRoot)) {
-    throw new Error(`vendor source dir not found: ${vendorSourceRoot}`);
+    throw new Error('vendor source dir not found: ' + vendorSourceRoot);
   }
   const collected = [];
-  for (const sub of VENDOR_SOURCE_DIRS) {
-    const subSrc = path.join(vendorSourceRoot, sub);
-    if (!fs.existsSync(subSrc)) continue;
-    walkAndCopy(subSrc, sub, stagingDir, collected);
-  }
-  if (collected.length === 0) {
-    throw new Error(`vendor dirs empty under ${vendorSourceRoot} — no piper/whisper files found`);
+  for (const rel of REQUIRED_ASSETS) {
+    // The shared vendor guard rejects symlink/junction ancestry before copying.
+    assertVendorAncestry(path.join(vendorSourceRoot, ...rel.split('/')), fs, REPO_ROOT);
+    const absSrc = path.join(vendorSourceRoot, ...rel.split('/'));
+    let stat;
+    try { stat = fs.lstatSync(absSrc); }
+    catch { throw new Error('required voice asset missing: ' + rel); }
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0 || stat.size > MAX_ASSET_BYTES) {
+      throw new Error('required voice asset invalid: ' + rel);
+    }
+    const absDest = path.join(stagingDir, ...rel.split('/'));
+    fs.mkdirSync(path.dirname(absDest), { recursive: true });
+    fs.copyFileSync(absSrc, absDest, fs.constants.COPYFILE_EXCL);
+    // Hash the exact staged bytes that will enter the archive, not a source
+    // file that could change after copy.
+    collected.push({ rel, abs: absDest });
   }
   return collected;
-}
-
-function walkAndCopy(absSrcDir, relPrefix, stagingDir, collected) {
-  for (const entry of fs.readdirSync(absSrcDir, { withFileTypes: true })) {
-    const absSrc = path.join(absSrcDir, entry.name);
-    const relPath = `${relPrefix}/${entry.name}`;
-    const absDest = path.join(stagingDir, relPath);
-    if (entry.isDirectory()) {
-      fs.mkdirSync(absDest, { recursive: true });
-      walkAndCopy(absSrc, relPath, stagingDir, collected);
-    } else if (entry.isFile()) {
-      fs.mkdirSync(path.dirname(absDest), { recursive: true });
-      fs.copyFileSync(absSrc, absDest);
-      collected.push({ rel: relPath, abs: absSrc });
-    }
-  }
 }
 
 function writeManifest(stagingDir, version, collected) {
