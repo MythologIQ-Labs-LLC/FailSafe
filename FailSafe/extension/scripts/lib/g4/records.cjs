@@ -114,7 +114,7 @@ function syncDirectory(dir) {
 async function writeNew(repoRoot, rels, make) {
   const { parent, targets } = realOutputDirectory(repoRoot, rels);
   refuseExisting(targets, rels);
-  const lock = path.join(parent, ".g4-record-" + sha256(Buffer.from(rels.join("\n"))).slice(0, 20) + ".lock");
+  const lock = path.join(parent, ".g4-record-" + sha256(Buffer.from([...rels].sort().join("\n"))).slice(0, 20) + ".lock");
   try { fs.mkdirSync(lock, { mode: 0o700 }); }
   catch (err) {
     if (err.code === "EEXIST") throw refuse("RECORD_BUSY",
