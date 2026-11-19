@@ -6,6 +6,8 @@
  * --untracked-files=all lists the actual filenames, including unusual spaces.
  * Never interpret pathspec magic from user input.
  */
+import * as fs from 'fs';
+import * as nodePath from 'path';
 import type { GitRunner } from './governedCommit';
 
 export interface ApprovedFile {
@@ -84,7 +86,39 @@ export async function snapshotExactSelection(
   }
   if (states.size === 0) return { ok: true, selection: { files: [] } };
   const files: ApprovedFile[] = [];
+  let realWorkspace: string;
+  try {
+    realWorkspace = fs.realpathSync.native(cwd);
+  } catch {
+    return refuse('workspace location could not be verified');
+  }
   for (const [path, state] of [...states.entries()].sort(([a], [b]) => a.localeCompare(b, 'en'))) {
+    // Git hash-object follows symlinks, so inspect filesystem type and canonical
+    // scope before reading any selected file. Devices/FIFOs must not be hashed.
+    const diskPath = nodePath.resolve(cwd, path);
+    let info: fs.Stats;
+    try {
+      info = fs.lstatSync(diskPath);
+    } catch (e) {
+      const missing = (e as NodeJS.ErrnoException).code === 'ENOENT';
+      if (missing && state.includes('D')) {
+        files.push({ path, state, blob: null });
+        continue;
+      }
+      return refuse('selected filesystem entry cannot be inspected');
+    }
+    if (info.isSymbolicLink() || !info.isFile()) {
+      return refuse('selected path is a symlink or not a regular file');
+    }
+    let realFile: string;
+    try {
+      realFile = fs.realpathSync.native(diskPath);
+    } catch {
+      return refuse('selected filesystem identity cannot be resolved');
+    }
+    const relative = nodePath.relative(realWorkspace, realFile);
+    if (relative === '' || relative === '..' || relative.startsWith('..' + nodePath.sep) ||
+      nodePath.isAbsolute(relative)) return refuse('selected file is outside workspace');
     // --path would run a configured clean filter BEFORE the operator consents.
     // Capture the raw content without executing any configured filter programs.
     const blob = await git(['hash-object', '--no-filters', '--', path], cwd);
