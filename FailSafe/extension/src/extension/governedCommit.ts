@@ -192,7 +192,8 @@ export async function commitPushOpenPr(
     }
     const actual = new Map<string, string>();
     for (const row of stagedFiles.stdout.slice(0, -1).split('\0').filter(Boolean)) {
-      const match = /^100(?:644|755|640) ([a-f0-9]{40}(?:[a-f0-9]{24})?) 0\t(.+)$/.exec(row);
+      // Reject symlink, gitlink and unmerged-index stages until reviewed.
+      const match = /^(?:100644|100755) ([a-f0-9]{40}(?:[a-f0-9]{24})?) 0\t(.+)$/.exec(row);
       if (!match || actual.has(match[2])) {
         return { step: 'noop', branch: req.branch,
           warning: 'approved file blobs were ambiguous; no commit, push or PR attempted (inspect index)' };
@@ -201,10 +202,39 @@ export async function commitPushOpenPr(
     }
     const approved = new Map(req.approvedFiles.map(file => [file.path, file.blob]));
     if (approved.size !== req.approvedFiles.length ||
-      [...actual].some(([path,blob]) => approved.get(path) !== blob) ||
-      req.approvedFiles.some(file => (actual.get(file.path) ?? null) !== file.blob)) {
+      [...actual].some(([path]) => !approved.has(path))) {
       return { step: 'noop', branch: req.branch,
-        warning: 'staged file content differs from approved manifest; no commit, push or PR attempted (inspect index)' };
+        warning: 'staged file set differs from approved manifest; no commit, push or PR attempted (inspect index)' };
+    }
+    for (const file of req.approvedFiles) {
+      const stagedObject = actual.get(file.path) ?? null;
+      if (file.blob === null) {
+        if (stagedObject !== null) return { step: 'noop', branch: req.branch,
+          warning: 'approved deletion changed before commit; no commit, push or PR attempted (inspect index)' };
+        continue;
+      }
+      if (stagedObject === null) return { step: 'noop', branch: req.branch,
+        warning: 'approved file missing from staged index; no commit, push or PR attempted (inspect index)' };
+      const raw = await git(['hash-object', '--no-filters', '--', file.path], cwd);
+      if (raw.code !== 0 || raw.stdout.trim() !== file.blob) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'approved file contents changed before commit; no commit, push or PR attempted (inspect index)' };
+      }
+      // Git may normalize line endings or apply an owner-configured clean filter
+      // when staging. Never invoke that filter before consent. Only if the staged
+      // blob differs from raw content, compute the expected filtered blob now.
+      if (stagedObject !== file.blob) {
+        const filtered = await git(['hash-object', '--path=' + file.path, '--', file.path], cwd);
+        if (filtered.code !== 0 || filtered.stdout.trim() !== stagedObject) {
+          return { step: 'noop', branch: req.branch,
+            warning: 'Git-filtered staging differed from approved file; no commit, push or PR attempted (inspect index)' };
+        }
+        const rawAgain = await git(['hash-object', '--no-filters', '--', file.path], cwd);
+        if (rawAgain.code !== 0 || rawAgain.stdout.trim() !== file.blob) {
+          return { step: 'noop', branch: req.branch,
+            warning: 'approved file contents changed during staging verification; no commit, push or PR attempted (inspect index)' };
+        }
+      }
     }
   }
 

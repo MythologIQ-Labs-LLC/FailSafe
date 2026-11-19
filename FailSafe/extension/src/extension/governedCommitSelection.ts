@@ -13,7 +13,7 @@ export interface ApprovedFile {
   path: string;
   /** Git's actual porcelain XY state at the approval checkpoint. */
   state: string;
-  /** Working-tree Git blob ID with filters, or null for a tracked deletion. */
+  /** Raw working-tree blob ID (no Git filters before consent), or null for a tracked deletion. */
   blob: string | null;
 }
 export interface ExactSelection { files: ApprovedFile[]; }
@@ -29,7 +29,10 @@ const refuse = (reason: string): SelectionResult => ({ ok: false, warning: 'sele
 
 function safePath(path: unknown): path is string {
   return typeof path === 'string' && path.length > 0 && path.length <= MAX_NAME &&
-    path.trim().length > 0 && !/[\u0000-\u001f\u007f\ufffd]/.test(path) &&
+    path.trim().length > 0 && !Array.from(path).some(char => {
+      const code = char.charCodeAt(0);
+      return code < 32 || code === 127 || char === '\ufffd';
+    }) &&
     !path.startsWith('/') && !path.startsWith('\\') && !/^[A-Za-z]:/.test(path) &&
     !path.split(/[\\/]/).some(p => p === '.' || p === '..');
 }
@@ -82,7 +85,9 @@ export async function snapshotExactSelection(
   if (states.size === 0) return { ok: true, selection: { files: [] } };
   const files: ApprovedFile[] = [];
   for (const [path, state] of [...states.entries()].sort(([a], [b]) => a.localeCompare(b, 'en'))) {
-    const blob = await git(['hash-object', '--path=' + path, '--', path], cwd);
+    // --path would run a configured clean filter BEFORE the operator consents.
+    // Capture the raw content without executing any configured filter programs.
+    const blob = await git(['hash-object', '--no-filters', '--', path], cwd);
     if (blob.code !== 0) {
       // A missing tracked file is meaningful only for a Git-declared deletion.
       if (!state.includes('D')) return refuse('could not hash selected file');
