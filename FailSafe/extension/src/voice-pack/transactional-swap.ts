@@ -55,7 +55,7 @@ function copyPayload(
 
 /** Recheck copied final bytes, not only the previously validated archive. */
 function verifyPrepared(prepared: string, seen: Set<string>, io: VoiceSwapOps, tarball: string): void {
-  const requested = /^failsafe-voice-pack-(\\d+\\.\\d+\\.\\d+)\\.tar\\.gz$/.exec(path.basename(tarball));
+  const requested = /^failsafe-voice-pack-(\d+\.\d+\.\d+)\.tar\.gz$/.exec(path.basename(tarball));
   if (!requested) throw new Error('unexpected voice archive filename for promotion');
   if (seen.size !== REQUIRED_FILES.size || [...REQUIRED_FILES].some(name => !seen.has(name))) {
     throw new Error('incomplete staged voice asset inventory');
