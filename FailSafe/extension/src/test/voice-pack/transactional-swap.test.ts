@@ -5,6 +5,8 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { createHash } from 'crypto';
+import { VOICE_ASSETS } from '../../voice-pack/safe-archive';
 import { atomicSwapVoicePack, VoiceSwapOps, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from '../../voice-pack/transactional-swap';
 
 function fixture(run: (root: string) => void): void {
@@ -15,8 +17,18 @@ function fixture(run: (root: string) => void): void {
 function dirs(root: string) {
   const stage = path.join(root, 'stage');
   const final = path.join(root, 'storage', 'voice-pack');
-  fs.mkdirSync(path.join(stage, 'piper'), { recursive: true });
-  fs.writeFileSync(path.join(stage, 'piper', 'piper.min.js'), 'new');
+  const hashes: Record<string, string> = {};
+  for (const name of VOICE_ASSETS) {
+    const file = path.join(stage, name);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const bytes = name === 'piper/piper.min.js' ? 'new' : 'fixture:' + name;
+    fs.writeFileSync(file, bytes);
+    hashes[name] = createHash('sha256').update(bytes).digest('hex');
+  }
+  fs.writeFileSync(path.join(stage, 'voice-pack.manifest.json'), JSON.stringify({
+    version: '6.0.13', builtAt: '2026-11-19T00:00:00Z',
+    expectedFiles: [...VOICE_ASSETS], sha256: hashes,
+  }));
   const tarball = path.join(stage, 'failsafe-voice-pack-6.0.13.tar.gz');
   fs.writeFileSync(tarball, 'fixture tar');
   fs.mkdirSync(path.dirname(final), { recursive: true });
@@ -95,6 +107,31 @@ suite('voice-pack transactional replacement #710', () => {
       assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
     });
   });
+
+  test('a new unlisted staging file cannot be promoted into the installed voice pack', () => fixture(root => {
+    const d = dirs(root); old(d.final);
+    fs.writeFileSync(path.join(d.stage, 'piper', 'injected.js'), 'UNVERIFIED');
+    assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x1' }),
+      /unlisted staged voice asset/);
+    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.existsSync(d.final + '.new-x1'), false);
+  }));
+
+  test('staging-file tampering after archive verification fails before replacing old pack', () => fixture(root => {
+    const d = dirs(root); old(d.final);
+    fs.writeFileSync(path.join(d.stage, 'piper', 'piper.min.js'), 'TAMPERED');
+    assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x2' }),
+      /prepared voice asset checksum mismatch/);
+    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+  }));
+
+  test('missing staged voice asset fails before promotion, prior install survives', () => fixture(root => {
+    const d = dirs(root); old(d.final);
+    fs.rmSync(path.join(d.stage, 'whisper', 'ort-wasm-simd.wasm'));
+    assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x3' }),
+      /incomplete staged voice asset inventory/);
+    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+  }));
 
   test('backup cleanup failure is warning, not a false failed installation', () => fixture(root => {
     const d = dirs(root); old(d.final);
