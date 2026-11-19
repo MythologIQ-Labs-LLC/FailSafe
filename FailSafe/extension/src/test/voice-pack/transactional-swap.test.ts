@@ -129,4 +129,40 @@ suite('voice-pack transactional replacement #710', () => {
     const d = dirs(root);
     assert.throws(() => atomicSwapVoicePack(d.stage, path.join(d.stage, 'nested'), d.tarball, { token: 'j' }), /disjoint/);
   }));
+  test('dangling backup symlink is a collision and cannot displace the previous pack', function () {
+    if (process.platform === 'win32') this.skip(); // Elevated symlink privilege varies.
+    fixture(root => {
+      const d = dirs(root); old(d.final);
+      const backup = d.final + '.old-k';
+      fs.symlinkSync(path.join(root, 'missing-target'), backup, 'dir');
+      assert.equal(fs.existsSync(backup), false, 'the old existsSync guard would miss this entry');
+      assert.equal(fs.lstatSync(backup).isSymbolicLink(), true);
+      assert.throws(
+        () => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'k' }),
+        /collision/,
+      );
+      assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+      assert.equal(fs.lstatSync(backup).isSymbolicLink(), true);
+      assert.equal(fs.existsSync(d.final + '.new-k'), false);
+    });
+  });
+
+  test('existing symlink destination is refused without changing its external target', function () {
+    if (process.platform === 'win32') this.skip();
+    fixture(root => {
+      const d = dirs(root);
+      const external = path.join(root, 'external');
+      fs.mkdirSync(external);
+      fs.writeFileSync(path.join(external, 'keep.txt'), 'untouched');
+      fs.symlinkSync(external, d.final, 'dir');
+      assert.throws(
+        () => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'l' }),
+        /destination must be a real directory/,
+      );
+      assert.equal(fs.lstatSync(d.final).isSymbolicLink(), true);
+      assert.equal(fs.readFileSync(path.join(external, 'keep.txt'), 'utf8'), 'untouched');
+      assert.equal(fs.existsSync(d.final + '.new-l'), false);
+    });
+  });
+
 });

@@ -40,12 +40,77 @@ function copyPayload(source: string, target: string, stagingTarball: string, io:
   }
 }
 
-/**
- * Commits a verified staging directory to global storage.
- * If promotion fails after moving the old pack aside, restore the old pack.
- * If recovery itself fails, preserve the old directory at .old-<token>.
- * Post-promotion cleanup warnings do not misreport a successful installation.
- */
+function entryExists(file: string, io: VoiceSwapOps): boolean {
+  try { io.lstatSync(file); return true; }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+function requireRealDestination(final: string, io: VoiceSwapOps): boolean {
+  if (!entryExists(final, io)) return false;
+  const stat = io.lstatSync(final);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    throw new Error('voice pack destination must be a real directory');
+  }
+  return true;
+}
+
+function checkSwapPaths(stage: string, dest: string, tar: string, io: VoiceSwapOps) {
+  if (!path.isAbsolute(stage) || !path.isAbsolute(dest)) {
+    throw new Error('voice pack installation requires absolute paths');
+  }
+  const staging = path.resolve(stage);
+  const final = path.resolve(dest);
+  const stagingStat = io.lstatSync(staging);
+  if (!stagingStat.isDirectory() || stagingStat.isSymbolicLink()) {
+    throw new Error('voice pack staging root must be a real directory');
+  }
+  if (staging === final || staging.startsWith(final + path.sep) || final.startsWith(staging + path.sep)) {
+    throw new Error('staging and destination must be disjoint');
+  }
+  if (path.resolve(tar) !== path.join(staging, path.basename(tar))) {
+    throw new Error('voice pack tarball must be directly within staging');
+  }
+  return { staging, final };
+}
+
+function promotePrepared(prepared: string, final: string, backup: string, io: VoiceSwapOps): boolean {
+  const movedOld = requireRealDestination(final, io);
+  if (movedOld) io.renameSync(final, backup);
+  try { io.renameSync(prepared, final); }
+  catch (installError) {
+    if (!movedOld) throw installError;
+    try { io.renameSync(backup, final); }
+    catch (restoreError) {
+      throw new AggregateError(
+        [installError, restoreError],
+        'Voice pack promotion and rollback failed. Prior installation is preserved at ' + backup,
+      );
+    }
+    throw installError;
+  }
+  return movedOld;
+}
+
+function cleanupAfterPromotion(
+  staging: string, backup: string, movedOld: boolean, io: VoiceSwapOps,
+): VoiceSwapResult {
+  const warnings: string[] = [];
+  if (movedOld) {
+    try { io.rmSync(backup, { recursive: true, force: true }); }
+    catch (e) { warnings.push('Previous voice pack backup cleanup failed: ' + String(e)); }
+  }
+  try { io.rmSync(staging, { recursive: true, force: true }); }
+  catch (e) { warnings.push('Temporary voice pack cleanup failed: ' + String(e)); }
+  return {
+    staleBackup: movedOld && io.existsSync(backup) ? backup : undefined,
+    cleanupWarnings: warnings,
+  };
+}
+
+/** Recoverably install a validated staging directory without trusting existing transaction links. */
 export function atomicSwapVoicePack(
   stagingDir: string,
   finalDir: string,
@@ -53,74 +118,26 @@ export function atomicSwapVoicePack(
   options: { ops?: VoiceSwapOps; token?: string } = {},
 ): VoiceSwapResult {
   const io: VoiceSwapOps = options.ops ?? fs;
-  const stagingStat = io.lstatSync(stagingDir);
-  if (!stagingStat.isDirectory() || stagingStat.isSymbolicLink()) {
-    throw new Error('voice pack staging root must be a real directory');
-  }
-  if (!path.isAbsolute(finalDir) || !path.isAbsolute(stagingDir)) {
-    throw new Error('voice pack installation requires absolute paths');
-  }
-  const final = path.resolve(finalDir);
-  const staging = path.resolve(stagingDir);
-  const parent = path.dirname(final);
-  if (staging === final || staging.startsWith(final + path.sep) || final.startsWith(staging + path.sep)) {
-    throw new Error('staging and destination must be disjoint');
-  }
-  if (path.resolve(stagingTarball) !== path.join(staging, path.basename(stagingTarball))) {
-    throw new Error('voice pack tarball must be directly within staging');
-  }
-  io.mkdirSync(parent, { recursive: true });
-
+  const { staging, final } = checkSwapPaths(stagingDir, finalDir, stagingTarball, io);
   const token = options.token ?? randomBytes(12).toString('hex');
   if (!/^[a-zA-Z0-9_-]{1,64}$/.test(token)) throw new Error('invalid transaction token');
   const backup = final + '.old-' + token;
   const prepared = final + '.new-' + token;
-  if (io.existsSync(backup) || io.existsSync(prepared)) {
+  if (entryExists(backup, io) || entryExists(prepared, io)) {
     throw new Error('voice pack transaction path collision; refusing overwrite');
   }
-  const warnings: string[] = [];
-  let movedOld = false;
-  let promoted = false;
-  let rollbackFailed = false;
+  requireRealDestination(final, io);
+  io.mkdirSync(path.dirname(final), { recursive: true });
   try {
     io.mkdirSync(prepared, { recursive: false, mode: 0o700 });
     copyPayload(staging, prepared, path.resolve(stagingTarball), io);
-    if (io.existsSync(final)) {
-      io.renameSync(final, backup);
-      movedOld = true;
-    }
-    try {
-      io.renameSync(prepared, final);
-      promoted = true;
-    } catch (installError) {
-      if (movedOld) {
-        try {
-          io.renameSync(backup, final);
-          movedOld = false;
-        } catch (restoreError) {
-          rollbackFailed = true;
-          throw new AggregateError(
-            [installError, restoreError],
-            'Voice pack promotion and rollback failed. Prior installation is preserved at ' + backup,
-          );
-        }
-      }
-      throw installError;
-    }
-  } finally {
-    if (!promoted && io.existsSync(prepared)) {
+    const movedOld = promotePrepared(prepared, final, backup, io);
+    return cleanupAfterPromotion(staging, backup, movedOld, io);
+  } catch (error) {
+    if (entryExists(prepared, io)) {
       try { io.rmSync(prepared, { recursive: true, force: true }); }
-      catch (e) { warnings.push('Failed to remove unpromoted voice pack staging: ' + String(e)); }
+      catch { /* leave forensic evidence of interrupted preparation; keep original error */ }
     }
-    if (rollbackFailed && !io.existsSync(backup)) {
-      warnings.push('Voice pack rollback failed and backup is unexpectedly missing');
-    }
+    throw error;
   }
-  if (movedOld) {
-    try { io.rmSync(backup, { recursive: true, force: true }); }
-    catch (e) { warnings.push('Previous voice pack backup cleanup failed: ' + String(e)); }
-  }
-  try { io.rmSync(staging, { recursive: true, force: true }); }
-  catch (e) { warnings.push('Temporary voice pack cleanup failed: ' + String(e)); }
-  return { staleBackup: movedOld && io.existsSync(backup) ? backup : undefined, cleanupWarnings: warnings };
 }
