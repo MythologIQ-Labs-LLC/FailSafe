@@ -7,6 +7,7 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
 import { snapshotExactSelection, sameExactSelection } from '../../extension/governedCommitSelection';
+import { runGovernedCommitFlow } from '../../extension/governedCommitFlow';
 
 function git(cwd: string, ...args: string[]): string {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8', windowsHide: true });
@@ -100,4 +101,90 @@ suite('#715 exact-directory manifest, real Git', () => {
       assert.equal(result.ok, false, JSON.stringify(result));
     }
   });
+
+  test('approved directory lists exact filenames and commits only that reviewed set', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    let prompt = '';
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { prompt = text; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /Exact changed files to commit \(1\):/);
+    assert.match(prompt, /docs\/approved\.md/);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+  });
+
+  test('new file inside selected directory after consent refuses without checkout or staging', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    const before = git(root, 'symbolic-ref', '--short', 'HEAD');
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => {
+        assert.match(text, /docs\/approved\.md/);
+        assert.doesNotMatch(text, /docs\/unreviewed\.md/);
+        fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), '# introduced later\n');
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'noop');
+    assert.match('warning' in result ? result.warning || '' : '', /manifest changed after approval/i);
+    assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), before);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+    assert.equal(git(root, 'branch', '--list', 'fix/organize-20261118120000'), '');
+  });
+
+  test('changed contents after directory approval refuse even when filename set is unchanged', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async () => {
+        fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# different content\n');
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'noop');
+    assert.match('warning' in result ? result.warning || '' : '', /manifest changed after approval/i);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+  });
+
+  test('new descendant appearing after the recheck still cannot enter approved commit', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    let injected = 0;
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root,
+      git: async (args, cwd) => {
+        const response = await defaultGitRunner(args, cwd);
+        if (args[0] === 'checkout' && args[1] === '-b' && response.code === 0) {
+          fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), 'late newcomer\n');
+          injected++;
+        }
+        return response;
+      },
+      confirm: async () => true,
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(injected, 1);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+    assert.equal(git(root, 'status', '--porcelain', '--', 'docs/unreviewed.md'), '?? docs/unreviewed.md');
+  });
+
+  test('an approved tracked deletion remains a valid directory change', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'gone.md'), 'before\n');
+    git(root, 'add', '--', 'docs/gone.md');
+    git(root, 'commit', '-qm', 'baseline');
+    fs.rmSync(path.join(root, 'docs', 'gone.md'));
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Remove file'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { assert.match(text, /docs\/gone\.md/); return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-status', 'HEAD'), 'D\tdocs/gone.md');
+  });
+
 });
