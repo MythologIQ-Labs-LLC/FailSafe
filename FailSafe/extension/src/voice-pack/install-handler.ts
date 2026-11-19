@@ -151,7 +151,7 @@ async function fetchChecksum(url: string, expectedFilename: string): Promise<{ e
   const text = Buffer.concat(chunks).toString('utf8');
   // Require the one exact output from our packager, not a digest prefix
   // followed by a different asset name, extra records, or a shell marker.
-  const match = /^([a-f0-9]{64})  ([^\r\n]+)\r?\n?$/i.exec(text);
+  const match = /^([a-f0-9]{64}) {2}([^\r\n]+)\r?\n?$/i.exec(text);
   if (!match || match[2] !== expectedFilename) {
     throw new Error('checksum fetch failed: malformed or mismatched archive filename');
   }
