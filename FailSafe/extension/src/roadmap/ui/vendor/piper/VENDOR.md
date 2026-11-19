@@ -22,6 +22,6 @@ Voice models are downloaded by the browser at runtime into IndexedDB, not stored
 
 ## Non-mutating upstream parity check
 
-`npm run verify:voice-pins` downloads both upstream npm tarballs, rejects any SHA-512 mismatch, extracts only the pinned six browser members, applies the same deterministic Whisper sanitization as normal vendoring and compares the bytes of all six committed assets. The command does **not** change committed vendor files; a mismatch or missing file exits nonzero. This is a release-source integrity check, not a claim that runtime microphone/Piper/Whisper behavior was installed-host tested. Run it explicitly in an allowed network environment and record the actual result.
+`npm run verify:voice-pins` downloads both upstream npm tarballs, rejects any SHA-512 mismatch, extracts only the pinned six browser members, applies the same deterministic Whisper sanitization as normal vendoring and compares bytes against all six working-tree files **and** the same six immutable `HEAD` Git blobs. The command does **not** change committed vendor files; a mismatch or missing file exits nonzero. This is a release-source integrity check, not a claim that runtime microphone/Piper/Whisper behavior was installed-host tested. Run it explicitly in an allowed network environment and record the actual result.
 
 For broader Voice Pack provenance, installer and release requirements see `docs/architecture/integrations/voice-pack.md`, #707 and #710.
