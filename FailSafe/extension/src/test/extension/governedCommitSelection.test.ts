@@ -96,6 +96,20 @@ suite('#715 exact-directory manifest, real Git', () => {
     if (!result.ok) assert.match(result.warning, /invalid|outside|unsafe|status/i);
   });
 
+  test('unmerged and conflicted Git porcelain states cannot be approved', async () => {
+    for (const state of ['UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD']) {
+      const spoofed: GitRunner = async (args, cwd) => {
+        if (args[0] === 'status') return {
+          code: 0, stdout: state + ' docs/conflicted.md\0', stderr: '',
+        };
+        return defaultGitRunner(args, cwd);
+      };
+      const result = await snapshotExactSelection(spoofed, root, ['docs/']);
+      assert.equal(result.ok, false, state + ': ' + JSON.stringify(result));
+      if (!result.ok) assert.match(result.warning, /conflict|unmerged/i);
+    }
+  });
+
   test('unreadable, misleading or truncated porcelain cannot authorize any filenames', async () => {
     const cases = [
       { code: 1, stdout: '', stderr: 'refused' },
