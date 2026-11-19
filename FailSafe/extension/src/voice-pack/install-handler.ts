@@ -8,7 +8,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { Readable } from 'stream';
+import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import { createHash } from 'crypto';
 import { extractValidatedVoiceArchive } from './safe-archive';
@@ -23,6 +23,8 @@ import {
 } from './types';
 
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
+const MAX_PACK_DOWNLOAD_BYTES = 96 * 1024 * 1024;
+const MAX_CHECKSUM_BYTES = 8 * 1024;
 const PACK_FILENAME = (version: string) => `failsafe-voice-pack-${version}.tar.gz`;
 const RELEASE_BASE = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download';
 
@@ -118,13 +120,35 @@ function logProvenance(opts: InstallVoicePackOptions, what: string, p: VoicePack
 async function downloadToFile(url: string, destPath: string): Promise<VoicePackDownloadProvenance> {
   const { response: res, requestedUrl, finalUrl } = await fetchAllowlisted(url, 'download failed');
   if (!res.body) throw new Error('download failed: empty response body');
-  await pipeline(Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream), fs.createWriteStream(destPath));
+  const claimed = Number(res.headers.get('content-length'));
+  if (Number.isFinite(claimed) && claimed > MAX_PACK_DOWNLOAD_BYTES) {
+    throw new Error('download failed: compressed voice pack exceeds size budget');
+  }
+  let received = 0;
+  const limiter = new Transform({
+    transform(chunk: Buffer, _encoding, done) {
+      received += chunk.length;
+      if (received > MAX_PACK_DOWNLOAD_BYTES) {
+        done(new Error('download failed: compressed voice pack exceeds size budget'));
+      } else done(null, chunk);
+    },
+  });
+  await pipeline(Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream),
+    limiter, fs.createWriteStream(destPath, { flags: 'wx', mode: 0o600 }));
   return { requestedUrl, finalUrl };
 }
 
 async function fetchChecksum(url: string): Promise<{ expected: string; provenance: VoicePackDownloadProvenance }> {
   const { response: res, requestedUrl, finalUrl } = await fetchAllowlisted(url, 'checksum fetch failed');
-  const text = await res.text();
+  if (!res.body) throw new Error('checksum fetch failed: empty body');
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  for await (const chunk of Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream)) {
+    bytes += chunk.length;
+    if (bytes > MAX_CHECKSUM_BYTES) throw new Error('checksum fetch failed: response exceeds budget');
+    chunks.push(Buffer.from(chunk));
+  }
+  const text = Buffer.concat(chunks).toString('utf8');
   // sha256 file format: "<64-char-hex>  <filename>\n"
   const match = /^([a-f0-9]{64})\b/i.exec(text.trim());
   if (!match) {
