@@ -97,7 +97,7 @@ test("G4 #660: concurrent same-record writer is refused while first holds exclus
       return f.maker();
     });
     await inside;
-    await assert.rejects(writeNew(f.root, rels, f.maker), /earlier writer or interrupted record owns the lock/);
+    await assert.rejects(writeNew(f.root, [...rels].reverse(), f.maker), /earlier writer or interrupted record owns the lock/);
     unblock();
     assert.deepEqual(await first, rels);
     assert.equal(fs.readdirSync(f.parent).length, 3);
