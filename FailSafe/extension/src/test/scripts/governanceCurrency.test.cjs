@@ -85,7 +85,13 @@ test('refuses missing files and symlinks outside the checked repository', t => {
   const f = fixture(t);
   fs.rmSync(path.join(f.root, 'docs/FEATURE_INDEX.md'));
   assert.throws(() => checkCurrency(f.root), /ENOENT/);
-  fs.symlinkSync(path.join(f.root, 'docs/ARCHITECTURE_PLAN.md'), path.join(f.root, 'docs/FEATURE_INDEX.md'));
+  try {
+    fs.symlinkSync(path.join(f.root, 'docs/ARCHITECTURE_PLAN.md'), path.join(f.root, 'docs/FEATURE_INDEX.md'));
+  } catch (error) {
+    // Some Windows hosts restrict symlink creation; absence was already tested.
+    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return;
+    throw error;
+  }
   assert.throws(() => checkCurrency(f.root), /Not a regular file/);
 });
 
