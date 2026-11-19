@@ -58,6 +58,8 @@ const R2_ALLOW = {
   [path.join('integrations', 'agent-cli', 'git-safety.ts')]: 6,
   [path.join('integrations', 'shield-receipts', 'workspace-evidence-source.ts')]: 2,
   [path.join('extension', 'governedCommit.ts')]: 1,
+  // #715/#719: git `-c name=value`, spelled once in configArgs, never a python argument.
+  [path.join('extension', 'governedCommitSelection.ts')]: 1,
   [path.join('roadmap', 'services', 'AdapterService.ts')]: 1,
 };
 

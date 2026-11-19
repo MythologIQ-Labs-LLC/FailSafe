@@ -27,7 +27,35 @@ const FULL_BLOB = /^[a-f0-9]{40}([a-f0-9]{24})?$/;
 const MAX_FILES = 64;
 const MAX_NAME = 1024;
 const MAX_STATUS_BYTES = 256 * 1024;
+const MAX_FILTER_DRIVERS = 32;
 const refuse = (reason: string): SelectionResult => ({ ok: false, warning: 'selected file manifest unverified: ' + reason + '; no commit, push or PR attempted' });
+/** Git `-c name=value` arguments; the one place this module spells the option. */
+const configArgs = (settings: string[]): string[] => settings.flatMap(setting => ['-c', setting]);
+
+/**
+ * Command-scoped Git options for change discovery before the operator consents.
+ * `git status` can run a configured fsmonitor hook, run clean or process filters
+ * on racy entries, and rewrite the index. These options disable the hook, blank
+ * every configured filter driver for this command only, and skip optional index
+ * writes. Reading configuration runs no program. Returns null (callers refuse)
+ * when the configured drivers cannot be listed or named safely.
+ */
+export async function preConsentGitOptions(git: GitRunner, cwd: string): Promise<string[] | null> {
+  const listed = await git(['config', '-z', '--name-only', '--get-regexp', '^filter\\.'], cwd);
+  // git config exits 1 when no key matches; anything else is unverified.
+  if (!(listed.code === 0 || (listed.code === 1 && listed.stdout === '')) ||
+    listed.stdout.length > MAX_STATUS_BYTES) return null;
+  const drivers = new Set<string>();
+  for (const key of listed.stdout.split('\0').filter(Boolean)) {
+    const match = /^filter\.([\s\S]+)\.[^.]+$/.exec(key);
+    // `-c` splits at the first '=', so a driver name containing one cannot be blanked.
+    if (!match || /[=\r\n\0]/.test(match[1])) return null;
+    drivers.add(match[1]);
+  }
+  if (drivers.size > MAX_FILTER_DRIVERS) return null;
+  return ['--no-optional-locks', ...configArgs(['core.fsmonitor=false', ...[...drivers].flatMap(driver =>
+    [`filter.${driver}.clean=`, `filter.${driver}.process=`, `filter.${driver}.required=false`])])];
+}
 
 function safePath(path: unknown): path is string {
   return typeof path === 'string' && path.length > 0 && path.length <= MAX_NAME &&
@@ -66,7 +94,7 @@ export async function requiresExactSelection(
   try {
     // A repository may configure core.fsmonitor as an executable hook.
     // Disable it for this pre-consent tracked-file classification.
-    const tracked = await git(['-c', 'core.fsmonitor=false', 'ls-files', '-z', '--', ':(literal)' + relative], cwd);
+    const tracked = await git([...configArgs(['core.fsmonitor=false']), 'ls-files', '-z', '--', ':(literal)' + relative], cwd);
     if (tracked.code !== 0 || tracked.stdout.length > MAX_STATUS_BYTES ||
       (tracked.stdout.length > 0 && !tracked.stdout.endsWith('\0'))) return true;
     return tracked.stdout.length > 0 &&
@@ -94,10 +122,12 @@ export async function snapshotExactSelection(
 
   const selectors = await Promise.all(requested.map(async p =>
     await requiresExactSelection(git, cwd, p) && !p.endsWith('/') ? p + '/' : p));
-  // Git status can execute core.fsmonitor before the owner approves anything.
-  // Command-scoped override prevents expanding this workflow's pre-consent authority.
+  // Git status can execute core.fsmonitor or filters, or write the index, before
+  // the owner approves anything. Command-scoped options prevent all three.
+  const guard = await preConsentGitOptions(git, cwd);
+  if (!guard) return refuse('Git filter configuration could not be verified');
   const status = await git([
-    '-c', 'core.fsmonitor=false', 'status', '--porcelain=v1', '-z', '--untracked-files=all', '--',
+    ...guard, 'status', '--porcelain=v1', '-z', '--untracked-files=all', '--',
     ...selectors.map(p => ':(literal)' + p),
   ], cwd);
   if (status.code !== 0 || status.stdout.length > MAX_STATUS_BYTES ||
