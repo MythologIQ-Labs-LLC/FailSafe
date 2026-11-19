@@ -1,6 +1,7 @@
 const esbuild = require("esbuild");
 const fs = require("fs");
 const path = require("path");
+const { assertVendorAncestry } = require('./vendor-voice.cjs');
 
 const root = path.resolve(__dirname, "..");
 const distDir = path.join(root, "dist");
@@ -29,6 +30,7 @@ function verifyVendoredVoiceAssets() {
   ];
   for (const relative of required) {
     const file = path.join(root, 'src', 'roadmap', 'ui', 'vendor', relative);
+    assertVendorAncestry(file, fs, root);
     let stat;
     try { stat = fs.lstatSync(file); }
     catch { throw new Error('Missing browser voice asset: ' + relative + '. Run npm run vendor:voice'); }
