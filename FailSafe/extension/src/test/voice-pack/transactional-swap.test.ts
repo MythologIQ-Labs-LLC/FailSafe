@@ -125,6 +125,17 @@ suite('voice-pack transactional replacement #710', () => {
     assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
   }));
 
+  test('staged manifest version substitution cannot promote a different voice pack', () => fixture(root => {
+    const d = dirs(root); old(d.final);
+    const file = path.join(d.stage, 'voice-pack.manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    manifest.version = '6.0.14';
+    fs.writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x4' }),
+      /prepared voice manifest version differs from requested archive/);
+    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+  }));
+
   test('missing staged voice asset fails before promotion, prior install survives', () => fixture(root => {
     const d = dirs(root); old(d.final);
     fs.rmSync(path.join(d.stage, 'whisper', 'ort-wasm-simd.wasm'));
