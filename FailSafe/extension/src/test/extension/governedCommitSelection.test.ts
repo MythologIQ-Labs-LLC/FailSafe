@@ -87,6 +87,15 @@ suite('#715 exact-directory manifest, real Git', () => {
     if (!result.ok) assert.match(result.warning, /64 changed files/i);
   });
 
+  test('Unicode bidi controls cannot visually spoof approved filenames', async () => {
+    if (process.platform === 'win32') return; // Windows names can be restricted by platform policy.
+    const spoof = 'visible' + '\u202e' + 'txt.dm';
+    fs.writeFileSync(path.join(root, 'docs', spoof), 'spoofed\n');
+    const result = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(result.ok, false, JSON.stringify(result));
+    if (!result.ok) assert.match(result.warning, /invalid|outside|unsafe|status/i);
+  });
+
   test('unreadable, misleading or truncated porcelain cannot authorize any filenames', async () => {
     const cases = [
       { code: 1, stdout: '', stderr: 'refused' },
