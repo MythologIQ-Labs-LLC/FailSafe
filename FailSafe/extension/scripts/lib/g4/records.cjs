@@ -95,9 +95,15 @@ function syncDirectory(dir) {
     fd = fs.openSync(dir, "r");
     fs.fsyncSync(fd);
   } catch (err) {
-    // On Windows, syncing a directory handle is not guaranteed by Node. Never
-    // misstate a triplet of hardlinks as one crash-atomic filesystem operation.
-    if (!["EISDIR", "EINVAL", "EPERM", "EACCES", "ENOTSUP"].includes(err.code)) throw err;
+    // Directory fsync is unsupported on some Windows and macOS filesystems.
+    // A genuine I/O failure (EIO/ENOSPC/EROFS), or Linux permission failure,
+    // is NOT an optional feature: fail and roll back our own published files.
+    const unsupported = process.platform === "win32"
+      ? ["EISDIR", "EINVAL", "EPERM", "EACCES", "ENOTSUP"]
+      : process.platform === "darwin"
+        ? ["EINVAL", "ENOTSUP"]
+        : [];
+    if (!unsupported.includes(err.code)) throw err;
   } finally {
     if (fd !== undefined) fs.closeSync(fd);
   }
