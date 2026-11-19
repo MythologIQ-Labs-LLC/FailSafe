@@ -73,6 +73,9 @@ export async function snapshotExactSelection(
     const record = records[i];
     if (record.length < 4 || record[2] !== ' ') return refuse('invalid Git porcelain record');
     const state = record.slice(0, 2);
+    if (state.includes('U') || state === 'AA' || state === 'DD') {
+      return refuse('unmerged or conflicted Git status requires manual review');
+    }
     const names = [record.slice(3)];
     // In -z porcelain v1, renamed/copied entries are followed by the old path.
     if (state.includes('R') || state.includes('C')) {
