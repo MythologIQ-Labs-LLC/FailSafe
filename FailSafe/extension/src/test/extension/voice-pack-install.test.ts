@@ -60,8 +60,8 @@ suite("voice-pack install-handler — installVoicePack", () => {
       name: "../outside", body: "malicious",
     }]);
     installFetchStub([
-      { url: /failsafe-voice-pack-5\\.2\\.0\\.tar\\.gz$/, body: bytes },
-      { url: /\\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\\n` },
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
+      { url: /\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
     ]);
     await assert.rejects(
       () => installVoicePack({ globalStoragePath: fixture.globalStoragePath, version: "5.2.0" }),
