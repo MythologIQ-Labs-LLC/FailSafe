@@ -17,7 +17,7 @@ A user of the Console's voice features wants higher-quality local speech recogni
 
 ## Measurable value
 
-Metric: base VSIX size saved by shipping speech binaries as a separate download, and the share of installs passing all six pinned browser-asset hashes. This v6.1.0 candidate validates a strict seven-file archive and six SHA-256 entries before staging `FailSafe/extension/src/voice-pack/safe-archive.ts:112` (`fail('manifest sha256 mismatch:`). Published v6.0.13 remains unchanged; independent publisher authentication and installed-host acceptance are still open (#710).
+Metric: base VSIX size saved by shipping speech binaries as a separate download, and the share of installs passing all six pinned browser-asset hashes. This v6.1.0 candidate validates a strict seven-file archive and six SHA-256 entries before staging `FailSafe/extension/src/voice-pack/safe-archive.ts:114` (`fail('manifest sha256 mismatch:`). Published v6.0.13 remains unchanged; independent publisher authentication and installed-host acceptance are still open (#710).
 Baseline: no install count or size figure is recorded in the code, so both are unverified.
 
 ## Why not simply ask an agent
@@ -32,7 +32,7 @@ none: `docs/integrations/INTEGRATION_DOCS_INDEX.md` has no Voice Pack row; the d
 
 No credential is used; each download is an anonymous HTTPS GET made one hop at a time in manual redirect mode `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:77` (`return await fetch(hop, { redirect: 'manual' });`).
 Every hop, including the first, must be HTTPS on `github.com`, `objects.githubusercontent.com`, `codeload.github.com` or `release-assets.githubusercontent.com`, with no userinfo and the default port, and is checked before it is requested `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:103` (`assertAllowedUrl(current, prefix);`) against `FailSafe/extension/src/voice-pack/types.ts:63-68` (`'release-assets.githubusercontent.com',`); at most five redirects are followed `FailSafe/extension/src/voice-pack/types.ts:71` (`export const MAX_VOICE_PACK_REDIRECTS = 5;`).
-The v6.1.0 candidate parses bounded gzip/USTAR internally without spawning `tar`, rejects archive links, unexpected paths/types and duplicate entries, and verifies all six hashes before creating payload files `FailSafe/extension/src/voice-pack/safe-archive.ts:124` (`export function extractValidatedVoiceArchive(`). Unsupported PAX/GNU extensions fail closed pending producer cross-platform qualification.
+The v6.1.0 candidate parses bounded gzip/USTAR internally without spawning `tar`, rejects archive links, unexpected paths/types and duplicate entries, and verifies all six hashes before creating payload files `FailSafe/extension/src/voice-pack/safe-archive.ts:126` (`export function extractValidatedVoiceArchive(`). Unsupported PAX/GNU extensions fail closed pending producer cross-platform qualification.
 Installed files are promoted under the extension's global storage directory `FailSafe/extension/src/voice-pack/install-handler.ts:84` (`const finalDir = path.join(globalStoragePath, 'voice-pack');`); temporary downloads and extraction are staged in the OS temporary directory `FailSafe/extension/src/voice-pack/install-handler.ts:71` (`fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-')`).
 
 ## Feature state
@@ -48,7 +48,7 @@ Installed files are promoted under the extension's global storage directory `Fai
 ## Inbound fields
 
 From GitHub Releases: the pack tarball and its `.sha256` file for the extension's own version `FailSafe/extension/src/voice-pack/install-handler.ts:69` (`const checksumUrl = resolveVoicePackChecksumUrl(version);`).
-From the bounded in-memory archive: `voice-pack.manifest.json` with the exact requested `version`, six `expectedFiles`, and each SHA-256 `FailSafe/extension/src/voice-pack/safe-archive.ts:109` (`const hash = m.sha256[name];`).
+From the bounded in-memory archive: `voice-pack.manifest.json` with the exact requested `version`, six `expectedFiles`, and each SHA-256 `FailSafe/extension/src/voice-pack/safe-archive.ts:111` (`const hash = m.sha256[name];`).
 
 ## Outbound fields and egress
 
