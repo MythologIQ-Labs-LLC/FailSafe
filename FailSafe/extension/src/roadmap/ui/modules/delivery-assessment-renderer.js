@@ -385,12 +385,18 @@ export class DeliveryAssessmentRenderer {
     const reworkPicks = this.reworkPicks(view, linked);
     for (const pick of reworkPicks) actions.appendChild(pick.parentNode);
     const reworksOf = () => reworkPicks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
-    const record = (verdict, btn) => {
-      btn.disabled = true;
+    // One operator review request at a time: PASS and VETO must not race
+    // into contradictory ledger submissions while the first POST is pending.
+    let submitting = false;
+    const record = (verdict) => {
+      if (submitting) return;
+      submitting = true;
+      pass.disabled = true;
+      veto.disabled = true;
       void this.review(view.intent.id, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
     };
-    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS', pass));
-    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO', veto));
+    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS'));
+    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO'));
     actions.appendChild(pass);
     actions.appendChild(veto);
     return actions;
