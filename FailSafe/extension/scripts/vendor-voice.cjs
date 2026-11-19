@@ -244,6 +244,44 @@ function verifyPinnedVendorOutputs(outputs, root = VENDOR, io = fs, trustedRoot 
   return outputs.size;
 }
 
+/**
+ * Verify the SHA-512-pinned upstream outputs against committed Git HEAD blobs,
+ * not just mutable checkout files. A local repair without a reviewed commit
+ * must not be reported as release-source parity.
+ */
+function verifyCommittedVendorOutputs(outputs, extensionRoot = ROOT, run = spawnSync) {
+  if (!(outputs instanceof Map) || outputs.size === 0 || outputs.size > 6) {
+    throw new Error('voice committed verification requires a nonempty approved asset map');
+  }
+  const repoRoot = path.resolve(extensionRoot, '..', '..');
+  const top = run('git', ['rev-parse', '--show-toplevel'], {
+    cwd: repoRoot, shell: false, encoding: 'utf8', maxBuffer: 4096,
+  });
+  if (top.status !== 0 || top.error ||
+      path.resolve(String(top.stdout || '').trim()) !== repoRoot) {
+    throw new Error('voice verification requires the expected Git checkout root');
+  }
+  for (const [rel, expected] of outputs) {
+    if (!/^(piper|whisper)\/[A-Za-z0-9_.-]+$/.test(rel) ||
+        !(Buffer.isBuffer(expected) || expected instanceof Uint8Array) ||
+        expected.length === 0 || expected.length > MAX_ASSET) {
+      throw new Error('invalid pinned committed voice asset');
+    }
+    const gitRel = 'FailSafe/extension/src/roadmap/ui/vendor/' + rel;
+    const snapshot = run('git', ['show', 'HEAD:' + gitRel], {
+      cwd: repoRoot, shell: false, maxBuffer: MAX_ASSET + 1024,
+    });
+    if (snapshot.status !== 0 || snapshot.error || !Buffer.isBuffer(snapshot.stdout)) {
+      throw new Error('committed browser voice asset unavailable: ' + rel);
+    }
+    if (snapshot.stdout.length !== expected.length ||
+        !snapshot.stdout.equals(Buffer.from(expected))) {
+      throw new Error('pinned committed browser voice asset mismatch: ' + rel);
+    }
+  }
+  return outputs.size;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const allowed = new Set(['--piper-only', '--verify']);
@@ -268,7 +306,8 @@ async function main() {
     }
     if (verifyOnly) {
       const verified = verifyPinnedVendorOutputs(outputs);
-      console.log('[vendor:voice] pinned upstream bytes match ' + verified + ' committed browser assets; no files changed');
+      verifyCommittedVendorOutputs(outputs);
+      console.log('[vendor:voice] pinned upstream bytes match ' + verified + ' browser assets on disk and committed HEAD; no source files changed');
     } else {
       const warnings = commitOutputs(outputs);
       for (const warning of warnings) console.warn('[vendor:voice] ' + warning);
@@ -278,5 +317,5 @@ async function main() {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
-module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, assertVendorAncestry, commitOutputs, verifyPinnedVendorOutputs };
+module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, assertVendorAncestry, commitOutputs, verifyPinnedVendorOutputs, verifyCommittedVendorOutputs };
 if (require.main === module) main().catch(err => { console.error('[vendor:voice] ' + err.message); process.exitCode = 1; });
