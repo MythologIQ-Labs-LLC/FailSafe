@@ -127,6 +127,6 @@ export function unstubFetch(): void {
 export function originalFetch(): unknown { return ORIGINAL_FETCH; }
 /** The extractor no longer launches tar, so no spawn interception is needed. */
 export function makeInstallFixture(): InstallFixture {
-  const globalStoragePath = fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-voice-pack-"));
+  const globalStoragePath = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "failsafe-voice-pack-"));
   return { globalStoragePath, restoreSpawn: () => {}, spawnCount: () => 0 };
 }
