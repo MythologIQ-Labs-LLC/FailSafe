@@ -85,7 +85,7 @@ function sanitizeBundleNewFunction() {
 
 function sanitizeVendorPatterns() {
   // Whisper/Transformers.js: strip eval shim and new Function("return this")
-  const whisperPath = path.join(root, "src", "roadmap", "ui", "vendor", "whisper", "transformers.min.js");
+  const whisperPath = path.join(distDir, "extension", "ui", "vendor", "whisper", "transformers.min.js");
   if (fs.existsSync(whisperPath)) {
     let code = fs.readFileSync(whisperPath, "utf8");
     const original = code;
@@ -101,7 +101,7 @@ function sanitizeVendorPatterns() {
   }
 
   // 3d-force-graph: replace new Function with indirect constructor reference
-  const graphPath = path.join(root, "src", "roadmap", "ui", "vendor", "3d-force-graph", "3d-force-graph.min.js");
+  const graphPath = path.join(distDir, "extension", "ui", "vendor", "3d-force-graph", "3d-force-graph.min.js");
   if (fs.existsSync(graphPath)) {
     let code = fs.readFileSync(graphPath, "utf8");
     const original = code;
@@ -133,13 +133,14 @@ async function main() {
 
   // Voice files are maintained by the explicit pinned vendor:voice command.
   verifyVendoredVoiceAssets();
-  sanitizeVendorPatterns();
   sanitizeBetterSqlite3Metadata();
 
   copyDir(
     path.join(root, "src", "roadmap", "ui"),
     path.join(distDir, "extension", "ui"),
   );
+  // Rewrite build outputs, never the committed browser-vendor source files.
+  sanitizeVendorPatterns();
 
   // Educational Component (v5.2.0): emit the browser-ESM education modules
   // into dist so the /education mount resolves in the packaged VSIX. The
