@@ -255,6 +255,21 @@ suite('#715 exact-directory manifest, real Git', () => {
     assert.notEqual(raw, staged, 'Git text normalization changes the object ID');
   });
 
+  test('consent and commit count use expanded file count, not collapsed directory count', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'a.md'), 'a\n');
+    fs.writeFileSync(path.join(root, 'docs', 'b.md'), 'b\n');
+    let prompt = '';
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Organize docs'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async message => { prompt = message; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /applied 2 change\(s\)/);
+    assert.match(prompt, /Exact changed files to commit \(2\):/);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'log', '-1', '--format=%s'), 'chore(organize): apply 2 workspace change(s)');
+  });
+
   test('approved directory lists exact filenames and commits only that reviewed set', async () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
     let prompt = '';
