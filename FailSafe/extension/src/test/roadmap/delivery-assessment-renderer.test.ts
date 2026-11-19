@@ -291,6 +291,13 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     };
     try {
       const renderer = new DeliveryAssessmentRenderer('workspace');
+      const originalReview = renderer.review.bind(renderer);
+      let finishReview!: () => void;
+      const reviewFinished = new Promise<void>((resolve) => { finishReview = resolve; });
+      renderer.review = async (...args: unknown[]) => {
+        try { return await originalReview(...args); }
+        finally { finishReview(); }
+      };
       await renderer.refresh();
       const pass = ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement;
       pass.click();
@@ -305,7 +312,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
       assert.equal(repaintedVeto.disabled, true, 'a new panel must not bypass the in-flight guard');
       repaintedVeto.dispatchEvent(new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('click', { bubbles: true }));
       release!();
-      await new Promise((resolve) => setTimeout(resolve, 40));
+      await reviewFinished;
       assert.equal(ctx.posted.length, 1, 'only one backend review may be submitted');
       assert.equal(ctx.posted[0].body.verdict, 'PASS');
       assert.equal((ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement).disabled, false,
@@ -332,14 +339,23 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     };
     try {
       const renderer = new DeliveryAssessmentRenderer('workspace');
+      const originalReview = renderer.review.bind(renderer);
+      const pending: Array<() => void> = [];
+      renderer.review = async (...args: unknown[]) => {
+        try { return await originalReview(...args); }
+        finally { pending.shift()?.(); }
+      };
+      const nextFinished = () => new Promise<void>((resolve) => { pending.push(resolve); });
       await renderer.refresh();
+      const first = nextFinished();
       (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await first;
       assert.match(ctx.doc.querySelector('.cc-dlv-result')?.textContent || '', /Recording the review failed: disconnected/);
       const veto = ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement;
       assert.equal(veto.disabled, false, 'the operator may retry after failure');
+      const second = nextFinished();
       veto.click();
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await second;
       assert.deepEqual(ctx.posted.map((p) => p.body.verdict), ['VETO']);
     } finally { ctx.cleanup(); }
   });
