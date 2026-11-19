@@ -111,7 +111,8 @@ export async function commitPushOpenPr(
   // Even with an approved manifest, directory pathspecs may stage additional
   // descendants before the staged-index check. Only exact file paths may reach
   // the lower-level Git add boundary, regardless of trailing slash spelling.
-  if (req.paths.some(path => requiresExactSelection(cwd, path))) {
+  const broadPaths = await Promise.all(req.paths.map(path => requiresExactSelection(git, cwd, path)));
+  if (broadPaths.some(Boolean)) {
     return { step: 'noop', branch: req.branch,
       warning: 'directory selection must be expanded to exact approved files; no branch, commit, push or PR attempted' };
   }
