@@ -77,7 +77,7 @@ suite('package-voice-pack.cjs exact asset inventory #707', () => {
       fs.symlinkSync(outside, path.join(source, 'whisper'), 'dir');
       const result = execute(root);
       assert.notEqual(result.status, 0);
-      assert.match(result.stderr, /required voice vendor directory invalid/);
+      assert.match(result.stderr, /voice vendor ancestor must be a real directory/);
       assert.equal(fs.existsSync(path.join(root, 'dist', 'failsafe-voice-pack-6.0.13.tar.gz')), false);
       assert.deepEqual(fs.readdirSync(outside).sort(), [
         'ort-wasm-simd-threaded.wasm', 'ort-wasm-simd.wasm', 'transformers.min.js',
@@ -95,7 +95,7 @@ suite('package-voice-pack.cjs exact asset inventory #707', () => {
       fs.symlinkSync(outside, ui, 'dir');
       const result = execute(root);
       assert.notEqual(result.status, 0);
-      assert.match(result.stderr, /required voice vendor directory invalid/);
+      assert.match(result.stderr, /voice vendor ancestor must be a real directory/);
       assert.equal(fs.existsSync(path.join(root, 'dist', 'failsafe-voice-pack-6.0.13.tar.gz')), false);
       assert.ok(fs.existsSync(path.join(outside, 'vendor', 'piper', 'piper.min.js')));
     });
