@@ -68,6 +68,39 @@ suite('package-voice-pack.cjs exact asset inventory #707', () => {
     }
   }));
 
+  test('symlinked Whisper directory cannot import external files into voice pack', function () {
+    if (process.platform === 'win32') this.skip(); // Symlink privilege varies by Windows host.
+    fixture(root => {
+      const source = seed(root);
+      const outside = path.join(root, 'outside-whisper');
+      fs.renameSync(path.join(source, 'whisper'), outside);
+      fs.symlinkSync(outside, path.join(source, 'whisper'), 'dir');
+      const result = execute(root);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /required voice vendor directory invalid/);
+      assert.equal(fs.existsSync(path.join(root, 'dist', 'failsafe-voice-pack-6.0.13.tar.gz')), false);
+      assert.deepEqual(fs.readdirSync(outside).sort(), [
+        'ort-wasm-simd-threaded.wasm', 'ort-wasm-simd.wasm', 'transformers.min.js',
+      ].sort());
+    });
+  });
+
+  test('symlinked parent UI directory is refused before packaging', function () {
+    if (process.platform === 'win32') this.skip(); // Symlink privilege varies by Windows host.
+    fixture(root => {
+      seed(root);
+      const ui = path.join(root, 'dist', 'extension', 'ui');
+      const outside = path.join(root, 'outside-ui');
+      fs.renameSync(ui, outside);
+      fs.symlinkSync(outside, ui, 'dir');
+      const result = execute(root);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /required voice vendor directory invalid/);
+      assert.equal(fs.existsSync(path.join(root, 'dist', 'failsafe-voice-pack-6.0.13.tar.gz')), false);
+      assert.ok(fs.existsSync(path.join(outside, 'vendor', 'piper', 'piper.min.js')));
+    });
+  });
+
   test('missing Piper asset causes a nonzero result and no successful tarball', () => fixture(root => {
     const source = seed(root);
     fs.rmSync(path.join(source, 'piper', 'piper.min.js'));
