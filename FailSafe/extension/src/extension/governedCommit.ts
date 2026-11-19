@@ -24,6 +24,7 @@ import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import { inspectPushBinding } from './githubPushBinding';
+import type { ApprovedFile } from './governedCommitSelection';
 
 export type GitRunner = (args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
 
@@ -36,6 +37,8 @@ export interface GovernedCommitRequest {
   base: string;     // PR base, e.g. "main"
   prTitle: string;
   prBody: string;
+  /** Operator-approved exact file/blob snapshot when directory consent was expanded. */
+  approvedFiles?: ApprovedFile[];
 }
 
 export interface GovernedCommitDeps {
@@ -171,6 +174,33 @@ export async function commitPushOpenPr(
     warning: outsideSelection.code === 1
       ? 'staged changes outside selected paths detected after git add; no commit, push or PR attempted (inspect index)'
       : 'staged scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+
+  // Directory consent is a finite list of files and Git blob identities, not
+  // authority for any new descendant or changed contents added after approval.
+  if (req.approvedFiles) {
+    const stagedFiles = await git(['ls-files', '--stage', '-z', '--', ...literalPaths], cwd);
+    if (stagedFiles.code !== 0 || stagedFiles.stdout.length > 256 * 1024 ||
+      (stagedFiles.stdout.length > 0 && !stagedFiles.stdout.endsWith('\0'))) {
+      return { step: 'noop', branch: req.branch,
+        warning: 'approved file blobs could not be verified; no commit, push or PR attempted (inspect index)' };
+    }
+    const actual = new Map<string, string>();
+    for (const row of stagedFiles.stdout.slice(0, -1).split('\0').filter(Boolean)) {
+      const match = /^100(?:644|755|640) ([a-f0-9]{40}(?:[a-f0-9]{24})?) 0\t(.+)$/.exec(row);
+      if (!match || actual.has(match[2])) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'approved file blobs were ambiguous; no commit, push or PR attempted (inspect index)' };
+      }
+      actual.set(match[2], match[1]);
+    }
+    const approved = new Map(req.approvedFiles.map(file => [file.path, file.blob]));
+    if (approved.size !== req.approvedFiles.length ||
+      [...actual].some(([path,blob]) => approved.get(path) !== blob) ||
+      req.approvedFiles.some(file => (actual.get(file.path) ?? null) !== file.blob)) {
+      return { step: 'noop', branch: req.branch,
+        warning: 'staged file content differs from approved manifest; no commit, push or PR attempted (inspect index)' };
+    }
+  }
 
   const before = await readBeforeCommit(git, cwd);
   const committed = await git(['commit', '--cleanup=verbatim', '-m', req.message], cwd);
