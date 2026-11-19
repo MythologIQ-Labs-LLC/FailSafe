@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
+import { commitPushOpenPr, defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
 import { snapshotExactSelection, sameExactSelection } from '../../extension/governedCommitSelection';
 import { runGovernedCommitFlow } from '../../extension/governedCommitFlow';
 
@@ -26,6 +26,39 @@ suite('#715 exact-directory manifest, real Git', () => {
     fs.mkdirSync(path.join(root, 'docs'));
   });
   teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  test('directory without trailing slash is expanded and shown as exact files before approval', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# reviewed\n');
+    let prompt = '';
+    const result = await runGovernedCommitFlow('organize', ['docs'], ['Organize docs'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { prompt = text; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /Exact changed files to commit \(1\):/);
+    assert.match(prompt, /docs\/approved\.md/);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+  });
+
+  test('direct bare directory cannot stage more than the authorized file manifest', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), '# unreviewed\n');
+    for (const approvedFiles of [undefined, [
+      { path: 'docs/approved.md', state: '??', blob: git(root, 'hash-object', '--no-filters', '--', 'docs/approved.md') },
+    ]]) {
+      const before = git(root, 'symbolic-ref', '--short', 'HEAD');
+      const result = await commitPushOpenPr({
+        workspaceRoot: root, paths: ['docs'], approvedFiles,
+        branch: 'fix/unsafe-dir', message: 'test', base: 'main', prTitle: 'test', prBody: '',
+      }, { git: defaultGitRunner });
+      assert.equal(result.step, 'noop', JSON.stringify(result));
+      assert.match(result.warning ?? '', /directory selection.*exact.*files/i);
+      assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+      assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), before);
+      assert.equal(git(root, 'branch', '--list', 'fix/unsafe-dir'), '');
+    }
+  });
 
   test('untracked directory is expanded to reviewed individual filenames, not "docs/"', async () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
@@ -85,6 +118,29 @@ suite('#715 exact-directory manifest, real Git', () => {
     const result = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.warning, /64 changed files/i);
+  });
+
+  test('Unicode bidi controls cannot visually spoof approved filenames', async () => {
+    if (process.platform === 'win32') return; // Windows names can be restricted by platform policy.
+    const spoof = 'visible' + '\u202e' + 'txt.dm';
+    fs.writeFileSync(path.join(root, 'docs', spoof), 'spoofed\n');
+    const result = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(result.ok, false, JSON.stringify(result));
+    if (!result.ok) assert.match(result.warning, /invalid|outside|unsafe|status/i);
+  });
+
+  test('unmerged and conflicted Git porcelain states cannot be approved', async () => {
+    for (const state of ['UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD']) {
+      const spoofed: GitRunner = async (args, cwd) => {
+        if (args[0] === 'status') return {
+          code: 0, stdout: state + ' docs/conflicted.md\0', stderr: '',
+        };
+        return defaultGitRunner(args, cwd);
+      };
+      const result = await snapshotExactSelection(spoofed, root, ['docs/']);
+      assert.equal(result.ok, false, state + ': ' + JSON.stringify(result));
+      if (!result.ok) assert.match(result.warning, /conflict|unmerged/i);
+    }
   });
 
   test('unreadable, misleading or truncated porcelain cannot authorize any filenames', async () => {

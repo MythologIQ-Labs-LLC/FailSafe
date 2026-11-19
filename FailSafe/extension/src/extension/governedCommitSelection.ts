@@ -33,10 +33,31 @@ function safePath(path: unknown): path is string {
   return typeof path === 'string' && path.length > 0 && path.length <= MAX_NAME &&
     path.trim().length > 0 && !Array.from(path).some(char => {
       const code = char.charCodeAt(0);
-      return code < 32 || code === 127 || char === '\ufffd';
+      return code < 32 || code === 127 || code === 0xfffd ||
+        // Bidi override, isolates, LRM/RLM, Arabic letter mark and zero-width
+        // marks can make an approved filename look unlike the actual Git path.
+        (code >= 0x202a && code <= 0x202e) ||
+        (code >= 0x2066 && code <= 0x2069) ||
+        (code >= 0x200b && code <= 0x200f) ||
+        code === 0x061c || code === 0xfeff;
     }) &&
     !path.startsWith('/') && !path.startsWith('\\') && !/^[A-Za-z]:/.test(path) &&
     !path.split(/[\\/]/).some(p => p === '.' || p === '..');
+}
+
+/**
+ * Git treats unsuffixed directory selectors as broad directory requests.
+ * A trailing slash is not an authority boundary. Symlinks and special entries
+ * require explicit review; invalid paths must not be looked up on disk.
+ */
+export function requiresExactSelection(cwd: string, relative: string): boolean {
+  if (!safePath(relative) || relative.endsWith('/')) return true;
+  try {
+    const info = fs.lstatSync(nodePath.resolve(cwd, relative));
+    return !info.isFile();
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+  }
 }
 
 /**
@@ -55,9 +76,11 @@ export async function snapshotExactSelection(
   const prefix = scope.stdout.replace(/\r?\n$/, '');
   if (scope.code !== 0 || (prefix.length > 0 && !safePath(prefix))) return refuse('invalid repository-relative scope');
 
+  const selectors = requested.map(p =>
+    requiresExactSelection(cwd, p) && !p.endsWith('/') ? p + '/' : p);
   const status = await git([
     'status', '--porcelain=v1', '-z', '--untracked-files=all', '--',
-    ...requested.map(p => ':(literal)' + p),
+    ...selectors.map(p => ':(literal)' + p),
   ], cwd);
   if (status.code !== 0 || status.stdout.length > MAX_STATUS_BYTES ||
     (status.stdout.length > 0 && !status.stdout.endsWith('\0'))) return refuse('incomplete or oversized Git status');
@@ -67,6 +90,9 @@ export async function snapshotExactSelection(
     const record = records[i];
     if (record.length < 4 || record[2] !== ' ') return refuse('invalid Git porcelain record');
     const state = record.slice(0, 2);
+    if (state.includes('U') || state === 'AA' || state === 'DD') {
+      return refuse('unmerged or conflicted Git status requires manual review');
+    }
     const names = [record.slice(3)];
     // In -z porcelain v1, renamed/copied entries are followed by the old path.
     if (state.includes('R') || state.includes('C')) {
@@ -76,7 +102,7 @@ export async function snapshotExactSelection(
     for (const rootPath of names) {
       if (!rootPath.startsWith(prefix)) return refuse('path escaped the approved workspace');
       const localPath = rootPath.slice(prefix.length);
-      if (!safePath(localPath) || !requested.some(p =>
+      if (!safePath(localPath) || !selectors.some(p =>
         p.endsWith('/') ? localPath.startsWith(p) : localPath === p)) {
         return refuse('status includes a file outside the selection');
       }
