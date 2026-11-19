@@ -65,7 +65,14 @@ test("G4 #660: staged partial write or ENOSPC publishes no evidence, retry works
   let writes = 0;
   try {
     fs.writeSync = (...args) => {
-      if (++writes === 2) throw errno("ENOSPC");
+      ++writes;
+      if (writes === 1) {
+        // Force a real partial write of the first staged file, then fail its
+        // continuation. The final record set must remain entirely absent.
+        const [fd, data, offset, length, position] = args;
+        return original(fd, data, offset, Math.max(1, Math.floor(length / 2)), position);
+      }
+      if (writes === 2) throw errno("ENOSPC");
       return original(...args);
     };
     await assert.rejects(writeNew(f.root, rels, f.maker), /ENOSPC/);
