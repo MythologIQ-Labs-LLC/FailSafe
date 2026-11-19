@@ -283,7 +283,7 @@ function verifyCommittedVendorOutputs(outputs, extensionRoot = ROOT, run = spawn
         entry[1] !== gitRel) {
       throw new Error('committed browser voice asset is not a regular Git blob: ' + rel);
     }
-    const snapshot = run('git', ['show', 'HEAD:' + gitRel], {') + '\\n?
+    const snapshot = run('git', ['show', 'HEAD:' + gitRel], {
       cwd: repoRoot, shell: false, maxBuffer: MAX_ASSET + 1024,
     });
     if (snapshot.status !== 0 || snapshot.error || !Buffer.isBuffer(snapshot.stdout)) {
