@@ -55,7 +55,7 @@ function entryHeader(block: Buffer): { name: string; size: number; directory: bo
   const kind = block[156];
   const directory = kind === 53;
   if (!directory && kind !== 48 && kind !== 0) fail('tar entry type forbidden');
-  if (!/^[a-zA-Z0-9_.\/-]+$/.test(name) || name.includes('\\') ||
+  if (!/^[a-zA-Z0-9_./-]+$/.test(name) || name.includes('\\') ||
       name.startsWith('/') || name.includes('//') || name.split('/').includes('..') ||
       name.split('/').includes('.') || name.includes(':')) fail('unsafe tar member name');
   if (!(directory ? dirs.has(name) : files.has(name))) fail('unexpected tar member: ' + name);
