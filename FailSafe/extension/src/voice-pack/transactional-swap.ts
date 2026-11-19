@@ -141,3 +141,25 @@ export function atomicSwapVoicePack(
     throw error;
   }
 }
+
+/** Keep both installer and staging-cleanup errors instead of hiding the recovery cause. */
+export function preserveVoiceInstallFailure(
+  stagingDir: string, original: unknown, io: Pick<VoiceSwapOps, 'rmSync'> = fs,
+): Error {
+  const primary = original instanceof Error ? original : new Error(String(original));
+  try { io.rmSync(stagingDir, { recursive: true, force: true }); }
+  catch (cleanupError) {
+    return new AggregateError(
+      [primary, cleanupError], 'Voice pack install and cleanup failed: ' + primary.message,
+    );
+  }
+  return primary;
+}
+
+/** Diagnostic channels may be disposed while an upgrade completes. Never misreport success. */
+export function reportVoiceCleanupWarning(
+  output: { appendLine(message: string): void } | undefined, warning: string,
+): void {
+  try { output?.appendLine('[voice-pack] install cleanup warning: ' + warning); }
+  catch { /* a disposed output channel cannot undo a committed installation */ }
+}
