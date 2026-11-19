@@ -33,7 +33,7 @@ test("G4 #660: complete three-record publish, data intact, never overwrite even 
     for (let i = 0; i < f.targets.length; i++) {
       assert.equal(fs.readFileSync(f.targets[i], "utf8"), "signed-test-" + i);
     }
-    assert.deepEqual(fs.readdirSync(f.parent), names);
+    assert.deepEqual(fs.readdirSync(f.parent).sort(), [...names].sort());
     await assert.rejects(writeNew(f.root, rels, f.maker), /never replaced/);
     assert.equal(fs.readFileSync(f.targets[0], "utf8"), "signed-test-0");
   } finally { f.cleanup(); }
@@ -58,6 +58,29 @@ for (const failAt of [1, 2, 3]) {
     } finally { f.cleanup(); }
   });
 }
+
+test("G4 #660: failed publication does not remove unrelated preexisting trust records", async () => {
+  const f = fixture();
+  const original = fs.linkSync;
+  const unrelated = path.join(f.parent, "previous-owner.json");
+  fs.mkdirSync(f.parent, { recursive: true });
+  fs.writeFileSync(unrelated, "trusted-unrelated-record");
+  let calls = 0;
+  try {
+    fs.linkSync = (...args) => {
+      if (++calls === 2) throw errno("EIO");
+      return original(...args);
+    };
+    await assert.rejects(writeNew(f.root, rels, f.maker), /injected EIO/);
+  } finally { fs.linkSync = original; }
+  try {
+    assert.equal(fs.readFileSync(unrelated, "utf8"), "trusted-unrelated-record");
+    assert.deepEqual(fs.readdirSync(f.parent), ["previous-owner.json"]);
+    assert.ok(f.targets.every((target) => !fs.existsSync(target)));
+    await writeNew(f.root, rels, f.maker);
+    assert.equal(fs.readFileSync(unrelated, "utf8"), "trusted-unrelated-record");
+  } finally { f.cleanup(); }
+});
 
 test("G4 #660: staged partial write or ENOSPC publishes no evidence, retry works", async () => {
   const f = fixture();
