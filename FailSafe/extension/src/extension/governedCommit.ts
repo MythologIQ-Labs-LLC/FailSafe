@@ -24,7 +24,7 @@ import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import { inspectPushBinding } from './githubPushBinding';
-import { requiresExactSelection, type ApprovedFile } from './governedCommitSelection';
+import { preConsentGitOptions, requiresExactSelection, type ApprovedFile } from './governedCommitSelection';
 
 export type GitRunner = (args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
 
@@ -370,10 +370,31 @@ export const defaultGitRunner: GitRunner = (args, cwd) =>
     child.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
   });
 
-/** Parse `git status --porcelain` → the set of changed paths (strips status flags + rename arrows + quotes). */
+/**
+ * Changed paths inside the workspace, relative to it, for the before/after diff
+ * that precedes the governed-commit offer. This runs before consent, so it uses
+ * the pre-consent options (no fsmonitor hook, no filter, no index write), NUL
+ * framing (no octal-quoted names) and a `.` pathspec, and strips the repository
+ * prefix so a nested workspace never names a same-named file elsewhere.
+ * Submodules are not inspected. Any failure yields [] (no offer).
+ */
 export async function statusPaths(git: GitRunner, cwd: string): Promise<string[]> {
-  const res = await git(['status', '--porcelain'], cwd);
-  if (res.code !== 0) return [];
-  return res.stdout.split(/\r?\n/).map((l) => l.replace(/\r$/, '')).filter((l) => l.trim().length > 0)
-    .map((l) => l.slice(3).replace(/^.*\s->\s/, '').replace(/^"|"$/g, '').trim());
+  const guard = await preConsentGitOptions(git, cwd);
+  if (!guard) return [];
+  const scope = await git([...guard, 'rev-parse', '--show-prefix'], cwd);
+  if (scope.code !== 0) return [];
+  const prefix = scope.stdout.replace(/\r?\n$/, '');
+  const res = await git([...guard, 'status', '--porcelain=v1', '-z', '--ignore-submodules=all', '--', '.'], cwd);
+  if (res.code !== 0 || res.stdout.length > 256 * 1024 ||
+    (res.stdout.length > 0 && !res.stdout.endsWith('\0'))) return [];
+  const records = res.stdout ? res.stdout.slice(0, -1).split('\0') : [];
+  const paths: string[] = [];
+  for (let i = 0; i < records.length; i++) {
+    const state = records[i].slice(0, 2);
+    const name = records[i].slice(3);
+    // In -z porcelain v1 a rename or copy is followed by its source path.
+    if (state.includes('R') || state.includes('C')) i++;
+    if (name.length > prefix.length && name.startsWith(prefix)) paths.push(name.slice(prefix.length));
+  }
+  return paths;
 }

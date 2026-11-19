@@ -156,8 +156,13 @@ async function prepareDirectorySelection(
 > {
   const broadPaths = await Promise.all(changedPaths.map(path =>
     requiresExactSelection(deps.git, deps.workspaceRoot, path)));
+  // Every selection names its exact files before consent. Exact-file selections
+  // are already safe paths (requiresExactSelection refuses any other kind); only
+  // directory selections are expanded and their contents bound to blob ids.
   if (!broadPaths.some(Boolean)) {
-    return { ok: true, paths: changedPaths, display: '' };
+    const display = exactFileDisplay(changedPaths);
+    if (display === null) return { ok: false, warning: OVERSIZED_LIST };
+    return { ok: true, paths: changedPaths, display };
   }
   const result = await snapshotExactSelection(deps.git, deps.workspaceRoot, changedPaths);
   if (!result.ok) return result;
@@ -165,10 +170,15 @@ async function prepareDirectorySelection(
   if (files.length === 0) {
     return { ok: false, warning: 'directory selection has no verifiable changed files; no commit, push or PR attempted' };
   }
-  const display = '\nExact changed files to commit (' + files.length + '):\n' +
-    files.map(f => ' • ' + f.path).join('\n');
-  if (display.length > 8192) {
-    return { ok: false, warning: 'exact changed-file list exceeds safe confirmation size; review files manually' };
-  }
+  const display = exactFileDisplay(files.map(f => f.path));
+  if (display === null) return { ok: false, warning: OVERSIZED_LIST };
   return { ok: true, paths: files.map(f => f.path), display, snapshot: result.selection };
+}
+
+const OVERSIZED_LIST = 'exact changed-file list exceeds safe confirmation size; review files manually';
+
+/** The consent prompt's exact file list, or null when it exceeds the safe size. */
+function exactFileDisplay(paths: string[]): string | null {
+  const display = '\nExact changed files to commit (' + paths.length + '):\n' + paths.map(p => ' • ' + p).join('\n');
+  return display.length > 8192 ? null : display;
 }

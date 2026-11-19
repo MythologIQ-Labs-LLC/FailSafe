@@ -10,8 +10,12 @@ import type { GitRunner } from '../../extension/governedCommit';
 
 const FETCH = 'https://github.com/acme/repo.git';
 const BAD = 'https://attacker.invalid/acme/repo.git';
+// Git for Windows cannot open os.devNull ('\\.\nul') as a config file, so the
+// isolated global configuration is an empty file instead.
+const EMPTY_GLOBAL = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-476-global-')), 'gitconfig');
+fs.writeFileSync(EMPTY_GLOBAL, '');
 const ENV = { ...process.env, GIT_CONFIG_NOSYSTEM: '1',
-  GIT_CONFIG_GLOBAL: os.devNull, GIT_TERMINAL_PROMPT: '0' };
+  GIT_CONFIG_GLOBAL: EMPTY_GLOBAL, GIT_TERMINAL_PROMPT: '0' };
 
 function git(root: string, args: string[]) {
   const r = spawnSync('git', args, { cwd: root, env: ENV, encoding: 'utf8' });

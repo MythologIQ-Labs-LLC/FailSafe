@@ -61,7 +61,7 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
       token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
     });
     assert.equal(r.step, 'noop');
-    assert.match(r.warning ?? '', /directory selection requires an exact approved file manifest/i);
+    assert.match(r.warning ?? '', /directory selection must be expanded to exact approved files/i);
     assert.equal(calls.filter(x => ['status', 'checkout', 'add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
     assert.equal(posts, 0);
   });

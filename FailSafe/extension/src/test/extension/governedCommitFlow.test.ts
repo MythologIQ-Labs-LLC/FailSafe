@@ -133,6 +133,8 @@ suite('runGovernedCommitFlow — linkCommit (#532 B286)', () => {
 // unchanged and a Yes still commits.
 suite('runGovernedCommitFlow - affected architecture decisions (B311)', () => {
   const BASE = 'FailSafe organize applied 1 change(s). Commit, push & open a PR for them?';
+  // #719 D5: every selection, not only a directory, names its exact files before consent.
+  const FILES = '\nExact changed files to commit (1):\n • .gitignore';
 
   const withDescribe = (describe: unknown, prompts: string[], extra: Partial<GovernedFlowDeps> = {}) =>
     baseDeps({ confirm: async (m) => { prompts.push(m); return true; }, describeArchitecture: describe, ...extra } as Partial<GovernedFlowDeps>);
@@ -146,13 +148,13 @@ suite('runGovernedCommitFlow - affected architecture decisions (B311)', () => {
     }, prompts));
     assert.deepEqual(seen, [['.gitignore']]);
     assert.equal(prompts[0], `${BASE} Architecture decisions these files touch (warn-only): ` +
-      'a: r1 (canonical, "d") docs/A.md, via contract; b: r2 (proposed, "d") docs/B.md, via document; and 1 more.' + DEST);
+      'a: r1 (canonical, "d") docs/A.md, via contract; b: r2 (proposed, "d") docs/B.md, via document; and 1 more.' + DEST + FILES);
   });
 
   test('no lines: the prompt is unchanged', async () => {
     const prompts: string[] = [];
     await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], withDescribe(async () => [], prompts));
-    assert.equal(prompts[0], BASE + DEST);
+    assert.equal(prompts[0], BASE + DEST + FILES);
   });
 
   test('a throwing or rejecting describe leaves the prompt unchanged, and Yes still commits', async () => {
@@ -162,7 +164,7 @@ suite('runGovernedCommitFlow - affected architecture decisions (B311)', () => {
       const r = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], withDescribe(describe, prompts, {
         git: async (a) => { if (a[0] === 'commit') committed = true; return defaultFor(a); },
       }));
-      assert.equal(prompts[0], BASE + DEST);
+      assert.equal(prompts[0], BASE + DEST + FILES);
       assert.equal(committed, true);
       assert.notEqual((r as { step: string }).step, 'declined');
     }
@@ -184,22 +186,36 @@ suite('runGovernedCommitFlow - affected architecture decisions through describe 
     fs.mkdirSync(path.join(root, 'docs'));
     fs.writeFileSync(path.join(root, 'docs', 'ARCHITECTURE_INDEX.md'), ['# Architecture Index', '', '## Registry', '', HEADER,
       '|---|---|---|---|---|---|---|---|---|---|---|', row('rlo', '[evil](../src/%E2%80%AEevil.ts)'), row('long', `\`${LONG}\``),
-      row('a', '`src/a.ts`'), row('b', '`src/b.ts`'), ''].join('\n'));
+      row('a', '`src/a.ts`'), row('b', '`src/b.ts`'), row('c', '`src/c.ts`'), ''].join('\n'));
   });
   suiteTeardown(() => { if (root) removeTempTree(root); });
+  const describe = async (paths: string[]) => (await describeAffectedArchitecture({ workspaceRoot: root }, paths, { maxLines: 3 })).lines;
 
   test('the prompt carries review text, a capped long path and at most 3 lines, then "and N more"', async () => {
     const prompts: string[] = [];
-    await runGovernedCommitFlow('organize', ['src/\u202Eevil.ts', LONG, 'src/a.ts', 'src/b.ts'], ['x'], baseDeps({
-      confirm: async (m) => { prompts.push(m); return true; },
-      describeArchitecture: async (paths) => (await describeAffectedArchitecture({ workspaceRoot: root }, paths, { maxLines: 3 })).lines,
+    await runGovernedCommitFlow('organize', [LONG, 'src/a.ts', 'src/b.ts', 'src/c.ts'], ['x'], baseDeps({
+      confirm: async (m) => { prompts.push(m); return true; }, describeArchitecture: describe,
     }));
     const p = prompts[0];
-    assert.ok(p.includes('src/[U+202E]evil.ts: rlo (canonical, "rlo")'), p);
-    assert.ok(!p.includes('\u202E'), 'no raw RLO in the prompt');
-    const long = p.split('; ').find((s) => s.startsWith('src/LLL')) ?? '';
-    assert.ok(Array.from(long).length <= 240 && long.endsWith('...'), long);
-    assert.ok(p.endsWith('; and 1 more.' + DEST), p);
-    assert.ok(!p.includes('src/b.ts: b '), 'the fourth line is not shown');
+    const segment = p.split('; ').find((s) => s.includes('src/LLL')) ?? '';
+    const long = segment.slice(segment.indexOf('src/LLL'));
+    assert.ok(long.length > 0 && Array.from(long).length <= 240 && long.endsWith('...'), long);
+    assert.ok(p.includes('; and 1 more.' + DEST + '\nExact changed files to commit (4):'), p);
+    assert.ok(!p.includes('src/c.ts: c '), 'the fourth line is not shown');
+  });
+
+  // #715 refuses a bidi filename before consent, so it never reaches the prompt;
+  // the describe step it feeds still renders the character as review text.
+  test('an RLO path is rendered as review text and refused before any prompt', async () => {
+    const lines = await describe(['src/\u202Eevil.ts']);
+    assert.ok(lines.some((l) => l.includes('src/[U+202E]evil.ts: rlo (canonical, "rlo")')), lines.join('\n'));
+    assert.ok(!lines.join('').includes('\u202E'), 'no raw RLO in the review text');
+    const prompts: string[] = [];
+    const r = await runGovernedCommitFlow('organize', ['src/\u202Eevil.ts', 'src/a.ts'], ['x'], baseDeps({
+      confirm: async (m) => { prompts.push(m); return true; }, describeArchitecture: describe,
+    }));
+    assert.deepEqual(prompts, []);
+    assert.equal((r as { step: string }).step, 'noop');
+    assert.match((r as { warning?: string }).warning ?? '', /invalid requested file/);
   });
 });
