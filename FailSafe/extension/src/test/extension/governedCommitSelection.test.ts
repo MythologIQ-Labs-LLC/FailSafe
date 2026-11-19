@@ -102,6 +102,27 @@ suite('#715 exact-directory manifest, real Git', () => {
     }
   });
 
+  test('a symlinked selected file is refused before any content hashing', async () => {
+    if (process.platform === 'win32') return; // Symlink creation is privileged on some Windows hosts.
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-symlink-target-'));
+    try {
+      fs.writeFileSync(path.join(outside, 'secret.md'), 'not workspace content\n');
+      fs.symlinkSync(path.join(outside, 'secret.md'), path.join(root, 'docs', 'link.md'));
+      const calls: string[][] = [];
+      const guarded: GitRunner = async (args, cwd) => {
+        calls.push(args);
+        if (args[0] === 'hash-object') throw new Error('hashing a symlink target is forbidden');
+        return defaultGitRunner(args, cwd);
+      };
+      const result = await snapshotExactSelection(guarded, root, ['docs/']);
+      assert.equal(result.ok, false, JSON.stringify(result));
+      if (!result.ok) assert.match(result.warning, /symlink|regular file|outside workspace/i);
+      assert.equal(calls.some(args => args[0] === 'hash-object'), false);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   test('pre-approval file hashes never invoke configured Git clean filters', async () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), 'original\n');
     const calls: string[][] = [];
