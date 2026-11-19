@@ -150,8 +150,8 @@ suite("voice-pack install-handler — storage boundary (#710)", () => {
     fs.writeFileSync(finalDir, "EXISTING UNRELATED FILE");
     const bytes = buildFixturePackTar();
     installFetchStub([
-      { url: /failsafe-voice-pack-5\\.2\\.0\\.tar\\.gz$/, body: bytes },
-      { url: /\\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\\n` },
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
+      { url: /\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
     ]);
     const phases: Array<{ phase: string; status: string; error?: string }> = [];
     await assert.rejects(() => installVoicePack({
