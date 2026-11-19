@@ -130,6 +130,25 @@ test("G4 #660: silently corrupted staged bytes are refused before publishing tru
   } finally { f.cleanup(); }
 });
 
+test("G4 #660: directory fsync I/O failure rolls back every published output", async () => {
+  const f = fixture();
+  const original = fs.fsyncSync;
+  let calls = 0;
+  try {
+    fs.fsyncSync = (...args) => {
+      // Three staged file flushes succeed; final directory fsync fails.
+      if (++calls === 4) throw errno("EIO");
+      return original(...args);
+    };
+    await assert.rejects(writeNew(f.root, rels, f.maker), /injected EIO/);
+  } finally { fs.fsyncSync = original; }
+  try {
+    checkClean(f);
+    assert.deepEqual(await writeNew(f.root, rels, f.maker), rels);
+    for (const target of f.targets) assert.equal(fs.lstatSync(target).isFile(), true);
+  } finally { f.cleanup(); }
+});
+
 test("G4 #660: concurrent same-record writer is refused while first holds exclusive lock", async () => {
   const f = fixture();
   let unblock;
