@@ -11,7 +11,7 @@ import * as path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { createHash } from 'crypto';
-import { spawn } from 'child_process';
+import { extractValidatedVoiceArchive } from './safe-archive';
 import { fetchAllowlisted } from './allowlisted-fetch';
 import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
@@ -73,11 +73,10 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     const { tarball, checksum, actual } = await downloadAndVerifyPack(opts, tarballUrl, checksumUrl, stagingTarball);
 
     emit(opts, { phase: 'extract', status: 'running' });
-    await runTarExtract(stagingTarball, stagingDir);
+    // No external tar extraction. Complete header, path, type, size, manifest
+    // and SHA-256 validation before any voice asset is written to staging.
+    const manifest = extractValidatedVoiceArchive(stagingTarball, stagingDir, version);
     emit(opts, { phase: 'extract', status: 'success' });
-
-    emit(opts, { phase: 'manifest-verify', status: 'running' });
-    const manifest = readAndValidateExtractedManifest(stagingDir);
     emit(opts, { phase: 'manifest-verify', status: 'success' });
 
     const finalDir = path.join(globalStoragePath, 'voice-pack');
@@ -138,52 +137,6 @@ function sha256OfFile(p: string): string {
   return createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 }
 
-function runTarExtract(tarballPath: string, destDir: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Portable extraction (plan-240 LD4b): GNU/Cygwin tar treat Windows
-    // drive-letter paths as `host:path` SSH remotes, but the GNU-only
-    // --force-local escape hatch is REJECTED by bsdtar 3.8.x (Windows'
-    // built-in tar.exe). Instead, spawn with cwd = the tarball's directory
-    // and pass a bare basename to `-f` so no drive-letter path reaches the
-    // remote heuristic; the absolute `-C` arg is exempt from that heuristic
-    // (the package-voice-pack.cjs assembler's `-C stagingDir` is the
-    // working precedent).
-    const child = spawn('tar', ['-xzf', path.basename(tarballPath), '-C', destDir], {
-      shell: false,
-      cwd: path.dirname(tarballPath),
-    });
-    let stderr = '';
-    child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-    child.on('error', reject);
-    child.on('close', (code: number) => {
-      if (code === 0) resolve();
-      else reject(new Error(`tar extract failed (exit ${code}): ${stderr.trim()}`));
-    });
-  });
-}
-
-function readAndValidateExtractedManifest(stagingDir: string): VoicePackManifest {
-  const manifestPath = path.join(stagingDir, 'voice-pack.manifest.json');
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error('extracted pack missing voice-pack.manifest.json');
-  }
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as VoicePackManifest;
-  for (const rel of manifest.expectedFiles) {
-    const abs = path.join(stagingDir, rel);
-    if (!fs.existsSync(abs)) {
-      throw new Error(`extracted pack missing ${rel}`);
-    }
-    const expected = manifest.sha256[rel];
-    if (!expected) {
-      throw new Error(`manifest missing sha256 for ${rel}`);
-    }
-    const actual = sha256OfFile(abs);
-    if (actual !== expected) {
-      throw new Error(`extracted file sha256 mismatch for ${rel}`);
-    }
-  }
-  return manifest;
-}
 
 /** Classify by the failure prefix only; a message can quote a hostname (#538). */
 function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
