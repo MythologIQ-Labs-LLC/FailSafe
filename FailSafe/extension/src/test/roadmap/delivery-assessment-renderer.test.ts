@@ -239,6 +239,42 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
+  test('#703: a new note typed while review POST is pending must survive its successful response', async () => {
+    const ctx = setupDom();
+    try {
+      const g = global as unknown as {
+        fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+      };
+      const prior = g.fetch;
+      let finishPost: (() => void) | undefined;
+      g.fetch = async (url, init) => {
+        if (url === '/api/actions/delivery/review' && init?.method === 'POST') {
+          await new Promise<void>((resolve) => { finishPost = resolve; });
+        }
+        return prior(url, init);
+      };
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      await renderer.refresh();
+      const note = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+      const sendInput = () => note.dispatchEvent(
+        new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('input', { bubbles: true }),
+      );
+      note.value = 'submitted earlier';
+      sendInput();
+      (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+      assert.ok(finishPost, 'POST must remain pending');
+      note.value = 'new unsent draft';
+      sendInput();
+      finishPost!();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      assert.deepEqual(ctx.posted, [
+        { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'submitted earlier' } },
+      ]);
+      assert.equal((ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement).value, 'new unsent draft',
+        'a newer unsent draft must not be cleared by completion of the older request');
+    } finally { ctx.cleanup(); }
+  });
+
   test('the legend names all six statuses with distinct chips', async () => {
     const ctx = setupDom();
     try {
