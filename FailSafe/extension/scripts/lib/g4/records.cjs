@@ -144,8 +144,8 @@ async function writeNew(repoRoot, rels, make) {
     refuseExisting(targets, rels); // any existing destination, including a dangling link, must refuse
     for (let i = 0; i < targets.length; i++) {
       // hardlink is atomic and fails EEXIST; unlike rename it NEVER overwrites.
-      fs.linkSync(staged[i], targets[i]);
       const info = fs.lstatSync(staged[i]);
+      fs.linkSync(staged[i], targets[i]);
       published.push({ dest: targets[i], dev: info.dev, ino: info.ino });
     }
     syncDirectory(parent);
@@ -211,4 +211,4 @@ async function writeTransition({ repoRoot, kind, fromFingerprint, toFingerprint,
   }));
 }
 
-module.exports = { requestToken, stampRegistry, writeTransition };
+module.exports = { requestToken, stampRegistry, writeTransition, writeNew };
