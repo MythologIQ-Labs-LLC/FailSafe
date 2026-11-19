@@ -13,6 +13,7 @@ import { pipeline } from 'stream/promises';
 import { createHash } from 'crypto';
 import { spawn } from 'child_process';
 import { fetchAllowlisted } from './allowlisted-fetch';
+import { atomicSwapVoicePack } from './transactional-swap';
 import {
   InstallReport,
   InstallVoicePackOptions,
@@ -71,7 +72,10 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     emit(opts, { phase: 'manifest-verify', status: 'success' });
 
     const finalDir = path.join(globalStoragePath, 'voice-pack');
-    atomicSwap(stagingDir, finalDir, stagingTarball);
+    const swap = atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);
+    for (const warning of swap.cleanupWarnings) {
+      opts.output?.appendLine('[voice-pack] install cleanup warning: ' + warning);
+    }
 
     return { ok: true, version: manifest.version, finalPath: finalDir, provenance: { tarball, checksum, sha256: actual } };
   } catch (err) {
@@ -168,40 +172,6 @@ function readAndValidateExtractedManifest(stagingDir: string): VoicePackManifest
     }
   }
   return manifest;
-}
-
-function atomicSwap(stagingDir: string, finalDir: string, _stagingTarball: string): void {
-  // Move staging payload to a sibling next to finalDir, then rename swap.
-  // fs.renameSync is atomic on the same filesystem (globalStorage is one fs).
-  const parent = path.dirname(finalDir);
-  fs.mkdirSync(parent, { recursive: true });
-  const oldDir = `${finalDir}.old-${Date.now()}`;
-  const newDir = `${finalDir}.new-${Date.now()}`;
-  // Build the new dir from staging (exclude the staging tarball + the staging root)
-  fs.mkdirSync(newDir, { recursive: true });
-  copyExtractedPayload(stagingDir, newDir);
-  // Move existing finalDir aside (if any), then put newDir in place
-  if (fs.existsSync(finalDir)) {
-    fs.renameSync(finalDir, oldDir);
-  }
-  fs.renameSync(newDir, finalDir);
-  fs.rmSync(oldDir, { recursive: true, force: true });
-  fs.rmSync(stagingDir, { recursive: true, force: true });
-}
-
-function copyExtractedPayload(srcDir: string, destDir: string): void {
-  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
-    // Skip the tarball itself; keep only the extracted contents.
-    if (entry.name.startsWith('failsafe-voice-pack-') && entry.name.endsWith('.tar.gz')) continue;
-    const srcPath = path.join(srcDir, entry.name);
-    const destPath = path.join(destDir, entry.name);
-    if (entry.isDirectory()) {
-      fs.mkdirSync(destPath, { recursive: true });
-      copyExtractedPayload(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
 }
 
 function cleanup(stagingDir: string): void {
