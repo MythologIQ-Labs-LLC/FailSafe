@@ -161,7 +161,7 @@ suite('#715 exact-directory manifest, real Git', () => {
   test('unmerged and conflicted Git porcelain states cannot be approved', async () => {
     for (const state of ['UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD']) {
       const spoofed: GitRunner = async (args, cwd) => {
-        if (args[0] === 'status') return {
+        if (args[0] === 'status' || (args[0] === '-c' && args[2] === 'status')) return {
           code: 0, stdout: state + ' docs/conflicted.md\0', stderr: '',
         };
         return defaultGitRunner(args, cwd);
@@ -180,7 +180,7 @@ suite('#715 exact-directory manifest, real Git', () => {
       { code: 0, stdout: '?? docs/evil\nname.md\0', stderr: '' },
     ];
     for (const injected of cases) {
-      const guard: GitRunner = async (args, cwd) => args[0] === 'status'
+      const guard: GitRunner = async (args, cwd) => (args[0] === 'status' || (args[0] === '-c' && args[2] === 'status'))
         ? injected : defaultGitRunner(args, cwd);
       const result = await snapshotExactSelection(guard, root, ['docs/']);
       assert.equal(result.ok, false, JSON.stringify(result));
@@ -206,6 +206,22 @@ suite('#715 exact-directory manifest, real Git', () => {
     } finally {
       fs.rmSync(outside, { recursive: true, force: true });
     }
+  });
+
+  test('preconsent status and tracked-file lookup do not invoke core.fsmonitor commands', async () => {
+    if (process.platform === 'win32') return; // Host-specific executable proof requires installed Windows acceptance.
+    const hook = path.join(root, 'fsmonitor.sh');
+    const marker = path.join(root, 'fsmonitor-executed.log');
+    fs.writeFileSync(hook, '#!/bin/sh\nprintf "hook ran\\n" >> "' + marker + '"\nprintf "\\0"\n');
+    fs.chmodSync(hook, 0o755);
+    git(root, 'config', 'core.fsmonitor', hook);
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), 'raw content\n');
+    const current = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(current.ok, true, JSON.stringify(current));
+    assert.equal(fs.existsSync(marker), false, 'status must not run configured fsmonitor');
+    const missing = await snapshotExactSelection(defaultGitRunner, root, ['docs/missing.md']);
+    assert.equal(missing.ok, true, JSON.stringify(missing));
+    assert.equal(fs.existsSync(marker), false, 'ls-files must not run configured fsmonitor');
   });
 
   test('pre-approval file hashes never invoke configured Git clean filters', async () => {
