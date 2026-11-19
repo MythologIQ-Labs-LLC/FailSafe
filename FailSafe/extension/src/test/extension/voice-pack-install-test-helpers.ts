@@ -13,7 +13,7 @@ export interface InstallFixture {
   restoreSpawn: () => void; spawnCount: () => number;
 }
 export interface TarFixtureEntry {
-  name: string; body?: Uint8Array | string; type?: '0' | '1' | '2' | '5';
+  name: string; body?: Uint8Array | string; type?: '0' | '1' | '2' | '3' | '5'; declaredSize?: number;
 }
 const ORIGINAL_FETCH = (globalThis as { fetch?: unknown }).fetch;
 const HAD_FETCH = Object.prototype.hasOwnProperty.call(globalThis, "fetch");
@@ -41,7 +41,7 @@ export function buildFixtureTar(entries: TarFixtureEntry[]): Uint8Array {
     octal(h, 100, 8, 0o644);
     octal(h, 108, 8, 0);
     octal(h, 116, 8, 0);
-    octal(h, 124, 12, data.length);
+    octal(h, 124, 12, entry.declaredSize ?? data.length);
     octal(h, 136, 12, 0);
     h.fill(32, 148, 156);
     h[156] = (entry.type ?? '0').charCodeAt(0);
@@ -57,15 +57,18 @@ export function buildFixtureTar(entries: TarFixtureEntry[]): Uint8Array {
   chunks.push(Buffer.alloc(1024));
   return gzipSync(Buffer.concat(chunks), { level: 1 });
 }
-export function buildFixturePackTar(): Uint8Array {
+export function buildFixturePackEntries(): TarFixtureEntry[] {
   const assets = REQUIRED.map(name => ({ name, body: 'fixture:' + name }));
   const sha256 = Object.fromEntries(assets.map(a => [a.name, sha256OfBytes(Buffer.from(a.body))]));
   const manifest = { version: '5.2.0', builtAt: '2026-05-18T00:00:00Z',
     expectedFiles: REQUIRED, sha256 };
-  return buildFixtureTar([
+  return [
     { name: 'piper/', type: '5' }, { name: 'whisper/', type: '5' },
     ...assets, { name: 'voice-pack.manifest.json', body: JSON.stringify(manifest) },
-  ]);
+  ];
+}
+export function buildFixturePackTar(): Uint8Array {
+  return buildFixtureTar(buildFixturePackEntries());
 }
 function isRedirect(status: number): boolean {
   return [301, 302, 303, 307, 308].includes(status);
