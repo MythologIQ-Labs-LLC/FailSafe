@@ -277,6 +277,73 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     });
   }
 
+  test('#703: PASS and VETO cannot both submit across an overlapping repaint', async () => {
+    const ctx = setupDom();
+    const g = global as unknown as {
+      fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+    };
+    const prior = g.fetch;
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    g.fetch = async (url, init) => {
+      if (url === '/api/actions/delivery/review' && init?.method === 'POST') await blocked;
+      return prior(url, init);
+    };
+    try {
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      await renderer.refresh();
+      const pass = ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement;
+      pass.click();
+      assert.equal(pass.disabled, true);
+      const veto = ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement;
+      assert.equal(veto.disabled, true, 'the opposite outcome must be unavailable while PASS is pending');
+
+      // An HTTP snapshot can repaint the whole panel while an earlier review POST is pending.
+      await renderer.refresh();
+      const repaintedVeto = ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement;
+      assert.notEqual(veto, repaintedVeto);
+      assert.equal(repaintedVeto.disabled, true, 'a new panel must not bypass the in-flight guard');
+      repaintedVeto.dispatchEvent(new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('click', { bubbles: true }));
+      release!();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      assert.equal(ctx.posted.length, 1, 'only one backend review may be submitted');
+      assert.equal(ctx.posted[0].body.verdict, 'PASS');
+      assert.equal((ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement).disabled, false,
+        'controls become available once the request completes');
+    } finally {
+      release?.();
+      ctx.cleanup();
+    }
+  });
+
+  test('#703: rejected network POST re-enables review instead of leaving disabled controls', async () => {
+    const ctx = setupDom();
+    const g = global as unknown as {
+      fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+    };
+    const prior = g.fetch;
+    let rejected = false;
+    g.fetch = async (url, init) => {
+      if (!rejected && url === '/api/actions/delivery/review' && init?.method === 'POST') {
+        rejected = true;
+        throw new Error('disconnected');
+      }
+      return prior(url, init);
+    };
+    try {
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      await renderer.refresh();
+      (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      assert.match(ctx.doc.querySelector('.cc-dlv-result')?.textContent || '', /Recording the review failed: disconnected/);
+      const veto = ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement;
+      assert.equal(veto.disabled, false, 'the operator may retry after failure');
+      veto.click();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      assert.deepEqual(ctx.posted.map((p) => p.body.verdict), ['VETO']);
+    } finally { ctx.cleanup(); }
+  });
+
   test('the legend names all six statuses with distinct chips', async () => {
     const ctx = setupDom();
     try {
