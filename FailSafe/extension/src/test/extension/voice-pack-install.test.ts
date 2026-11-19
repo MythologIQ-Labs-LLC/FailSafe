@@ -107,6 +107,29 @@ suite("voice-pack install-handler — storage boundary (#710)", () => {
     assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "UNTOUCHED");
   });
 
+  test("linked storage ancestor refuses install and uninstall without touching outside data", async () => {
+    if (process.platform === "win32") return; // symlink privilege varies
+    const outside = path.join(fixture.globalStoragePath, "outside");
+    const linked = path.join(fixture.globalStoragePath, "linked-ancestor");
+    const nested = path.join(linked, "nested");
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, "sentinel.txt"), "KEEP");
+    fs.symlinkSync(outside, linked, "dir");
+    const { calls } = installFetchStub([]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: nested, version: "5.2.0" }),
+      /storage root must be a real directory/,
+    );
+    assert.equal(calls.length, 0, "linked ancestor must be rejected before download");
+    assert.equal(fs.existsSync(path.join(outside, "nested")), false, "no redirected child created");
+    const outsidePack = path.join(outside, "nested", "voice-pack");
+    fs.mkdirSync(outsidePack, { recursive: true });
+    fs.writeFileSync(path.join(outsidePack, "unrelated.txt"), "PRESERVE");
+    assert.throws(() => uninstallVoicePack(nested), /storage root must be a real directory/);
+    assert.equal(fs.readFileSync(path.join(outsidePack, "unrelated.txt"), "utf8"), "PRESERVE");
+    assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "KEEP");
+  });
+
   test("uninstall refuses a linked voice-pack destination and preserves its target", () => {
     if (process.platform === "win32") return; // symlink privilege varies
     const outside = path.join(fixture.globalStoragePath, "other-data");

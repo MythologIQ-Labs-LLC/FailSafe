@@ -67,16 +67,25 @@ async function downloadAndVerifyPack(
  * directory. Never follow a link at the application storage boundary into
  * another directory during an opt-in install or uninstall.
  */
-function requireVoiceStorageRoot(root: string): void {
+function requireVoiceStorageRoot(root: string): string {
   if (!path.isAbsolute(root)) throw new Error('voice pack storage root must be absolute');
-  try { fs.mkdirSync(root, { recursive: true, mode: 0o700 }); }
-  catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+  const canonical = path.resolve(root);
+  let cursor = path.parse(canonical).root;
+  // Check each existing ancestor before creating a missing child: recursive
+  // mkdir would otherwise follow a linked parent outside VS Code's storage.
+  for (const segment of canonical.slice(cursor.length).split(path.sep).filter(Boolean)) {
+    cursor = path.join(cursor, segment);
+    try {
+      const stat = fs.lstatSync(cursor);
+      if (!stat.isDirectory() || stat.isSymbolicLink()) {
+        throw new Error('voice pack storage root must be a real directory, without linked ancestors');
+      }
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+      fs.mkdirSync(cursor, { mode: 0o700 });
+    }
   }
-  const stat = fs.lstatSync(root);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) {
-    throw new Error('voice pack storage root must be a real directory, not a link');
-  }
+  return canonical;
 }
 
 /** Public entry — download, verify, extract, atomic-rename. Throws on failure. */
@@ -86,7 +95,7 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
   const checksumUrl = resolveVoicePackChecksumUrl(version);
 
   // Refuse linked/untrusted storage before downloading unverified archive bytes.
-  requireVoiceStorageRoot(globalStoragePath);
+  const storageRoot = requireVoiceStorageRoot(globalStoragePath);
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'));
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
@@ -100,7 +109,7 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     emit(opts, { phase: 'extract', status: 'success' });
     emit(opts, { phase: 'manifest-verify', status: 'success' });
 
-    const finalDir = path.join(globalStoragePath, 'voice-pack');
+    const finalDir = path.join(storageRoot, 'voice-pack');
     const swap = atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);
     for (const warning of swap.cleanupWarnings) {
       reportVoiceCleanupWarning(opts.output, warning);
@@ -119,8 +128,8 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
 
 /** Public entry — rm-rf <globalStoragePath>/voice-pack/. Idempotent. */
 export function uninstallVoicePack(globalStoragePath: string): void {
-  requireVoiceStorageRoot(globalStoragePath);
-  const packDir = path.join(globalStoragePath, 'voice-pack');
+  const storageRoot = requireVoiceStorageRoot(globalStoragePath);
+  const packDir = path.join(storageRoot, 'voice-pack');
   let stat: fs.Stats;
   try { stat = fs.lstatSync(packDir); }
   catch (e) {
