@@ -51,7 +51,7 @@ async function downloadAndVerifyPack(
   emit(opts, { phase: 'download', status: 'success' });
 
   emit(opts, { phase: 'verify', status: 'running' });
-  const { expected, provenance: checksum } = await fetchChecksum(checksumUrl);
+  const { expected, provenance: checksum } = await fetchChecksum(checksumUrl, path.basename(stagingTarball));
   const actual = sha256OfFile(stagingTarball);
   if (actual !== expected) {
     throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
@@ -138,7 +138,7 @@ async function downloadToFile(url: string, destPath: string): Promise<VoicePackD
   return { requestedUrl, finalUrl };
 }
 
-async function fetchChecksum(url: string): Promise<{ expected: string; provenance: VoicePackDownloadProvenance }> {
+async function fetchChecksum(url: string, expectedFilename: string): Promise<{ expected: string; provenance: VoicePackDownloadProvenance }> {
   const { response: res, requestedUrl, finalUrl } = await fetchAllowlisted(url, 'checksum fetch failed');
   if (!res.body) throw new Error('checksum fetch failed: empty body');
   const chunks: Buffer[] = [];
@@ -149,10 +149,11 @@ async function fetchChecksum(url: string): Promise<{ expected: string; provenanc
     chunks.push(Buffer.from(chunk));
   }
   const text = Buffer.concat(chunks).toString('utf8');
-  // sha256 file format: "<64-char-hex>  <filename>\n"
-  const match = /^([a-f0-9]{64})\b/i.exec(text.trim());
-  if (!match) {
-    throw new Error('checksum fetch failed: malformed sha256 file');
+  // Require the one exact output from our packager, not a digest prefix
+  // followed by a different asset name, extra records, or a shell marker.
+  const match = /^([a-f0-9]{64})  ([^\r\n]+)\r?\n?$/i.exec(text);
+  if (!match || match[2] !== expectedFilename) {
+    throw new Error('checksum fetch failed: malformed or mismatched archive filename');
   }
   return { expected: match[1].toLowerCase(), provenance: { requestedUrl, finalUrl } };
 }
