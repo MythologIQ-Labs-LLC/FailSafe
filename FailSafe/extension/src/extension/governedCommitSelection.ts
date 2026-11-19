@@ -64,7 +64,9 @@ export async function requiresExactSelection(
   // ls-files from cwd returns cwd-relative names; exact-file matches are safe,
   // but any matched descendant requires the reviewed directory manifest.
   try {
-    const tracked = await git(['ls-files', '-z', '--', ':(literal)' + relative], cwd);
+    // A repository may configure core.fsmonitor as an executable hook.
+    // Disable it for this pre-consent tracked-file classification.
+    const tracked = await git(['-c', 'core.fsmonitor=false', 'ls-files', '-z', '--', ':(literal)' + relative], cwd);
     if (tracked.code !== 0 || tracked.stdout.length > MAX_STATUS_BYTES ||
       (tracked.stdout.length > 0 && !tracked.stdout.endsWith('\0'))) return true;
     return tracked.stdout.length > 0 &&
@@ -92,8 +94,10 @@ export async function snapshotExactSelection(
 
   const selectors = await Promise.all(requested.map(async p =>
     await requiresExactSelection(git, cwd, p) && !p.endsWith('/') ? p + '/' : p));
+  // Git status can execute core.fsmonitor before the owner approves anything.
+  // Command-scoped override prevents expanding this workflow's pre-consent authority.
   const status = await git([
-    'status', '--porcelain=v1', '-z', '--untracked-files=all', '--',
+    '-c', 'core.fsmonitor=false', 'status', '--porcelain=v1', '-z', '--untracked-files=all', '--',
     ...selectors.map(p => ':(literal)' + p),
   ], cwd);
   if (status.code !== 0 || status.stdout.length > MAX_STATUS_BYTES ||
