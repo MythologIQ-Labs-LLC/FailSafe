@@ -62,12 +62,31 @@ async function downloadAndVerifyPack(
   return { tarball, checksum, actual };
 }
 
+/**
+ * The VS Code globalStorage path is trusted only when it names a real local
+ * directory. Never follow a link at the application storage boundary into
+ * another directory during an opt-in install or uninstall.
+ */
+function requireVoiceStorageRoot(root: string): void {
+  if (!path.isAbsolute(root)) throw new Error('voice pack storage root must be absolute');
+  try { fs.mkdirSync(root, { recursive: true, mode: 0o700 }); }
+  catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+  }
+  const stat = fs.lstatSync(root);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error('voice pack storage root must be a real directory, not a link');
+  }
+}
+
 /** Public entry — download, verify, extract, atomic-rename. Throws on failure. */
 export async function installVoicePack(opts: InstallVoicePackOptions): Promise<InstallReport> {
   const { globalStoragePath, version } = opts;
   const tarballUrl = resolveVoicePackUrl(version);
   const checksumUrl = resolveVoicePackChecksumUrl(version);
 
+  // Refuse linked/untrusted storage before downloading unverified archive bytes.
+  requireVoiceStorageRoot(globalStoragePath);
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'));
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
@@ -100,8 +119,18 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
 
 /** Public entry — rm-rf <globalStoragePath>/voice-pack/. Idempotent. */
 export function uninstallVoicePack(globalStoragePath: string): void {
+  requireVoiceStorageRoot(globalStoragePath);
   const packDir = path.join(globalStoragePath, 'voice-pack');
-  fs.rmSync(packDir, { recursive: true, force: true });
+  let stat: fs.Stats;
+  try { stat = fs.lstatSync(packDir); }
+  catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw e;
+  }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error('voice pack uninstall refused: destination is not a real directory');
+  }
+  fs.rmSync(packDir, { recursive: true, force: false });
 }
 
 // ── Internals ──────────────────────────────────────────────────────────
@@ -169,5 +198,7 @@ function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
   if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch')) return 'verify';
   if (msg.startsWith('tar extract')) return 'extract';
   if (/^(extracted |manifest )/.test(msg)) return 'manifest-verify';
-  return 'download';
+  // A failed filesystem promotion or unsafe storage root must not tell the
+  // operator the network download failed. The exact cause remains in error.
+  return 'install';
 }
