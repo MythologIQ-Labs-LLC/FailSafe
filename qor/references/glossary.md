@@ -338,6 +338,8 @@ introduced_in_plan: plan-475-isolated-agent-runs
 referenced_by:
   - docs/FEATURE_INDEX.md
   - FailSafe/extension/src/integrations/agent-cli/README.md
+```
+
 ## Sentry import outcome
 
 ```yaml
