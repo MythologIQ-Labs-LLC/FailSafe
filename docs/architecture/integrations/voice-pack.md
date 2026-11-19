@@ -17,7 +17,7 @@ A user of the Console's voice features wants higher-quality local speech recogni
 
 ## Measurable value
 
-Metric: base VSIX size saved by shipping the speech binaries as a separate download, and the share of installs whose files all match the manifest hashes; every completed install has verified every manifest-listed file `FailSafe/extension/src/voice-pack/install-handler.ts:180-184` (`extracted file sha256 mismatch for`). This is not yet an exhaustive archive-member allowlist (#710).
+Metric: base VSIX size saved by shipping speech binaries as a separate download, and the share of installs passing all six pinned browser-asset hashes. This v6.1.0 candidate validates a strict seven-file archive and six SHA-256 entries before staging `FailSafe/extension/src/voice-pack/safe-archive.ts:112` (`fail('manifest sha256 mismatch:`). Published v6.0.13 remains unchanged; independent publisher authentication and installed-host acceptance are still open (#710).
 Baseline: no install count or size figure is recorded in the code, so both are unverified.
 
 ## Why not simply ask an agent
@@ -26,54 +26,54 @@ An agent can download a file, but it would not pin the pack to the extension ver
 
 ## API documentation
 
-none: `docs/integrations/INTEGRATION_DOCS_INDEX.md` has no Voice Pack row; the download uses the GitHub Releases asset URL built in code `FailSafe/extension/src/voice-pack/install-handler.ts:29-34` (`export function resolveVoicePackUrl(version: string): string {`).
+none: `docs/integrations/INTEGRATION_DOCS_INDEX.md` has no Voice Pack row; the download uses the GitHub Releases asset URL built in code `FailSafe/extension/src/voice-pack/install-handler.ts:32` (`export function resolveVoicePackUrl(version: string): string {`).
 
 ## Privileges and scopes
 
 No credential is used; each download is an anonymous HTTPS GET made one hop at a time in manual redirect mode `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:77` (`return await fetch(hop, { redirect: 'manual' });`).
 Every hop, including the first, must be HTTPS on `github.com`, `objects.githubusercontent.com`, `codeload.github.com` or `release-assets.githubusercontent.com`, with no userinfo and the default port, and is checked before it is requested `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:103` (`assertAllowedUrl(current, prefix);`) against `FailSafe/extension/src/voice-pack/types.ts:63-68` (`'release-assets.githubusercontent.com',`); at most five redirects are followed `FailSafe/extension/src/voice-pack/types.ts:71` (`export const MAX_VOICE_PACK_REDIRECTS = 5;`).
-The pack is extracted by spawning `tar` without a shell `FailSafe/extension/src/voice-pack/install-handler.ts:151-154` (`const child = spawn('tar', ['-xzf', path.basename(tarballPath), '-C', destDir], {`).
-Installed files are promoted under the extension's global storage directory `FailSafe/extension/src/voice-pack/install-handler.ts:83` (`const finalDir = path.join(globalStoragePath, 'voice-pack');`); temporary downloads and extraction are staged in the OS temporary directory `FailSafe/extension/src/voice-pack/install-handler.ts:69` (`fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-')`).
+The v6.1.0 candidate parses bounded gzip/USTAR internally without spawning `tar`, rejects archive links, unexpected paths/types and duplicate entries, and verifies all six hashes before creating payload files `FailSafe/extension/src/voice-pack/safe-archive.ts:124` (`export function extractValidatedVoiceArchive(`). Unsupported PAX/GNU extensions fail closed pending producer cross-platform qualification.
+Installed files are promoted under the extension's global storage directory `FailSafe/extension/src/voice-pack/install-handler.ts:84` (`const finalDir = path.join(globalStoragePath, 'voice-pack');`); temporary downloads and extraction are staged in the OS temporary directory `FailSafe/extension/src/voice-pack/install-handler.ts:71` (`fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-')`).
 
 ## Feature state
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| pack-install | verified-shipped | `installVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:64` (`export async function installVoicePack(opts: InstallVoicePackOptions)`) | `FailSafe/extension/src/extension/bootstrapServers.ts:395` (`registerCommand("failsafe.installVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install.test.ts` (unit) | The tests stub fetch; no live download `FailSafe/extension/src/test/extension/voice-pack-install.test.ts:6` (`installFetchStub`). No `-voice` release is published, so a real install fails with HTTP 404 until one is ([B287]) |
-| pack-uninstall | verified-shipped | `uninstallVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:101` (`export function uninstallVoicePack(globalStoragePath: string): void {`) | `FailSafe/extension/src/extension/bootstrapServers.ts:419` (`registerCommand("failsafe.uninstallVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install-guards.test.ts` (unit) | - |
+| pack-install | verified-shipped | `installVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:66` (`export async function installVoicePack(opts: InstallVoicePackOptions)`) | `FailSafe/extension/src/extension/bootstrapServers.ts:395` (`registerCommand("failsafe.installVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install.test.ts` (unit) | The tests stub fetch; no live download `FailSafe/extension/src/test/extension/voice-pack-install.test.ts:6` (`installFetchStub`). No `-voice` release is published, so a real install fails with HTTP 404 until one is ([B287]) |
+| pack-uninstall | verified-shipped | `uninstallVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:102` (`export function uninstallVoicePack(globalStoragePath: string): void {`) | `FailSafe/extension/src/extension/bootstrapServers.ts:419` (`registerCommand("failsafe.uninstallVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install-guards.test.ts` (unit) | - |
 | install-state-probe | verified-shipped | `probeVoicePackState` `FailSafe/extension/src/voice-pack/voice-pack-detector.ts:30` (`export async function probeVoicePackState(`) | `FailSafe/extension/src/extension/bootstrapVoicePack.ts:48` (`await probeVoicePackState(globalStoragePath, requiredMinVersion)`) | `FailSafe/extension/src/test/voice-pack/voice-pack-detector.test.ts` (unit) | - |
 | activation-wiring | verified-shipped | `wireVoicePack` `FailSafe/extension/src/extension/bootstrapVoicePack.ts:20` (`export async function wireVoicePack(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:256` (`await wireVoicePack(context, consoleServer, extensionVersion);`) | `FailSafe/extension/src/test/extension/voice-pack-activation.test.ts` (unit) | Never downloads at activation `FailSafe/extension/src/extension/bootstrapVoicePack.ts:9` (`never downloads at activation`) |
 | console-install-routes | shipped-unverified | `setupVoicePackRoutes` `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:25` (`export function setupVoicePackRoutes(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:381` (`setupVoicePackRoutes(consoleServer.getExpressApp(), {`) | none | No CI test file contains the route function; the Playwright spec reaches it through a harness and stubs the install POST `FailSafe/extension/src/test/ui/voice-pack.spec.ts:3-4` (`Stubs the actual install/uninstall POSTs via page.route()`) |
 
 ## Inbound fields
 
-From GitHub Releases: the pack tarball and its `.sha256` file for the extension's own version `FailSafe/extension/src/voice-pack/install-handler.ts:66-67` (`const checksumUrl = resolveVoicePackChecksumUrl(version);`).
-From the extracted pack: `voice-pack.manifest.json` with `version`, `expectedFiles` and per-file `sha256` `FailSafe/extension/src/voice-pack/install-handler.ts:176-180` (`const expected = manifest.sha256[rel];`).
+From GitHub Releases: the pack tarball and its `.sha256` file for the extension's own version `FailSafe/extension/src/voice-pack/install-handler.ts:69` (`const checksumUrl = resolveVoicePackChecksumUrl(version);`).
+From the bounded in-memory archive: `voice-pack.manifest.json` with the exact requested `version`, six `expectedFiles`, and each SHA-256 `FailSafe/extension/src/voice-pack/safe-archive.ts:109` (`const hash = m.sha256[name];`).
 
 ## Outbound fields and egress
 
-Repository content: no `FailSafe/extension/src/voice-pack/install-handler.ts:119` (`async function downloadToFile(url: string, destPath: string): Promise<VoicePackDownloadProvenance> {`).
-Metadata: yes, two downloads that carry the extension version in the URL, each up to six requests, gated by an operator click or command `FailSafe/extension/src/voice-pack/install-handler.ts:33` (`-voice/${PACK_FILENAME(version)}`).
-Graph relationships: no `FailSafe/extension/src/voice-pack/install-handler.ts:89` (`return { ok: true, version: manifest.version, finalPath: finalDir, provenance:`).
-Governance evidence: no; the install report and the output log record provenance (requested URL, final URL as origin plus path, sha256), not a ledger entry `FailSafe/extension/src/voice-pack/install-handler.ts:115-116` (`[voice-pack] provenance ${what}`).
-Destination: GitHub Releases of `MythologIQ-Labs-LLC/FailSafe` `FailSafe/extension/src/voice-pack/install-handler.ts:26` (`const RELEASE_BASE = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download';`); GitHub answers a release asset with a 302 to `release-assets.githubusercontent.com` (observed with curl on 2026-10-18, not tested against the live service), which the allowlist accepts.
+Repository content: no `FailSafe/extension/src/voice-pack/install-handler.ts:120` (`async function downloadToFile(url: string, destPath: string): Promise<VoicePackDownloadProvenance> {`).
+Metadata: yes, two downloads that carry the extension version in the URL, each up to six requests, gated by an operator click or command `FailSafe/extension/src/voice-pack/install-handler.ts:36` (`-voice/${PACK_FILENAME(version)}`).
+Graph relationships: no `FailSafe/extension/src/voice-pack/install-handler.ts:90` (`return { ok: true, version: manifest.version, finalPath: finalDir, provenance:`).
+Governance evidence: no; the install report and the output log record provenance (requested URL, final URL as origin plus path, sha256), not a ledger entry `FailSafe/extension/src/voice-pack/install-handler.ts:117` (`[voice-pack] provenance ${what}`).
+Destination: GitHub Releases of `MythologIQ-Labs-LLC/FailSafe` `FailSafe/extension/src/voice-pack/install-handler.ts:29` (`const RELEASE_BASE = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download';`); GitHub answers a release asset with a 302 to `release-assets.githubusercontent.com` (observed with curl on 2026-10-18, not tested against the live service), which the allowlist accepts.
 
 ## Transformations
 
-The extension version selects the release tag `v<version>-voice` and asset name `FailSafe/extension/src/voice-pack/install-handler.ts:25-33` (`failsafe-voice-pack-${version}.tar.gz`).
-The tarball's SHA-256 is compared with the published checksum before extraction `FailSafe/extension/src/voice-pack/install-handler.ts:54-55` (`sha256 mismatch: expected`).
+The extension version selects the release tag `v<version>-voice` and asset name `FailSafe/extension/src/voice-pack/install-handler.ts:28` (`failsafe-voice-pack-${version}.tar.gz`).
+The tarball's SHA-256 is compared with the published checksum before extraction `FailSafe/extension/src/voice-pack/install-handler.ts:57` (`sha256 mismatch: expected`).
 A redirect's `Location` is resolved against the current hop, and the final URL is kept as origin plus path only `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:108` (`finalUrl: originAndPath(current)`).
 The installer stages a replacement and uses a recoverable rename transaction; an interrupted process is not a fully atomic multi-directory commit `FailSafe/extension/src/voice-pack/transactional-swap.ts:79-85` (`io.renameSync(prepared, final);`).
 
 ## Persisted artifacts
 
-The pack directory `<globalStorage>/voice-pack/` with its manifest and binaries `FailSafe/extension/src/voice-pack/install-handler.ts:83-84` (`atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);`).
+The pack directory `<globalStorage>/voice-pack/` with its manifest and binaries `FailSafe/extension/src/voice-pack/install-handler.ts:85` (`atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);`).
 A temporary staging directory is removed after successful promotion on a best-effort basis, with a visible cleanup warning on failure `FailSafe/extension/src/voice-pack/transactional-swap.ts:105-106` (`io.rmSync(staging, { recursive: true, force: true });`). An unsuccessful install attempts cleanup without masking its original error `FailSafe/extension/src/voice-pack/transactional-swap.ts:149-154` (`io.rmSync(stagingDir, { recursive: true, force: true });`).
-Nothing is written to the workspace `FailSafe/extension/src/voice-pack/install-handler.ts:69` (`fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'))`).
+Nothing is written to the workspace `FailSafe/extension/src/voice-pack/install-handler.ts:71` (`fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'))`).
 
 ## Graph links
 
-Implemented: none `FailSafe/extension/src/voice-pack/install-handler.ts:89` (`finalPath: finalDir`).
+Implemented: none `FailSafe/extension/src/voice-pack/install-handler.ts:90` (`finalPath: finalDir`).
 Proposed: none; the pack holds no governance data (unverified: no proposal exists).
 
 ## Customer UI and actions
@@ -88,9 +88,9 @@ Progress events are broadcast over the Console WebSocket `FailSafe/extension/src
 Enforced: a hop that is not HTTPS, not on an allowlisted host, carries userinfo or names a port is refused before it is requested `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:45-56` (`redirect target rejected: host ${u.hostname} not in allowlist`).
 Enforced: a response the fetch redirected by itself (`redirected`, or a response URL that is empty or differs from the requested hop) or an opaque redirect is refused before its body is read, so a fetch that ignores manual mode cannot deliver a body from another host `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:60-72` (`the fetch followed a redirect itself`).
 Enforced: error text names only the requested URL's origin and path or a refused hop's host, so a signed asset query never reaches an error, a progress event or the log `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:107` (`HTTP ${res.status} for ${originAndPath(url)}`).
-Enforced: a checksum or manifest-hash mismatch aborts before replacement, and the original failure is propagated `FailSafe/extension/src/voice-pack/install-handler.ts:90-96` (`throw failure;`). If promotion fails, the old pack is restored where possible; a failed rollback retains its backup for recovery `FailSafe/extension/src/voice-pack/transactional-swap.ts:85-90` (`Prior installation is preserved at`).
+Enforced: a checksum or manifest-hash mismatch aborts before replacement, and the original failure is propagated `FailSafe/extension/src/voice-pack/install-handler.ts:97` (`throw failure;`). If promotion fails, the old pack is restored where possible; a failed rollback retains its backup for recovery `FailSafe/extension/src/voice-pack/transactional-swap.ts:85-90` (`Prior installation is preserved at`).
 Enforced: the Console routes refuse non-loopback callers `FailSafe/extension/src/extension/bootstrapServers.ts:379-383` (`Forbidden: local access only`).
-Limit: the checksum comes from the same release as the tarball, so it detects a damaged download, not a replaced release; no hash is pinned in the extension and no signature is checked ([B287]) `FailSafe/extension/src/voice-pack/install-handler.ts:37` (`function resolveVoicePackChecksumUrl(version: string): string {`).
+Limit: the checksum comes from the same release as the tarball, so it detects a damaged download, not a replaced release; no hash is pinned in the extension and no signature is checked ([B287]) `FailSafe/extension/src/voice-pack/install-handler.ts:40` (`function resolveVoicePackChecksumUrl(version: string): string {`).
 Limit: a fetch that ignores manual mode has already requested every hop it followed by the time the response is refused; the guard keeps its body out, not the request `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:60` (`function assertNotFollowed(res: Response, hop: string, prefix: string): void {`).
 Limit: the Console install route starts the download with no VS Code confirmation `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:56-59` (`const report = await installVoicePack({`).
 
@@ -104,9 +104,9 @@ No `v*-voice` release exists (`gh release list`, 2026-10-18) and no workflow pub
 
 ## End-to-end scenario and measurable acceptance
 
-Scenario: open Console Settings, click Install, watch download, verify, extract and manifest-verify progress, and see the card report installed with the extension's version `FailSafe/extension/src/voice-pack/install-handler.ts:79-81` (`emit(opts, { phase: 'manifest-verify', status: 'success' });`).
+Scenario: open Console Settings, click Install, watch download, verify, extract and manifest-verify progress, and see the card report installed with the extension's version `FailSafe/extension/src/voice-pack/install-handler.ts:82` (`emit(opts, { phase: 'manifest-verify', status: 'success' });`).
 Metric: a checksum mismatch or an extract failure leaves the prior pack unchanged (threshold: zero changed files) `FailSafe/extension/src/test/extension/voice-pack-install.test.ts:24-37` (`SHA256 mismatch aborts before extract`); the redirect rule is held by `FailSafe/extension/src/test/extension/voice-pack-install-redirects.test.ts:95` (`V3 an off-allowlist intermediate hop is refused before it is requested`) and `FailSafe/extension/src/test/extension/voice-pack-install-redirects.test.ts:166` (`V9 a fetch that follows redirects itself despite manual mode is refused`).
-Existing tests: unit tests with a stubbed fetch, plus `FailSafe/extension/src/test/ui/voice-pack.spec.ts:1` (`Phase 6 of plan-qor-voice-substrate-extraction`) (playwright-stubbed).
+Existing tests: unit tests with a stubbed fetch but genuine gzip/USTAR fixture bytes, plus `FailSafe/extension/src/test/ui/voice-pack.spec.ts:1` (`Phase 6 of plan-qor-voice-substrate-extraction`) (playwright-stubbed).
 Installed-extension test: none downloads a real pack (unverified).
 
 ## Recommended disposition
@@ -115,4 +115,4 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. In
 
 ## Open defects
 
-No Voice Pack release is published and no workflow publishes one, so Install fails with HTTP 404 [B287] `FailSafe/extension/src/voice-pack/install-handler.ts:26` (`MythologIQ-Labs-LLC/FailSafe/releases/download`).
+No Voice Pack release is published and no workflow publishes one, so Install fails with HTTP 404 [B287] `FailSafe/extension/src/voice-pack/install-handler.ts:29` (`MythologIQ-Labs-LLC/FailSafe/releases/download`).
