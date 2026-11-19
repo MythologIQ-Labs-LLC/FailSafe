@@ -23,7 +23,7 @@ export interface VoicePackProbeResult {
 }
 
 export interface InstallProgressEvent {
-  phase: 'download' | 'verify' | 'extract' | 'manifest-verify';
+  phase: 'download' | 'verify' | 'extract' | 'manifest-verify' | 'install';
   status: 'running' | 'success' | 'error';
   bytesTransferred?: number;
   totalBytes?: number;
