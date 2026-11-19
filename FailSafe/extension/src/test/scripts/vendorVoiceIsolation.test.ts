@@ -236,7 +236,19 @@ suite('voice vendor isolation #707', () => {
     assert.equal(fs.readFileSync(file, 'utf8'), 'UNCOMMITTED-REPAIR');
     assert.throws(() => vendorTool.verifyCommittedVendorOutputs(
       new Map([['whisper/transformers.min.js', Buffer.from('ANY')]]), extension),
-    /committed browser voice asset unavailable/);
+    /committed browser voice asset is not a regular Git blob/);
+
+    if (process.platform !== 'win32') {
+      // A Git symlink blob whose target string exactly matches pinned bytes
+      // must not masquerade as a normal browser asset.
+      fs.rmSync(file);
+      fs.symlinkSync('COMMITTED-PIN', file);
+      git('add', 'FailSafe/extension/src/roadmap/ui/vendor/piper/piper.min.js');
+      git('-c', 'user.name=FailSafe Fixture', '-c', 'user.email=fixture@example.invalid',
+        'commit', '-q', '-m', 'symlink fixture');
+      assert.throws(() => vendorTool.verifyCommittedVendorOutputs(pinned, extension),
+        /not a regular Git blob/);
+    }
   }));
 
   test('Whisper re-vendoring applies the same deterministic browser sanitization', () => {
