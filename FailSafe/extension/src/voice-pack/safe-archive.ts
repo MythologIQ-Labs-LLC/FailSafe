@@ -48,7 +48,8 @@ function entryHeader(block: Buffer): { name: string; size: number; directory: bo
   let total = 0;
   for (let i = 0; i < BLOCK; i++) total += i >= 148 && i < 156 ? 32 : block[i];
   if (checksum !== total) fail('tar header checksum mismatch');
-  if (field(block, 257, 6) !== 'ustar') fail('unsupported tar header format');
+  // GNU tar uses six-byte `ustar `; POSIX USTAR uses `ustar\\0`.
+  if (!['ustar', 'ustar '].includes(field(block, 257, 6))) fail('unsupported tar header format');
   if (field(block, 345, 155) || field(block, 157, 100)) fail('tar prefix or link is forbidden');
   const name = field(block, 0, 100);
   const kind = block[156];
