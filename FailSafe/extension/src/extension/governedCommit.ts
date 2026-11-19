@@ -24,7 +24,7 @@ import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import { inspectPushBinding } from './githubPushBinding';
-import type { ApprovedFile } from './governedCommitSelection';
+import { requiresExactSelection, type ApprovedFile } from './governedCommitSelection';
 
 export type GitRunner = (args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
 
@@ -108,10 +108,12 @@ export async function commitPushOpenPr(
       warning: 'invalid selected paths; no status, branch, commit, push or PR attempted' };
   }
 
-  if (req.paths.some(path => path.endsWith('/')) &&
-    (!Array.isArray(req.approvedFiles) || req.approvedFiles.length === 0)) {
+  // Even with an approved manifest, directory pathspecs may stage additional
+  // descendants before the staged-index check. Only exact file paths may reach
+  // the lower-level Git add boundary, regardless of trailing slash spelling.
+  if (req.paths.some(path => requiresExactSelection(cwd, path))) {
     return { step: 'noop', branch: req.branch,
-      warning: 'directory selection requires an exact approved file manifest; no branch, commit, push or PR attempted' };
+      warning: 'directory selection must be expanded to exact approved files; no branch, commit, push or PR attempted' };
   }
 
   // Git pathspec magic must never reinterpret an operator-selected filename.
