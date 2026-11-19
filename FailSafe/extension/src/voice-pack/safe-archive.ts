@@ -60,6 +60,7 @@ function entryHeader(block: Buffer): { name: string; size: number; directory: bo
       name.split('/').includes('.') || name.includes(':')) fail('unsafe tar member name');
   if (!(directory ? dirs.has(name) : files.has(name))) fail('unexpected tar member: ' + name);
   const size = octal(block, 124, 12);
+  if (!directory && size === 0) fail('empty voice asset');
   if ((directory && size !== 0) || size > (name === MANIFEST ? MAX_MANIFEST : MAX_FILE)) {
     fail('invalid tar member size');
   }
