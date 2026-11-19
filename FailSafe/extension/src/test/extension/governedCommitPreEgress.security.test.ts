@@ -53,6 +53,19 @@ suite('commitPushOpenPr #476 pre-egress branch/index identity', () => {
     });
   }
 
+  test('#715: direct directory selector without file-by-file approval refuses before any Git mutation', async () => {
+    const calls: string[][] = [];
+    let posts = 0;
+    const r = await commitPushOpenPr({ ...REQ, paths: ['docs/'] }, {
+      git: async (args) => { calls.push(args); return defaultFor(args); },
+      token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+    });
+    assert.equal(r.step, 'noop');
+    assert.match(r.warning ?? '', /directory selection requires an exact approved file manifest/i);
+    assert.equal(calls.filter(x => ['status', 'checkout', 'add', 'commit', 'push', 'remote'].includes(x[0])).length, 0);
+    assert.equal(posts, 0);
+  });
+
   test('failed git status refuses before branch selection, staging or external egress', async () => {
     const calls: string[][] = [];
     let posts = 0;

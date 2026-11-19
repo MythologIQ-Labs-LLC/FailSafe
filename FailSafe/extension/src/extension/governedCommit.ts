@@ -24,6 +24,7 @@ import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import { inspectPushBinding } from './githubPushBinding';
+import { requiresExactSelection, type ApprovedFile } from './governedCommitSelection';
 
 export type GitRunner = (args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
 
@@ -36,6 +37,8 @@ export interface GovernedCommitRequest {
   base: string;     // PR base, e.g. "main"
   prTitle: string;
   prBody: string;
+  /** Operator-approved exact file/blob snapshot when directory consent was expanded. */
+  approvedFiles?: ApprovedFile[];
 }
 
 export interface GovernedCommitDeps {
@@ -105,6 +108,15 @@ export async function commitPushOpenPr(
       warning: 'invalid selected paths; no status, branch, commit, push or PR attempted' };
   }
 
+  // Even with an approved manifest, directory pathspecs may stage additional
+  // descendants before the staged-index check. Only exact file paths may reach
+  // the lower-level Git add boundary, regardless of trailing slash spelling.
+  const broadPaths = await Promise.all(req.paths.map(path => requiresExactSelection(git, cwd, path)));
+  if (broadPaths.some(Boolean)) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'directory selection must be expanded to exact approved files; no branch, commit, push or PR attempted' };
+  }
+
   // Git pathspec magic must never reinterpret an operator-selected filename.
   const literalPaths = req.paths.map((path) => `:(literal)${path}`);
   const status = await git(['status', '--porcelain', '--', ...literalPaths], cwd);
@@ -171,6 +183,63 @@ export async function commitPushOpenPr(
     warning: outsideSelection.code === 1
       ? 'staged changes outside selected paths detected after git add; no commit, push or PR attempted (inspect index)'
       : 'staged scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+
+  // Directory consent is a finite list of files and Git blob identities, not
+  // authority for any new descendant or changed contents added after approval.
+  if (req.approvedFiles) {
+    const stagedFiles = await git(['ls-files', '--stage', '-z', '--', ...literalPaths], cwd);
+    if (stagedFiles.code !== 0 || stagedFiles.stdout.length > 256 * 1024 ||
+      (stagedFiles.stdout.length > 0 && !stagedFiles.stdout.endsWith('\0'))) {
+      return { step: 'noop', branch: req.branch,
+        warning: 'approved file blobs could not be verified; no commit, push or PR attempted (inspect index)' };
+    }
+    const actual = new Map<string, string>();
+    for (const row of stagedFiles.stdout.slice(0, -1).split('\0').filter(Boolean)) {
+      // Reject symlink, gitlink and unmerged-index stages until reviewed.
+      const match = /^(?:100644|100755) ([a-f0-9]{40}(?:[a-f0-9]{24})?) 0\t(.+)$/.exec(row);
+      if (!match || actual.has(match[2])) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'approved file blobs were ambiguous; no commit, push or PR attempted (inspect index)' };
+      }
+      actual.set(match[2], match[1]);
+    }
+    const approved = new Map(req.approvedFiles.map(file => [file.path, file.blob]));
+    if (approved.size !== req.approvedFiles.length ||
+      [...actual].some(([path]) => !approved.has(path))) {
+      return { step: 'noop', branch: req.branch,
+        warning: 'staged file set differs from approved manifest; no commit, push or PR attempted (inspect index)' };
+    }
+    for (const file of req.approvedFiles) {
+      const stagedObject = actual.get(file.path) ?? null;
+      if (file.blob === null) {
+        if (stagedObject !== null) return { step: 'noop', branch: req.branch,
+          warning: 'approved deletion changed before commit; no commit, push or PR attempted (inspect index)' };
+        continue;
+      }
+      if (stagedObject === null) return { step: 'noop', branch: req.branch,
+        warning: 'approved file missing from staged index; no commit, push or PR attempted (inspect index)' };
+      const raw = await git(['hash-object', '--no-filters', '--', file.path], cwd);
+      if (raw.code !== 0 || raw.stdout.trim() !== file.blob) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'approved file contents changed before commit; no commit, push or PR attempted (inspect index)' };
+      }
+      // Git may normalize line endings or apply an owner-configured clean filter
+      // when staging. Never invoke that filter before consent. Only if the staged
+      // blob differs from raw content, compute the expected filtered blob now.
+      if (stagedObject !== file.blob) {
+        const filtered = await git(['hash-object', '--path=' + file.path, '--', file.path], cwd);
+        if (filtered.code !== 0 || filtered.stdout.trim() !== stagedObject) {
+          return { step: 'noop', branch: req.branch,
+            warning: 'Git-filtered staging differed from approved file; no commit, push or PR attempted (inspect index)' };
+        }
+        const rawAgain = await git(['hash-object', '--no-filters', '--', file.path], cwd);
+        if (rawAgain.code !== 0 || rawAgain.stdout.trim() !== file.blob) {
+          return { step: 'noop', branch: req.branch,
+            warning: 'approved file contents changed during staging verification; no commit, push or PR attempted (inspect index)' };
+        }
+      }
+    }
+  }
 
   const before = await readBeforeCommit(git, cwd);
   const committed = await git(['commit', '--cleanup=verbatim', '-m', req.message], cwd);
