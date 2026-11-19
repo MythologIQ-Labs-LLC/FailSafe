@@ -29,7 +29,10 @@ const refuse = (reason: string): SelectionResult => ({ ok: false, warning: 'sele
 
 function safePath(path: unknown): path is string {
   return typeof path === 'string' && path.length > 0 && path.length <= MAX_NAME &&
-    path.trim().length > 0 && !/[\u0000-\u001f\u007f\ufffd]/.test(path) &&
+    path.trim().length > 0 && !Array.from(path).some(char => {
+      const code = char.charCodeAt(0);
+      return code < 32 || code === 127 || char === '\ufffd';
+    }) &&
     !path.startsWith('/') && !path.startsWith('\\') && !/^[A-Za-z]:/.test(path) &&
     !path.split(/[\\/]/).some(p => p === '.' || p === '..');
 }
