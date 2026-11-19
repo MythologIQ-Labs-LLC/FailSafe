@@ -54,7 +54,9 @@ function copyPayload(
 }
 
 /** Recheck copied final bytes, not only the previously validated archive. */
-function verifyPrepared(prepared: string, seen: Set<string>, io: VoiceSwapOps): void {
+function verifyPrepared(prepared: string, seen: Set<string>, io: VoiceSwapOps, tarball: string): void {
+  const requested = /^failsafe-voice-pack-(\\d+\\.\\d+\\.\\d+)\\.tar\\.gz$/.exec(path.basename(tarball));
+  if (!requested) throw new Error('unexpected voice archive filename for promotion');
   if (seen.size !== REQUIRED_FILES.size || [...REQUIRED_FILES].some(name => !seen.has(name))) {
     throw new Error('incomplete staged voice asset inventory');
   }
@@ -64,7 +66,10 @@ function verifyPrepared(prepared: string, seen: Set<string>, io: VoiceSwapOps): 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('prepared voice manifest schema mismatch');
   }
-  const m = parsed as { expectedFiles?: unknown; sha256?: unknown };
+  const m = parsed as { version?: unknown; builtAt?: unknown; expectedFiles?: unknown; sha256?: unknown };
+  if (m.version !== requested[1] || typeof m.builtAt !== 'string') {
+    throw new Error('prepared voice manifest version differs from requested archive');
+  }
   const expected = [...VOICE_ASSETS].sort();
   const hashes = m.sha256;
   if (!Array.isArray(m.expectedFiles) || JSON.stringify([...m.expectedFiles].sort()) !== JSON.stringify(expected) ||
@@ -173,7 +178,7 @@ export function atomicSwapVoicePack(
     io.mkdirSync(prepared, { recursive: false, mode: 0o700 });
     const seen = new Set<string>();
     copyPayload(staging, prepared, path.resolve(stagingTarball), io, seen);
-    verifyPrepared(prepared, seen, io);
+    verifyPrepared(prepared, seen, io, stagingTarball);
     const movedOld = promotePrepared(prepared, final, backup, io);
     return cleanupAfterPromotion(staging, backup, movedOld, io);
   } catch (error) {
