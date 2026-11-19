@@ -46,6 +46,21 @@ function safePath(path: unknown): path is string {
 }
 
 /**
+ * Git treats unsuffixed directory selectors as broad directory requests.
+ * A trailing slash is not an authority boundary. Symlinks and special entries
+ * require explicit review; invalid paths must not be looked up on disk.
+ */
+export function requiresExactSelection(cwd: string, relative: string): boolean {
+  if (!safePath(relative) || relative.endsWith('/')) return true;
+  try {
+    const info = fs.lstatSync(nodePath.resolve(cwd, relative));
+    return !info.isFile();
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+  }
+}
+
+/**
  * Capture an exact changed-file list and the content blob as Git would stage it.
  * A hash can still race a competing process; the caller must recheck before use.
  * This function never writes the worktree, index, branch, or remote.
@@ -61,9 +76,11 @@ export async function snapshotExactSelection(
   const prefix = scope.stdout.replace(/\r?\n$/, '');
   if (scope.code !== 0 || (prefix.length > 0 && !safePath(prefix))) return refuse('invalid repository-relative scope');
 
+  const selectors = requested.map(p =>
+    requiresExactSelection(cwd, p) && !p.endsWith('/') ? p + '/' : p);
   const status = await git([
     'status', '--porcelain=v1', '-z', '--untracked-files=all', '--',
-    ...requested.map(p => ':(literal)' + p),
+    ...selectors.map(p => ':(literal)' + p),
   ], cwd);
   if (status.code !== 0 || status.stdout.length > MAX_STATUS_BYTES ||
     (status.stdout.length > 0 && !status.stdout.endsWith('\0'))) return refuse('incomplete or oversized Git status');
@@ -85,7 +102,7 @@ export async function snapshotExactSelection(
     for (const rootPath of names) {
       if (!rootPath.startsWith(prefix)) return refuse('path escaped the approved workspace');
       const localPath = rootPath.slice(prefix.length);
-      if (!safePath(localPath) || !requested.some(p =>
+      if (!safePath(localPath) || !selectors.some(p =>
         p.endsWith('/') ? localPath.startsWith(p) : localPath === p)) {
         return refuse('status includes a file outside the selection');
       }
