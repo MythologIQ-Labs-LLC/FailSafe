@@ -1,6 +1,6 @@
 # Third-Party Integrations
 
-FailSafe v5.x ships a small, opinionated set of third-party integrations behind a single Command Center tab (**Integrations**). Each integration is **opt-in**, installed on the operator's own machine, and exposes a typed surface that FailSafe drives — nothing is bundled inside the VSIX.
+FailSafe v6.0.13 provides opt-in third-party capabilities in the Console's **Integrations** area. Each integration has its own trust boundary: some require local components or an MCP connection, while others, such as the Statewright AI card, only open the provider's website and do not establish an embedded connection. A visible card does not prove the provider is installed, compatible or governed by FailSafe. Check the current per-integration contract before installing software or sharing data.
 
 What each integration does for the customer, what leaves the machine and which of its capabilities are real is recorded per integration in the [Integration portfolio](architecture/INTEGRATION_PORTFOLIO.md).
 
