@@ -33,7 +33,13 @@ function safePath(path: unknown): path is string {
   return typeof path === 'string' && path.length > 0 && path.length <= MAX_NAME &&
     path.trim().length > 0 && !Array.from(path).some(char => {
       const code = char.charCodeAt(0);
-      return code < 32 || code === 127 || char === '\ufffd';
+      return code < 32 || code === 127 || code === 0xfffd ||
+        // Bidi override, isolates, LRM/RLM, Arabic letter mark and zero-width
+        // marks can make an approved filename look unlike the actual Git path.
+        (code >= 0x202a && code <= 0x202e) ||
+        (code >= 0x2066 && code <= 0x2069) ||
+        (code >= 0x200b && code <= 0x200f) ||
+        code === 0x061c || code === 0xfeff;
     }) &&
     !path.startsWith('/') && !path.startsWith('\\') && !/^[A-Za-z]:/.test(path) &&
     !path.split(/[\\/]/).some(p => p === '.' || p === '..');
