@@ -38,12 +38,11 @@ suite("voice-pack install-handler — installVoicePack", () => {
     const finalDir = path.join(fixture.globalStoragePath, "voice-pack");
     fs.mkdirSync(finalDir, { recursive: true });
     fs.writeFileSync(path.join(finalDir, "sentinel.txt"), "PRIOR PACK");
-    const bytes = buildFixturePackTar();
+    const bytes = Buffer.from('not a gzip archive');
     installFetchStub([
       { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
       { url: /\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
     ]);
-    fixture.extractControl.shouldFail = true;
     await assert.rejects(() => installVoicePack({
       globalStoragePath: fixture.globalStoragePath, version: "5.2.0",
     }));
