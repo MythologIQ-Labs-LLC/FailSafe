@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 import { gzipSync } from "zlib";
 
 export interface FetchHandler {
