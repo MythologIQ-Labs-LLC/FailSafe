@@ -29,6 +29,31 @@ suite("voice-pack install guards", () => {
     assert.equal(fs.existsSync(path.join(fixture.globalStoragePath, "voice-pack")), false);
   });
 
+  test("declared over-budget archive fails before extraction", async () => {
+    installFetchStub([
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: buildFixturePackTar(),
+        contentLength: 96 * 1024 * 1024 + 1 },
+    ]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: fixture.globalStoragePath, version: "5.2.0" }),
+      /download failed: compressed voice pack exceeds size budget/,
+    );
+    assert.equal(fs.existsSync(path.join(fixture.globalStoragePath, "voice-pack")), false);
+  });
+
+  test("oversized checksum response is bounded and leaves prior pack untouched", async () => {
+    const bytes = buildFixturePackTar();
+    installFetchStub([
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
+      { url: /\.sha256$/, body: "x".repeat(8193) },
+    ]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: fixture.globalStoragePath, version: "5.2.0" }),
+      /checksum fetch failed: response exceeds budget/,
+    );
+    assert.equal(fs.existsSync(path.join(fixture.globalStoragePath, "voice-pack")), false);
+  });
+
   test("version-derived URL rejects command-shaped input", () => {
     assert.throws(() => resolveVoicePackUrl("not-a-semver"), /version|semver/i);
     assert.throws(() => resolveVoicePackUrl("5.2.0; rm -rf /"), /version|semver/i);
