@@ -230,5 +230,5 @@ async function main() {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
-module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, commitOutputs };
+module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, assertVendorAncestry, commitOutputs };
 if (require.main === module) main().catch(err => { console.error('[vendor:voice] ' + err.message); process.exitCode = 1; });
