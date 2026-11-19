@@ -423,8 +423,10 @@ export class DeliveryAssessmentRenderer {
 
   async review(intentId, verdict, commitSha, note, reworks = []) {
     const body = reworks.length ? { intentId, verdict, commitSha, note, reworks } : { intentId, verdict, commitSha, note };
+    const submittedDraft = this.reviewNoteDraft;
     const { status, data } = await postJson('/api/actions/delivery/review', body);
-    if (status === 200 && this.reviewNoteDraft && this.reviewNoteDraft.intentId === intentId && this.reviewNoteDraft.commitSha === commitSha) {
+    if (status === 200 && submittedDraft && this.reviewNoteDraft === submittedDraft &&
+        submittedDraft.intentId === intentId && submittedDraft.commitSha === commitSha && submittedDraft.value === note) {
       this.reviewNoteDraft = null;
     }
     this.message = status === 200
