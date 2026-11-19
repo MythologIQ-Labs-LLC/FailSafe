@@ -50,13 +50,27 @@ function safePath(path: unknown): path is string {
  * A trailing slash is not an authority boundary. Symlinks and special entries
  * require explicit review; invalid paths must not be looked up on disk.
  */
-export function requiresExactSelection(cwd: string, relative: string): boolean {
+export async function requiresExactSelection(
+  git: GitRunner, cwd: string, relative: string,
+): Promise<boolean> {
   if (!safePath(relative) || relative.endsWith('/')) return true;
   try {
     const info = fs.lstatSync(nodePath.resolve(cwd, relative));
     return !info.isFile();
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return true;
+  }
+  // Git still expands a missing directory that contains tracked deletions.
+  // ls-files from cwd returns cwd-relative names; exact-file matches are safe,
+  // but any matched descendant requires the reviewed directory manifest.
+  try {
+    const tracked = await git(['ls-files', '-z', '--', ':(literal)' + relative], cwd);
+    if (tracked.code !== 0 || tracked.stdout.length > MAX_STATUS_BYTES ||
+      (tracked.stdout.length > 0 && !tracked.stdout.endsWith('\0'))) return true;
+    return tracked.stdout.length > 0 &&
+      tracked.stdout.slice(0, -1).split('\0').some(file => file !== relative);
+  } catch {
+    return true;
   }
 }
 
@@ -76,8 +90,8 @@ export async function snapshotExactSelection(
   const prefix = scope.stdout.replace(/\r?\n$/, '');
   if (scope.code !== 0 || (prefix.length > 0 && !safePath(prefix))) return refuse('invalid repository-relative scope');
 
-  const selectors = requested.map(p =>
-    requiresExactSelection(cwd, p) && !p.endsWith('/') ? p + '/' : p);
+  const selectors = await Promise.all(requested.map(async p =>
+    await requiresExactSelection(git, cwd, p) && !p.endsWith('/') ? p + '/' : p));
   const status = await git([
     'status', '--porcelain=v1', '-z', '--untracked-files=all', '--',
     ...selectors.map(p => ':(literal)' + p),

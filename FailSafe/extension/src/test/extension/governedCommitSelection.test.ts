@@ -41,6 +41,35 @@ suite('#715 exact-directory manifest, real Git', () => {
     assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
   });
 
+  test('deleted last tracked child still makes a missing bare directory selector unsafe', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'gone.md'), 'before\n');
+    git(root, 'add', '--', 'docs/gone.md');
+    git(root, 'commit', '-qm', 'baseline');
+    fs.rmSync(path.join(root, 'docs', 'gone.md'));
+    fs.rmdirSync(path.join(root, 'docs'));
+
+    const original = git(root, 'rev-parse', 'HEAD');
+    const direct = await commitPushOpenPr({
+      workspaceRoot: root, paths: ['docs'], branch: 'fix/missing-dir',
+      message: 'unsafe directory selector', base: 'main', prTitle: 'test', prBody: '',
+    }, { git: defaultGitRunner });
+    assert.equal(direct.step, 'noop');
+    assert.match(direct.warning ?? '', /directory selection.*exact/i);
+    assert.equal(git(root, 'rev-parse', 'HEAD'), original);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+
+    let prompt = '';
+    const flow = await runGovernedCommitFlow('organize', ['docs'], ['Delete docs/gone.md'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { prompt = text; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /Exact changed files to commit \(1\):/);
+    assert.match(prompt, /docs\/gone\.md/);
+    assert.equal(flow.step, 'committed', JSON.stringify(flow));
+    assert.equal(git(root, 'show', '--format=', '--name-status', 'HEAD'), 'D\tdocs/gone.md');
+  });
+
   test('direct bare directory cannot stage more than the authorized file manifest', async () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
     fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), '# unreviewed\n');

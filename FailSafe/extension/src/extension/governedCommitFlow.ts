@@ -153,7 +153,9 @@ async function prepareDirectorySelection(
   | { ok: true; paths: string[]; display: string; snapshot?: ExactSelection }
   | { ok: false; warning: string }
 > {
-  if (!changedPaths.some(path => requiresExactSelection(deps.workspaceRoot, path))) {
+  const broadPaths = await Promise.all(changedPaths.map(path =>
+    requiresExactSelection(deps.git, deps.workspaceRoot, path)));
+  if (!broadPaths.some(Boolean)) {
     return { ok: true, paths: changedPaths, display: '' };
   }
   const result = await snapshotExactSelection(deps.git, deps.workspaceRoot, changedPaths);
