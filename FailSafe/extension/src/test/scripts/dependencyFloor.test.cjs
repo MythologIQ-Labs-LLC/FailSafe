@@ -4,11 +4,12 @@
  * A lockfile revert to a vulnerable version fails here:
  *   - @modelcontextprotocol/sdk >= 1.32.0, declared as ^1.32.0 (GHSA-22jm, -46jr, -6prh, -rvq5);
  *   - markdown-it >= 14.3.3 (dev, used by vsce at packaging time);
- *   - sharp >= 0.35.5 with every @img/sharp-<platform> and wasm entry >= 0.35.5 and every
+ *   - if sharp is present, sharp >= 0.35.5, each @img/sharp-<platform> or wasm >= 0.35.5; otherwise all sharp/@img/native binaries are absent (voice isolation #707);
+ *   - if present, every
  *     @img/sharp-libvips-* entry >= 1.3.4 (sharp 0.35.5 pins libvips 1.3.4 exactly; the native
  *     fixes live in those binaries, so a floor on sharp alone would pass a lockfile that kept
  *     1.3.2 libvips);
- *   - the sharp set is internally consistent: every @img/* pin inside node_modules/sharp and the
+ *   - if present, the sharp set is internally consistent: every @img/* pin inside node_modules/sharp and the
  *     node_modules/@img/* entries is satisfied by the locked version of its target (exact pins
  *     must be equal; range pins such as "@img/colour": "^1.1.0" must be satisfied);
  *   - chokidar >= 4.0.3 with a declared caret floor >= 4.0.3, and every lockfile entry named
@@ -64,6 +65,26 @@ function locked(name) {
 }
 
 const sharpSet = () => Object.keys(PACKAGES).filter((k) => k === 'node_modules/sharp' || k.startsWith('node_modules/@img/'));
+const sharpRetained = () => Boolean(PACKAGES['node_modules/sharp']);
+
+/**
+ * #707: sharp arrived only through the optional browser voice *vendoring*
+ * packages. If the core lock no longer contains sharp, the secure floor is
+ * absence of every native sharp/libvips/image platform binary. If sharp is
+ * reintroduced to the core, the original floors/pin-consistency rules remain
+ * mandatory and MUST NOT be silently skipped.
+ */
+function assertSharpAbsent() {
+  const leftovers = Object.keys(PACKAGES).filter((k) =>
+    k === 'node_modules/sharp'
+    || k.includes('/node_modules/sharp')
+    || k.startsWith('node_modules/@img/')
+    || k.includes('/node_modules/@img/')
+  );
+  assert.deepEqual(leftovers, [], 'native sharp/libvips graph must be absent when voice is isolated');
+  assert.equal(PKG.devDependencies['piper-tts-web'], undefined, 'voice vendoring must stay out of core npm ci');
+  assert.equal(PKG.devDependencies['@xenova/transformers'], undefined, 'voice vendoring must stay out of core npm ci');
+}
 
 describe('v6.0.10 Lane C dependency floors', () => {
   it('@modelcontextprotocol/sdk >= 1.32.0, declared with a caret floor >= 1.32.0', () => {
@@ -79,6 +100,10 @@ describe('v6.0.10 Lane C dependency floors', () => {
   });
 
   it('sharp and every @img/sharp-<platform> or wasm entry >= 0.35.5', () => {
+    if (!sharpRetained()) {
+      assertSharpAbsent();
+      return;
+    }
     assert.ok(compare(locked('sharp'), '0.35.5') >= 0, `sharp locked ${locked('sharp')}`);
     const platform = sharpSet().filter((k) => /^node_modules\/@img\/sharp-(?!libvips-)/.test(k));
     assert.ok(platform.length > 0, 'no @img/sharp-<platform> entries found');
@@ -87,6 +112,10 @@ describe('v6.0.10 Lane C dependency floors', () => {
   });
 
   it('every @img/sharp-libvips-* entry >= 1.3.4', () => {
+    if (!sharpRetained()) {
+      assertSharpAbsent();
+      return;
+    }
     const libvips = sharpSet().filter((k) => k.startsWith('node_modules/@img/sharp-libvips-'));
     assert.ok(libvips.length > 0, 'no @img/sharp-libvips-* entries found');
     const low = libvips.filter((k) => compare(PACKAGES[k].version, '1.3.4') < 0).map((k) => `${k}@${PACKAGES[k].version}`);
@@ -94,6 +123,10 @@ describe('v6.0.10 Lane C dependency floors', () => {
   });
 
   it('the sharp set is consistent: every @img/* pin is satisfied by its locked target', () => {
+    if (!sharpRetained()) {
+      assertSharpAbsent();
+      return;
+    }
     const problems = [];
     let pins = 0;
     for (const key of sharpSet()) {
