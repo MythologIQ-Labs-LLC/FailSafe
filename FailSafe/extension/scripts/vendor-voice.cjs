@@ -102,7 +102,27 @@ function sanitizeWhisperBrowserBundle(bytes) {
   return Buffer.from(code, 'utf8');
 }
 
-function stageVoiceOutputs(outputs, root, io, token, staged) {
+function assertVendorAncestry(target, io, trustedRoot, allowMissing = false) {
+  const base = path.resolve(trustedRoot);
+  const rel = path.relative(base, path.resolve(target));
+  if (!rel || rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) {
+    throw new Error('voice vendor path is outside the trusted root');
+  }
+  let cursor = base;
+  for (const part of ['.', ...rel.split(path.sep).slice(0, -1)]) {
+    if (part !== '.') cursor = path.join(cursor, part);
+    let st;
+    try { st = io.lstatSync(cursor); }
+    catch (err) {
+      if (allowMissing && err.code === 'ENOENT') break;
+      throw err;
+    }
+    if (!st.isDirectory() || st.isSymbolicLink()) throw new Error('voice vendor ancestor must be a real directory');
+  }
+}
+
+function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
+  assertVendorAncestry(root, io, trustedRoot, true);
   io.mkdirSync(root, { recursive: true });
   const rootStat = io.lstatSync(root);
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
@@ -112,8 +132,10 @@ function stageVoiceOutputs(outputs, root, io, token, staged) {
     if (!/^(piper|whisper)\/[A-Za-z0-9_.-]+$/.test(rel)) throw new Error('invalid vendor destination');
     const target = path.join(root, rel);
     const dir = path.dirname(target);
+    assertVendorAncestry(dir, io, trustedRoot, true);
     io.mkdirSync(dir, { recursive: true });
     if (io.lstatSync(dir).isSymbolicLink()) throw new Error('vendor directory is a symlink');
+    assertVendorAncestry(target, io, trustedRoot);
     if (io.existsSync(target) && !io.lstatSync(target).isFile()) {
       throw new Error('unexpected vendor destination type');
     }
@@ -126,8 +148,9 @@ function stageVoiceOutputs(outputs, root, io, token, staged) {
   }
 }
 
-function promoteVoiceOutputs(staged, io, moved, promoted) {
+function promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot) {
   for (const item of staged) {
+    assertVendorAncestry(item.target, io, trustedRoot);
     if (io.existsSync(item.target)) {
       io.renameSync(item.target, item.backup);
       moved.push(item);
@@ -164,14 +187,14 @@ function cleanupVoiceOutputs(io, staged, moved) {
   return warnings;
 }
 
-function commitOutputs(outputs, root = VENDOR, io = fs) {
+function commitOutputs(outputs, root = VENDOR, io = fs, trustedRoot = ROOT) {
   const token = crypto.randomBytes(12).toString('hex');
   const staged = [];
   const moved = [];
   const promoted = [];
   try {
-    stageVoiceOutputs(outputs, root, io, token, staged);
-    promoteVoiceOutputs(staged, io, moved, promoted);
+    stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot);
+    promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot);
   } catch (err) {
     const failures = restoreVoiceOutputs(io, moved, promoted);
     if (failures.length) throw new AggregateError([err, ...failures], 'voice vendor failed, recovery may be required');

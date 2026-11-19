@@ -69,7 +69,7 @@ suite('voice vendor isolation #707', () => {
       },
     };
     assert.throws(
-      () => vendorTool.commitOutputs(new Map([['piper/piper.min.js', Buffer.from('NEW')]]), path.join(root, 'vendor'), ops),
+      () => vendorTool.commitOutputs(new Map([['piper/piper.min.js', Buffer.from('NEW')]]), path.join(root, 'vendor'), ops, root),
       /injected promotion failure/,
     );
     assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
@@ -92,7 +92,7 @@ suite('voice vendor isolation #707', () => {
       },
     };
     assert.throws(() => vendorTool.commitOutputs(
-      new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, ops,
+      new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, ops, root,
     ), /simulated disk-full/);
     assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
     assert.deepEqual(fs.readdirSync(dir).filter(x => x.includes('.new-') || x.includes('.old-')), []);
@@ -106,15 +106,31 @@ suite('voice vendor isolation #707', () => {
       const vendor = path.join(root, 'vendor');
       fs.symlinkSync(outside, vendor, 'dir');
       assert.throws(() => vendorTool.commitOutputs(
-        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor,
+        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, fs, root,
       ), /vendor root must be a real directory/);
       assert.deepEqual(fs.readdirSync(outside), []);
     });
   });
 
+  test('vendor ancestor symlink cannot create files outside trusted checkout', function () {
+    if (process.platform === 'win32') this.skip(); // Junction/symlink privileges vary; real Unix negative is mandatory.
+    temporary(root => {
+      const checkout = path.join(root, 'checkout');
+      const outside = path.join(root, 'outside');
+      fs.mkdirSync(path.join(checkout, 'src'), { recursive: true });
+      fs.mkdirSync(outside);
+      fs.symlinkSync(outside, path.join(checkout, 'src', 'roadmap'), 'dir');
+      const vendor = path.join(checkout, 'src', 'roadmap', 'ui', 'vendor');
+      assert.throws(() => vendorTool.commitOutputs(
+        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, fs, checkout,
+      ), /vendor ancestor must be a real directory/);
+      assert.deepEqual(fs.readdirSync(outside), [], 'must refuse before even creating a directory outside');
+    });
+  });
+
   test('write transaction updates pinned browser assets successfully', () => temporary(root => {
     const outputs = new Map([['piper/piper.min.js', Buffer.from('NEW')]]);
-    const warnings = vendorTool.commitOutputs(outputs, path.join(root, 'vendor'));
+    const warnings = vendorTool.commitOutputs(outputs, path.join(root, 'vendor'), fs, root);
     assert.deepEqual(warnings, []);
     assert.equal(fs.readFileSync(path.join(root, 'vendor', 'piper', 'piper.min.js'), 'utf8'), 'NEW');
   }));
