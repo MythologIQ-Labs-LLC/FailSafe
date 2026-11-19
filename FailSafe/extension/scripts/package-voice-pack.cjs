@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { createHash } = require('crypto');
 const { spawnSync } = require('child_process');
+const { assertVendorAncestry } = require('./vendor-voice.cjs');
 
 const REPO_ROOT = process.env.FAILSAFE_REPO_ROOT || path.resolve(__dirname, '..');
 const REQUIRED_ASSETS = Object.freeze([
@@ -78,33 +79,14 @@ function readVersion() {
   return pkg.version;
 }
 
-// A regular file beneath a symlinked parent can escape the checkout.
-// Refuse any symlink/junction in the source ancestry before copying bytes.
-function assertRealVendorDirectories(vendorSourceRoot, assetRel) {
-  const trustedRoot = path.resolve(REPO_ROOT);
-  const targetDir = path.join(vendorSourceRoot, path.dirname(assetRel));
-  const relative = path.relative(trustedRoot, path.resolve(targetDir));
-  if (!relative || relative === '..' ||
-      relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
-    throw new Error('voice vendor directory escapes checkout');
-  }
-  let cursor = trustedRoot;
-  for (const part of ['.', ...relative.split(path.sep)]) {
-    if (part !== '.') cursor = path.join(cursor, part);
-    const stat = fs.lstatSync(cursor);
-    if (!stat.isDirectory() || stat.isSymbolicLink()) {
-      throw new Error('required voice vendor directory invalid: ' + path.relative(trustedRoot, cursor));
-    }
-  }
-}
-
 function collectFiles(vendorSourceRoot, stagingDir) {
   if (!fs.existsSync(vendorSourceRoot)) {
     throw new Error('vendor source dir not found: ' + vendorSourceRoot);
   }
   const collected = [];
   for (const rel of REQUIRED_ASSETS) {
-    assertRealVendorDirectories(vendorSourceRoot, rel);
+    // The shared vendor guard rejects symlink/junction ancestry before copying.
+    assertVendorAncestry(path.join(vendorSourceRoot, ...rel.split('/')), fs, REPO_ROOT);
     const absSrc = path.join(vendorSourceRoot, ...rel.split('/'));
     let stat;
     try { stat = fs.lstatSync(absSrc); }
