@@ -111,3 +111,37 @@ test('rejects unknown args and duplicate options with refusal exit 2', t => {
   assert.equal(f.run('--something-unsafe').status, 2);
   assert.equal(f.run('--enforce', '--enforce').status, 2);
 });
+
+test('refuses malformed SYSTEM_STATE release suffix rather than accepting matching prefix', t => {
+  const f = fixture(t);
+  f.write('docs/SYSTEM_STATE.md', '**Current Release:** v6.0.13.999\n');
+  assert.throws(() => checkCurrency(f.root), /Malformed SYSTEM_STATE Current Release/);
+  assert.equal(f.run('--enforce').status, 2);
+});
+
+test('refuses malformed ARCHITECTURE_PLAN release suffix rather than accepting matching prefix', t => {
+  const f = fixture(t);
+  f.write('docs/ARCHITECTURE_PLAN.md', '**Current Release:** v6.0.13junk\n');
+  assert.throws(() => checkCurrency(f.root), /Malformed ARCHITECTURE_PLAN Current Release/);
+});
+
+test('refuses malformed first governance review date rather than falling through to older history', t => {
+  const f = fixture(t);
+  f.write('docs/GOVERNANCE_INDEX.md', '**Last Reviewed**: 2026-11-13junk\n**Last Reviewed**: 2026-10-22\n');
+  assert.throws(() => checkCurrency(f.root), /Invalid ISO release date/);
+  assert.equal(f.run('--format', 'json').status, 2);
+});
+
+test('refuses a canonical docs ancestor symlink even when the target remains in the repo', t => {
+  const f = fixture(t);
+  const canonical = path.join(f.root, 'docs');
+  const moved = path.join(f.root, 'docs-original');
+  fs.renameSync(canonical, moved);
+  try {
+    fs.symlinkSync(moved, canonical, 'dir');
+  } catch (error) {
+    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return;
+    throw error;
+  }
+  assert.throws(() => checkCurrency(f.root), /Not a regular file.*docs\//);
+});

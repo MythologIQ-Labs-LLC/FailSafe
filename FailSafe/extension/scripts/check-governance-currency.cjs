@@ -47,9 +47,14 @@ function realRepositoryRoot(root) {
 }
 
 function trustedRead(root, relativePath) {
-  const full = path.join(root, ...relativePath.split('/'));
-  const st = fs.lstatSync(full);
-  if (!st.isFile() || st.isSymbolicLink()) throw new Error(`Not a regular file: ${relativePath}`);
+  let full = root;
+  let st;
+  for (const part of relativePath.split('/')) {
+    full = path.join(full, part);
+    st = fs.lstatSync(full);
+    if (st.isSymbolicLink()) throw new Error(`Not a regular file (symlink component): ${relativePath}`);
+  }
+  if (!st.isFile()) throw new Error(`Not a regular file: ${relativePath}`);
   const resolved = fs.realpathSync.native(full);
   const rel = path.relative(root, resolved);
   if (rel === '' || rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) {
@@ -62,7 +67,9 @@ function trustedRead(root, relativePath) {
 function singleHeader(source, regex, field) {
   const matches = [...source.matchAll(regex)];
   if (matches.length !== 1) throw new Error(`Expected exactly one ${field}; found ${matches.length}`);
-  return matches[0][1];
+  const marker = matches[0][1];
+  if (!versionPattern.test(marker)) throw new Error(`Malformed ${field}: ${marker}`);
+  return marker;
 }
 
 function releaseDate(day) {
@@ -74,10 +81,20 @@ function releaseDate(day) {
   return day;
 }
 
+function loadSources(rootArg) {
+  const root = realRepositoryRoot(rootArg);
+  return Object.fromEntries(Object.entries(REL).map(([key, rel]) => [key, trustedRead(root, rel)]));
+}
+
+function indexReviewDate(governance) {
+  const matches = [...governance.matchAll(/^\*\*Last Reviewed\*\*:[ \t]*(\S+)/gm)];
+  if (matches.length === 0) throw new Error('No GOVERNANCE_INDEX Last Reviewed record');
+  return releaseDate(matches[0][1]);
+}
+
 /** Returns a report, not an audit verdict or publication authorization. */
 function checkCurrency(rootArg) {
-  const root = realRepositoryRoot(rootArg);
-  const source = Object.fromEntries(Object.entries(REL).map(([key, rel]) => [key, trustedRead(root, rel)]));
+  const source = loadSources(rootArg);
   const manifest = JSON.parse(source.manifest);
   if (typeof manifest.version !== 'string' || !versionPattern.test(manifest.version)) {
     throw new Error('Extension manifest does not declare an unambiguous SemVer version');
@@ -95,15 +112,13 @@ function checkCurrency(rootArg) {
   const newest = sections[0]?.[1];
   if (newest !== version) error('FC001', REL.changelog, `Newest release heading ${newest ?? "missing"} differs from extension manifest ${version}`);
 
-  const stateRelease = singleHeader(source.state.slice(0, 12000), /^\*\*Current Release:\*\*\s*v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/gm, 'SYSTEM_STATE Current Release');
+  const stateRelease = singleHeader(source.state.slice(0, 12000), /^\*\*Current Release:\*\*[ \t]*v?(\S+)/gm, 'SYSTEM_STATE Current Release');
   if (stateRelease !== version) error('FC002', REL.state, `Current Release ${stateRelease} differs from ${version}`);
 
-  const architectureRelease = singleHeader(source.architecture.slice(0, 2400), /^\*\*Current Release:\*\*\s*v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/gm, 'ARCHITECTURE_PLAN Current Release');
+  const architectureRelease = singleHeader(source.architecture.slice(0, 2400), /^\*\*Current Release:\*\*[ \t]*v?(\S+)/gm, 'ARCHITECTURE_PLAN Current Release');
   if (architectureRelease !== version) error('FC003', REL.architecture, `Current Release ${architectureRelease} differs from ${version}`);
 
-  const reviewMatches = [...source.governance.matchAll(/^\*\*Last Reviewed\*\*:\s*(\d{4}-\d{2}-\d{2})/gm)];
-  if (reviewMatches.length === 0) throw new Error('No GOVERNANCE_INDEX Last Reviewed record');
-  const reviewedAt = releaseDate(reviewMatches[0][1]);
+  const reviewedAt = indexReviewDate(source.governance);
   if (reviewedAt < publishedAt) {
     error('FC004', REL.governance, `Last Reviewed ${reviewedAt} predates CHANGELOG ${version} release date ${publishedAt}`);
   }
