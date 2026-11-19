@@ -5,7 +5,7 @@ import {
   installVoicePack, resolveVoicePackUrl, uninstallVoicePack,
 } from "../../voice-pack/install-handler";
 import {
-  buildFixturePackTar, installFetchStub, makeInstallFixture, originalFetch,
+  buildFixturePackTar, installFetchStub, makeInstallFixture, originalFetch, sha256OfBytes,
   unstubFetch, type InstallFixture,
 } from "./voice-pack-install-test-helpers";
 
@@ -52,6 +52,30 @@ suite("voice-pack install guards", () => {
       /checksum fetch failed: response exceeds budget/,
     );
     assert.equal(fs.existsSync(path.join(fixture.globalStoragePath, "voice-pack")), false);
+  });
+
+  test("checksum must name exactly this archive, with no additional records", async () => {
+    const prior = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.mkdirSync(prior);
+    fs.writeFileSync(path.join(prior, "sentinel.txt"), "unchanged");
+    const tar = buildFixturePackTar();
+    const sha = sha256OfBytes(tar);
+    for (const checksum of [
+      `${sha}  other-asset.tar.gz\n`,
+      `${sha}  failsafe-voice-pack-5.2.0.tar.gz\n${sha}  second-asset\n`,
+      `${sha} *failsafe-voice-pack-5.2.0.tar.gz\n`,
+    ]) {
+      installFetchStub([
+        { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: tar },
+        { url: /\.sha256$/, body: checksum },
+      ]);
+      await assert.rejects(
+        () => installVoicePack({ globalStoragePath: fixture.globalStoragePath, version: "5.2.0" }),
+        /checksum fetch failed: malformed or mismatched archive filename/,
+      );
+      assert.equal(fs.readFileSync(path.join(prior, "sentinel.txt"), "utf8"), "unchanged");
+      unstubFetch();
+    }
   });
 
   test("version-derived URL rejects command-shaped input", () => {
