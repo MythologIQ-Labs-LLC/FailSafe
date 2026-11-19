@@ -39,6 +39,27 @@ function resolveVoicePackChecksumUrl(version: string): string {
   return `${resolveVoicePackUrl(version)}.sha256`;
 }
 
+/** Resolve and verify both voice release downloads before touching installed assets. */
+async function downloadAndVerifyPack(
+  opts: InstallVoicePackOptions,
+  tarballUrl: string, checksumUrl: string, stagingTarball: string,
+) {
+  emit(opts, { phase: 'download', status: 'running' });
+  const tarball = await downloadToFile(tarballUrl, stagingTarball);
+  emit(opts, { phase: 'download', status: 'success' });
+
+  emit(opts, { phase: 'verify', status: 'running' });
+  const { expected, provenance: checksum } = await fetchChecksum(checksumUrl);
+  const actual = sha256OfFile(stagingTarball);
+  if (actual !== expected) {
+    throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
+  }
+  emit(opts, { phase: 'verify', status: 'success' });
+  logProvenance(opts, 'tarball', tarball, actual);
+  logProvenance(opts, 'checksum', checksum, expected);
+  return { tarball, checksum, actual };
+}
+
 /** Public entry — download, verify, extract, atomic-rename. Throws on failure. */
 export async function installVoicePack(opts: InstallVoicePackOptions): Promise<InstallReport> {
   const { globalStoragePath, version } = opts;
@@ -49,19 +70,7 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
   try {
-    emit(opts, { phase: 'download', status: 'running' });
-    const tarball = await downloadToFile(tarballUrl, stagingTarball);
-    emit(opts, { phase: 'download', status: 'success' });
-
-    emit(opts, { phase: 'verify', status: 'running' });
-    const { expected, provenance: checksum } = await fetchChecksum(checksumUrl);
-    const actual = sha256OfFile(stagingTarball);
-    if (actual !== expected) {
-      throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
-    }
-    emit(opts, { phase: 'verify', status: 'success' });
-    logProvenance(opts, 'tarball', tarball, actual);
-    logProvenance(opts, 'checksum', checksum, expected);
+    const { tarball, checksum, actual } = await downloadAndVerifyPack(opts, tarballUrl, checksumUrl, stagingTarball);
 
     emit(opts, { phase: 'extract', status: 'running' });
     await runTarExtract(stagingTarball, stagingDir);
