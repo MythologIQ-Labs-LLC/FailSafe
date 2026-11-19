@@ -257,8 +257,14 @@ function verifyCommittedVendorOutputs(outputs, extensionRoot = ROOT, run = spawn
   const top = run('git', ['rev-parse', '--show-toplevel'], {
     cwd: repoRoot, shell: false, encoding: 'utf8', maxBuffer: 4096,
   });
+  let actualRoot;
+  try { actualRoot = fs.realpathSync.native(String(top.stdout || '').trim()); }
+  catch { throw new Error('voice verification requires the expected Git checkout root'); }
+  const intendedRoot = fs.realpathSync.native(repoRoot);
   if (top.status !== 0 || top.error ||
-      path.resolve(String(top.stdout || '').trim()) !== repoRoot) {
+      (process.platform === 'win32'
+        ? actualRoot.toLowerCase() !== intendedRoot.toLowerCase()
+        : actualRoot !== intendedRoot)) {
     throw new Error('voice verification requires the expected Git checkout root');
   }
   for (const [rel, expected] of outputs) {
