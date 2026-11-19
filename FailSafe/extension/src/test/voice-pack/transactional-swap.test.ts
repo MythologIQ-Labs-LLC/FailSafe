@@ -5,7 +5,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { atomicSwapVoicePack, VoiceSwapOps } from '../../voice-pack/transactional-swap';
+import { atomicSwapVoicePack, VoiceSwapOps, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from '../../voice-pack/transactional-swap';
 
 function fixture(run: (root: string) => void): void {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-710-swap-'));
@@ -163,6 +163,31 @@ suite('voice-pack transactional replacement #710', () => {
       assert.equal(fs.readFileSync(path.join(external, 'keep.txt'), 'utf8'), 'untouched');
       assert.equal(fs.existsSync(d.final + '.new-l'), false);
     });
+  });
+
+  test('failed staging cleanup retains the original failure and both error causes', () => fixture(root => {
+    const original = new Error('rollback failed; prior pack at .old-recovery');
+    const cleanupError = new Error('injected EACCES while removing staging');
+    const io = { rmSync(): never { throw cleanupError; } };
+    const result = preserveVoiceInstallFailure(root, original, io);
+    assert.ok(result instanceof AggregateError);
+    assert.equal(result.errors[0], original);
+    assert.equal(result.errors[1], cleanupError);
+    assert.match(result.message, /rollback failed; prior pack/);
+    assert.equal(fs.existsSync(root), true);
+  }));
+
+  test('successful staging cleanup preserves original error instance', () => fixture(root => {
+    const d = dirs(root);
+    const original = new Error('promotion refused');
+    const result = preserveVoiceInstallFailure(d.stage, original);
+    assert.equal(result, original);
+    assert.equal(fs.existsSync(d.stage), false);
+  }));
+
+  test('disposed warning channel cannot misreport a completed installation as failure', () => {
+    const output = { appendLine(): never { throw new Error('disposed output channel'); } };
+    assert.doesNotThrow(() => reportVoiceCleanupWarning(output, 'stale prior backup'));
   });
 
 });

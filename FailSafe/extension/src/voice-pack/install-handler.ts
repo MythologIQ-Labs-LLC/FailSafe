@@ -13,7 +13,7 @@ import { pipeline } from 'stream/promises';
 import { createHash } from 'crypto';
 import { spawn } from 'child_process';
 import { fetchAllowlisted } from './allowlisted-fetch';
-import { atomicSwapVoicePack } from './transactional-swap';
+import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
   InstallReport,
   InstallVoicePackOptions,
@@ -74,15 +74,17 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     const finalDir = path.join(globalStoragePath, 'voice-pack');
     const swap = atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);
     for (const warning of swap.cleanupWarnings) {
-      opts.output?.appendLine('[voice-pack] install cleanup warning: ' + warning);
+      reportVoiceCleanupWarning(opts.output, warning);
     }
 
     return { ok: true, version: manifest.version, finalPath: finalDir, provenance: { tarball, checksum, sha256: actual } };
   } catch (err) {
-    cleanup(stagingDir);
-    const msg = err instanceof Error ? err.message : String(err);
-    emit(opts, { phase: currentPhaseFromError(msg), status: 'error', error: msg });
-    throw err;
+    const originalMessage = err instanceof Error ? err.message : String(err);
+    const failure = preserveVoiceInstallFailure(stagingDir, err);
+    try {
+      emit(opts, { phase: currentPhaseFromError(originalMessage), status: 'error', error: failure.message });
+    } catch { /* a reporting callback must not replace the installation failure */ }
+    throw failure;
   }
 }
 
@@ -172,10 +174,6 @@ function readAndValidateExtractedManifest(stagingDir: string): VoicePackManifest
     }
   }
   return manifest;
-}
-
-function cleanup(stagingDir: string): void {
-  fs.rmSync(stagingDir, { recursive: true, force: true });
 }
 
 /** Classify by the failure prefix only; a message can quote a hostname (#538). */
