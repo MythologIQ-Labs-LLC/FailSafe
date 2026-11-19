@@ -14,7 +14,7 @@ import { commitPushOpenPr, redactUrlCredentials, type GitRunner, type GovernedCo
 import type { GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 import type { Connection } from '../integrations/credentials/credentialGates';
 import { inspectPushBinding } from './githubPushBinding';
-import { snapshotExactSelection, sameExactSelection, type ExactSelection } from './governedCommitSelection';
+import { requiresExactSelection, snapshotExactSelection, sameExactSelection, type ExactSelection } from './governedCommitSelection';
 
 export interface GovernedFlowDeps {
   workspaceRoot: string;
@@ -153,7 +153,7 @@ async function prepareDirectorySelection(
   | { ok: true; paths: string[]; display: string; snapshot?: ExactSelection }
   | { ok: false; warning: string }
 > {
-  if (!changedPaths.some(path => path.endsWith('/'))) {
+  if (!changedPaths.some(path => requiresExactSelection(deps.workspaceRoot, path))) {
     return { ok: true, paths: changedPaths, display: '' };
   }
   const result = await snapshotExactSelection(deps.git, deps.workspaceRoot, changedPaths);
