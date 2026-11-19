@@ -84,6 +84,29 @@ test("G4 #660: staged partial write or ENOSPC publishes no evidence, retry works
   } finally { f.cleanup(); }
 });
 
+test("G4 #660: silently corrupted staged bytes are refused before publishing trust files", async () => {
+  const f = fixture();
+  const original = fs.writeSync;
+  let tampered = false;
+  try {
+    fs.writeSync = (...args) => {
+      if (!tampered) {
+        tampered = true;
+        const [fd, data, offset, length, position] = args;
+        const changed = Buffer.from(data);
+        changed[offset] ^= 0x01;
+        return original(fd, changed, offset, length, position);
+      }
+      return original(...args);
+    };
+    await assert.rejects(writeNew(f.root, rels, f.maker), /staged record bytes changed before publication/);
+  } finally { fs.writeSync = original; }
+  try {
+    checkClean(f);
+    assert.deepEqual(await writeNew(f.root, rels, f.maker), rels);
+  } finally { f.cleanup(); }
+});
+
 test("G4 #660: concurrent same-record writer is refused while first holds exclusive lock", async () => {
   const f = fixture();
   let unblock;
