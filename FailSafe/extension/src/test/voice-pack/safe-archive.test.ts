@@ -38,8 +38,11 @@ suite('voice pack strict archive reader #710', () => {
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, entry.body ?? '');
     }
-    const tar = spawnSync('tar', ['-czf', archive, '-C', source, 'piper', 'whisper', 'voice-pack.manifest.json'], {
-      encoding: 'utf8',
+    // Pass only the archive basename: GNU tar treats Windows drive letters in
+    // -f as remote-host syntax. This is also the production packager's route.
+    const tar = spawnSync('tar', ['-czf', path.basename(archive), '-C', source,
+      'piper', 'whisper', 'voice-pack.manifest.json'], {
+      cwd: path.dirname(archive), encoding: 'utf8',
     });
     assert.equal(tar.status, 0, tar.stderr);
     const manifest = extractValidatedVoiceArchive(archive, stage, '5.2.0');
