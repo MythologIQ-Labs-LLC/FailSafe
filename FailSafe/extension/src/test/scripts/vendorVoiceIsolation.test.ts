@@ -206,6 +206,39 @@ suite('voice vendor isolation #707', () => {
       new Map([['../outside', Buffer.from('X')]]), vendor, fs, root), /invalid pinned voice verification asset/);
   }));
 
+  test('upstream parity is checked against committed HEAD bytes, never just a dirty worktree', () => temporary(root => {
+    const extension = path.join(root, 'FailSafe', 'extension');
+    const vendor = path.join(extension, 'src', 'roadmap', 'ui', 'vendor');
+    const file = path.join(vendor, 'piper', 'piper.min.js');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, 'COMMITTED-PIN');
+    const git = (...args: string[]) => {
+      const run = childProcess.spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+      assert.equal(run.status, 0, `git ${args.join(' ')} failed: ${run.stderr}`);
+    };
+    git('init', '-q');
+    git('add', 'FailSafe/extension/src/roadmap/ui/vendor/piper/piper.min.js');
+    git('-c', 'user.name=FailSafe Fixture', '-c', 'user.email=fixture@example.invalid',
+      'commit', '-q', '-m', 'pinned fixture');
+    const pinned = new Map([['piper/piper.min.js', Buffer.from('COMMITTED-PIN')]]);
+    assert.equal(vendorTool.verifyPinnedVendorOutputs(pinned, vendor, fs, root), 1);
+    assert.equal(vendorTool.verifyCommittedVendorOutputs(pinned, extension), 1);
+
+    fs.writeFileSync(file, 'UNCOMMITTED-REPAIR');
+    assert.throws(() => vendorTool.verifyPinnedVendorOutputs(pinned, vendor, fs, root), /asset mismatch/);
+    assert.equal(vendorTool.verifyCommittedVendorOutputs(pinned, extension), 1,
+      'Git snapshot remains original, independent of mutable worktree');
+
+    const uncommitted = new Map([['piper/piper.min.js', Buffer.from('UNCOMMITTED-REPAIR')]]);
+    assert.equal(vendorTool.verifyPinnedVendorOutputs(uncommitted, vendor, fs, root), 1);
+    assert.throws(() => vendorTool.verifyCommittedVendorOutputs(uncommitted, extension),
+      /pinned committed browser voice asset mismatch/);
+    assert.equal(fs.readFileSync(file, 'utf8'), 'UNCOMMITTED-REPAIR');
+    assert.throws(() => vendorTool.verifyCommittedVendorOutputs(
+      new Map([['whisper/transformers.min.js', Buffer.from('ANY')]]), extension),
+    /committed browser voice asset unavailable/);
+  }));
+
   test('Whisper re-vendoring applies the same deterministic browser sanitization', () => {
     const before = Buffer.from(
       'var mod=eval("quire".replace(/^/,"re"))(moduleName);if(mod&&(mod.length||Object.keys(mod).length))return mod; new Function("return this")',
