@@ -102,6 +102,37 @@ suite('#715 exact-directory manifest, real Git', () => {
     }
   });
 
+  test('pre-approval file hashes never invoke configured Git clean filters', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), 'original\n');
+    const calls: string[][] = [];
+    const captureOnly: GitRunner = async (args, cwd) => {
+      calls.push(args);
+      if (args[0] === 'hash-object' && !args.includes('--no-filters')) {
+        throw new Error('Git filter capable hashing occurred before consent');
+      }
+      return defaultGitRunner(args, cwd);
+    };
+    const manifest = await snapshotExactSelection(captureOnly, root, ['docs/']);
+    assert.equal(manifest.ok, true, JSON.stringify(manifest));
+    assert.ok(calls.some(x => x[0] === 'hash-object' && x.includes('--no-filters')));
+    assert.equal(calls.some(x => x[0] === 'hash-object' && x.some(v => v.startsWith('--path='))), false);
+  });
+
+  test('approved CRLF content can be staged with Git text normalization', async () => {
+    fs.writeFileSync(path.join(root, '.gitattributes'), '*.md text\n');
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# win\r\nline\r\n');
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Normalize approved markdown'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { assert.match(text, /docs\/approved\.md/); return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+    const raw = git(root, 'hash-object', '--no-filters', '--', 'docs/approved.md');
+    const staged = git(root, 'rev-parse', 'HEAD:docs/approved.md');
+    assert.notEqual(raw, staged, 'Git text normalization changes the object ID');
+  });
+
   test('approved directory lists exact filenames and commits only that reviewed set', async () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
     let prompt = '';
