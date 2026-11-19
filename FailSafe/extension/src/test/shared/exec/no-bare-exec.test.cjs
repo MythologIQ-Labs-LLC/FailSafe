@@ -2,8 +2,8 @@
  * Source scan (v6.0.8 lane A, B211, plan T12).
  *
  * R1: no production file starts gh, PowerShell, a scanner, a package manager,
- * taskkill, Python or pip by bare name; the only allowed bare names are the two
- * deferred B215 sites (voice-pack tar, the POSIX ps sampler).
+ * taskkill, Python or pip by bare name; the only remaining deferred B215
+ * site is the POSIX ps sampler. The Voice Pack no longer spawns tar.
  * R2: every python argv literal `-m` or `-c` has `-P` immediately before it;
  * the allowed exceptions are git `-c`/`commit -m` and AdapterService's `-c`,
  * which runs from a fresh empty folder instead (LD13). R2 sees separate
@@ -53,7 +53,7 @@ function walk(dir, out = []) {
   return out;
 }
 
-const R1_ALLOW = [path.join('voice-pack', 'install-handler.ts'), path.join('integrations', 'agent-cli', 'process-tree.ts')];
+const R1_ALLOW = [path.join('integrations', 'agent-cli', 'process-tree.ts')];
 const R2_ALLOW = {
   [path.join('integrations', 'agent-cli', 'git-safety.ts')]: 6,
   [path.join('integrations', 'shield-receipts', 'workspace-evidence-source.ts')]: 2,
@@ -99,7 +99,7 @@ test('T12 R2 self-test: every b66a32d8 python -m / -c line is unguarded, a -P li
   assert.equal(r2Hits('["-P", "-c", "x"]')[0].guarded, true);
 });
 
-test('T12: no production bare start outside the two deferred sites, and every python -m/-c is guarded', () => {
+test('T12: no production bare start outside the remaining ps sampler, and every python -m/-c is guarded', () => {
   const files = walk(SRC);
   assert.ok(files.length >= 500, `scanned ${files.length} files (expected >= 500)`);
   const r1v = [];
@@ -121,7 +121,8 @@ test('T12: no production bare start outside the two deferred sites, and every py
     }
   }
   assert.deepEqual(r1v, [], 'bare starts in production code');
-  assert.equal(r1a.length, 2, `exactly the 2 deferred sites: ${r1a.join(', ')}`);
+  assert.equal(r1a.length, 1, `exactly the remaining ps site: ${r1a.join(', ')}`);
+  assert.match(r1a[0], /^integrations[/\\]agent-cli[/\\]process-tree\.ts:\d+ execFile\('ps',/);
   assert.deepEqual(r2v, [], 'unguarded python -m/-c');
   assert.deepEqual(r2a, R2_ALLOW, 'the non-python -m/-c sites, by file and count');
   // #463 (PR #633): the frozen-wheel install (pip show, pip --isolated install), the dependency
