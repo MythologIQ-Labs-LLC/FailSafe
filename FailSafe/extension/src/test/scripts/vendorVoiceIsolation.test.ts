@@ -134,6 +134,78 @@ suite('voice vendor isolation #707', () => {
     assert.deepEqual(warnings, []);
     assert.equal(fs.readFileSync(path.join(root, 'vendor', 'piper', 'piper.min.js'), 'utf8'), 'NEW');
   }));
+  test('read-only pinned verification accepts byte-identical assets and preserves source metadata', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const assets = new Map([
+      ['piper/piper.min.js', Buffer.from('PINNED-PIPER')],
+      ['whisper/transformers.min.js', Buffer.from('PINNED-WHISPER')],
+    ]);
+    for (const [rel, data] of assets) {
+      const file = path.join(vendor, rel);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, data);
+    }
+    const before = [...assets.keys()].map(rel => {
+      const file = path.join(vendor, rel);
+      const stat = fs.statSync(file);
+      return { rel, bytes: fs.readFileSync(file), mtimeMs: stat.mtimeMs };
+    });
+    assert.equal(vendorTool.verifyPinnedVendorOutputs(assets, vendor, fs, root), 2);
+    for (const prior of before) {
+      const file = path.join(vendor, prior.rel);
+      assert.deepEqual(fs.readFileSync(file), prior.bytes);
+      assert.equal(fs.statSync(file).mtimeMs, prior.mtimeMs, 'verification must not rewrite the vendor tree');
+    }
+  }));
+
+  test('read-only pinned verification refuses changed bytes, then passes after exact repair', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const file = path.join(vendor, 'piper', 'piper.min.js');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, 'DIFFERENT');
+    const expected = new Map([['piper/piper.min.js', Buffer.from('PINNED')]]);
+    assert.throws(() => vendorTool.verifyPinnedVendorOutputs(expected, vendor, fs, root), /asset mismatch/);
+    assert.equal(fs.readFileSync(file, 'utf8'), 'DIFFERENT', 'failed verification is read-only');
+    fs.writeFileSync(file, 'PINNED');
+    assert.equal(vendorTool.verifyPinnedVendorOutputs(expected, vendor, fs, root), 1);
+  }));
+
+  test('read-only pinned verification refuses missing, empty and wrong-type files', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const file = path.join(vendor, 'piper', 'piper.min.js');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const expected = new Map([['piper/piper.min.js', Buffer.from('PINNED')]]);
+    assert.throws(() => vendorTool.verifyPinnedVendorOutputs(expected, vendor, fs, root), /asset missing/);
+    fs.writeFileSync(file, '');
+    assert.throws(() => vendorTool.verifyPinnedVendorOutputs(expected, vendor, fs, root), /invalid browser voice asset/);
+    fs.rmSync(file);
+    fs.mkdirSync(file);
+    assert.throws(() => vendorTool.verifyPinnedVendorOutputs(expected, vendor, fs, root), /invalid browser voice asset/);
+  }));
+
+  test('read-only pinned verification refuses linked ancestor and never follows a source symlink', function () {
+    if (process.platform === 'win32') this.skip();
+    temporary(root => {
+      const outside = path.join(root, 'outside');
+      fs.mkdirSync(outside);
+      fs.writeFileSync(path.join(outside, 'piper.min.js'), 'PINNED');
+      const vendor = path.join(root, 'vendor');
+      fs.mkdirSync(vendor);
+      fs.symlinkSync(outside, path.join(vendor, 'piper'), 'dir');
+      const expected = new Map([['piper/piper.min.js', Buffer.from('PINNED')]]);
+      assert.throws(() => vendorTool.verifyPinnedVendorOutputs(expected, vendor, fs, root), /ancestor must be a real directory/);
+      assert.equal(fs.readFileSync(path.join(outside, 'piper.min.js'), 'utf8'), 'PINNED');
+    });
+  });
+
+  test('read-only pinned verification rejects unauthorized asset names and empty inventory', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    fs.mkdirSync(vendor);
+    assert.throws(() => vendorTool.verifyPinnedVendorOutputs(new Map(), vendor, fs, root), /approved asset map/);
+    assert.throws(() => vendorTool.verifyPinnedVendorOutputs(
+      new Map([['../outside', Buffer.from('X')]]), vendor, fs, root), /invalid pinned voice verification asset/);
+  }));
+
   test('Whisper re-vendoring applies the same deterministic browser sanitization', () => {
     const before = Buffer.from(
       'var mod=eval("quire".replace(/^/,"re"))(moduleName);if(mod&&(mod.length||Object.keys(mod).length))return mod; new Function("return this")',
