@@ -191,6 +191,7 @@ export class DeliveryAssessmentRenderer {
     this.message = null;
     // Unsubmitted review text survives an overlapping refresh but is scoped to its intent and commit.
     this.reviewNoteDraft = null;
+    this.reviewInFlight = false;
   }
 
   ensureStyle() {
@@ -387,16 +388,17 @@ export class DeliveryAssessmentRenderer {
     const reworksOf = () => reworkPicks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
     // One operator review request at a time: PASS and VETO must not race
     // into contradictory ledger submissions while the first POST is pending.
-    let submitting = false;
     const record = (verdict) => {
-      if (submitting) return;
-      submitting = true;
+      if (this.reviewInFlight) return;
+      this.reviewInFlight = true;
       pass.disabled = true;
       veto.disabled = true;
       void this.review(view.intent.id, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
     };
     const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS'));
     const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO'));
+    pass.disabled = this.reviewInFlight;
+    veto.disabled = this.reviewInFlight;
     actions.appendChild(pass);
     actions.appendChild(veto);
     return actions;
@@ -430,15 +432,21 @@ export class DeliveryAssessmentRenderer {
   async review(intentId, verdict, commitSha, note, reworks = []) {
     const body = reworks.length ? { intentId, verdict, commitSha, note, reworks } : { intentId, verdict, commitSha, note };
     const submittedDraft = this.reviewNoteDraft;
-    const { status, data } = await postJson('/api/actions/delivery/review', body);
-    if (status === 200 && submittedDraft && this.reviewNoteDraft === submittedDraft &&
-        submittedDraft.intentId === intentId && submittedDraft.commitSha === commitSha && submittedDraft.value === note) {
-      this.reviewNoteDraft = null;
+    try {
+      const { status, data } = await postJson('/api/actions/delivery/review', body);
+      if (status === 200 && submittedDraft && this.reviewNoteDraft === submittedDraft &&
+          submittedDraft.intentId === intentId && submittedDraft.commitSha === commitSha && submittedDraft.value === note) {
+        this.reviewNoteDraft = null;
+      }
+      this.message = status === 200
+        ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
+        : [data.error || `Recording the review failed (${status}).`, true];
+    } catch (err) {
+      this.message = [`Recording the review failed: ${err && err.message ? err.message : err}`, true];
+    } finally {
+      this.reviewInFlight = false;
+      await this.refresh();
     }
-    this.message = status === 200
-      ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
-      : [data.error || `Recording the review failed (${status}).`, true];
-    await this.refresh();
   }
 
   linkArchitecture(view, candidates) {
