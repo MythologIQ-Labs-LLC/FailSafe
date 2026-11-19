@@ -277,8 +277,12 @@ function verifyCommittedVendorOutputs(outputs, extensionRoot = ROOT, run = spawn
     const treeEntry = run('git', ['ls-tree', 'HEAD', '--', gitRel], {
       cwd: repoRoot, shell: false, encoding: 'utf8', maxBuffer: 4096,
     });
-    const expectedEntry = new RegExp('^100644 blob [a-f0-9]{40}(?:[a-f0-9]{24})?\\t' +
-      gitRel.replace(/[.*+?^\${}()|[\\]\\\\]/g, '\\\\    const gitRel = 'FailSafe/extension/src/roadmap/ui/vendor/' + rel;
+    const entry = String(treeEntry.stdout || '').trimEnd().split('\\t');
+    if (treeEntry.status !== 0 || treeEntry.error || entry.length !== 2 ||
+        !/^100644 blob [a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(entry[0]) ||
+        entry[1] !== gitRel) {
+      throw new Error('committed browser voice asset is not a regular Git blob: ' + rel);
+    }
     const snapshot = run('git', ['show', 'HEAD:' + gitRel], {') + '\\n?
       cwd: repoRoot, shell: false, maxBuffer: MAX_ASSET + 1024,
     });
