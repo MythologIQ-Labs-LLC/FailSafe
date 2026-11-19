@@ -7,11 +7,13 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
+import { VOICE_ASSETS } from './safe-archive';
 
 export interface VoiceSwapOps {
   existsSync: typeof fs.existsSync;
   lstatSync: typeof fs.lstatSync;
+  readFileSync: typeof fs.readFileSync;
   readdirSync: typeof fs.readdirSync;
   mkdirSync: typeof fs.mkdirSync;
   copyFileSync: typeof fs.copyFileSync;
@@ -23,19 +25,58 @@ export interface VoiceSwapResult {
   cleanupWarnings: string[];
 }
 
-function copyPayload(source: string, target: string, stagingTarball: string, io: VoiceSwapOps): void {
+const REQUIRED_FILES = new Set([...VOICE_ASSETS, 'voice-pack.manifest.json']);
+const REQUIRED_DIRS = new Set(['piper', 'whisper']);
+
+/** The copy phase must not trust a mutable staging directory's inventory. */
+function copyPayload(
+  source: string, target: string, stagingTarball: string, io: VoiceSwapOps,
+  seen: Set<string>, prefix = '',
+): void {
   for (const ent of io.readdirSync(source, { withFileTypes: true })) {
     const src = path.join(source, ent.name);
     if (src === stagingTarball) continue;
+    const rel = prefix ? prefix + '/' + ent.name : ent.name;
     const dest = path.join(target, ent.name);
-    if (ent.isSymbolicLink()) throw new Error('voice pack contains a symlink: ' + ent.name);
+    if (ent.isSymbolicLink()) throw new Error('voice pack contains a symlink: ' + rel);
     if (ent.isDirectory()) {
+      if (!REQUIRED_DIRS.has(rel)) throw new Error('unlisted staged voice directory: ' + rel);
       io.mkdirSync(dest, { recursive: false, mode: 0o700 });
-      copyPayload(src, dest, stagingTarball, io);
+      copyPayload(src, dest, stagingTarball, io, seen, rel);
     } else if (ent.isFile()) {
+      if (!REQUIRED_FILES.has(rel) || seen.has(rel)) throw new Error('unlisted staged voice asset: ' + rel);
       io.copyFileSync(src, dest, fs.constants.COPYFILE_EXCL);
+      seen.add(rel);
     } else {
-      throw new Error('voice pack contains unsupported filesystem entry: ' + ent.name);
+      throw new Error('voice pack contains unsupported filesystem entry: ' + rel);
+    }
+  }
+}
+
+/** Recheck copied final bytes, not only the previously validated archive. */
+function verifyPrepared(prepared: string, seen: Set<string>, io: VoiceSwapOps): void {
+  if (seen.size !== REQUIRED_FILES.size || [...REQUIRED_FILES].some(name => !seen.has(name))) {
+    throw new Error('incomplete staged voice asset inventory');
+  }
+  let parsed: unknown;
+  try { parsed = JSON.parse(io.readFileSync(path.join(prepared, 'voice-pack.manifest.json'), 'utf8')); }
+  catch { throw new Error('prepared voice manifest cannot be read'); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('prepared voice manifest schema mismatch');
+  }
+  const m = parsed as { expectedFiles?: unknown; sha256?: unknown };
+  const expected = [...VOICE_ASSETS].sort();
+  const hashes = m.sha256;
+  if (!Array.isArray(m.expectedFiles) || JSON.stringify([...m.expectedFiles].sort()) !== JSON.stringify(expected) ||
+      !hashes || typeof hashes !== 'object' || Array.isArray(hashes) ||
+      JSON.stringify(Object.keys(hashes).sort()) !== JSON.stringify(expected)) {
+    throw new Error('prepared voice manifest inventory mismatch');
+  }
+  for (const name of VOICE_ASSETS) {
+    const value = (hashes as Record<string, unknown>)[name];
+    if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value) ||
+        createHash('sha256').update(io.readFileSync(path.join(prepared, name))).digest('hex') !== value) {
+      throw new Error('prepared voice asset checksum mismatch: ' + name);
     }
   }
 }
@@ -130,7 +171,9 @@ export function atomicSwapVoicePack(
   io.mkdirSync(path.dirname(final), { recursive: true });
   try {
     io.mkdirSync(prepared, { recursive: false, mode: 0o700 });
-    copyPayload(staging, prepared, path.resolve(stagingTarball), io);
+    const seen = new Set<string>();
+    copyPayload(staging, prepared, path.resolve(stagingTarball), io, seen);
+    verifyPrepared(prepared, seen, io);
     const movedOld = promotePrepared(prepared, final, backup, io);
     return cleanupAfterPromotion(staging, backup, movedOld, io);
   } catch (error) {
