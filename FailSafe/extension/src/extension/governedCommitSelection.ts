@@ -13,7 +13,7 @@ export interface ApprovedFile {
   path: string;
   /** Git's actual porcelain XY state at the approval checkpoint. */
   state: string;
-  /** Working-tree Git blob ID with filters, or null for a tracked deletion. */
+  /** Raw working-tree blob ID (no Git filters before consent), or null for a tracked deletion. */
   blob: string | null;
 }
 export interface ExactSelection { files: ApprovedFile[]; }
@@ -85,7 +85,9 @@ export async function snapshotExactSelection(
   if (states.size === 0) return { ok: true, selection: { files: [] } };
   const files: ApprovedFile[] = [];
   for (const [path, state] of [...states.entries()].sort(([a], [b]) => a.localeCompare(b, 'en'))) {
-    const blob = await git(['hash-object', '--path=' + path, '--', path], cwd);
+    // --path would run a configured clean filter BEFORE the operator consents.
+    // Capture the raw content without executing any configured filter programs.
+    const blob = await git(['hash-object', '--no-filters', '--', path], cwd);
     if (blob.code !== 0) {
       // A missing tracked file is meaningful only for a Git-declared deletion.
       if (!state.includes('D')) return refuse('could not hash selected file');
