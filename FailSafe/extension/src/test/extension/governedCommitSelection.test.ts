@@ -161,7 +161,7 @@ suite('#715 exact-directory manifest, real Git', () => {
   test('unmerged and conflicted Git porcelain states cannot be approved', async () => {
     for (const state of ['UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD']) {
       const spoofed: GitRunner = async (args, cwd) => {
-        if (args[0] === 'status') return {
+        if (args[0] === 'status' || (args[0] === '-c' && args[2] === 'status')) return {
           code: 0, stdout: state + ' docs/conflicted.md\0', stderr: '',
         };
         return defaultGitRunner(args, cwd);
@@ -180,7 +180,7 @@ suite('#715 exact-directory manifest, real Git', () => {
       { code: 0, stdout: '?? docs/evil\nname.md\0', stderr: '' },
     ];
     for (const injected of cases) {
-      const guard: GitRunner = async (args, cwd) => args[0] === 'status'
+      const guard: GitRunner = async (args, cwd) => (args[0] === 'status' || (args[0] === '-c' && args[2] === 'status'))
         ? injected : defaultGitRunner(args, cwd);
       const result = await snapshotExactSelection(guard, root, ['docs/']);
       assert.equal(result.ok, false, JSON.stringify(result));
