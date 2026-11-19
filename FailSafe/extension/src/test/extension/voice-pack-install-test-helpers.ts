@@ -6,6 +6,7 @@ import { gzipSync } from "zlib";
 export interface FetchHandler {
   url: string | RegExp; status?: number; body?: Uint8Array | string;
   location?: string; finalUrl?: string; throws?: Error; type?: string;
+  contentLength?: number;
 }
 export interface FetchStubOptions { ignoreManual?: boolean }
 export interface InstallFixture {
@@ -80,7 +81,13 @@ function mockResponse(handler: FetchHandler, requestedUrl: string, redirected = 
   return {
     ok: status >= 200 && status < 300, status, redirected,
     type: handler.type ?? "basic", url: handler.finalUrl ?? requestedUrl,
-    headers: { get: (name: string) => name.toLowerCase() === "location" ? handler.location ?? null : null },
+    headers: { get: (name: string) => {
+      if (name.toLowerCase() === "location") return handler.location ?? null;
+      if (name.toLowerCase() === "content-length" && handler.contentLength !== undefined) {
+        return String(handler.contentLength);
+      }
+      return null;
+    } },
     text: async () => new TextDecoder().decode(bytes),
     arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
     body: new ReadableStream<Uint8Array>({
