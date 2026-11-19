@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { extractValidatedVoiceArchive, VOICE_ASSETS } from '../../voice-pack/safe-archive';
-import { buildFixturePackEntries, buildFixtureTar, TarFixtureEntry } from '../extension/voice-pack-install-test-helpers';
+import { buildFixturePackEntries, buildFixtureTar, sha256OfBytes, TarFixtureEntry } from '../extension/voice-pack-install-test-helpers';
 
 function fixture(run: (root: string, stage: string, archive: string) => void): void {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-safe-tar-'));
@@ -85,6 +85,18 @@ suite('voice pack strict archive reader #710', () => {
       assert.equal(fs.existsSync(path.join(stage, 'piper')), false);
     });
   });
+  test('rejects empty inference asset even when the manifest hash matches', () => {
+    const entries = buildFixturePackEntries();
+    const target = VOICE_ASSETS[0];
+    const idx = entries.findIndex(item => item.name === target);
+    entries[idx] = { ...entries[idx], body: '' };
+    const mi = entries.findIndex(item => item.name === 'voice-pack.manifest.json');
+    const manifest = JSON.parse(String(entries[mi].body));
+    manifest.sha256[target] = sha256OfBytes(Buffer.alloc(0));
+    entries[mi] = { ...entries[mi], body: JSON.stringify(manifest) };
+    deny(entries, /empty voice asset/);
+  });
+
   test('rejects declared asset inflation before allocation or writing', () => {
     const entries = buildFixturePackEntries();
     const idx = entries.findIndex(item => item.name === VOICE_ASSETS[0]);
