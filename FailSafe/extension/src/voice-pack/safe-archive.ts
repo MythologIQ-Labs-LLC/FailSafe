@@ -34,7 +34,8 @@ function field(block: Buffer, offset: number, length: number): string {
   return raw.subarray(0, end < 0 ? length : end).toString('utf8');
 }
 function octal(block: Buffer, offset: number, length: number): number {
-  const value = field(block, offset, length).trim();
+  // POSIX checksum fields commonly end in NUL followed by a space.
+  const value = block.subarray(offset, offset + length).toString('ascii').replace(/[\\x00 ]+$/g, '').trim();
   if (!/^[0-7]+$/.test(value)) fail('invalid tar numeric field');
   const n = parseInt(value, 8);
   if (!Number.isSafeInteger(n)) fail('tar numeric field overflow');
