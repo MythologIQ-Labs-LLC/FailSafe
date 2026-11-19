@@ -208,6 +208,22 @@ suite('#715 exact-directory manifest, real Git', () => {
     }
   });
 
+  test('preconsent status and tracked-file lookup do not invoke core.fsmonitor commands', async () => {
+    if (process.platform === 'win32') return; // Host-specific executable proof requires installed Windows acceptance.
+    const hook = path.join(root, 'fsmonitor.sh');
+    const marker = path.join(root, 'fsmonitor-executed.log');
+    fs.writeFileSync(hook, '#!/bin/sh\nprintf "hook ran\\n" >> "' + marker + '"\nprintf "\\0"\n');
+    fs.chmodSync(hook, 0o755);
+    git(root, 'config', 'core.fsmonitor', hook);
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), 'raw content\n');
+    const current = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(current.ok, true, JSON.stringify(current));
+    assert.equal(fs.existsSync(marker), false, 'status must not run configured fsmonitor');
+    const missing = await snapshotExactSelection(defaultGitRunner, root, ['docs/missing.md']);
+    assert.equal(missing.ok, true, JSON.stringify(missing));
+    assert.equal(fs.existsSync(marker), false, 'ls-files must not run configured fsmonitor');
+  });
+
   test('pre-approval file hashes never invoke configured Git clean filters', async () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), 'original\n');
     const calls: string[][] = [];
