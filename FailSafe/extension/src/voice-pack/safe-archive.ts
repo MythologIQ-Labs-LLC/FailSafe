@@ -95,6 +95,8 @@ function validateManifest(contents: Map<string, Buffer>, version: string): Voice
   catch { return fail('invalid voice pack manifest JSON'); }
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) fail('invalid manifest');
   const m = manifest as VoicePackManifest;
+  if (JSON.stringify(Object.keys(m).sort()) !==
+      JSON.stringify(['builtAt', 'expectedFiles', 'sha256', 'version'])) fail('unexpected manifest fields');
   if (m.version !== version || typeof m.builtAt !== 'string' ||
       !Array.isArray(m.expectedFiles) || !m.sha256 ||
       typeof m.sha256 !== 'object' || Array.isArray(m.sha256)) fail('manifest schema/version mismatch');
@@ -124,7 +126,9 @@ export function extractValidatedVoiceArchive(tarball: string, stage: string, ver
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_COMPRESSED) fail('compressed archive budget');
   const root = fs.lstatSync(stage);
   if (!root.isDirectory() || root.isSymbolicLink()) fail('unsafe staging root');
-  const bytes = gunzipSync(fs.readFileSync(tarball), { maxOutputLength: MAX_EXPANDED });
+  let bytes: Buffer;
+  try { bytes = gunzipSync(fs.readFileSync(tarball), { maxOutputLength: MAX_EXPANDED }); }
+  catch { fail('invalid or oversized gzip stream'); }
   const entries = inspectTar(bytes);
   const manifest = validateManifest(entries, version);
   for (const dir of ['piper', 'whisper', MANIFEST]) unusedDestination(path.join(stage, dir));
