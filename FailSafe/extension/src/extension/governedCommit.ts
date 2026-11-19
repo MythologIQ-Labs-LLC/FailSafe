@@ -108,6 +108,12 @@ export async function commitPushOpenPr(
       warning: 'invalid selected paths; no status, branch, commit, push or PR attempted' };
   }
 
+  if (req.paths.some(path => path.endsWith('/')) &&
+    (!Array.isArray(req.approvedFiles) || req.approvedFiles.length === 0)) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'directory selection requires an exact approved file manifest; no branch, commit, push or PR attempted' };
+  }
+
   // Git pathspec magic must never reinterpret an operator-selected filename.
   const literalPaths = req.paths.map((path) => `:(literal)${path}`);
   const status = await git(['status', '--porcelain', '--', ...literalPaths], cwd);
