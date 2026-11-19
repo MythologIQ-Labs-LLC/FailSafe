@@ -136,7 +136,7 @@ Computed by the check on every run; it fails when a number here differs from the
 |---|---|
 | `scan-1-files` | 54 |
 | `scan-1-call-sites` | 104 |
-| `scan-2-files` | 7 |
+| `scan-2-files` | 6 |
 | `browser-files` | 39 |
 | `browser-targets` | 87 |
 | `loopback-targets` | 1 |
