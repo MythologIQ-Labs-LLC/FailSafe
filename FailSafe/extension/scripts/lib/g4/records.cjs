@@ -139,6 +139,9 @@ async function writeNew(repoRoot, rels, make) {
       }
       const name = path.join(stage, `output-${index}`);
       stageOutput(name, bytes);
+      if (!fs.readFileSync(name).equals(Buffer.from(bytes))) {
+        throw refuse("RECORD_OUTPUT", "staged record bytes changed before publication");
+      }
       return name;
     });
     refuseExisting(targets, rels); // any existing destination, including a dangling link, must refuse
