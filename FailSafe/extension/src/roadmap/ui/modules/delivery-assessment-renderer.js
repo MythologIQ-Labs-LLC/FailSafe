@@ -189,6 +189,8 @@ export class DeliveryAssessmentRenderer {
     this.container = document.getElementById(containerId);
     this.selectedId = null;
     this.message = null;
+    // Unsubmitted review text survives an overlapping refresh but is scoped to its intent and commit.
+    this.reviewNoteDraft = null;
   }
 
   ensureStyle() {
@@ -369,6 +371,15 @@ export class DeliveryAssessmentRenderer {
     note.maxLength = 500;
     note.placeholder = 'Note (optional)';
     note.setAttribute('aria-label', 'Review note');
+    const restoreDraft = () => {
+      const draft = this.reviewNoteDraft;
+      note.value = draft && draft.intentId === view.intent.id && draft.commitSha === select.value ? draft.value : '';
+    };
+    restoreDraft();
+    note.addEventListener('input', () => {
+      this.reviewNoteDraft = { intentId: view.intent.id, commitSha: select.value, value: note.value };
+    });
+    select.addEventListener('change', restoreDraft);
     actions.appendChild(select);
     actions.appendChild(note);
     const reworkPicks = this.reworkPicks(view, linked);
@@ -412,7 +423,12 @@ export class DeliveryAssessmentRenderer {
 
   async review(intentId, verdict, commitSha, note, reworks = []) {
     const body = reworks.length ? { intentId, verdict, commitSha, note, reworks } : { intentId, verdict, commitSha, note };
+    const submittedDraft = this.reviewNoteDraft;
     const { status, data } = await postJson('/api/actions/delivery/review', body);
+    if (status === 200 && submittedDraft && this.reviewNoteDraft === submittedDraft &&
+        submittedDraft.intentId === intentId && submittedDraft.commitSha === commitSha && submittedDraft.value === note) {
+      this.reviewNoteDraft = null;
+    }
     this.message = status === 200
       ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
       : [data.error || `Recording the review failed (${status}).`, true];

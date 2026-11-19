@@ -216,6 +216,67 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
+  test('a typed review note survives an async repaint and posts exactly once before the draft is cleared (#703)', async () => {
+    const ctx = setupDom();
+    try {
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      await renderer.refresh();
+      const oldInput = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+      oldInput.value = 'keep this note';
+      oldInput.dispatchEvent(new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('input', { bubbles: true }));
+
+      // This recreates reviewControls, just as an overlapping API refresh does in the real UI.
+      await renderer.refresh();
+      const newInput = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+      assert.notEqual(newInput, oldInput, 'the refresh must replace the actual input');
+      assert.equal(newInput.value, 'keep this note', 'unsent text must not disappear during a refresh');
+      (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+      await new Promise((res) => setTimeout(res, 20));
+      assert.deepEqual(ctx.posted, [
+        { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'keep this note' } },
+      ], 'only the real typed note may be recorded');
+      assert.equal((ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement).value, '', 'a successful post clears the private draft');
+    } finally { ctx.cleanup(); }
+  });
+
+  for (const nextDraft of ['new unsent draft', 'submitted earlier']) {
+    test(`#703: a later ${nextDraft === 'submitted earlier' ? 'same-text' : 'different-text'} edit survives a prior POST`, async () => {
+      const ctx = setupDom();
+      try {
+        const g = global as unknown as {
+          fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+        };
+        const prior = g.fetch;
+        let finishPost: (() => void) | undefined;
+        g.fetch = async (url, init) => {
+          if (url === '/api/actions/delivery/review' && init?.method === 'POST') {
+            await new Promise<void>((resolve) => { finishPost = resolve; });
+          }
+          return prior(url, init);
+        };
+        const renderer = new DeliveryAssessmentRenderer('workspace');
+        await renderer.refresh();
+        const note = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+        const sendInput = () => note.dispatchEvent(
+          new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('input', { bubbles: true }),
+        );
+        note.value = 'submitted earlier';
+        sendInput();
+        (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+        assert.ok(finishPost, 'POST must remain pending');
+        note.value = nextDraft;
+        sendInput();
+        finishPost!();
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        assert.deepEqual(ctx.posted, [
+          { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'submitted earlier' } },
+        ]);
+        assert.equal((ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement).value, nextDraft,
+          'a newer unsent draft must not be cleared by completion of the older request');
+      } finally { ctx.cleanup(); }
+    });
+  }
+
   test('the legend names all six statuses with distinct chips', async () => {
     const ctx = setupDom();
     try {
