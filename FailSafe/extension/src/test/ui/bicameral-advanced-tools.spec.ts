@@ -21,11 +21,14 @@ const ALL_CAPABILITIES = [
   'update', 'reset', 'dashboard', 'validateSymbols', 'getNeighbors',
 ];
 
-function makeStubClient(): any {
+function makeStubClient({ connectDelayMs = 0 }: { connectDelayMs?: number } = {}): any {
   let connected = false;
   return {
     isConnected: () => connected,
-    connect: async () => { connected = true; },
+    connect: async () => {
+      if (connectDelayMs) await new Promise((resolve) => setTimeout(resolve, connectDelayMs));
+      connected = true;
+    },
     disconnect: async () => { connected = false; },
     getCapabilities: () => new Set(ALL_CAPABILITIES),
     history: async () => [],
@@ -47,11 +50,11 @@ function makeStubClient(): any {
   };
 }
 
-async function waitForConfiguredState(page: Page, url: string): Promise<void> {
+async function waitForState(page: Page, url: string, state: string): Promise<void> {
   await expect.poll(async () => {
     const response = await page.request.get(`${url}/api/integrations/bicameral/status`);
     return (await response.json()).state;
-  }, { timeout: 15_000 }).toBe('configured-not-running');
+  }, { timeout: 15_000 }).toBe(state);
 }
 
 test.describe('FX589 — Bicameral Advanced-tools section (B-INT-1)', () => {
@@ -66,10 +69,10 @@ test.describe('FX589 — Bicameral Advanced-tools section (B-INT-1)', () => {
 
   test('expand Advanced tools → invoke dashboard → result area populates', async ({ page }) => {
     controller = await serveConsoleServerUI({
-      bicameralClient: makeStubClient(),
+      bicameralClient: makeStubClient({ connectDelayMs: 250 }),
       bicameralConfigured: true,
     });
-    await waitForConfiguredState(page, controller.url);
+    await waitForState(page, controller.url, 'configured-not-running');
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="integrations"]').click();
     // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
@@ -78,12 +81,14 @@ test.describe('FX589 — Bicameral Advanced-tools section (B-INT-1)', () => {
 
     // Connect to reach the running state, where the Advanced-tools section mounts.
     const connectBtn = page.locator('[data-action="bicameral-connect"]');
-    await expect(connectBtn).toBeVisible({ timeout: 5000 });
+    await expect(connectBtn).toBeVisible();
     await connectBtn.click();
+    // The HTTP status is the readiness signal, not elapsed time on a busy CI host.
+    await waitForState(page, controller.url, 'running');
 
     // The collapsed <details> section appears in the running-state card.
     const details = page.locator('details.cc-bicameral-advanced');
-    await expect(details).toBeVisible({ timeout: 5000 });
+    await expect(details).toBeVisible();
     // Collapsed by default — the tool list is not yet visible.
     await expect(details).not.toHaveAttribute('open', /.*/);
 
@@ -92,12 +97,12 @@ test.describe('FX589 — Bicameral Advanced-tools section (B-INT-1)', () => {
     const runBtn = page.locator(
       '.cc-bicameral-tool-row[data-tool="dashboard"] [data-action="bicameral-tool-invoke"]',
     );
-    await expect(runBtn).toBeEnabled({ timeout: 5000 });
+    await expect(runBtn).toBeEnabled();
     await runBtn.click();
 
     // The result <pre> populates with the dashboard snapshot.
     const result = page.locator('.cc-bicameral-tool-result');
-    await expect(result).toContainText('"features": 3', { timeout: 5000 });
+    await expect(result).toContainText('"features": 3');
     await expect(result).toContainText('"decisions": 12');
   });
 });
