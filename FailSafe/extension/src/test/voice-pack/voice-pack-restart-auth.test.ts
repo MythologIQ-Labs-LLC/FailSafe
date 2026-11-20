@@ -87,6 +87,23 @@ suite('voice-pack signed restart evidence #732', () => {
     assert.equal((await probeVoicePackState(root, '5.2.0')).state, 'corrupt');
   });
 
+  test('symlinked receipt cannot activate a pack even when signature is valid', async () => {
+    if (process.platform === 'win32') return;
+    const { dir } = signedPack(root);
+    const receipt = path.join(dir, 'voice-pack-release.json');
+    const other = path.join(root, 'outside-release.json');
+    fs.renameSync(receipt, other);
+    fs.symlinkSync(other, receipt);
+    assert.equal((await probeVoicePackState(root, '5.2.0')).state, 'corrupt');
+    assert.ok(fs.existsSync(other));
+  });
+
+  test('oversized signed receipt is refused before allocation or activation', async () => {
+    const { dir } = signedPack(root);
+    fs.writeFileSync(path.join(dir, 'voice-pack-release.json'), 'X'.repeat(4097));
+    assert.equal((await probeVoicePackState(root, '5.2.0')).state, 'corrupt');
+  });
+
   test('another publisher key cannot confer installed status', async () => {
     signedPack(root);
     const other = generateKeyPairSync('ed25519');
