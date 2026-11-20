@@ -119,8 +119,14 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
 
     // Require a publisher signature bound to *this* archive and the exact
     // verified manifest bytes, before displacing any existing installation.
-    await verifyPublisherBeforePromotion(version, actual,
+    const signed = await verifyPublisherBeforePromotion(version, actual,
       path.join(stagingDir, 'voice-pack.manifest.json'), pinnedPublisher);
+    // Persist the exact authenticated receipt with the payload. On the next
+    // launch the read-only probe can independently reauthenticate the files.
+    fs.writeFileSync(path.join(stagingDir, 'voice-pack-release.json'),
+      signed.record, { flag: 'wx', mode: 0o600 });
+    fs.writeFileSync(path.join(stagingDir, 'voice-pack-release.json.sig'),
+      signed.signature, { flag: 'wx', mode: 0o600 });
     emit(opts, { phase: 'verify', status: 'success' });
 
     const finalDir = path.join(storageRoot, 'voice-pack');
