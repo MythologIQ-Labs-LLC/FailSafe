@@ -58,13 +58,17 @@ test("altered signed archive digest, source or version is refused", () => {
   }
 });
 
-test("tampering with the signed record is refused cryptographically", () => {
+test("tampered version is refused by schema and corrupted signature by Ed25519", () => {
   const k = keys(), item = candidate();
   const receipt = signCandidate(item, k.privateKey, k.publicKey);
   const altered = Buffer.from(receipt.payload);
   altered[altered.indexOf(Buffer.from("6.1.0"))] = "7".charCodeAt(0);
   assert.throws(() => verifySignedCandidate(item, altered, receipt.signature, k.publicKey),
-    /signed identity, signer or digest does not match|signature invalid/);
+    /Expected values to be strictly equal|signed identity, signer or digest does not match/);
+  const wrongSignature = Buffer.from(receipt.signature);
+  wrongSignature[0] ^= 0x01;
+  assert.throws(() => verifySignedCandidate(item, receipt.payload, wrongSignature, k.publicKey),
+    /publisher signature invalid/);
 });
 
 test("wrong signature size and missing publisher pin fail closed", () => {
