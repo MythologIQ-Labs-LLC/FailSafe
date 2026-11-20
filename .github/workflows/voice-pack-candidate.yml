@@ -1,0 +1,97 @@
+name: Voice Pack Candidate (Non-publishing)
+
+# #732: verification and artifact assembly only. No signature, release, tag,
+# marketplace upload, or content-write token exists in this workflow.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/voice-pack-candidate.yml"
+      - ".github/workflows/release.yml"
+      - "FailSafe/extension/scripts/verify-voice-release-candidate.cjs"
+      - "FailSafe/extension/src/test/scripts/verifyVoiceReleaseCandidate.test.cjs"
+      - "FailSafe/extension/scripts/package-voice-pack.cjs"
+      - "FailSafe/extension/scripts/vendor-voice.cjs"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Exact previously published extension version, e.g. 6.1.0"
+        type: string
+        required: true
+      source_sha:
+        description: "Exact 40-hex SHA of the existing extension release tag"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voice-candidate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    name: Verify pinned source and build non-publishable archive
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact requested source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_sha || github.event.pull_request.head.sha }}
+      - name: Refuse unapproved manual version/source mismatch
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY}" = "MythologIQ-Labs-LLC/FailSafe"
+          test "${GITHUB_REF}" = "refs/heads/main"
+          [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "${SOURCE_SHA}" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "${SOURCE_SHA}"
+          git merge-base --is-ancestor "${SOURCE_SHA}" origin/main
+          test "$(git rev-parse "v${VERSION}^{commit}")" = "${SOURCE_SHA}"
+          gh release view "v${VERSION}" --json isDraft,tagName --jq '
+            if .isDraft == false and .tagName == "v" + env.VERSION
+            then true
+            else error("extension release not published") end
+          '
+      - name: Setup Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - name: Install exact locked dependencies
+        working-directory: FailSafe/extension
+        run: npm ci
+      - name: Verify original SHA-512 pinned upstream browser assets
+        working-directory: FailSafe/extension
+        run: npm run verify:voice-pins
+      - name: Build actual six-asset candidate
+        working-directory: FailSafe/extension
+        run: npm run build:package
+      - name: Verify exact tar inventory, version, SHA-256 and source
+        working-directory: FailSafe/extension
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          VERSION="${INPUT_VERSION:-$(node -p "require('./package.json').version")}"
+          test "$(node -p "require('./package.json').version")" = "${VERSION}"
+          node scripts/verify-voice-release-candidate.cjs \
+            --version "${VERSION}" --source "$(git rev-parse HEAD)" --dist dist
+      - name: Retain explicitly unsigned proof; never publish
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: untrusted-voice-pack-candidate-${{ github.run_id }}
+          path: |
+            FailSafe/extension/dist/*.tar.gz
+            FailSafe/extension/dist/*.tar.gz.sha256
+            FailSafe/extension/dist/voice-pack-candidate.json
+          if-no-files-found: error
+          retention-days: 7
