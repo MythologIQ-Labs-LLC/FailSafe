@@ -121,3 +121,24 @@ test("linked candidate archive is refused before tar or hashing", { skip: proces
     fs.symlinkSync(other, x.archive);
     assert.throws(() => verify(x), /not a bounded regular file/);
   }));
+
+test("ordinary release tag filter cannot reinterpret v*-voice as a VSIX release", () => {
+  const f = path.resolve(__dirname, "../../../../../.github/workflows/release.yml");
+  const source = fs.readFileSync(f, "utf8");
+  const match = /tags:\s*\[([^\]]+)\]/.exec(source);
+  assert.ok(match, "release must specify tag filter");
+  assert.match(match[1], /["']v\*["']/);
+  assert.match(match[1], /["']!v\*-voice["']/);
+  assert.ok(match[1].indexOf("v*") < match[1].indexOf("!v*-voice"),
+    "GitHub negation must follow positive pattern");
+});
+
+test("candidate workflow never grants GitHub release or marketplace write authority", () => {
+  const f = path.resolve(__dirname, "../../../../../.github/workflows/voice-pack-candidate.yml");
+  const source = fs.readFileSync(f, "utf8");
+  assert.match(source, /permissions:\s*\n\s*contents: read/);
+  assert.doesNotMatch(source, /contents:\s*write|gh release create|publish-release/i);
+  assert.match(source, /sign_candidate == true/);
+  assert.match(source, /environment: production/);
+  assert.match(source, /workflow_dispatch/);
+});
