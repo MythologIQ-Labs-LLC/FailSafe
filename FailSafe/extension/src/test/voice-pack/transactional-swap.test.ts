@@ -36,7 +36,18 @@ function dirs(root: string) {
 }
 function old(final: string) {
   fs.mkdirSync(final, { recursive: true });
-  fs.writeFileSync(path.join(final, 'old.txt'), 'previous');
+  const sha256: Record<string, string> = {};
+  for (const name of VOICE_ASSETS) {
+    const file = path.join(final, name);
+    const contents = name === 'piper/piper.min.js' ? 'previous' : 'prior:' + name;
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, contents);
+    sha256[name] = createHash('sha256').update(contents).digest('hex');
+  }
+  fs.writeFileSync(path.join(final, 'voice-pack.manifest.json'), JSON.stringify({
+    version: '6.0.12', builtAt: '2026-11-01T00:00:00Z',
+    expectedFiles: [...VOICE_ASSETS], sha256,
+  }));
 }
 function opsWithRename(fails: (from: string, to: string) => boolean): VoiceSwapOps {
   return {
@@ -60,15 +71,36 @@ suite('voice-pack transactional replacement #710', () => {
   test('upgrade replaces active pack and removes successful backup', () => fixture(root => {
     const d = dirs(root); old(d.final);
     atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'b' });
-    assert.equal(fs.existsSync(path.join(d.final, 'old.txt')), false);
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'new');
     assert.equal(fs.existsSync(d.final + '.old-b'), false);
+  }));
+
+  test('unowned destination cannot be replaced and preserves foreign content', () => fixture(root => {
+    const d = dirs(root); fs.mkdirSync(d.final);
+    fs.writeFileSync(path.join(d.final, 'private.txt'), 'PRESERVE');
+    assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'own0' }),
+      /unrecognized pack entry/);
+    assert.equal(fs.readFileSync(path.join(d.final, 'private.txt'), 'utf8'), 'PRESERVE');
+    assert.equal(fs.existsSync(d.final + '.old-own0'), false);
+    assert.equal(fs.existsSync(d.final + '.new-own0'), false);
+  }));
+
+  test('valid prior pack containing an unrelated file cannot be replaced', () => fixture(root => {
+    const d = dirs(root); old(d.final);
+    const foreign = path.join(d.final, 'whisper', 'private.txt');
+    fs.writeFileSync(foreign, 'PRESERVE');
+    assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'own1' }),
+      /unrecognized pack entry/);
+    assert.equal(fs.readFileSync(foreign, 'utf8'), 'PRESERVE');
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
+    assert.equal(fs.existsSync(d.final + '.old-own1'), false);
   }));
 
   test('failure of new promotion restores previous active installation', () => fixture(root => {
     const d = dirs(root); old(d.final);
     const ops = opsWithRename((from, to) => from.endsWith('.new-c') && to === d.final);
     assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'c', ops }), /injected rename failure/);
-    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
     assert.equal(fs.existsSync(d.final + '.old-c'), false);
     assert.equal(fs.existsSync(d.final + '.new-c'), false);
   }));
@@ -88,14 +120,14 @@ suite('voice-pack transactional replacement #710', () => {
       (error: unknown) => error instanceof AggregateError && error.errors.length === 2
         && error.message.includes('.old-e'),
     );
-    assert.equal(fs.readFileSync(path.join(d.final + '.old-e', 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.readFileSync(path.join(d.final + '.old-e', 'piper', 'piper.min.js'), 'utf8'), 'previous');
   }));
 
   test('pre-existing backup path collision refuses replacement', () => fixture(root => {
     const d = dirs(root); old(d.final);
     fs.mkdirSync(d.final + '.old-f');
     assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'f' }), /collision/);
-    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
   }));
 
   test('staged symlink does not overwrite active pack', function () {
@@ -104,7 +136,7 @@ suite('voice-pack transactional replacement #710', () => {
       const d = dirs(root); old(d.final);
       fs.symlinkSync(path.join(root, 'outside'), path.join(d.stage, 'bad-link'));
       assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'g' }), /symlink/);
-      assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+      assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
     });
   });
 
@@ -113,7 +145,7 @@ suite('voice-pack transactional replacement #710', () => {
     fs.writeFileSync(path.join(d.stage, 'piper', 'injected.js'), 'UNVERIFIED');
     assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x1' }),
       /unlisted staged voice asset/);
-    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
     assert.equal(fs.existsSync(d.final + '.new-x1'), false);
   }));
 
@@ -122,7 +154,7 @@ suite('voice-pack transactional replacement #710', () => {
     fs.writeFileSync(path.join(d.stage, 'piper', 'piper.min.js'), 'TAMPERED');
     assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x2' }),
       /prepared voice asset checksum mismatch/);
-    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
   }));
 
   test('staged manifest version substitution cannot promote a different voice pack', () => fixture(root => {
@@ -133,7 +165,7 @@ suite('voice-pack transactional replacement #710', () => {
     fs.writeFileSync(file, JSON.stringify(manifest));
     assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x4' }),
       /prepared voice manifest version differs from requested archive/);
-    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
   }));
 
   test('missing staged voice asset fails before promotion, prior install survives', () => fixture(root => {
@@ -141,7 +173,7 @@ suite('voice-pack transactional replacement #710', () => {
     fs.rmSync(path.join(d.stage, 'whisper', 'ort-wasm-simd.wasm'));
     assert.throws(() => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'x3' }),
       /incomplete staged voice asset inventory/);
-    assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+    assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
   }));
 
   test('backup cleanup failure is warning, not a false failed installation', () => fixture(root => {
@@ -189,7 +221,7 @@ suite('voice-pack transactional replacement #710', () => {
         () => atomicSwapVoicePack(d.stage, d.final, d.tarball, { token: 'k' }),
         /collision/,
       );
-      assert.equal(fs.readFileSync(path.join(d.final, 'old.txt'), 'utf8'), 'previous');
+      assert.equal(fs.readFileSync(path.join(d.final, 'piper', 'piper.min.js'), 'utf8'), 'previous');
       assert.equal(fs.lstatSync(backup).isSymbolicLink(), true);
       assert.equal(fs.existsSync(d.final + '.new-k'), false);
     });

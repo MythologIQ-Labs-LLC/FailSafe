@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash, randomBytes } from 'crypto';
 import { VOICE_ASSETS } from './safe-archive';
+import { assertRemovableVoicePack } from './uninstall-boundary';
 
 export interface VoiceSwapOps {
   existsSync: typeof fs.existsSync;
@@ -100,6 +101,8 @@ function requireRealDestination(final: string, io: VoiceSwapOps): boolean {
   if (stat.isSymbolicLink() || !stat.isDirectory()) {
     throw new Error('voice pack destination must be a real directory');
   }
+  // Never replace an unrelated directory and then delete its backup.
+  assertRemovableVoicePack(final);
   return true;
 }
 
