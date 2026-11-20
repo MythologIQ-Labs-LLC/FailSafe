@@ -121,6 +121,23 @@ function assertVendorAncestry(target, io, trustedRoot, allowMissing = false) {
   }
 }
 
+/** lstat, not existsSync: a dangling symlink is still an occupied pathname. */
+function existingVendorEntry(io, file) {
+  try { return io.lstatSync(file); }
+  catch (err) {
+    if (err && err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+function requireRegularVendorTarget(io, file) {
+  const stat = existingVendorEntry(io, file);
+  if (stat && (!stat.isFile() || stat.isSymbolicLink())) {
+    throw new Error('unexpected vendor destination type');
+  }
+  return stat;
+}
+
 function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
   assertVendorAncestry(root, io, trustedRoot, true);
   io.mkdirSync(root, { recursive: true });
@@ -128,30 +145,51 @@ function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
     throw new Error('voice vendor root must be a real directory');
   }
+  // Preflight ALL destinations and transaction names before staging any bytes.
+  const prepared = [];
   for (const [rel, bytes] of outputs) {
     if (!/^(piper|whisper)\/[A-Za-z0-9_.-]+$/.test(rel)) throw new Error('invalid vendor destination');
     const target = path.join(root, rel);
     const dir = path.dirname(target);
     assertVendorAncestry(dir, io, trustedRoot, true);
     io.mkdirSync(dir, { recursive: true });
-    if (io.lstatSync(dir).isSymbolicLink()) throw new Error('vendor directory is a symlink');
-    assertVendorAncestry(target, io, trustedRoot);
-    if (io.existsSync(target) && !io.lstatSync(target).isFile()) {
-      throw new Error('unexpected vendor destination type');
+    const dirStat = io.lstatSync(dir);
+    if (!dirStat.isDirectory() || dirStat.isSymbolicLink()) {
+      throw new Error('vendor directory must be a real directory');
     }
+    assertVendorAncestry(target, io, trustedRoot);
+    const original = requireRegularVendorTarget(io, target);
     const pending = target + '.new-' + token;
     const backup = target + '.old-' + token;
-    if (io.existsSync(pending) || io.existsSync(backup)) throw new Error('voice vendor transaction collision');
+    if (existingVendorEntry(io, pending) || existingVendorEntry(io, backup)) {
+      throw new Error('voice vendor transaction collision');
+    }
+    prepared.push({ target, pending, backup, hadOriginal: Boolean(original), bytes });
+  }
+  for (const { bytes, ...item } of prepared) {
     // Record first: writeFileSync can create a partial file before throwing.
-    staged.push({ target, pending, backup });
-    io.writeFileSync(pending, bytes, { flag: 'wx', mode: 0o600 });
+    staged.push(item);
+    io.writeFileSync(item.pending, bytes, { flag: 'wx', mode: 0o600 });
   }
 }
 
 function promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot) {
   for (const item of staged) {
     assertVendorAncestry(item.target, io, trustedRoot);
-    if (io.existsSync(item.target)) {
+    const original = requireRegularVendorTarget(io, item.target);
+    if (Boolean(original) !== item.hadOriginal) {
+      throw new Error('voice vendor destination changed during promotion');
+    }
+    // An attacker or concurrent process may create a collision after preflight.
+    // This check is not a race-free directory-handle capability.
+    if (existingVendorEntry(io, item.backup)) {
+      throw new Error('voice vendor transaction collision');
+    }
+    const pending = existingVendorEntry(io, item.pending);
+    if (!pending || !pending.isFile() || pending.isSymbolicLink()) {
+      throw new Error('voice vendor staged file changed during promotion');
+    }
+    if (original) {
       io.renameSync(item.target, item.backup);
       moved.push(item);
     }

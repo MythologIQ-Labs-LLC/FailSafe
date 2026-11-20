@@ -98,6 +98,96 @@ suite('voice vendor isolation #707', () => {
     assert.deepEqual(fs.readdirSync(dir).filter(x => x.includes('.new-') || x.includes('.old-')), []);
   }));
 
+  test('dangling vendor destination link refuses without staging or losing earlier assets', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege varies.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const dir = path.join(vendor, 'piper');
+      fs.mkdirSync(dir, { recursive: true });
+      const prior = path.join(dir, 'piper_phonemize.wasm');
+      fs.writeFileSync(prior, 'PRESERVE');
+      const link = path.join(dir, 'piper.min.js');
+      const outside = path.join(root, 'missing-external-asset');
+      fs.symlinkSync(outside, link, 'file');
+      assert.equal(fs.existsSync(link), false, 'the regression requires a dangling link');
+      const outputs = new Map([
+        ['piper/piper_phonemize.wasm', Buffer.from('REPLACEMENT')],
+        ['piper/piper.min.js', Buffer.from('NEW')],
+      ]);
+      assert.throws(() => vendorTool.commitOutputs(outputs, vendor, fs, root),
+        /unexpected vendor destination type/);
+      assert.equal(fs.readFileSync(prior, 'utf8'), 'PRESERVE');
+      assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+      assert.equal(fs.readlinkSync(link), outside);
+      assert.equal(fs.existsSync(outside), false);
+      assert.deepEqual(fs.readdirSync(dir).sort(),
+        ['piper.min.js', 'piper_phonemize.wasm'].sort(), 'no staged files may remain');
+    });
+  }));
+
+  test('dangling backup collision injected after staging is never overwritten', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege varies.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const dir = path.join(vendor, 'piper');
+      fs.mkdirSync(dir, { recursive: true });
+      const target = path.join(dir, 'piper.min.js');
+      fs.writeFileSync(target, 'PRESERVE');
+      const outside = path.join(root, 'missing-backup-asset');
+      let foreignBackup = '';
+      const io = {
+        ...fs,
+        writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+          opts?: fs.WriteFileOptions) {
+          fs.writeFileSync(file, data, opts);
+          if (String(file).includes('.new-')) {
+            foreignBackup = String(file).replace('.new-', '.old-');
+            fs.symlinkSync(outside, foreignBackup, 'file');
+          }
+        },
+      };
+      assert.throws(() => vendorTool.commitOutputs(
+        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, io, root,
+      ), /voice vendor transaction collision/);
+      assert.equal(fs.readFileSync(target, 'utf8'), 'PRESERVE');
+      assert.ok(foreignBackup);
+      assert.equal(fs.lstatSync(foreignBackup).isSymbolicLink(), true);
+      assert.equal(fs.readlinkSync(foreignBackup), outside);
+      assert.equal(fs.existsSync(outside), false);
+      assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+    });
+  }));
+
+  test('destination replaced with dangling link during staging is refused at promotion', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege varies.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const dir = path.join(vendor, 'piper');
+      fs.mkdirSync(dir, { recursive: true });
+      const target = path.join(dir, 'piper.min.js');
+      fs.writeFileSync(target, 'ORIGINAL');
+      const outside = path.join(root, 'missing-mutation');
+      const io = {
+        ...fs,
+        writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+          opts?: fs.WriteFileOptions) {
+          fs.writeFileSync(file, data, opts);
+          if (String(file).includes('.new-')) {
+            fs.unlinkSync(target);
+            fs.symlinkSync(outside, target, 'file');
+          }
+        },
+      };
+      assert.throws(() => vendorTool.commitOutputs(
+        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, io, root,
+      ), /unexpected vendor destination type/);
+      assert.equal(fs.lstatSync(target).isSymbolicLink(), true);
+      assert.equal(fs.readlinkSync(target), outside);
+      assert.equal(fs.existsSync(outside), false);
+      assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+    });
+  }));
+
   test('vendor root symlink is refused before writing any assets', function () {
     if (process.platform === 'win32') this.skip(); // Windows symlink privileges vary.
     temporary(root => {
