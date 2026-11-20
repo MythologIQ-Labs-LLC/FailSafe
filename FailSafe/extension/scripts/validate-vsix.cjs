@@ -2,6 +2,7 @@ const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { checkNativeBinary, findNativeAddons } = require("./native-targets.cjs");
+const { requirePublisherPinForRelease } = require("./voice-publisher-release-gate.cjs");
 
 const root = path.resolve(__dirname, "..");
 
@@ -163,6 +164,7 @@ function main() {
   }
 
   requireReleaseMarker(sourceReadme, sourcePkg.version, latestRelease.date, "Source README release marker");
+  requirePublisherPinForRelease(sourcePkg.version, { extensionRoot: root });
   assertIncludes(sourceReadme, `## What's New in v${sourcePkg.version}`, "Source README release notes heading");
   // Validate all icon references in package.json resolve to real files
   const iconErrors = [];
@@ -196,6 +198,8 @@ function main() {
 
   const archive = createArchiveReader(vsixPath);
   const list = archive.list();
+  requirePublisherPinForRelease(sourcePkg.version, { extensionRoot: root,
+    archiveEntries: list, readPackageBytes: entry => archive.readBuffer(entry) });
   [
     "extension.vsixmanifest",
     "extension/package.json",
