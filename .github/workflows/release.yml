@@ -5,7 +5,9 @@ env:
 
 on:
   push:
-    tags: ["v*"]
+    # Voice companion tags are NOT extension/Marketplace releases (#732).
+    # Keep the negative rule after the positive glob (GitHub matching order).
+    tags: ["v*", "!v*-voice"]
   workflow_dispatch:
     inputs:
       diff_category:
