@@ -139,6 +139,13 @@ suite("voice-pack install-handler — storage boundary (#710)", () => {
     );
     assert.equal(calls.length, 0);
     assert.throws(() => uninstallVoicePack(volumeRoot), /storage root must not be a filesystem root/);
+    const normalizedAlias = volumeRoot + "nonexistent" + path.sep + "..";
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: normalizedAlias, version: "5.2.0" }),
+      /storage root must not be a filesystem root/,
+    );
+    assert.throws(() => uninstallVoicePack(normalizedAlias), /storage root must not be a filesystem root/);
+    assert.equal(calls.length, 0);
   });
 
   test("uninstall refuses a linked voice-pack destination and preserves its target", () => {
