@@ -8,6 +8,8 @@ on:
       - ".github/workflows/voice-pack-candidate.yml"
       - ".github/workflows/release.yml"
       - "FailSafe/extension/scripts/verify-voice-release-candidate.cjs"
+      - "FailSafe/extension/scripts/voice-pack-auth.cjs"
+      - "FailSafe/extension/src/test/scripts/voicePackAuth.test.cjs"
       - "FailSafe/extension/src/test/scripts/verifyVoiceReleaseCandidate.test.cjs"
       - "FailSafe/extension/scripts/package-voice-pack.cjs"
       - "FailSafe/extension/scripts/vendor-voice.cjs"
@@ -68,6 +70,11 @@ jobs:
       - name: Install exact locked dependencies
         working-directory: FailSafe/extension
         run: npm ci
+      - name: Exercise real tar and Ed25519 negative-test matrices
+        working-directory: FailSafe/extension
+        run: |
+          node --test src/test/scripts/verifyVoiceReleaseCandidate.test.cjs \
+            src/test/scripts/voicePackAuth.test.cjs
       - name: Verify original SHA-512 pinned upstream browser assets
         working-directory: FailSafe/extension
         run: npm run verify:voice-pins
