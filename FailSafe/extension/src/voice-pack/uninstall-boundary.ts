@@ -40,9 +40,25 @@ function requireOwnedManifest(folder: string): void {
 }
 
 function requireKnownEntries(folder: string): void {
-  const approved = new Set(['voice-pack.manifest.json', 'piper', 'whisper']);
+  const approved = new Set(['voice-pack.manifest.json', 'piper', 'whisper',
+    'voice-pack-release.json', 'voice-pack-release.json.sig']);
   for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
     if (!approved.has(entry.name)) throw new Error(REFUSE + 'unrecognized pack entry');
+  }
+  // Release attestations are known owned files, never links or directories.
+  for (const [name, limit] of [['voice-pack-release.json', 4096],
+    ['voice-pack-release.json.sig', 90]] as const) {
+    const file = path.join(folder, name);
+    let stat: fs.Stats;
+    try { stat = fs.lstatSync(file); }
+    catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') continue; // legacy pack
+      throw e;
+    }
+    if (!stat.isFile() || stat.isSymbolicLink() ||
+        stat.size === 0 || stat.size > limit) {
+      throw new Error(REFUSE + 'unsafe signed pack entry');
+    }
   }
   for (const group of ['piper', 'whisper']) {
     const dir = path.join(folder, group);
