@@ -123,7 +123,7 @@ suite('voice vendor isolation #707', () => {
       assert.deepEqual(fs.readdirSync(dir).sort(),
         ['piper.min.js', 'piper_phonemize.wasm'].sort(), 'no staged files may remain');
     });
-  }));
+  });
 
   test('dangling backup collision injected after staging is never overwritten', function () {
     if (process.platform === 'win32') this.skip(); // symlink privilege varies.
@@ -156,7 +156,7 @@ suite('voice vendor isolation #707', () => {
       assert.equal(fs.existsSync(outside), false);
       assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
     });
-  }));
+  });
 
   test('destination replaced with dangling link during staging is refused at promotion', function () {
     if (process.platform === 'win32') this.skip(); // symlink privilege varies.
@@ -186,7 +186,7 @@ suite('voice vendor isolation #707', () => {
       assert.equal(fs.existsSync(outside), false);
       assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
     });
-  }));
+  });
 
   test('vendor root symlink is refused before writing any assets', function () {
     if (process.platform === 'win32') this.skip(); // Windows symlink privileges vary.
