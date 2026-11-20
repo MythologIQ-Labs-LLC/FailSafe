@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { installVoicePack } from '../../voice-pack/install-handler';
 import * as publisher from '../../voice-pack/publisher-auth';
+import { probeVoicePackState } from '../../voice-pack/voice-pack-detector';
 import { buildFixturePackTar, installFetchStub, makeInstallFixture,
   sha256OfBytes, unstubFetch, type InstallFixture } from './voice-pack-install-test-helpers';
 
@@ -47,6 +48,10 @@ suite('voice-pack publisher authentication #732', () => {
     assert.equal(result.version, '5.2.0');
     assert.ok(fs.existsSync(path.join(result.finalPath, 'piper', 'piper.min.js')));
     assert.ok(fs.existsSync(path.join(result.finalPath, 'whisper', 'transformers.min.js')));
+    assert.ok(fs.existsSync(path.join(result.finalPath, 'voice-pack-release.json')));
+    assert.ok(fs.existsSync(path.join(result.finalPath, 'voice-pack-release.json.sig')));
+    assert.equal((await probeVoicePackState(fixture.globalStoragePath, '5.2.0')).state,
+      'installed', 'publisher authentication must survive a new status probe');
     assert.ok(calls.some(c => c.url.endsWith('/voice-pack-release.json')));
     assert.ok(calls.some(c => c.url.endsWith('/voice-pack-release.json.sig')));
     assert.ok(phases.includes('verify:success'));
