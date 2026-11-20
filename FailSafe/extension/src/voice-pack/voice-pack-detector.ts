@@ -1,120 +1,182 @@
-// Voice-pack detector — install-state probe over <globalStoragePath>/voice-pack/.
-// Plan: docs/plan-qor-voice-substrate-extraction.md Phase 1.
-
+// Voice Pack activation probe. Treat on-disk manifests as untrusted input.
+// A successfully downloaded archive can be modified before a later launch.
+// This is a bounded read-only check, not proof of publisher authenticity.
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
-import { VoicePackManifest, VoicePackProbeResult } from './types';
+import { VOICE_ASSETS } from './safe-archive';
+import type { VoicePackManifest, VoicePackProbeResult } from './types';
 
-const MANIFEST_FILENAME = 'voice-pack.manifest.json';
-const PACK_DIR = 'voice-pack';
-const SAFE_PATH_RE = /\.\.[\\/]/;
+const MANIFEST = 'voice-pack.manifest.json';
+const MAX_MANIFEST = 64 * 1024;
+const MAX_FILE = 75 * 1024 * 1024;
+const MAX_TOTAL = 160 * 1024 * 1024;
+const EXPECTED = [...VOICE_ASSETS].sort();
+const OPEN_SAFE = fs.constants.O_RDONLY |
+  (fs.constants.O_NOFOLLOW || 0) | (fs.constants.O_NONBLOCK || 0);
+const VERSION = /^\d+\.\d+\.\d+$/;
+const SHA256 = /^[0-9a-f]{64}$/;
 
-/**
- * Probe install state of the voice pack at <globalStoragePath>/voice-pack/.
- * Reads manifest, validates each expectedFile against its declared sha256,
- * compares manifest.version against requiredMinVersion. Pure-fs read; no
- * spawn, no network.
- *
- * Returns:
- *   - { state: 'absent' } when the pack directory does not exist
- *   - { state: 'installed', version, manifestPath } when manifest + files
- *     valid and version >= requiredMinVersion
- *   - { state: 'stale', version } when manifest valid but version is below
- *     requiredMinVersion (downgrade-tolerant: operator decides)
- *   - { state: 'corrupt', missingFiles } when manifest exists but at least
- *     one expectedFile is missing OR fails sha256
- *
- * Throws on path traversal in globalStoragePath (defense in depth).
- */
-export async function probeVoicePackState(
-  globalStoragePath: string,
-  requiredMinVersion: string,
-): Promise<VoicePackProbeResult> {
-  if (typeof globalStoragePath !== 'string' || globalStoragePath.length === 0) {
-    throw new Error('unsafe globalStoragePath: empty');
+function regular(file: string, limit: number): fs.Stats {
+  const st = fs.lstatSync(file);
+  if (!st.isFile() || st.isSymbolicLink() || st.size === 0 || st.size > limit) {
+    throw new Error('voice asset must be a bounded regular file');
   }
-  if (SAFE_PATH_RE.test(globalStoragePath)) {
-    throw new Error('unsafe globalStoragePath: path traversal segment detected');
-  }
+  return st;
+}
 
-  const packDir = path.join(globalStoragePath, PACK_DIR);
-  if (!fs.existsSync(packDir)) {
-    return { state: 'absent' };
-  }
-
-  const manifestPath = path.join(packDir, MANIFEST_FILENAME);
-  if (!fs.existsSync(manifestPath)) {
-    return { state: 'corrupt', manifestPath, missingFiles: [MANIFEST_FILENAME] };
-  }
-
-  let manifest: VoicePackManifest;
+function openChecked(file: string, before: fs.Stats): number {
+  const fd = fs.openSync(file, OPEN_SAFE);
   try {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as VoicePackManifest;
-  } catch {
-    return { state: 'corrupt', manifestPath, missingFiles: [MANIFEST_FILENAME] };
+    const now = fs.fstatSync(fd);
+    if (!now.isFile() || now.size !== before.size ||
+        now.dev !== before.dev || now.ino !== before.ino) {
+      throw new Error('voice file changed during inspection');
+    }
+  } catch (error) {
+    fs.closeSync(fd);
+    throw error;
   }
-  if (!isValidManifest(manifest)) {
-    return { state: 'corrupt', manifestPath, missingFiles: [MANIFEST_FILENAME] };
-  }
-
-  const missing = verifyFiles(packDir, manifest);
-  if (missing.length > 0) {
-    return { state: 'corrupt', version: manifest.version, manifestPath, missingFiles: missing };
-  }
-
-  if (compareSemver(manifest.version, requiredMinVersion) < 0) {
-    return { state: 'stale', version: manifest.version, manifestPath };
-  }
-
-  return { state: 'installed', version: manifest.version, manifestPath };
+  return fd;
 }
 
-function isValidManifest(m: unknown): m is VoicePackManifest {
-  if (!m || typeof m !== 'object') return false;
-  const obj = m as Record<string, unknown>;
-  return (
-    typeof obj.version === 'string'
-    && typeof obj.builtAt === 'string'
-    && Array.isArray(obj.expectedFiles)
-    && obj.sha256 !== null
-    && typeof obj.sha256 === 'object'
-  );
+function readManifest(file: string): unknown {
+  const before = regular(file, MAX_MANIFEST);
+  const fd = openChecked(file, before);
+  try {
+    const bytes = Buffer.alloc(before.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const read = fs.readSync(fd, bytes, offset, bytes.length - offset, null);
+      if (read === 0) throw new Error('voice manifest truncated');
+      offset += read;
+    }
+    if (fs.readSync(fd, Buffer.alloc(1), 0, 1, null) !== 0) {
+      throw new Error('voice manifest grew during inspection');
+    }
+    return JSON.parse(bytes.toString('utf8'));
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
-function verifyFiles(packDir: string, manifest: VoicePackManifest): string[] {
-  const missing: string[] = [];
-  for (const rel of manifest.expectedFiles) {
-    const abs = path.join(packDir, rel);
-    if (!fs.existsSync(abs)) {
-      missing.push(rel);
+function validManifest(value: unknown): value is VoicePackManifest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const m = value as Record<string, unknown>;
+  const sha = m.sha256;
+  if (JSON.stringify(Object.keys(m).sort()) !==
+      JSON.stringify(['builtAt', 'expectedFiles', 'sha256', 'version']) ||
+      typeof m.version !== 'string' || !VERSION.test(m.version) ||
+      typeof m.builtAt !== 'string' ||
+      !Array.isArray(m.expectedFiles) ||
+      m.expectedFiles.some((item: unknown) => typeof item !== 'string') ||
+      JSON.stringify([...m.expectedFiles].sort()) !== JSON.stringify(EXPECTED) ||
+      !sha || typeof sha !== 'object' || Array.isArray(sha) ||
+      JSON.stringify(Object.keys(sha).sort()) !== JSON.stringify(EXPECTED)) return false;
+  return EXPECTED.every(name =>
+    typeof (sha as Record<string, unknown>)[name] === 'string' &&
+    SHA256.test((sha as Record<string, string>)[name]));
+}
+
+function hashBounded(file: string, before: fs.Stats): string {
+  const fd = openChecked(file, before);
+  const hash = createHash('sha256');
+  const buf = Buffer.allocUnsafe(64 * 1024);
+  try {
+    let remaining = before.size;
+    while (remaining) {
+      const n = fs.readSync(fd, buf, 0, Math.min(remaining, buf.length), null);
+      if (n === 0) throw new Error('voice asset truncated during inspection');
+      hash.update(buf.subarray(0, n));
+      remaining -= n;
+    }
+    if (fs.readSync(fd, buf, 0, 1, null) !== 0) {
+      throw new Error('voice asset grew during inspection');
+    }
+    return hash.digest('hex');
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function verifyPayload(packDir: string, manifest: VoicePackManifest): string[] {
+  const bad: string[] = [];
+  const top = fs.readdirSync(packDir, { withFileTypes: true });
+  const allowedTop = new Set([MANIFEST, 'piper', 'whisper']);
+  for (const entry of top) if (!allowedTop.has(entry.name)) bad.push(entry.name);
+
+  let total = 0;
+  for (const group of ['piper', 'whisper']) {
+    const folder = path.join(packDir, group);
+    const groupFiles = EXPECTED.filter(name => name.startsWith(group + '/'));
+    try {
+      const st = fs.lstatSync(folder);
+      if (!st.isDirectory() || st.isSymbolicLink()) throw new Error('linked voice directory');
+      const allowed = new Set(groupFiles.map(name => path.basename(name)));
+      for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+        if (!allowed.has(entry.name) || !entry.isFile() || entry.isSymbolicLink()) {
+          bad.push(group + '/' + entry.name);
+        }
+      }
+    } catch {
+      bad.push(...groupFiles);
       continue;
     }
-    const expected = manifest.sha256[rel];
-    if (!expected) {
-      missing.push(rel);
-      continue;
-    }
-    const actual = createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
-    if (actual !== expected) {
-      missing.push(rel);
+    for (const rel of groupFiles) {
+      try {
+        const file = path.join(packDir, rel);
+        const st = regular(file, MAX_FILE);
+        total += st.size;
+        if (total > MAX_TOTAL || hashBounded(file, st) !== manifest.sha256[rel]) {
+          bad.push(rel);
+        }
+      } catch { bad.push(rel); }
     }
   }
-  return missing;
+  return [...new Set(bad)];
 }
 
-/** Returns -1 if a < b, 0 if equal, 1 if a > b. Strict 3-part semver only. */
-function compareSemver(a: string, b: string): number {
-  const pa = parseSemver(a);
-  const pb = parseSemver(b);
+function compareVersions(a: string, b: string): number {
+  const x = a.split('.').map(Number), y = b.split('.').map(Number);
   for (let i = 0; i < 3; i++) {
-    if (pa[i] !== pb[i]) return pa[i] < pb[i] ? -1 : 1;
+    if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
   }
   return 0;
 }
 
-function parseSemver(v: string): [number, number, number] {
-  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v);
-  if (!m) return [0, 0, 0];
-  return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
+/** Read-only status; any untrusted or malformed installed tree is CORRUPT. */
+export async function probeVoicePackState(
+  globalStoragePath: string,
+  requiredMinVersion: string,
+): Promise<VoicePackProbeResult> {
+  if (!path.isAbsolute(globalStoragePath) ||
+      globalStoragePath.split(/[\\/]/).includes('..')) {
+    throw new Error('unsafe globalStoragePath: absolute path without traversal required');
+  }
+  const packDir = path.join(globalStoragePath, 'voice-pack');
+  const manifestPath = path.join(packDir, MANIFEST);
+  const corrupt = (names: string[] = [MANIFEST]): VoicePackProbeResult =>
+    ({ state: 'corrupt', manifestPath, missingFiles: names });
+
+  let pack: fs.Stats;
+  try { pack = fs.lstatSync(packDir); }
+  catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { state: 'absent' };
+    return corrupt();
+  }
+  if (!pack.isDirectory() || pack.isSymbolicLink()) return corrupt();
+  let manifest: unknown;
+  try { manifest = readManifest(manifestPath); }
+  catch { return corrupt(); }
+  if (!validManifest(manifest)) return corrupt();
+
+  let bad: string[];
+  try { bad = verifyPayload(packDir, manifest); }
+  catch { return corrupt(); }
+  if (bad.length) return { state: 'corrupt', version: manifest.version, manifestPath, missingFiles: bad };
+  if (!VERSION.test(requiredMinVersion)) return corrupt();
+  if (compareVersions(manifest.version, requiredMinVersion) < 0) {
+    return { state: 'stale', version: manifest.version, manifestPath };
+  }
+  return { state: 'installed', version: manifest.version, manifestPath };
 }
