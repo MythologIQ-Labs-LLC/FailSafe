@@ -34,6 +34,12 @@ jobs:
           node-version: "22"
       - run: npm ci
         working-directory: FailSafe/extension
+      # CI-ONLY source proof: use real registry archives under exact SHA-512 pins
+      # to compare six committed voice browser assets against upstream bytes.
+      # This step is temporary on this test branch and must not merge.
+      - name: Verify upstream voice asset pins against committed Git HEAD
+        run: npm run verify:voice-pins
+        working-directory: FailSafe/extension
       - run: npx playwright install --with-deps chromium
         working-directory: FailSafe/extension
       - run: npm run compile
