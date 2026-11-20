@@ -12,6 +12,7 @@ import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import { createHash } from 'crypto';
 import { extractValidatedVoiceArchive } from './safe-archive';
+import { assertRemovableVoicePack } from './uninstall-boundary';
 import { fetchAllowlisted } from './allowlisted-fetch';
 import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
@@ -142,6 +143,7 @@ export function uninstallVoicePack(globalStoragePath: string): void {
   if (!stat.isDirectory() || stat.isSymbolicLink()) {
     throw new Error('voice pack uninstall refused: destination is not a real directory');
   }
+  assertRemovableVoicePack(packDir);
   fs.rmSync(packDir, { recursive: true, force: false });
 }
 

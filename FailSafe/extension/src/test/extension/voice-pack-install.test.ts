@@ -160,14 +160,34 @@ suite("voice-pack install-handler — storage boundary (#710)", () => {
     assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "KEEP");
   });
 
-  test("uninstall removes an owned real voice-pack directory, remains idempotent", () => {
+  test("uninstall removes a manifest-owned pack even when an asset is corrupted", () => {
     const dir = path.join(fixture.globalStoragePath, "voice-pack");
     fs.mkdirSync(dir);
-    fs.writeFileSync(path.join(dir, "sentinel.txt"), "OWNED");
+    for (const entry of buildFixturePackEntries()) {
+      const target = path.join(dir, entry.name);
+      if (entry.type === "5") fs.mkdirSync(target);
+      else fs.writeFileSync(target, entry.body ?? "");
+    }
+    fs.writeFileSync(path.join(dir, "piper", "piper.min.js"), "CORRUPTED");
     uninstallVoicePack(fixture.globalStoragePath);
     assert.equal(fs.existsSync(dir), false);
     uninstallVoicePack(fixture.globalStoragePath);
     assert.equal(fs.existsSync(dir), false);
+  });
+
+  test("uninstall refuses foreign content inside an otherwise owned pack", () => {
+    const dir = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.mkdirSync(dir);
+    for (const entry of buildFixturePackEntries()) {
+      const target = path.join(dir, entry.name);
+      if (entry.type === "5") fs.mkdirSync(target);
+      else fs.writeFileSync(target, entry.body ?? "");
+    }
+    const foreign = path.join(dir, "piper", "unrelated.txt");
+    fs.writeFileSync(foreign, "UNRELATED");
+    assert.throws(() => uninstallVoicePack(fixture.globalStoragePath), /unrecognized pack entry/);
+    assert.equal(fs.readFileSync(foreign, "utf8"), "UNRELATED");
+    assert.ok(fs.existsSync(path.join(dir, "voice-pack.manifest.json")));
   });
 
   test("storage file or nonabsolute path is refused before network download", async () => {

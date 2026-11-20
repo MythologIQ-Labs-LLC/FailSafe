@@ -91,14 +91,14 @@ suite("voice-pack install guards", () => {
     assert.equal(typeof (globalThis as { fetch?: unknown }).fetch, "function");
   });
 
-  test("uninstall removes only the voice-pack directory", () => {
+  test("uninstall refuses an unowned directory while preserving unrelated files", () => {
     const pack = path.join(fixture.globalStoragePath, "voice-pack");
     const sibling = path.join(fixture.globalStoragePath, "other-data.json");
     fs.mkdirSync(pack, { recursive: true });
-    fs.writeFileSync(path.join(pack, "piper.min.js"), "piper");
+    fs.writeFileSync(path.join(pack, "piper.min.js"), "UNRELATED");
     fs.writeFileSync(sibling, "{}");
-    uninstallVoicePack(fixture.globalStoragePath);
-    assert.equal(fs.existsSync(pack), false);
+    assert.throws(() => uninstallVoicePack(fixture.globalStoragePath), /unrecognized pack entry/);
+    assert.equal(fs.readFileSync(path.join(pack, "piper.min.js"), "utf8"), "UNRELATED");
     assert.equal(fs.existsSync(sibling), true);
   });
 });

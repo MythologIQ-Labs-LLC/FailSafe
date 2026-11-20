@@ -95,7 +95,7 @@ Limit: the checksum comes from the same release as the tarball, so it detects a 
 Limit: a fetch that ignores manual mode has already requested every hop it followed by the time the response is refused; the guard keeps its body out, not the request `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:60` (`function assertNotFollowed(res: Response, hop: string, prefix: string): void {`).
 Limit: the Console install route starts the download with no VS Code confirmation `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:56-59` (`const report = await installVoicePack({`).
 
-## Failure, offline, stale and permission semantics
+Uninstall refuses a directory unless its bounded ownership manifest declares the canonical six assets, and all entries are known, ordinary files or directories; a corrupted or missing asset may still be removed when the manifest is valid. Unknown content and linked subdirectories cause a refusal without deleting any files. This is a preflight policy, not race-free containment against same-user concurrent mutation (`FailSafe/extension/src/voice-pack/uninstall-boundary.ts`, `assertRemovableVoicePack`).\n\n## Failure, offline, stale and permission semantics
 
 Offline or HTTP error: install fails with "download failed: HTTP <status> for <URL>" ("checksum fetch failed: ..." for the checksum) and nothing changes `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:107` (`HTTP ${res.status} for`).
 A pack older than the extension is reported stale and is not mounted `FailSafe/extension/src/extension/bootstrapVoicePack.ts:49-58` (`Only set the path when fully installed.`).
