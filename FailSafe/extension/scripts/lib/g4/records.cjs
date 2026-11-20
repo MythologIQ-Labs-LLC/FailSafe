@@ -30,19 +30,161 @@ async function requestToken(imprintHex, tsa, stageDir) {
   return bytes;
 }
 
-/** Write `files` ({ rel: bytes }) under repoRoot only if none exists yet, after `make` succeeds. */
-async function writeNew(repoRoot, rels, make) {
-  for (const rel of rels) if (fs.existsSync(path.join(repoRoot, rel))) throw refuse("RECORD_EXISTS", `${rel} already exists; records are never replaced`);
-  const stage = fs.mkdtempSync(path.join(path.dirname(path.join(repoRoot, layout.REGISTRY_PATH)), ".g4-stage-"));
-  try {
-    const out = await make(stage);
-    for (const [rel, bytes] of Object.entries(out)) {
-      fs.mkdirSync(path.dirname(path.join(repoRoot, rel)), { recursive: true });
-      fs.writeFileSync(path.join(repoRoot, rel), bytes);
+/** Refuse linked parents and paths outside the checkout before writing any record. */
+function realOutputDirectory(repoRoot, rels) {
+  const root = path.resolve(repoRoot);
+  const rootStat = fs.lstatSync(root);
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw refuse("RECORD_PATH", "repository root must be a real directory");
+  if (!rels.length || new Set(rels).size !== rels.length) throw refuse("RECORD_PATH", "record output names must be unique");
+  const targets = rels.map((rel) => {
+    if (typeof rel !== "string" || !rel || path.isAbsolute(rel)) throw refuse("RECORD_PATH", "record output must be relative");
+    const target = path.resolve(root, rel);
+    const inside = path.relative(root, target);
+    if (!inside || inside === ".." || inside.startsWith(".." + path.sep) || path.isAbsolute(inside)) {
+      throw refuse("RECORD_PATH", "record output escapes repository");
     }
-    return Object.keys(out);
+    return target;
+  });
+  const parent = path.dirname(targets[0]);
+  if (targets.some((target) => path.dirname(target) !== parent)) {
+    throw refuse("RECORD_PATH", "one record transaction must have a single output directory");
+  }
+  const parentRel = path.relative(root, parent);
+  let current = root;
+  for (const segment of parentRel.split(path.sep).filter(Boolean)) {
+    current = path.join(current, segment);
+    try { fs.mkdirSync(current, { mode: 0o700 }); }
+    catch (err) { if (err.code !== "EEXIST") throw err; }
+    const stat = fs.lstatSync(current);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw refuse("RECORD_PATH", "record output ancestor is not a real directory");
+  }
+  return { parent, targets };
+}
+
+function refuseExisting(targets, rels) {
+  for (let i = 0; i < targets.length; i++) {
+    try {
+      fs.lstatSync(targets[i]);
+      throw refuse("RECORD_EXISTS", `${rels[i]} already exists; records are never replaced`);
+    } catch (err) {
+      if (err.code !== "ENOENT") throw err;
+    }
+  }
+}
+
+/** Write complete staged bytes with exclusive create; flush bytes before publishing links. */
+function stageOutput(file, bytes) {
+  const fd = fs.openSync(file, "wx", 0o600);
+  try {
+    const data = Buffer.from(bytes);
+    for (let offset = 0; offset < data.length;) {
+      const written = fs.writeSync(fd, data, offset, data.length - offset, offset);
+      if (written < 1) throw new Error("G4 staging write made no progress");
+      offset += written;
+    }
+    fs.fsyncSync(fd);
   } finally {
-    fs.rmSync(stage, { recursive: true, force: true });
+    fs.closeSync(fd);
+  }
+}
+
+/** Best-effort directory metadata flush where the host supports directory fsync. */
+function syncDirectory(dir) {
+  let fd;
+  try {
+    fd = fs.openSync(dir, "r");
+    fs.fsyncSync(fd);
+  } catch (err) {
+    // Directory fsync is unsupported on some Windows and macOS filesystems.
+    // A genuine I/O failure (EIO/ENOSPC/EROFS), or Linux permission failure,
+    // is NOT an optional feature: fail and roll back our own published files.
+    const unsupported = process.platform === "win32"
+      ? ["EISDIR", "EINVAL", "EPERM", "EACCES", "ENOTSUP"]
+      : process.platform === "darwin"
+        ? ["EINVAL", "ENOTSUP"]
+        : [];
+    if (!unsupported.includes(err.code)) throw err;
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+  }
+}
+
+/**
+ * Publish a record's complete outputs without ever replacing a final path.
+ * A per-record directory lock serializes contenders, and same-filesystem
+ * hardlinks create each final path with atomic NO-OVERWRITE semantics.
+ * A failed attempt rolls back ONLY the inodes it actually published.
+ * Filesystem crashes can still interrupt a multi-file publish: a retained
+ * lock/partial triplet is a fail-closed manual-recovery signal, not a PASS.
+ */
+async function writeNew(repoRoot, rels, make) {
+  const { parent, targets } = realOutputDirectory(repoRoot, rels);
+  refuseExisting(targets, rels);
+  const lock = path.join(parent, ".g4-record-" + sha256(Buffer.from([...rels].sort().join("\n"))).slice(0, 20) + ".lock");
+  try { fs.mkdirSync(lock, { mode: 0o700 }); }
+  catch (err) {
+    if (err.code === "EEXIST") throw refuse("RECORD_BUSY",
+      "an earlier writer or interrupted record owns the lock; inspect record paths and staged bytes before manual recovery");
+    throw err;
+  }
+
+  const published = [];
+  let retainLock = false;
+  try {
+    refuseExisting(targets, rels); // a writer may have raced the initial preflight
+    const stage = fs.mkdtempSync(path.join(lock, "stage-"));
+    const out = await make(stage);
+    if (!out || typeof out !== "object" || Array.isArray(out) ||
+        Object.keys(out).length !== rels.length || rels.some((rel) => !Object.hasOwn(out, rel))) {
+      throw refuse("RECORD_OUTPUT", "the prepared record file set differs from the requested record");
+    }
+    const staged = rels.map((rel, index) => {
+      const bytes = out[rel];
+      if (!(Buffer.isBuffer(bytes) || bytes instanceof Uint8Array) || bytes.length === 0) {
+        throw refuse("RECORD_OUTPUT", "record output must contain nonempty binary data");
+      }
+      const name = path.join(stage, `output-${index}`);
+      stageOutput(name, bytes);
+      if (!fs.readFileSync(name).equals(Buffer.from(bytes))) {
+        throw refuse("RECORD_OUTPUT", "staged record bytes changed before publication");
+      }
+      return name;
+    });
+    refuseExisting(targets, rels); // any existing destination, including a dangling link, must refuse
+    for (let i = 0; i < targets.length; i++) {
+      // hardlink is atomic and fails EEXIST; unlike rename it NEVER overwrites.
+      const info = fs.lstatSync(staged[i]);
+      fs.linkSync(staged[i], targets[i]);
+      published.push({ dest: targets[i], dev: info.dev, ino: info.ino });
+    }
+    syncDirectory(parent);
+    return [...rels];
+  } catch (primary) {
+    const cleanupErrors = [];
+    for (const item of published.reverse()) {
+      try {
+        const current = fs.lstatSync(item.dest);
+        if (!current.isFile() || current.isSymbolicLink() ||
+            current.dev !== item.dev || current.ino !== item.ino) {
+          throw new Error("published record path no longer has the inode owned by this attempt");
+        }
+        fs.unlinkSync(item.dest);
+      } catch (err) {
+        retainLock = true;
+        cleanupErrors.push(new Error(`rollback of ${path.basename(item.dest)}: ${err.message}`));
+      }
+    }
+    if (!cleanupErrors.length && published.length) {
+      try { syncDirectory(parent); }
+      catch (err) { retainLock = true; cleanupErrors.push(err); }
+    }
+    if (cleanupErrors.length) {
+      throw new AggregateError([primary, ...cleanupErrors],
+        "G4 record publication failed; ownership-safe rollback incomplete; retained lock requires manual inspection");
+    }
+    throw primary;
+  } finally {
+    if (!retainLock) fs.rmSync(lock, { recursive: true, force: true });
   }
 }
 
@@ -78,4 +220,4 @@ async function writeTransition({ repoRoot, kind, fromFingerprint, toFingerprint,
   }));
 }
 
-module.exports = { requestToken, stampRegistry, writeTransition };
+module.exports = { requestToken, stampRegistry, writeTransition, writeNew };

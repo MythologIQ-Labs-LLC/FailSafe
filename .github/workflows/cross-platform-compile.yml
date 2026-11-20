@@ -36,3 +36,7 @@ jobs:
       - run: npm ci
       - run: npm run compile
       - run: npm run lint
+      # #660: exercise real hardlink/rollback behavior on every supported OS.
+      # No owner key, TSA, checkout mutation or release publication is involved.
+      - name: G4 atomic record publication on native filesystem
+        run: node --test src/test/scripts/g4RecordAtomicity.test.cjs
