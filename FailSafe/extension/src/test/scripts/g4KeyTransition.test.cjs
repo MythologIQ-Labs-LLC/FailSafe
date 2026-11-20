@@ -88,7 +88,7 @@ it("the genesis pin still decides: pinning the new key instead is refused", asyn
 });
 
 /** Write a hand-made record signed by `signer`, bypassing the builder's checks. */
-async function forgeRecord(dir, fields, signer, { stamp = true } = {}) {
+async function forgeRecord(dir, fields, signer, { stamp = true, omitSignature = false } = {}) {
   const manifestSha = sha256(fs.readFileSync(path.join(S.cpDir(dir, "g4-000002"), layout.FILES.manifest)));
   const r = { schema: SCHEMA, kind: "rotation", repository: REPOSITORY, fromFingerprintSha256: base.signer.fingerprint,
     toFingerprintSha256: keyB.fingerprint, afterCheckpoint: "g4-000002", afterCheckpointManifestSha256: manifestSha,
@@ -97,7 +97,7 @@ async function forgeRecord(dir, fields, signer, { stamp = true } = {}) {
   const sig = signer.sign(bytes);
   const p = layout.transitionPaths(base.signer.fingerprint);
   S.write(dir, p.record, bytes);
-  S.write(dir, p.signature, sig);
+  if (!omitSignature) S.write(dir, p.signature, sig);
   if (stamp) S.write(dir, p.token, await requestToken(transitionImprint(bytes, sig), base.tsa, fs.mkdtempSync(path.join(base.work, "st-"))));
   S.commitAll(dir, "test: forged transition record");
   S.appendEntry(dir, 931);
@@ -137,6 +137,12 @@ for (const [name, fields, signerOf, stamp] of [
     }
   });
 }
+
+it("release mode refuses a committed transition missing its signature", async () => {
+  const dir = await prepare();
+  await forgeRecord(dir, {}, base.signer, { omitSignature: true });
+  refused(S.verify(dir, releaseOpts(dir)), "KEY_TRANSITION_INVALID");
+});
 
 it("refused: a rotation record edited after it was signed", async () => {
   const dir = await prepare();
