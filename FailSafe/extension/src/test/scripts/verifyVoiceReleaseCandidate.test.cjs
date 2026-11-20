@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const cp = require("node:child_process");
-const { verifyCandidate, FILES } = require("../../scripts/verify-voice-release-candidate.cjs");
+const { verifyCandidate, FILES } = require("../../../scripts/verify-voice-release-candidate.cjs");
 
 const VERSION = "6.1.0";
 const SOURCE = "c".repeat(40);
