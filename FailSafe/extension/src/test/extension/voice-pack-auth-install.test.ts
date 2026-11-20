@@ -57,6 +57,26 @@ suite('voice-pack publisher authentication #732', () => {
     assert.ok(phases.includes('verify:success'));
   });
 
+  test('a newer signed pack cannot be rolled back, even when an older version is requested', async () => {
+    const archive = buildFixturePackTar();
+    installFetchStub([
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: archive },
+      { url: /\.sha256$/, body: `${sha256OfBytes(archive)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
+    ]);
+    const first = await installVoicePack({
+      globalStoragePath: fixture.globalStoragePath, version: '5.2.0',
+    });
+    assert.equal(first.ok, true);
+    const original = fs.readFileSync(path.join(first.finalPath, 'voice-pack-release.json'));
+    const { calls } = installFetchStub([]);
+    await assert.rejects(() => installVoicePack({
+      globalStoragePath: fixture.globalStoragePath, version: '5.1.0',
+    }), /publisher authentication refused: signed Voice Pack downgrade from 5\.2\.0 to 5\.1\.0/);
+    assert.equal(calls.length, 0, 'downgrade must refuse before network transfer');
+    assert.deepEqual(fs.readFileSync(path.join(first.finalPath, 'voice-pack-release.json')), original);
+    assert.equal((await probeVoicePackState(fixture.globalStoragePath, '5.2.0')).state, 'installed');
+  });
+
   test('invalid publisher signature preserves prior installed data', async () => {
     const prior = path.join(fixture.globalStoragePath, 'voice-pack');
     fs.mkdirSync(prior);

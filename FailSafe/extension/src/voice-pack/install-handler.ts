@@ -16,6 +16,7 @@ import { assertRemovableVoicePack } from './uninstall-boundary';
 import { fetchAllowlisted } from './allowlisted-fetch';
 import * as publisher from './publisher-auth';
 import { verifyPublisherBeforePromotion } from './release-attestation-fetch';
+import { refuseSignedVoiceDowngrade } from './signed-version-guard';
 import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
   InstallReport,
@@ -104,6 +105,7 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
   // The canonical public key is part of the reviewed VSIX, never a field
   // supplied by the caller or downloaded alongside the Voice Pack.
   const pinnedPublisher = publisher.loadPinnedVoicePublisherKey();
+  await refuseSignedVoiceDowngrade(storageRoot, version);
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'));
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
@@ -130,6 +132,8 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     emit(opts, { phase: 'verify', status: 'success' });
 
     const finalDir = path.join(storageRoot, 'voice-pack');
+    // A newer, still-authentic pack must not be replaced mid-download.
+    await refuseSignedVoiceDowngrade(storageRoot, version);
     const swap = atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);
     for (const warning of swap.cleanupWarnings) {
       reportVoiceCleanupWarning(opts.output, warning);
