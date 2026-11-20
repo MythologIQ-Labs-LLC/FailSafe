@@ -40,6 +40,45 @@ jobs:
       - name: Verify upstream voice asset pins against committed Git HEAD
         run: npm run verify:voice-pins
         working-directory: FailSafe/extension
+      # CI-ONLY real producer acceptance: no tag, release or publication.
+      - name: Build and read back real six-asset Voice Pack candidate
+        shell: bash
+        working-directory: FailSafe/extension
+        run: |
+          set -euo pipefail
+          npm run build:package
+          node <<'NODE'
+          const fs = require('fs'), path = require('path');
+          const cp = require('child_process'), crypto = require('crypto'), assert = require('assert/strict');
+          const version = require('./package.json').version;
+          const name = 'failsafe-voice-pack-' + version + '.tar.gz';
+          const archive = path.join('dist', name);
+          const sum = fs.readFileSync(archive + '.sha256', 'utf8');
+          const actual = crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+          assert.equal(sum, actual + '  ' + name + '\n');
+          const tar = (args) => {
+            const p = cp.spawnSync('tar', args, {encoding: null, maxBuffer: 80 * 1024 * 1024});
+            if (p.status !== 0 || p.error) throw Error('tar readback refused: ' + String(p.stderr));
+            return p.stdout;
+          };
+          const listed = tar(['-tzf', archive]).toString('utf8').trim().split('\n')
+            .map(s => s.replace(/^\.\//, '')).sort();
+          const members = ['piper/', 'whisper/', 'voice-pack.manifest.json',
+            'piper/piper.min.js', 'piper/piper_phonemize.wasm',
+            'piper/piper_phonemize.data', 'whisper/transformers.min.js',
+            'whisper/ort-wasm-simd.wasm', 'whisper/ort-wasm-simd-threaded.wasm'];
+          assert.deepEqual(listed, members.sort());
+          const manifest = JSON.parse(tar(['-xOzf', archive, 'voice-pack.manifest.json']).toString('utf8'));
+          assert.equal(manifest.version, version);
+          assert.deepEqual([...manifest.expectedFiles].sort(), members.filter(x=>!x.endsWith('/')&&x!=='voice-pack.manifest.json').sort());
+          assert.deepEqual(Object.keys(manifest.sha256).sort(), manifest.expectedFiles);
+          for (const member of manifest.expectedFiles) {
+            const asset = tar(['-xOzf', archive, member]);
+            assert.ok(asset.length>0);
+            assert.equal(crypto.createHash('sha256').update(asset).digest('hex'), manifest.sha256[member]);
+          }
+          console.log('[voice proof] REAL ARCHIVE PASS: version', version, 'six matched assets, exact 9 entries, SHA-256');
+          NODE
       - run: npx playwright install --with-deps chromium
         working-directory: FailSafe/extension
       - run: npm run compile
