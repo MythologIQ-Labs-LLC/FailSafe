@@ -43,6 +43,21 @@ for (const src of walk(SRC)) {
   copied += 1;
 }
 console.log(`copy-ui-js: mirrored ${copied} .js file(s) src/ → out/`);
+// Keep the unbundled extension-host test path aligned with installed output.
+const voicePin = path.join(SRC, "voice-pack", "publisher-public-key.pem");
+const outVoicePin = path.join(OUT, "voice-pack", "publisher-public-key.pem");
+if (fs.existsSync(voicePin)) {
+  const st = fs.lstatSync(voicePin);
+  if (!st.isFile() || st.isSymbolicLink() || st.size === 0 || st.size > 8192) {
+    throw new Error("invalid voice publisher key for test runtime");
+  }
+  const key = require("crypto").createPublicKey(fs.readFileSync(voicePin));
+  if (key.asymmetricKeyType !== "ed25519") throw new Error("voice publisher key must be Ed25519");
+  fs.mkdirSync(path.dirname(outVoicePin), { recursive: true });
+  fs.copyFileSync(voicePin, outVoicePin);
+} else {
+  fs.rmSync(outVoicePin, { force: true }); // Never reuse a stale previous-build pin.
+}
 
 // Educational Component (v5.2.0): emit BROWSER-ESM builds of the education
 // modules. `out/education/*.js` is tsc's CommonJS output — required by the
