@@ -123,6 +123,18 @@ for (const [name, fields, signerOf, stamp] of [
     const dir = await prepare();
     await forgeRecord(dir, fields, signerOf(), { stamp });
     refused(S.verify(dir), "KEY_TRANSITION_INVALID");
+    // A complete later checkpoint cannot legitimize incomplete or forged
+    // key-transition evidence, even with all owner release pins supplied.
+    refused(S.verify(dir, releaseOpts(dir)), "KEY_TRANSITION_INVALID");
+    if (!stamp) {
+      const i = releaseOpts(dir);
+      const cli = spawnSync(process.execPath, [CLI, "--repo-root", dir,
+        "--release", "--trust-fingerprint", i.trustFingerprint,
+        "--trusted-head", i.trustedHead, "--repository", i.repository,
+        "--commit", i.expectedCommit], { encoding: "utf8" });
+      assert.equal(cli.status, 1, cli.stdout + cli.stderr);
+      assert.match(cli.stdout, /REFUSED KEY_TRANSITION_INVALID/);
+    }
   });
 }
 
