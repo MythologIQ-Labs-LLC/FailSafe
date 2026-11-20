@@ -9,7 +9,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createHash } from 'crypto';
+import { createHash, generateKeyPairSync } from 'crypto';
+import * as publisher from '../../voice-pack/publisher-auth';
 import { VOICE_ASSETS } from '../../voice-pack/safe-archive';
 
 import { wireVoicePack } from '../../extension/bootstrapVoicePack';
@@ -39,6 +40,11 @@ function mkTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+let signer: { privateKey: string; publicKey: string };
+const signCandidate = require('../../../scripts/voice-pack-auth.cjs').signCandidate as
+  (candidate: unknown, privatePem: string, publicPem: string) =>
+    { payload: Buffer; signature: Buffer };
+
 /** A real pack has exactly six canonical files, not a permissive one-file mock. */
 function writeCanonicalPack(packDir: string, version: string): void {
   fs.mkdirSync(packDir, { recursive: true });
@@ -50,15 +56,41 @@ function writeCanonicalPack(packDir: string, version: string): void {
     fs.writeFileSync(filename, data, 'utf8');
     sha256[rel] = createHash('sha256').update(data).digest('hex');
   }
-  fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
+  const raw = Buffer.from(JSON.stringify({
     version,
     builtAt: new Date().toISOString(),
     expectedFiles: [...VOICE_ASSETS],
     sha256,
   }), 'utf8');
+  fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), raw);
+  const signed = signCandidate({
+    status: 'UNSIGNED_CANDIDATE_ONLY', repository: 'MythologIQ-Labs-LLC/FailSafe',
+    version, sourceSha: 'a'.repeat(40),
+    filename: 'failsafe-voice-pack-' + version + '.tar.gz',
+    archiveSha256: 'b'.repeat(64),
+    manifestSha256: createHash('sha256').update(raw).digest('hex'), filesVerified: 6,
+  }, signer.privateKey, signer.publicKey);
+  fs.writeFileSync(path.join(packDir, 'voice-pack-release.json'), signed.payload);
+  fs.writeFileSync(path.join(packDir, 'voice-pack-release.json.sig'),
+    signed.signature.toString('base64') + '\n');
 }
 
 suite('bootstrapVoicePack — wireVoicePack', () => {
+  let originalPublisher: typeof publisher.loadPinnedVoicePublisherKey;
+  setup(() => {
+    const keys = generateKeyPairSync('ed25519');
+    signer = {
+      privateKey: keys.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+      publicKey: keys.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    };
+    originalPublisher = publisher.loadPinnedVoicePublisherKey;
+    (publisher as { loadPinnedVoicePublisherKey: () => string })
+      .loadPinnedVoicePublisherKey = () => signer.publicKey;
+  });
+  teardown(() => {
+    (publisher as { loadPinnedVoicePublisherKey: () => string })
+      .loadPinnedVoicePublisherKey = originalPublisher;
+  });
 
   test('wireVoicePack with no pack installed sets voicePackPath to null', async () => {
     const globalStoragePath = mkTempDir('failsafe-voice-pack-activate-absent-');
