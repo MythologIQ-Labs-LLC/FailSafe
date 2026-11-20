@@ -69,10 +69,14 @@ suite('voice-pack publisher authentication #732', () => {
     assert.equal(first.ok, true);
     const original = fs.readFileSync(path.join(first.finalPath, 'voice-pack-release.json'));
     const { calls } = installFetchStub([]);
+    const errors: Array<{ phase: string; status: string }> = [];
     await assert.rejects(() => installVoicePack({
       globalStoragePath: fixture.globalStoragePath, version: '5.1.0',
+      onProgress: event => errors.push(event),
     }), /publisher authentication refused: signed Voice Pack downgrade from 5\.2\.0 to 5\.1\.0/);
     assert.equal(calls.length, 0, 'downgrade must refuse before network transfer');
+    assert.equal(errors.at(-1)?.phase, 'verify');
+    assert.equal(errors.at(-1)?.status, 'error');
     assert.deepEqual(fs.readFileSync(path.join(first.finalPath, 'voice-pack-release.json')), original);
     assert.equal((await probeVoicePackState(fixture.globalStoragePath, '5.2.0')).state, 'installed');
   });

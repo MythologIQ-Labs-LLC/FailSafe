@@ -105,11 +105,11 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
   // The canonical public key is part of the reviewed VSIX, never a field
   // supplied by the caller or downloaded alongside the Voice Pack.
   const pinnedPublisher = publisher.loadPinnedVoicePublisherKey();
-  await refuseSignedVoiceDowngrade(storageRoot, version);
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'));
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
   try {
+    await refuseSignedVoiceDowngrade(storageRoot, version);
     const { tarball, checksum, actual } = await downloadAndVerifyPack(opts, tarballUrl, checksumUrl, stagingTarball);
 
     emit(opts, { phase: 'extract', status: 'running' });
