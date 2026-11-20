@@ -60,8 +60,8 @@ function autoSignedHandlers(handlers: FetchHandler[]): FetchHandler[] {
   const receipt = signer.signCandidate(candidate, activeSigner.privatePem, activeSigner.publicPem);
   return [
     ...handlers,
-    { url: /\\/voice-pack-release\\.json$/, body: receipt.payload },
-    { url: /\\/voice-pack-release\\.json\\.sig$/, body: receipt.signature.toString('base64') + '\\n' },
+    { url: /\/voice-pack-release\.json$/, body: receipt.payload },
+    { url: /\/voice-pack-release\.json\.sig$/, body: receipt.signature.toString('base64') + '\n' },
   ];
 }
 const PLATFORM_REDIRECT_LIMIT = 20;
