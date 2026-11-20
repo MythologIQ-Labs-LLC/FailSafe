@@ -32,6 +32,26 @@ suite('voice-pack publisher authentication #732', () => {
     }
   });
 
+  test('real signed producer fixture installs only after publisher verification', async () => {
+    const archive = buildFixturePackTar();
+    const { calls } = installFetchStub([
+      { url: /failsafe-voice-pack-5\\.2\\.0\\.tar\\.gz$/, body: archive },
+      { url: /\\.sha256$/, body: `${sha256OfBytes(archive)}  failsafe-voice-pack-5.2.0.tar.gz\\n` },
+    ]);
+    const phases: string[] = [];
+    const result = await installVoicePack({
+      globalStoragePath: fixture.globalStoragePath, version: '5.2.0',
+      onProgress: e => phases.push(e.phase + ':' + e.status),
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.version, '5.2.0');
+    assert.ok(fs.existsSync(path.join(result.finalPath, 'piper', 'piper.min.js')));
+    assert.ok(fs.existsSync(path.join(result.finalPath, 'whisper', 'transformers.min.js')));
+    assert.ok(calls.some(c => c.url.endsWith('/voice-pack-release.json')));
+    assert.ok(calls.some(c => c.url.endsWith('/voice-pack-release.json.sig')));
+    assert.ok(phases.includes('verify:success'));
+  });
+
   test('invalid publisher signature preserves prior installed data', async () => {
     const prior = path.join(fixture.globalStoragePath, 'voice-pack');
     fs.mkdirSync(prior);
