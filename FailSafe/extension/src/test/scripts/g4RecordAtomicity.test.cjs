@@ -202,21 +202,27 @@ test("G4 #660: pre-existing file or dangling symlink never gets replaced", async
     await assert.rejects(writeNew(f.root, rels, f.maker), /never replaced/);
     assert.equal(fs.readFileSync(f.targets[0], "utf8"), "PRESERVED");
     fs.unlinkSync(f.targets[0]);
-    if (process.platform === "win32") return t.skip("Windows symlink privilege varies");
-    fs.symlinkSync(path.join(f.root, "missing-outside"), f.targets[0]);
+    try { fs.symlinkSync(path.join(f.root, "missing-outside"), f.targets[0], "file"); }
+    catch (err) {
+      if (process.platform === "win32" && err.code === "EPERM") return t.skip("file symlink denied by runner");
+      throw err;
+    }
     await assert.rejects(writeNew(f.root, rels, f.maker), /never replaced/);
     assert.equal(fs.lstatSync(f.targets[0]).isSymbolicLink(), true);
   } finally { f.cleanup(); }
 });
 
 test("G4 #660: symlinked parent refuses before publication", async (t) => {
-  if (process.platform === "win32") return t.skip("Windows junction/symlink privileges vary");
   const f = fixture();
   try {
     fs.mkdirSync(path.join(f.root, "tools/g4"), { recursive: true });
     const outside = path.join(f.root, "outside");
     fs.mkdirSync(outside);
-    fs.symlinkSync(outside, f.parent, "dir");
+    try { fs.symlinkSync(outside, f.parent, process.platform === "win32" ? "junction" : "dir"); }
+    catch (err) {
+      if (process.platform === "win32" && err.code === "EPERM") return t.skip("directory junction denied by runner");
+      throw err;
+    }
     await assert.rejects(writeNew(f.root, rels, f.maker), /not a real directory/);
     assert.deepEqual(fs.readdirSync(outside), []);
   } finally { f.cleanup(); }
