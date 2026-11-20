@@ -35,8 +35,8 @@ suite('voice-pack publisher authentication #732', () => {
   test('real signed producer fixture installs only after publisher verification', async () => {
     const archive = buildFixturePackTar();
     const { calls } = installFetchStub([
-      { url: /failsafe-voice-pack-5\\.2\\.0\\.tar\\.gz$/, body: archive },
-      { url: /\\.sha256$/, body: `${sha256OfBytes(archive)}  failsafe-voice-pack-5.2.0.tar.gz\\n` },
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: archive },
+      { url: /\.sha256$/, body: `${sha256OfBytes(archive)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
     ]);
     const phases: string[] = [];
     const result = await installVoicePack({
