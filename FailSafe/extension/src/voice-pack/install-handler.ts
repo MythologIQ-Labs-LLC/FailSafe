@@ -15,6 +15,7 @@ import { extractValidatedVoiceArchive } from './safe-archive';
 import { assertRemovableVoicePack } from './uninstall-boundary';
 import { fetchAllowlisted } from './allowlisted-fetch';
 import * as publisher from './publisher-auth';
+import { verifyPublisherBeforePromotion } from './release-attestation-fetch';
 import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
   InstallReport,
@@ -27,9 +28,6 @@ import {
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
 const MAX_PACK_DOWNLOAD_BYTES = 96 * 1024 * 1024;
 const MAX_CHECKSUM_BYTES = 8 * 1024;
-const MAX_SIGNED_RECORD_BYTES = 4096;
-const MAX_SIGNED_SIGNATURE_BYTES = 90;
-const ATTESTATION_NAME = 'voice-pack-release.json';
 const PACK_FILENAME = (version: string) => `failsafe-voice-pack-${version}.tar.gz`;
 const RELEASE_BASE = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download';
 
@@ -64,39 +62,6 @@ async function downloadAndVerifyPack(
   logProvenance(opts, 'tarball', tarball, actual);
   logProvenance(opts, 'checksum', checksum, expected);
   return { tarball, checksum, actual };
-}
-
-/** Read only a small signed record or detached signature from GitHub. */
-async function fetchSignedBytes(url: string, limit: number): Promise<Buffer> {
-  const { response } = await fetchAllowlisted(url, 'publisher authentication refused');
-  if (!response.body) throw new Error('publisher authentication refused: empty signed response');
-  const stated = response.headers.get('content-length');
-  if (stated && Number(stated) > limit) {
-    throw new Error('publisher authentication refused: signed response exceeds budget');
-  }
-  const chunks: Buffer[] = [];
-  let total = 0;
-  for await (const chunk of Readable.fromWeb(
-    response.body as unknown as import('stream/web').ReadableStream)) {
-    total += chunk.length;
-    if (total > limit) throw new Error('publisher authentication refused: signed response exceeds budget');
-    chunks.push(Buffer.from(chunk));
-  }
-  if (!total) throw new Error('publisher authentication refused: empty signed response');
-  return Buffer.concat(chunks);
-}
-
-async function verifyPublisherBeforePromotion(
-  version: string, archiveSha256: string, stagedManifest: string, pinnedPem: string,
-): Promise<void> {
-  const release = `${RELEASE_BASE}/v${version}-voice/${ATTESTATION_NAME}`;
-  const [record, signature] = await Promise.all([
-    fetchSignedBytes(release, MAX_SIGNED_RECORD_BYTES),
-    fetchSignedBytes(release + '.sig', MAX_SIGNED_SIGNATURE_BYTES),
-  ]);
-  const manifestSha = sha256OfFile(stagedManifest);
-  publisher.verifyVoicePublisherAttestation(
-    record, signature, pinnedPem, version, archiveSha256, manifestSha);
 }
 
 /**
