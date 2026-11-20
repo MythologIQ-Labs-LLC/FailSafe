@@ -70,6 +70,9 @@ async function downloadAndVerifyPack(
 function requireVoiceStorageRoot(root: string): string {
   if (!path.isAbsolute(root)) throw new Error('voice pack storage root must be absolute');
   const canonical = path.resolve(root);
+  if (canonical === path.parse(canonical).root) {
+    throw new Error('voice pack storage root must not be a filesystem root');
+  }
   let cursor = path.parse(canonical).root;
   // Check each existing ancestor before creating a missing child: recursive
   // mkdir would otherwise follow a linked parent outside VS Code's storage.

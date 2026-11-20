@@ -130,6 +130,17 @@ suite("voice-pack install-handler — storage boundary (#710)", () => {
     assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "KEEP");
   });
 
+  test("filesystem volume root refuses install and uninstall before any network or delete", async () => {
+    const volumeRoot = path.parse(fixture.globalStoragePath).root;
+    const { calls } = installFetchStub([]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: volumeRoot, version: "5.2.0" }),
+      /storage root must not be a filesystem root/,
+    );
+    assert.equal(calls.length, 0);
+    assert.throws(() => uninstallVoicePack(volumeRoot), /storage root must not be a filesystem root/);
+  });
+
   test("uninstall refuses a linked voice-pack destination and preserves its target", () => {
     if (process.platform === "win32") return; // symlink privilege varies
     const outside = path.join(fixture.globalStoragePath, "other-data");
