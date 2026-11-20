@@ -42,14 +42,18 @@ function signApprovedCandidate(dir, version, sourceSha) {
   verifySignedCandidate(verified, signed.payload, signed.signature, pub);
   const recordPath = path.join(dir, "voice-pack-release.json");
   const sigPath = recordPath + ".sig";
+  let createdRecord = false;
+  let createdSignature = false;
   try {
     fs.writeFileSync(recordPath, signed.payload, { flag: "wx", mode: 0o600 });
+    createdRecord = true;
     fs.writeFileSync(sigPath, signed.signature.toString("base64") + "\n",
       { flag: "wx", mode: 0o600 });
+    createdSignature = true;
   } catch (e) {
-    // A partial signer job must not leave output indistinguishable from success.
-    fs.rmSync(recordPath, { force: true });
-    fs.rmSync(sigPath, { force: true });
+    // Never remove a pre-existing record/signature belonging to another run.
+    if (createdSignature) fs.rmSync(sigPath, { force: true });
+    if (createdRecord) fs.rmSync(recordPath, { force: true });
     throw e;
   }
   return { status: "SIGNED_CANDIDATE_NOT_PUBLISHED", version, sourceSha,
