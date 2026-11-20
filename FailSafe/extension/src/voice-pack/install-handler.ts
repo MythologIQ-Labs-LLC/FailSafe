@@ -14,6 +14,7 @@ import { createHash } from 'crypto';
 import { extractValidatedVoiceArchive } from './safe-archive';
 import { assertRemovableVoicePack } from './uninstall-boundary';
 import { fetchAllowlisted } from './allowlisted-fetch';
+import * as publisher from './publisher-auth';
 import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
   InstallReport,
@@ -26,6 +27,9 @@ import {
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
 const MAX_PACK_DOWNLOAD_BYTES = 96 * 1024 * 1024;
 const MAX_CHECKSUM_BYTES = 8 * 1024;
+const MAX_SIGNED_RECORD_BYTES = 4096;
+const MAX_SIGNED_SIGNATURE_BYTES = 90;
+const ATTESTATION_NAME = 'voice-pack-release.json';
 const PACK_FILENAME = (version: string) => `failsafe-voice-pack-${version}.tar.gz`;
 const RELEASE_BASE = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download';
 
@@ -57,10 +61,42 @@ async function downloadAndVerifyPack(
   if (actual !== expected) {
     throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
   }
-  emit(opts, { phase: 'verify', status: 'success' });
   logProvenance(opts, 'tarball', tarball, actual);
   logProvenance(opts, 'checksum', checksum, expected);
   return { tarball, checksum, actual };
+}
+
+/** Read only a small signed record or detached signature from GitHub. */
+async function fetchSignedBytes(url: string, limit: number): Promise<Buffer> {
+  const { response } = await fetchAllowlisted(url, 'publisher authentication refused');
+  if (!response.body) throw new Error('publisher authentication refused: empty signed response');
+  const stated = response.headers.get('content-length');
+  if (stated && Number(stated) > limit) {
+    throw new Error('publisher authentication refused: signed response exceeds budget');
+  }
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of Readable.fromWeb(
+    response.body as unknown as import('stream/web').ReadableStream)) {
+    total += chunk.length;
+    if (total > limit) throw new Error('publisher authentication refused: signed response exceeds budget');
+    chunks.push(Buffer.from(chunk));
+  }
+  if (!total) throw new Error('publisher authentication refused: empty signed response');
+  return Buffer.concat(chunks);
+}
+
+async function verifyPublisherBeforePromotion(
+  version: string, archiveSha256: string, stagedManifest: string, pinnedPem: string,
+): Promise<void> {
+  const release = `${RELEASE_BASE}/v${version}-voice/${ATTESTATION_NAME}`;
+  const [record, signature] = await Promise.all([
+    fetchSignedBytes(release, MAX_SIGNED_RECORD_BYTES),
+    fetchSignedBytes(release + '.sig', MAX_SIGNED_SIGNATURE_BYTES),
+  ]);
+  const manifestSha = sha256OfFile(stagedManifest);
+  publisher.verifyVoicePublisherAttestation(
+    record, signature, pinnedPem, version, archiveSha256, manifestSha);
 }
 
 /**
@@ -100,6 +136,9 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
 
   // Refuse linked/untrusted storage before downloading unverified archive bytes.
   const storageRoot = requireVoiceStorageRoot(globalStoragePath);
+  // The canonical public key is part of the reviewed VSIX, never a field
+  // supplied by the caller or downloaded alongside the Voice Pack.
+  const pinnedPublisher = publisher.loadPinnedVoicePublisherKey();
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'));
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
@@ -112,6 +151,12 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     const manifest = extractValidatedVoiceArchive(stagingTarball, stagingDir, version);
     emit(opts, { phase: 'extract', status: 'success' });
     emit(opts, { phase: 'manifest-verify', status: 'success' });
+
+    // Require a publisher signature bound to *this* archive and the exact
+    // verified manifest bytes, before displacing any existing installation.
+    await verifyPublisherBeforePromotion(version, actual,
+      path.join(stagingDir, 'voice-pack.manifest.json'), pinnedPublisher);
+    emit(opts, { phase: 'verify', status: 'success' });
 
     const finalDir = path.join(storageRoot, 'voice-pack');
     const swap = atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);
@@ -209,7 +254,8 @@ function sha256OfFile(p: string): string {
 /** Classify by the failure prefix only; a message can quote a hostname (#538). */
 function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
   if (msg.startsWith('download failed')) return 'download';
-  if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch')) return 'verify';
+  if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch') ||
+      msg.startsWith('publisher authentication refused')) return 'verify';
   if (msg.startsWith('tar extract')) return 'extract';
   if (/^(extracted |manifest )/.test(msg)) return 'manifest-verify';
   // A failed filesystem promotion or unsafe storage root must not tell the
