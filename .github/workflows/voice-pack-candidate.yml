@@ -9,6 +9,9 @@ on:
       - ".github/workflows/release.yml"
       - "FailSafe/extension/scripts/verify-voice-release-candidate.cjs"
       - "FailSafe/extension/scripts/voice-pack-auth.cjs"
+      - "FailSafe/extension/scripts/voice-publisher-release-gate.cjs"
+      - "FailSafe/extension/src/test/scripts/voicePublisherReleaseGate.test.cjs"
+      - "FailSafe/extension/scripts/validate-vsix.cjs"
       - "FailSafe/extension/scripts/voice-pack-sign-candidate.cjs"
       - "FailSafe/extension/src/test/scripts/voicePackAuth.test.cjs"
       - "FailSafe/extension/src/test/scripts/verifyVoiceReleaseCandidate.test.cjs"
@@ -80,7 +83,8 @@ jobs:
         working-directory: FailSafe/extension
         run: |
           node --test src/test/scripts/verifyVoiceReleaseCandidate.test.cjs \
-            src/test/scripts/voicePackAuth.test.cjs
+            src/test/scripts/voicePackAuth.test.cjs \
+            src/test/scripts/voicePublisherReleaseGate.test.cjs
       - name: Verify original SHA-512 pinned upstream browser assets
         working-directory: FailSafe/extension
         run: npm run verify:voice-pins
