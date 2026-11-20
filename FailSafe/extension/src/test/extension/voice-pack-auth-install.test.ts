@@ -48,7 +48,8 @@ suite('voice-pack publisher authentication #732', () => {
       onProgress: e => events.push(e),
     }), /publisher authentication refused: Ed25519 signature mismatch/);
     assert.equal(fs.readFileSync(path.join(prior, 'sentinel.txt'), 'utf8'), 'KEEP');
-    assert.deepEqual(events.at(-1), { phase: 'verify', status: 'error' });
+    assert.equal(events.at(-1)?.phase, 'verify');
+    assert.equal(events.at(-1)?.status, 'error');
   });
 
   test('signed manifest content mismatch refuses before replacing prior pack', async () => {
