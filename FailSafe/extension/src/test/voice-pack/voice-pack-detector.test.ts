@@ -163,6 +163,19 @@ suite('voice-pack-detector — probeVoicePackState', () => {
     assert.equal((await probeVoicePackState(globalStoragePath, '5.2.0')).state, 'corrupt');
   });
 
+  test('linked Piper directory is refused even when every target asset matches', async () => {
+    if (process.platform === 'win32') return;
+    writePackFixture(globalStoragePath, { manifestVersion: '5.2.0' });
+    const root = path.join(globalStoragePath, 'voice-pack');
+    const linked = path.join(root, 'piper');
+    const elsewhere = path.join(globalStoragePath, 'outside-piper');
+    fs.renameSync(linked, elsewhere);
+    fs.symlinkSync(elsewhere, linked, 'dir');
+    const result = await probeVoicePackState(globalStoragePath, '5.2.0');
+    assert.equal(result.state, 'corrupt');
+    assert.ok(fs.existsSync(path.join(elsewhere, 'piper.min.js')));
+  });
+
   test('linked pack directory is corrupt rather than following its content', async () => {
     if (process.platform === 'win32') return;
     const other = fs.mkdtempSync(path.join(globalStoragePath, 'real-'));
