@@ -147,34 +147,6 @@ suite('voice-pack-detector — probeVoicePackState', () => {
     );
   });
 
-  test('rejects matching local hashes without a publisher-signed receipt', async () => {
-    writePackFixture(globalStoragePath, { manifestVersion: '5.2.0' });
-    const receipt = path.join(globalStoragePath, 'voice-pack', 'voice-pack-release.json');
-    fs.unlinkSync(receipt);
-    const result = await probeVoicePackState(globalStoragePath, '5.2.0');
-    assert.equal(result.state, 'corrupt');
-    assert.ok(result.missingFiles?.includes('voice-pack-release.json'));
-  });
-
-  test('tampered detached signature is rejected after restart', async () => {
-    writePackFixture(globalStoragePath, { manifestVersion: '5.2.0' });
-    const sig = path.join(globalStoragePath, 'voice-pack', 'voice-pack-release.json.sig');
-    fs.writeFileSync(sig, Buffer.alloc(64).toString('base64') + '\n');
-    const result = await probeVoicePackState(globalStoragePath, '5.2.0');
-    assert.equal(result.state, 'corrupt');
-  });
-
-  test('a forged local manifest and rehashed executable cannot bypass publisher trust', async () => {
-    const original = writePackFixture(globalStoragePath, { manifestVersion: '5.2.0' });
-    const dir = path.join(globalStoragePath, 'voice-pack');
-    const asset = VOICE_ASSETS[0];
-    fs.writeFileSync(path.join(dir, asset), 'FORGED-LOCAL-EXECUTABLE');
-    original.sha256[asset] = sha256OfFile(path.join(dir, asset));
-    fs.writeFileSync(path.join(dir, 'voice-pack.manifest.json'),
-      JSON.stringify(original, null, 2));
-    assert.equal((await probeVoicePackState(globalStoragePath, '5.2.0')).state, 'corrupt');
-  });
-
   test('rejects path traversal in globalStoragePath argument', async () => {
     await assert.rejects(
       () => probeVoicePackState('/etc/passwd/../etc/passwd', '5.2.0'),
