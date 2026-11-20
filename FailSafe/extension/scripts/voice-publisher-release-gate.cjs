@@ -16,13 +16,32 @@ function requiresPublisherPin(version) {
 }
 function readApprovedPin(root) {
   const file = path.join(root, "src", "voice-pack", "publisher-public-key.pem");
-  let st;
-  try { st = fs.lstatSync(file); }
+  let before;
+  try { before = fs.lstatSync(file); }
   catch { throw new Error("voice publisher release gate: approved public key missing"); }
-  assert.ok(st.isFile() && !st.isSymbolicLink() && st.size > 0 &&
-    st.size <= 8192, "voice publisher release gate: unsafe public key");
-  const bytes = fs.readFileSync(file);
-  assert.equal(bytes.length, st.size, "voice publisher release gate: key changed");
+  assert.ok(before.isFile() && !before.isSymbolicLink() && before.size > 0 &&
+    before.size <= 8192, "voice publisher release gate: unsafe public key");
+  const flags = fs.constants.O_RDONLY |
+    (fs.constants.O_NOFOLLOW || 0) | (fs.constants.O_NONBLOCK || 0);
+  let fd;
+  try { fd = fs.openSync(file, flags); }
+  catch { throw new Error("voice publisher release gate: unable to open regular key"); }
+  let bytes;
+  try {
+    const now = fs.fstatSync(fd);
+    assert.ok(now.isFile() && now.size === before.size &&
+      now.dev === before.dev && now.ino === before.ino,
+    "voice publisher release gate: key changed during inspection");
+    bytes = Buffer.alloc(now.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const n = fs.readSync(fd, bytes, offset, bytes.length - offset, null);
+      if (n === 0) throw new Error("voice publisher release gate: key truncated");
+      offset += n;
+    }
+    assert.equal(fs.readSync(fd, Buffer.alloc(1), 0, 1, null), 0,
+      "voice publisher release gate: key grew during inspection");
+  } finally { fs.closeSync(fd); }
   let key;
   try { key = crypto.createPublicKey(bytes); }
   catch { throw new Error("voice publisher release gate: invalid Ed25519 SPKI"); }

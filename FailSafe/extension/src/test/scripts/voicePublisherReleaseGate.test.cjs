@@ -90,3 +90,12 @@ test("approved key matches the actual bytes shipped inside the VSIX", () =>
     assert.equal(checked.required, true);
     assert.match(checked.publisherKeyId, /^sha256:[a-f0-9]{64}$/);
   }));
+test("empty and oversized source keys refuse before parsing or archive reads", () =>
+  fixture(({ root, file, bytes }) => {
+    fs.writeFileSync(file, "");
+    assert.throws(() => requirePublisherPinForRelease("6.1.0", {
+      extensionRoot: root }), /unsafe public key/);
+    fs.writeFileSync(file, Buffer.concat([bytes, Buffer.alloc(8193)]));
+    assert.throws(() => requirePublisherPinForRelease("6.1.0", {
+      extensionRoot: root }), /unsafe public key/);
+  }));
