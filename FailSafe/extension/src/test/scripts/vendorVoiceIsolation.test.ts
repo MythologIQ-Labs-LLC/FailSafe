@@ -243,6 +243,68 @@ suite('voice vendor isolation #707', () => {
     assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-') || name.includes('.old-')), []);
   }));
 
+  test('staged asset byte tampering cannot be promoted even when it remains a normal file', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let tampered = false;
+    const ops = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (!tampered && String(file).includes('.new-')) {
+          tampered = true;
+          fs.writeFileSync(file, 'POISON!', { flag: 'w' });
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED!')]]), vendor, ops, root,
+    ), /voice vendor staged asset content mismatch/);
+    assert.equal(tampered, true, 'the staged asset must be rewritten during the transaction');
+    assert.equal(fs.readFileSync(target, 'utf8'), 'ORIGINAL', 'installed asset is not overwritten');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-') || name.includes('.old-')), []);
+  }));
+
+  test('foreign pending inode substituted with identical bytes is refused and not deleted', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const primary = path.join(dir, 'piper.min.js');
+    const secondary = path.join(dir, 'piper_phonemize.wasm');
+    fs.writeFileSync(primary, 'ORIGINAL');
+    fs.writeFileSync(secondary, 'PREVIOUS');
+    let firstPending = '';
+    let injected = false;
+    const ops = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (String(file).includes('piper.min.js.new-')) {
+          firstPending = String(file);
+        } else if (firstPending && String(file).includes('piper_phonemize.wasm.new-')) {
+          const other = path.join(root, 'foreign-staged-content');
+          fs.writeFileSync(other, 'PINNED!');
+          fs.renameSync(other, firstPending); // Windows permits replacing an existing file only on supported hosts.
+          injected = true;
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(new Map([
+      ['piper/piper.min.js', Buffer.from('PINNED!')],
+      ['piper/piper_phonemize.wasm', Buffer.from('NEW-WASM')],
+    ]), vendor, ops, root), /voice vendor staged file changed during promotion/);
+    assert.equal(injected, true);
+    assert.equal(fs.readFileSync(primary, 'utf8'), 'ORIGINAL');
+    assert.equal(fs.readFileSync(secondary, 'utf8'), 'PREVIOUS');
+    assert.equal(fs.readFileSync(firstPending, 'utf8'), 'PINNED!', 'foreign staged inode remains untouched');
+    assert.deepEqual(fs.readdirSync(dir).filter(x => x.includes('.old-')), []);
+    // Clean up foreign fixture after validating that rollback respected its ownership.
+    fs.rmSync(firstPending);
+  }));
+
   test('vendor root symlink is refused before writing any assets', function () {
     if (process.platform === 'win32') this.skip(); // Windows symlink privileges vary.
     temporary(root => {

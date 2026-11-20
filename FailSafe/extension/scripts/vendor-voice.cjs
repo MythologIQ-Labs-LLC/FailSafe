@@ -178,12 +178,20 @@ function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
     if (existingVendorEntry(io, pending) || existingVendorEntry(io, backup)) {
       throw new Error('voice vendor transaction collision');
     }
-    prepared.push({ target, pending, backup, original, bytes });
+    if (!(Buffer.isBuffer(bytes) || bytes instanceof Uint8Array) ||
+        bytes.length === 0 || bytes.length > MAX_ASSET) {
+      throw new Error('invalid pinned vendor output bytes');
+    }
+    const expectedSha256 = crypto.createHash('sha256').update(bytes).digest();
+    prepared.push({ target, pending, backup, original, bytes, expectedSize: bytes.length, expectedSha256 });
   }
   for (const { bytes, ...item } of prepared) {
     // Record first: writeFileSync can create a partial file before throwing.
     staged.push(item);
     io.writeFileSync(item.pending, bytes, { flag: 'wx', mode: 0o600 });
+    // Capture this transaction's newly created staging inode for later validation.
+    item.pendingWritten = requireRegularVendorTarget(io, item.pending);
+    if (!item.pendingWritten) throw new Error('voice vendor staged file vanished after write');
   }
 }
 
@@ -200,7 +208,18 @@ function promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot) {
       throw new Error('voice vendor transaction collision');
     }
     const pending = existingVendorEntry(io, item.pending);
-    if (!pending || !pending.isFile() || pending.isSymbolicLink()) {
+    if (!pending || !pending.isFile() || pending.isSymbolicLink() ||
+        !sameVendorEntry(item.pendingWritten, pending)) {
+      throw new Error('voice vendor staged file changed during promotion');
+    }
+    // Enforce the exact pinned bytes, not merely a regular staged file.
+    // Stat checks alone cannot detect an in-place edit or copied replacement.
+    const stagedBytes = io.readFileSync(item.pending);
+    if (!Buffer.isBuffer(stagedBytes) || stagedBytes.length !== item.expectedSize ||
+        !crypto.timingSafeEqual(crypto.createHash('sha256').update(stagedBytes).digest(), item.expectedSha256)) {
+      throw new Error('voice vendor staged asset content mismatch');
+    }
+    if (!sameVendorEntry(pending, requireRegularVendorTarget(io, item.pending))) {
       throw new Error('voice vendor staged file changed during promotion');
     }
     if (original) {
@@ -227,8 +246,16 @@ function restoreVoiceOutputs(io, moved, promoted) {
 
 function cleanupVoiceOutputs(io, staged, moved) {
   for (const item of staged) {
-    try { io.rmSync(item.pending, { force: true }); }
-    catch { /* unpromoted staging cleanup best-effort */ }
+    try {
+      const current = existingVendorEntry(io, item.pending);
+      if (!current) continue;
+      // A different inode at this path is foreign. Do not delete it on rollback.
+      // A failed partial write has no captured inode; retain legacy best-effort cleanup.
+      if (item.pendingWritten &&
+          (item.pendingWritten.ino === 0 || current.dev !== item.pendingWritten.dev ||
+           current.ino !== item.pendingWritten.ino)) continue;
+      io.rmSync(item.pending, { force: true });
+    } catch { /* unpromoted staging cleanup best-effort */ }
   }
   if (!moved) return [];
   const warnings = [];
