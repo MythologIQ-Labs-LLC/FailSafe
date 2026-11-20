@@ -188,6 +188,61 @@ suite('voice vendor isolation #707', () => {
     });
   });
 
+  test('same-size regular-file replacement during stage is rejected without clobbering new owner', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    const displaced = path.join(root, 'original-displaced');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let replaced = false;
+    const io = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+        opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (!replaced && String(file).includes('.new-')) {
+          replaced = true;
+          fs.renameSync(target, displaced);
+          fs.writeFileSync(target, 'FOREIGN!');
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, io, root,
+    ), /voice vendor destination changed during promotion/);
+    assert.equal(replaced, true, 'the replacement must happen after original preflight');
+    assert.equal(fs.readFileSync(target, 'utf8'), 'FOREIGN!', 'foreign same-size regular file remains owned');
+    assert.equal(fs.readFileSync(displaced, 'utf8'), 'ORIGINAL', 'original file was not destroyed');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-') || name.includes('.old-')), []);
+  }));
+
+  test('in-place modification after preflight is rejected and preserves changed bytes', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let modified = false;
+    const io = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+        opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (!modified && String(file).includes('.new-')) {
+          modified = true;
+          fs.appendFileSync(target, ':FOREIGN');
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, io, root,
+    ), /voice vendor destination changed during promotion/);
+    assert.equal(modified, true);
+    assert.equal(fs.readFileSync(target, 'utf8'), 'ORIGINAL:FOREIGN');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-') || name.includes('.old-')), []);
+  }));
+
   test('vendor root symlink is refused before writing any assets', function () {
     if (process.platform === 'win32') this.skip(); // Windows symlink privileges vary.
     temporary(root => {

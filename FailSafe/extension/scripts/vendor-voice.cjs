@@ -138,6 +138,20 @@ function requireRegularVendorTarget(io, file) {
   return stat;
 }
 
+/**
+ * Metadata equality detects a replaced regular inode and routine edits to
+ * that inode between preflight and promotion. This is NOT an atomic guarantee
+ * against a concurrent same-user actor changing the path after rechecking.
+ */
+function sameVendorEntry(before, after) {
+  if (!before || !after) return before === after;
+  return before.dev === after.dev &&
+    before.ino === after.ino &&
+    before.size === after.size &&
+    before.mtimeMs === after.mtimeMs &&
+    before.ctimeMs === after.ctimeMs;
+}
+
 function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
   assertVendorAncestry(root, io, trustedRoot, true);
   io.mkdirSync(root, { recursive: true });
@@ -164,7 +178,7 @@ function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
     if (existingVendorEntry(io, pending) || existingVendorEntry(io, backup)) {
       throw new Error('voice vendor transaction collision');
     }
-    prepared.push({ target, pending, backup, hadOriginal: Boolean(original), bytes });
+    prepared.push({ target, pending, backup, original, bytes });
   }
   for (const { bytes, ...item } of prepared) {
     // Record first: writeFileSync can create a partial file before throwing.
@@ -177,7 +191,7 @@ function promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot) {
   for (const item of staged) {
     assertVendorAncestry(item.target, io, trustedRoot);
     const original = requireRegularVendorTarget(io, item.target);
-    if (Boolean(original) !== item.hadOriginal) {
+    if (!sameVendorEntry(item.original, original)) {
       throw new Error('voice vendor destination changed during promotion');
     }
     // An attacker or concurrent process may create a collision after preflight.
