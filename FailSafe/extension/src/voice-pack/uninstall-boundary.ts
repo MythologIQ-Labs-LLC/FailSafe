@@ -29,7 +29,7 @@ function requireOwnedManifest(folder: string): void {
   const hashes = m.sha256;
   if (JSON.stringify(Object.keys(m).sort()) !==
       JSON.stringify(['builtAt', 'expectedFiles', 'sha256', 'version']) ||
-      typeof m.version !== 'string' || !/^\\d+\\.\\d+\\.\\d+$/.test(m.version) ||
+      typeof m.version !== 'string' || !/^\d+\.\d+\.\d+$/.test(m.version) ||
       typeof m.builtAt !== 'string' || !Array.isArray(m.expectedFiles) ||
       JSON.stringify([...m.expectedFiles].sort()) !== JSON.stringify(EXPECTED) ||
       !hashes || typeof hashes !== 'object' || Array.isArray(hashes) ||
