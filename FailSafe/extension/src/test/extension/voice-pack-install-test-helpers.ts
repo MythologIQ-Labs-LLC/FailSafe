@@ -39,8 +39,13 @@ function registerTestPublisher(): () => void {
 function autoSignedHandlers(handlers: FetchHandler[]): FetchHandler[] {
   if (!activeSigner) return handlers;
   const tarUrl = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/v5.2.0-voice/failsafe-voice-pack-5.2.0.tar.gz';
-  const match = handlers.find(h => h.body instanceof Uint8Array &&
-    (typeof h.url === 'string' ? h.url === tarUrl : h.url.test(tarUrl)));
+  // The genuine GitHub release hop is a 302 to a short-lived signed asset URL.
+  // Sign the bytes of the terminal mock, not the empty redirect response.
+  const entry = handlers.find(h => typeof h.url === 'string'
+    ? h.url === tarUrl : h.url.test(tarUrl));
+  const match = entry?.body instanceof Uint8Array ? entry
+    : entry?.location ? handlers.find(h => typeof h.url === 'string' &&
+      h.url === entry.location && h.body instanceof Uint8Array) : undefined;
   if (!match || !(match.body instanceof Uint8Array)) return handlers;
   const rawManifest = buildFixturePackEntries().find(x => x.name === 'voice-pack.manifest.json')?.body;
   if (typeof rawManifest !== 'string') throw new Error('signed fixture manifest not present');
