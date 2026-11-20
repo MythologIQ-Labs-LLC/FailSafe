@@ -2,6 +2,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const cp = require("node:child_process");
 const { signCandidate, verifySignedCandidate, publisherKeyId } =
   require("../../../scripts/voice-pack-auth.cjs");
 
@@ -99,4 +103,20 @@ test("a record for a different repository or asset name cannot be issued", () =>
     k.privateKey, k.publicKey), /Expected values to be strictly equal/);
   assert.throws(() => signCandidate({ ...candidate(), filesVerified: 5 },
     k.privateKey, k.publicKey), /Expected values to be strictly equal/);
+});
+
+test("signer CLI refuses when no owner key or signing credential is provisioned", () => {
+  const dist = fs.mkdtempSync(path.join(os.tmpdir(), "voice-no-key-"));
+  try {
+    const cli = path.resolve(__dirname, "../../../scripts/voice-pack-sign-candidate.cjs");
+    const run = cp.spawnSync(process.execPath,
+      [cli, "--version", "6.1.0", "--source", "a".repeat(40), "--dist", dist],
+      { encoding: "utf8",
+        env: { ...process.env, VOICE_PACK_SIGNING_KEY_PEM_B64: "" } });
+    assert.notEqual(run.status, 0, "no signer must refuse");
+    assert.match(run.stderr, /publisher trust root unavailable|publisher signing credential unavailable/);
+    assert.deepEqual(fs.readdirSync(dist), [], "no partial signed release artifacts");
+  } finally {
+    fs.rmSync(dist, { recursive: true, force: true });
+  }
 });
