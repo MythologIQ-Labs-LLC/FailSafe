@@ -152,6 +152,37 @@ function sameVendorEntry(before, after) {
     before.ctimeMs === after.ctimeMs;
 }
 
+/**
+ * The build recursively copies the UI tree. Fail closed if a staged, backup,
+ * linked or otherwise unapproved voice file would be shipped in the VSIX.
+ * This is source-tree hygiene, not a replacement for pinned-byte validation.
+ */
+function assertVoiceVendorInventory(root = VENDOR, io = fs, trustedRoot = ROOT) {
+  const allowed = {
+    piper: new Set(['VENDOR.md', 'piper.min.js', 'piper_phonemize.wasm', 'piper_phonemize.data']),
+    whisper: new Set(['VENDOR.md', 'transformers.min.js', 'ort-wasm-simd.wasm', 'ort-wasm-simd-threaded.wasm']),
+  };
+  for (const [scope, files] of Object.entries(allowed)) {
+    const dir = path.join(root, scope);
+    assertVendorAncestry(dir, io, trustedRoot);
+    const directoryInfo = io.lstatSync(dir);
+    if (!directoryInfo.isDirectory() || directoryInfo.isSymbolicLink()) {
+      throw new Error('invalid browser voice vendor directory: ' + scope);
+    }
+    for (const entry of io.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (!files.has(entry.name) || !entry.isFile() || entry.isSymbolicLink()) {
+        throw new Error('unexpected browser voice vendor entry: ' + scope + '/' + entry.name);
+      }
+      assertVendorAncestry(full, io, trustedRoot);
+      const stat = io.lstatSync(full);
+      if (!stat.isFile() || stat.isSymbolicLink()) {
+        throw new Error('unexpected browser voice vendor entry: ' + scope + '/' + entry.name);
+      }
+    }
+  }
+}
+
 function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
   assertVendorAncestry(root, io, trustedRoot, true);
   io.mkdirSync(root, { recursive: true });
@@ -411,5 +442,5 @@ async function main() {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
-module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, assertVendorAncestry, commitOutputs, verifyPinnedVendorOutputs, verifyCommittedVendorOutputs };
+module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, assertVendorAncestry, assertVoiceVendorInventory, commitOutputs, verifyPinnedVendorOutputs, verifyCommittedVendorOutputs };
 if (require.main === module) main().catch(err => { console.error('[vendor:voice] ' + err.message); process.exitCode = 1; });

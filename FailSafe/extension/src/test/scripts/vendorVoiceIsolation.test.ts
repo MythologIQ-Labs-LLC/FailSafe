@@ -305,6 +305,53 @@ suite('voice vendor isolation #707', () => {
     fs.rmSync(firstPending);
   }));
 
+  test('recursive VSIX copy inventory admits only six voice assets and two vendor provenance notes', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const piper = path.join(vendor, 'piper');
+    const whisper = path.join(vendor, 'whisper');
+    fs.mkdirSync(piper, { recursive: true });
+    fs.mkdirSync(whisper, { recursive: true });
+    for (const name of ['VENDOR.md', 'piper.min.js', 'piper_phonemize.wasm', 'piper_phonemize.data']) {
+      fs.writeFileSync(path.join(piper, name), 'APPROVED');
+    }
+    for (const name of ['VENDOR.md', 'transformers.min.js', 'ort-wasm-simd.wasm', 'ort-wasm-simd-threaded.wasm']) {
+      fs.writeFileSync(path.join(whisper, name), 'APPROVED');
+    }
+    assert.doesNotThrow(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root));
+
+    const foreign = path.join(piper, 'piper.min.js.new-orphan');
+    fs.writeFileSync(foreign, 'UNTRUSTED');
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry: piper\/piper.min.js.new-orphan/);
+    assert.equal(fs.readFileSync(foreign, 'utf8'), 'UNTRUSTED', 'read-only guard must not delete foreign content');
+    fs.rmSync(foreign);
+
+    const extraDir = path.join(whisper, 'unexpected-nested');
+    fs.mkdirSync(extraDir);
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry: whisper\/unexpected-nested/);
+    fs.rmSync(extraDir, { recursive: true });
+    assert.doesNotThrow(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root));
+  }));
+
+  test('recursive voice inventory refuses a symlinked approved file without following it', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege depends on host configuration.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const piper = path.join(vendor, 'piper');
+      const whisper = path.join(vendor, 'whisper');
+      fs.mkdirSync(piper, { recursive: true });
+      fs.mkdirSync(whisper, { recursive: true });
+      const outside = path.join(root, 'outside.js');
+      fs.writeFileSync(outside, 'UNTRUSTED');
+      fs.symlinkSync(outside, path.join(piper, 'piper.min.js'), 'file');
+      assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+        /unexpected browser voice vendor entry: piper\/piper.min.js/);
+      assert.equal(fs.readFileSync(outside, 'utf8'), 'UNTRUSTED');
+      assert.equal(fs.lstatSync(path.join(piper, 'piper.min.js')).isSymbolicLink(), true);
+    });
+  });
+
   test('vendor root symlink is refused before writing any assets', function () {
     if (process.platform === 'win32') this.skip(); // Windows symlink privileges vary.
     temporary(root => {
