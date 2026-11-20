@@ -32,11 +32,12 @@ async function fetchBounded(url: string, max: number): Promise<Buffer> {
 /** Do not promote content until the signed manifest SHA and archive SHA match. */
 export async function verifyPublisherBeforePromotion(
   version: string, archiveSha: string, manifestPath: string, publisherPem: string,
-): Promise<void> {
+): Promise<{ record: Buffer; signature: Buffer }> {
   const url = `${ROOT}/v${version}-voice/${RECORD}`;
   const [record, sig] = await Promise.all([
     fetchBounded(url, 4096), fetchBounded(url + '.sig', 90),
   ]);
   const manifestSha = createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
   verifyVoicePublisherAttestation(record, sig, publisherPem, version, archiveSha, manifestSha);
+  return { record, signature: sig };
 }
