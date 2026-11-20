@@ -12,6 +12,9 @@ on:
       - "FailSafe/extension/scripts/voice-publisher-release-gate.cjs"
       - "FailSafe/extension/src/test/scripts/voicePublisherReleaseGate.test.cjs"
       - "FailSafe/extension/scripts/validate-vsix.cjs"
+      - "FailSafe/extension/scripts/bundle.cjs"
+      - "FailSafe/extension/scripts/package-target.cjs"
+      - "FailSafe/extension/.vscodeignore"
       - "FailSafe/extension/scripts/voice-pack-sign-candidate.cjs"
       - "FailSafe/extension/src/test/scripts/voicePackAuth.test.cjs"
       - "FailSafe/extension/src/test/scripts/verifyVoiceReleaseCandidate.test.cjs"
@@ -88,6 +91,54 @@ jobs:
       - name: Verify original SHA-512 pinned upstream browser assets
         working-directory: FailSafe/extension
         run: npm run verify:voice-pins
+      - name: Prove reviewed public key survives a real targeted VSIX build
+        working-directory: FailSafe/extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          pin="src/voice-pack/publisher-public-key.pem"
+          temporary=0
+          if [[ -L "$pin" ]]; then
+            echo "::error::Linked publisher pin is forbidden"
+            exit 1
+          fi
+          if [[ ! -e "$pin" ]]; then
+            # Disposable public key ONLY; no production signing credentials.
+            node -e '
+              const crypto = require("node:crypto");
+              const fs = require("node:fs");
+              const pair = crypto.generateKeyPairSync("ed25519");
+              fs.writeFileSync(process.argv[1],
+                pair.publicKey.export({type:"spki",format:"pem"}), {mode:0o600,flag:"wx"});
+            ' "$pin"
+            temporary=1
+          fi
+          cleanup() {
+            rm -f voice-pin-smoke.vsix
+            if [[ "$temporary" == "1" ]]; then
+              rm -f "$pin" dist/extension/publisher-public-key.pem
+            fi
+          }
+          trap cleanup EXIT
+          npm run compile
+          node scripts/package-target.cjs linux-x64 --out voice-pin-smoke.vsix
+          node scripts/validate-vsix.cjs voice-pin-smoke.vsix
+          node <<'NODE'
+          const cp = require("node:child_process");
+          const {requirePublisherPinForRelease} =
+            require("./scripts/voice-publisher-release-gate.cjs");
+          const archive = "voice-pin-smoke.vsix";
+          const entries = cp.execFileSync("unzip", ["-Z1", archive], {encoding:"utf8"});
+          const result = requirePublisherPinForRelease("6.1.0", {
+            extensionRoot: process.cwd(),
+            archiveEntries: entries,
+            readPackageBytes: p => cp.execFileSync("unzip", ["-p", archive, p],
+              {maxBuffer:8192}),
+          });
+          if (!result.required) throw Error("v6.1 publisher key gate was bypassed");
+          console.log("[voice-pin] actual VSIX SPKI bytes and fingerprint verified",
+            result.publisherKeyId);
+          NODE
       - name: Build actual six-asset candidate
         working-directory: FailSafe/extension
         run: npm run build:package
