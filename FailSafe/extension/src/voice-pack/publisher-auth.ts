@@ -101,3 +101,16 @@ export function verifyVoicePublisherAttestation(
   }
   return record;
 }
+
+/** Reauthenticate installed content after a restart, without fetching an archive.
+ * A signed archive hash is retained for provenance, while the signed raw
+ * manifest hash and per-file hashes protect the actual installed payload.
+ */
+export function verifyInstalledVoiceAttestation(
+  receipt: Buffer, signature: Buffer, pem: string,
+  version: string, installedManifestSha256: string,
+): void {
+  const record = parseSignedRelease(receipt);
+  verifyVoicePublisherAttestation(receipt, signature, pem,
+    version, record.archiveSha256, installedManifestSha256);
+}
