@@ -19,6 +19,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const BUNDLE = path.resolve(__dirname, '..', '..', '..', 'dist', 'extension', 'main.js');
 
@@ -41,5 +42,30 @@ describe('bundled dependencies (C2 T5)', () => {
     assert.ok(chokidar.includes('node_modules/chokidar/esm/handler.js'), `chokidar modules: ${chokidar.join(', ')}`);
     const v3 = chokidar.filter((m) => /^node_modules\/chokidar\/lib\/[^/]+-handler\.js$/.test(m));
     assert.deepEqual(v3, []);
+  });
+  it('never changes committed browser voice assets when generating the distribution copy', () => {
+    const extensionRoot = path.resolve(__dirname, '..', '..', '..');
+    const repoRoot = path.resolve(extensionRoot, '..', '..');
+    const required = [
+      'piper/piper.min.js',
+      'piper/piper_phonemize.wasm',
+      'piper/piper_phonemize.data',
+      'whisper/transformers.min.js',
+      'whisper/ort-wasm-simd.wasm',
+      'whisper/ort-wasm-simd-threaded.wasm',
+    ];
+    for (const relative of required) {
+      const gitPath = 'FailSafe/extension/src/roadmap/ui/vendor/' + relative;
+      const expected = spawnSync('git', ['rev-parse', 'HEAD:' + gitPath], { cwd: repoRoot, encoding: 'utf8' });
+      const actual = spawnSync('git', ['hash-object', '--', gitPath], { cwd: repoRoot, encoding: 'utf8' });
+      assert.equal(expected.status, 0, expected.stderr);
+      assert.equal(actual.status, 0, actual.stderr);
+      assert.equal(actual.stdout.trim(), expected.stdout.trim(), gitPath + ' was changed by bundle');
+    }
+    const published = path.join(extensionRoot, 'dist', 'extension', 'ui', 'vendor', 'whisper', 'transformers.min.js');
+    assert.ok(fs.existsSync(published), 'missing distribution copy of Whisper');
+    const bytes = fs.readFileSync(published, 'utf8');
+    assert.equal(bytes.includes('var mod=eval("quire"'), false, 'unsanitized eval shim in distribution');
+    assert.equal(bytes.includes('new Function("return this")'), false, 'unsanitized Function shim in distribution');
   });
 });
