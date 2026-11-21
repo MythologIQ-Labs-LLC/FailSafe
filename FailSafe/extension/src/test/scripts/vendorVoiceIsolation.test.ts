@@ -305,6 +305,76 @@ suite('voice vendor isolation #707', () => {
     fs.rmSync(firstPending);
   }));
 
+
+  test('failed later promotion preserves foreign replacement and original backup', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const first = path.join(dir, 'piper.min.js');
+    const second = path.join(dir, 'piper_phonemize.wasm');
+    fs.writeFileSync(first, 'FIRST-OLD');
+    fs.writeFileSync(second, 'SECOND-OLD');
+    let mutated = false;
+    const io = {
+      ...fs,
+      renameSync(from: fs.PathLike, to: fs.PathLike) {
+        if (!mutated && String(from).includes('piper_phonemize.wasm.new-')) {
+          mutated = true;
+          fs.unlinkSync(first);
+          fs.writeFileSync(first, 'FOREIGN-PROMOTED');
+          throw new Error('injected later promotion failure');
+        }
+        fs.renameSync(from, to);
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(new Map([
+      ['piper/piper.min.js', Buffer.from('FIRST-NEW')],
+      ['piper/piper_phonemize.wasm', Buffer.from('SECOND-NEW')],
+    ]), vendor, io, root), /recovery may be required/);
+    assert.equal(mutated, true);
+    assert.equal(fs.readFileSync(first, 'utf8'), 'FOREIGN-PROMOTED',
+      'rollback cannot remove a substituted installed target');
+    assert.equal(fs.readFileSync(second, 'utf8'), 'SECOND-OLD',
+      'unaffected second original is recovered');
+    const backups = fs.readdirSync(dir).filter(name => name.startsWith('piper.min.js.old-'));
+    assert.equal(backups.length, 1, 'do not discard unrecovered original');
+    assert.equal(fs.readFileSync(path.join(dir, backups[0]), 'utf8'), 'FIRST-OLD');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+  }));
+
+  test('failed promotion refuses a substituted backup instead of installing it', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    const displaced = path.join(root, 'original-backup-preserved');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let replaced = false;
+    const io = {
+      ...fs,
+      renameSync(from: fs.PathLike, to: fs.PathLike) {
+        if (!replaced && String(from).includes('piper.min.js.new-')) {
+          replaced = true;
+          const backup = String(from).replace('.new-', '.old-');
+          fs.renameSync(backup, displaced);
+          fs.writeFileSync(backup, 'FOREIGN-BACKUP');
+          throw new Error('injected destination promotion failure');
+        }
+        fs.renameSync(from, to);
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(new Map([
+      ['piper/piper.min.js', Buffer.from('PINNED')],
+    ]), vendor, io, root), /recovery may be required/);
+    assert.equal(replaced, true);
+    assert.equal(fs.existsSync(target), false, 'foreign backup cannot be restored');
+    assert.equal(fs.readFileSync(displaced, 'utf8'), 'ORIGINAL');
+    const backups = fs.readdirSync(dir).filter(name => name.includes('.old-'));
+    assert.equal(backups.length, 1);
+    assert.equal(fs.readFileSync(path.join(dir, backups[0]), 'utf8'), 'FOREIGN-BACKUP',
+      'rollback does not overwrite or remove foreign backup');
+  }));
+
   test('recursive VSIX copy inventory admits only six voice assets and two vendor provenance notes', () => temporary(root => {
     const vendor = path.join(root, 'vendor');
     const piper = path.join(vendor, 'piper');

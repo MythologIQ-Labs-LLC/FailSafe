@@ -214,7 +214,8 @@ function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
       throw new Error('invalid pinned vendor output bytes');
     }
     const expectedSha256 = crypto.createHash('sha256').update(bytes).digest();
-    prepared.push({ target, pending, backup, original, bytes, expectedSize: bytes.length, expectedSha256 });
+    const originalSha256 = original ? crypto.createHash('sha256').update(io.readFileSync(target)).digest() : null;
+    prepared.push({ target, pending, backup, original, originalSha256, bytes, expectedSize: bytes.length, expectedSha256 });
   }
   for (const { bytes, ...item } of prepared) {
     // Record first: writeFileSync can create a partial file before throwing.
@@ -265,12 +266,41 @@ function promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot) {
 function restoreVoiceOutputs(io, moved, promoted) {
   const failures = [];
   for (const item of promoted.reverse()) {
-    try { io.rmSync(item.target, { force: true }); }
-    catch (e) { failures.push(e); }
+    try {
+      const current = existingVendorEntry(io, item.target);
+      if (!current || !current.isFile() || current.isSymbolicLink() ||
+          !item.pendingWritten ||
+          (item.pendingWritten.ino !== 0 &&
+            (current.dev !== item.pendingWritten.dev || current.ino !== item.pendingWritten.ino)) ||
+          current.size !== item.expectedSize ||
+          !crypto.timingSafeEqual(
+            crypto.createHash('sha256').update(io.readFileSync(item.target)).digest(),
+            item.expectedSha256)) {
+        throw new Error('voice vendor rollback refuses changed promoted asset');
+      }
+      // Only the still-owned, byte-identical promoted output may be removed.
+      // This remains pathname based and does not claim race-free OS containment.
+      io.rmSync(item.target, { force: true });
+    } catch (e) { failures.push(e); }
   }
   for (const item of moved.reverse()) {
-    try { io.renameSync(item.backup, item.target); }
-    catch (e) { failures.push(e); }
+    try {
+      const backup = requireRegularVendorTarget(io, item.backup);
+      if (!backup || !item.original || !item.originalSha256 ||
+          (item.original.ino !== 0 &&
+            (backup.dev !== item.original.dev || backup.ino !== item.original.ino)) ||
+          backup.size !== item.original.size ||
+          !crypto.timingSafeEqual(
+            crypto.createHash('sha256').update(io.readFileSync(item.backup)).digest(),
+            item.originalSha256)) {
+        throw new Error('voice vendor rollback refuses changed backup');
+      }
+      // POSIX rename overwrites an occupied target, so refuse before restore.
+      if (existingVendorEntry(io, item.target)) {
+        throw new Error('voice vendor rollback refuses occupied destination');
+      }
+      io.renameSync(item.backup, item.target);
+    } catch (e) { failures.push(e); }
   }
   return failures;
 }
