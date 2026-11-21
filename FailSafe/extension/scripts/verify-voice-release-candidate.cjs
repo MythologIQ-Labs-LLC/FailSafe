@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawnSync } = require("node:child_process");
+const { verifyCommittedVendorOutputs } = require("./vendor-voice.cjs");
 
 const REPO = "MythologIQ-Labs-LLC/FailSafe";
 const FILES = Object.freeze([
@@ -86,6 +87,43 @@ function verifyCandidate(dist, version, sourceSha) {
     sourceSha, filename, archiveSha256, manifestSha256: sha(manifestBytes),
     filesVerified: FILES.length };
 }
+/**
+ * Only a candidate whose six archived payloads match regular blobs in the
+ * exact claimed Git commit may reach the owner signing boundary.
+ * A self-consistent tarball and manifest do not establish source provenance.
+ */
+function verifySourceBoundCandidate(dist, version, sourceSha,
+  extensionRoot = path.resolve(__dirname, ".."), run = spawnSync) {
+  const verified = verifyCandidate(dist, version, sourceSha);
+  const repoRoot = path.resolve(extensionRoot, "..", "..");
+  const head = run("git", ["rev-parse", "HEAD"], {
+    cwd: repoRoot, shell: false, encoding: "utf8", maxBuffer: 4096,
+  });
+  if (head.error || head.status !== 0 ||
+      String(head.stdout || "").trim() !== sourceSha) {
+    throw new Error("voice source-bound candidate: Git HEAD differs from claimed source SHA");
+  }
+  const packageBlob = run("git", ["show", "HEAD:FailSafe/extension/package.json"], {
+    cwd: repoRoot, shell: false, encoding: "utf8", maxBuffer: 1024 * 1024,
+  });
+  if (packageBlob.error || packageBlob.status !== 0) {
+    throw new Error("voice source-bound candidate: committed extension manifest unavailable");
+  }
+  let committedPackage;
+  try { committedPackage = JSON.parse(String(packageBlob.stdout)); }
+  catch { throw new Error("voice source-bound candidate: invalid committed extension manifest"); }
+  if (committedPackage.version !== version) {
+    throw new Error("voice source-bound candidate: version differs from committed extension manifest");
+  }
+  const archive = path.join(dist, verified.filename);
+  const archived = new Map();
+  for (const name of FILES) {
+    archived.set(name, readMember(archive, name, MAX_FILE));
+  }
+  verifyCommittedVendorOutputs(archived, extensionRoot, run);
+  return verified;
+}
+
 function flag(argv, name) {
   const i = argv.indexOf(name);
   if (i < 0 || i + 1 >= argv.length) throw new Error("missing argument " + name);
@@ -96,7 +134,7 @@ if (require.main === module) {
     const version = flag(process.argv, "--version");
     const source = flag(process.argv, "--source");
     const dist = path.resolve(flag(process.argv, "--dist"));
-    const result = verifyCandidate(dist, version, source);
+    const result = verifySourceBoundCandidate(dist, version, source);
     fs.writeFileSync(path.join(dist, "voice-pack-candidate.json"),
       JSON.stringify(result, null, 2) + "\n", { flag: "wx", mode: 0o600 });
     console.log("[voice-release] verified UNSIGNED, NON-PUBLISHABLE candidate:",
@@ -106,4 +144,4 @@ if (require.main === module) {
     process.exitCode = 1;
   }
 }
-module.exports = { verifyCandidate, FILES, MEMBERS };
+module.exports = { verifyCandidate, verifySourceBoundCandidate, FILES, MEMBERS };
