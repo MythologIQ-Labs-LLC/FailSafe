@@ -74,6 +74,47 @@ function trackedFiles() {
   return new Set(res.stdout.split('\n').map((s) => s.trim()).filter(Boolean));
 }
 
+/**
+ * FX939 publication census is row-based, not unique-path-based. It is deliberately
+ * narrower than all Tier-1 registrations: the historical contract enumerates only
+ * the first backticked .md path per tier table row.
+ */
+function measuredPublicationCensus(text, tracked) {
+  const prefixes = declaredPrivatePrefixes(text);
+  const paths = registeredPaths(text);
+  const tally = { registered: paths.length, tracked: 0, private: 0, shapes: 0, unexplained: [] };
+  for (const p of paths) {
+    if (isPattern(p)) tally.shapes++;
+    else if (tracked.has(p)) tally.tracked++;
+    else if (prefixes.some((pre) => p.startsWith(pre))) tally.private++;
+    else tally.unexplained.push(p);
+  }
+  return tally;
+}
+
+function claimedPublicationCensus(text) {
+  const published = /(\d+) of the (\d+) paths registered below have had that done;\s*(\d+) have not/.exec(text);
+  const patterns = /(\d+) of the (\d+) are of that kind/.exec(text);
+  if (!published || !patterns || published[2] !== patterns[2]) {
+    throw new Error('Missing or inconsistent publication census claims in GOVERNANCE_INDEX');
+  }
+  return {
+    registered: Number(published[2]),
+    tracked: Number(published[1]),
+    private: Number(published[3]),
+    shapes: Number(patterns[1]),
+  };
+}
+
+function verifyPublicationCensus(text, tracked) {
+  const measured = measuredPublicationCensus(text, tracked);
+  assert.deepEqual(measured.unexplained, [], 'registered paths missing outside private-by-default prefixes');
+  const { unexplained, ...counts } = measured;
+  assert.deepEqual(counts, claimedPublicationCensus(text),
+    'GOVERNANCE_INDEX publication status counts disagree with the actual tracked/declared-private tier rows');
+  return counts;
+}
+
 describe('FX939 GOVERNANCE_INDEX publication status', () => {
   it('registers no path that is neither tracked nor under a declared-private prefix', () => {
     const text = indexText();
@@ -110,6 +151,34 @@ describe('FX939 GOVERNANCE_INDEX publication status', () => {
       [],
       `declared private prefixes matching no registered row — dead declaration: ${dead.join(', ')}`
     );
+  });
+
+
+  it('checks recorded publication totals against current tracked tree, rather than trusting historical prose', () => {
+    const tracked = trackedFiles();
+    if (tracked === null) return; // GitHub source review is separately required without a checkout.
+    const census = verifyPublicationCensus(indexText(), tracked);
+    assert.equal(census.registered, census.tracked + census.private + census.shapes);
+  });
+
+  it('rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures', () => {
+    const rows = '| `docs/a.md` | published |\\n| `docs/private.md` | private |\\n| `docs/plan-*.md` | shape |\\n';
+    const section = '\\n## Publication status\\n- private-by-default: `docs/`\\n';
+    const ending = '\\n## Out-of-tier paths\\n';
+    const make = (claim) => rows + section + claim + ending;
+    const actual = make('1 of the 3 paths registered below have had that done; 1 have not.\\n1 of the 3 are of that kind.\\n');
+    const tracked = new Set(['docs/a.md']);
+    assert.deepEqual(verifyPublicationCensus(actual, tracked),
+      { registered: 3, tracked: 1, private: 1, shapes: 1 });
+    assert.throws(() => verifyPublicationCensus(
+      make('2 of the 3 paths registered below have had that done; 0 have not.\\n1 of the 3 are of that kind.\\n'), tracked
+    ), /publication status counts disagree/);
+    assert.throws(() => verifyPublicationCensus(
+      make('1 of the 3 paths registered below have had that done; 1 have not.\\n'), tracked
+    ), /Missing or inconsistent publication census claims/);
+    assert.throws(() => verifyPublicationCensus(
+      actual.replace('- private-by-default: `docs/`', '- private-by-default: `.failsafe/`'), tracked
+    ), /registered paths missing outside private-by-default prefixes/);
   });
 
   it('registers docs/README.md in some tier', () => {
