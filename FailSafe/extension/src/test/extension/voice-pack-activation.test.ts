@@ -9,6 +9,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { createHash } from 'crypto';
+import { VOICE_ASSETS } from '../../voice-pack/safe-archive';
 
 import { wireVoicePack } from '../../extension/bootstrapVoicePack';
 
@@ -35,6 +37,25 @@ function fakeContext(globalStoragePath: string): vscode.ExtensionContext {
 
 function mkTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+}
+
+/** A real pack has exactly six canonical files, not a permissive one-file mock. */
+function writeCanonicalPack(packDir: string, version: string): void {
+  fs.mkdirSync(packDir, { recursive: true });
+  const sha256: Record<string, string> = {};
+  for (const rel of VOICE_ASSETS) {
+    const filename = path.join(packDir, rel);
+    fs.mkdirSync(path.dirname(filename), { recursive: true });
+    const data = 'activation-fixture:' + rel;
+    fs.writeFileSync(filename, data, 'utf8');
+    sha256[rel] = createHash('sha256').update(data).digest('hex');
+  }
+  fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
+    version,
+    builtAt: new Date().toISOString(),
+    expectedFiles: [...VOICE_ASSETS],
+    sha256,
+  }), 'utf8');
 }
 
 suite('bootstrapVoicePack — wireVoicePack', () => {
@@ -71,19 +92,7 @@ suite('bootstrapVoicePack — wireVoicePack', () => {
   test('wireVoicePack with installed pack sets voicePackPath to the directory', async () => {
     const globalStoragePath = mkTempDir('failsafe-voice-pack-activate-installed-');
     const packDir = path.join(globalStoragePath, 'voice-pack');
-    fs.mkdirSync(packDir, { recursive: true });
-    // Create a minimal valid manifest + 1 file matching sha256
-    const { createHash } = require('crypto');
-    const content = 'piper-payload';
-    const filePath = path.join(packDir, 'piper.min.js');
-    fs.writeFileSync(filePath, content, 'utf8');
-    const sha = createHash('sha256').update(content).digest('hex');
-    fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
-      version: '5.2.0',
-      builtAt: new Date().toISOString(),
-      expectedFiles: ['piper.min.js'],
-      sha256: { 'piper.min.js': sha },
-    }), 'utf8');
+    writeCanonicalPack(packDir, '5.2.0');
 
     try {
       const { server, calls } = fakeServer();
@@ -97,13 +106,7 @@ suite('bootstrapVoicePack — wireVoicePack', () => {
   test('wireVoicePack ignores stale/corrupt pack — sets path to null so /vendor falls back', async () => {
     const globalStoragePath = mkTempDir('failsafe-voice-pack-activate-stale-');
     const packDir = path.join(globalStoragePath, 'voice-pack');
-    fs.mkdirSync(packDir, { recursive: true });
-    fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
-      version: '5.1.0', // < 5.2.0 required minimum
-      builtAt: new Date().toISOString(),
-      expectedFiles: [],
-      sha256: {},
-    }), 'utf8');
+    writeCanonicalPack(packDir, '5.1.0'); // valid but below required 5.2.0
 
     try {
       const { server, calls } = fakeServer();
@@ -116,4 +119,20 @@ suite('bootstrapVoicePack — wireVoicePack', () => {
       fs.rmSync(globalStoragePath, { recursive: true, force: true });
     }
   });
+  test('wireVoicePack refuses a fabricated empty manifest rather than enabling the pack', async () => {
+    const globalStoragePath = mkTempDir('failsafe-voice-pack-activate-corrupt-');
+    try {
+      const packDir = path.join(globalStoragePath, 'voice-pack');
+      fs.mkdirSync(packDir, { recursive: true });
+      fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
+        version: '5.2.0', builtAt: new Date().toISOString(), expectedFiles: [], sha256: {},
+      }));
+      const { server, calls } = fakeServer();
+      await wireVoicePack(fakeContext(globalStoragePath), server, '5.2.0');
+      assert.strictEqual(calls.setVoicePackPath[0], null, 'corrupt pack cannot activate');
+    } finally {
+      fs.rmSync(globalStoragePath, { recursive: true, force: true });
+    }
+  });
+
 });

@@ -1,9 +1,9 @@
 import { strict as assert } from "assert";
 import * as fs from "fs";
 import * as path from "path";
-import { installVoicePack } from "../../voice-pack/install-handler";
+import { installVoicePack, uninstallVoicePack } from "../../voice-pack/install-handler";
 import {
-  buildFixturePackTar, installFetchStub, makeInstallFixture, sha256OfBytes,
+  buildFixturePackEntries, buildFixturePackTar, buildFixtureTar, installFetchStub, makeInstallFixture, sha256OfBytes,
   unstubFetch, type InstallFixture,
 } from "./voice-pack-install-test-helpers";
 
@@ -38,12 +38,11 @@ suite("voice-pack install-handler — installVoicePack", () => {
     const finalDir = path.join(fixture.globalStoragePath, "voice-pack");
     fs.mkdirSync(finalDir, { recursive: true });
     fs.writeFileSync(path.join(finalDir, "sentinel.txt"), "PRIOR PACK");
-    const bytes = buildFixturePackTar();
+    const bytes = Buffer.from('not a gzip archive');
     installFetchStub([
       { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
       { url: /\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
     ]);
-    fixture.extractControl.shouldFail = true;
     await assert.rejects(() => installVoicePack({
       globalStoragePath: fixture.globalStoragePath, version: "5.2.0",
     }));
@@ -53,7 +52,25 @@ suite("voice-pack install-handler — installVoicePack", () => {
 
 suite("voice-pack install-handler — installVoicePack", () => {
   registerVoicePackInstallHooks();
-  test("success atomically installs the verified staging pack", async () => {
+  test("adversarial tar member is refused before replacing prior installed pack", async () => {
+    const finalDir = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.mkdirSync(finalDir, { recursive: true });
+    fs.writeFileSync(path.join(finalDir, "sentinel.txt"), "PRESERVED");
+    const bytes = buildFixtureTar([...buildFixturePackEntries(), {
+      name: "../outside", body: "malicious",
+    }]);
+    installFetchStub([
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
+      { url: /\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
+    ]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: fixture.globalStoragePath, version: "5.2.0" }),
+      /tar extract refused/,
+    );
+    assert.equal(fs.readFileSync(path.join(finalDir, "sentinel.txt"), "utf8"), "PRESERVED");
+  });
+
+  test("success recoverably installs the verified staging pack", async () => {
     const bytes = buildFixturePackTar();
     installFetchStub([
       { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
@@ -66,5 +83,147 @@ suite("voice-pack install-handler — installVoicePack", () => {
     assert.ok(fs.existsSync(path.join(
       fixture.globalStoragePath, "voice-pack", "voice-pack.manifest.json",
     )));
+  });
+});
+
+suite("voice-pack install-handler — storage boundary (#710)", () => {
+  registerVoicePackInstallHooks();
+
+  test("a symlinked storage root refuses installation before any network request", async () => {
+    if (process.platform === "win32") return; // symlink privilege varies
+    const outside = path.join(fixture.globalStoragePath, "outside-storage");
+    const linked = path.join(fixture.globalStoragePath, "linked-storage");
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, "sentinel.txt"), "UNTOUCHED");
+    fs.symlinkSync(outside, linked, "dir");
+    const { calls } = installFetchStub([]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: linked, version: "5.2.0" }),
+      /storage root must be a real directory/,
+    );
+    assert.equal(calls.length, 0, "untrusted storage must be refused before downloading");
+    assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "UNTOUCHED");
+    assert.throws(() => uninstallVoicePack(linked), /storage root must be a real directory/);
+    assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "UNTOUCHED");
+  });
+
+  test("linked storage ancestor refuses install and uninstall without touching outside data", async () => {
+    if (process.platform === "win32") return; // symlink privilege varies
+    const outside = path.join(fixture.globalStoragePath, "outside");
+    const linked = path.join(fixture.globalStoragePath, "linked-ancestor");
+    const nested = path.join(linked, "nested");
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, "sentinel.txt"), "KEEP");
+    fs.symlinkSync(outside, linked, "dir");
+    const { calls } = installFetchStub([]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: nested, version: "5.2.0" }),
+      /storage root must be a real directory/,
+    );
+    assert.equal(calls.length, 0, "linked ancestor must be rejected before download");
+    assert.equal(fs.existsSync(path.join(outside, "nested")), false, "no redirected child created");
+    const outsidePack = path.join(outside, "nested", "voice-pack");
+    fs.mkdirSync(outsidePack, { recursive: true });
+    fs.writeFileSync(path.join(outsidePack, "unrelated.txt"), "PRESERVE");
+    assert.throws(() => uninstallVoicePack(nested), /storage root must be a real directory/);
+    assert.equal(fs.readFileSync(path.join(outsidePack, "unrelated.txt"), "utf8"), "PRESERVE");
+    assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "KEEP");
+  });
+
+  test("filesystem volume root refuses install and uninstall before any network or delete", async () => {
+    const volumeRoot = path.parse(fixture.globalStoragePath).root;
+    const { calls } = installFetchStub([]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: volumeRoot, version: "5.2.0" }),
+      /storage root must not be a filesystem root/,
+    );
+    assert.equal(calls.length, 0);
+    assert.throws(() => uninstallVoicePack(volumeRoot), /storage root must not be a filesystem root/);
+    const normalizedAlias = volumeRoot + "nonexistent" + path.sep + "..";
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: normalizedAlias, version: "5.2.0" }),
+      /storage root must not be a filesystem root/,
+    );
+    assert.throws(() => uninstallVoicePack(normalizedAlias), /storage root must not be a filesystem root/);
+    assert.equal(calls.length, 0);
+  });
+
+  test("uninstall refuses a linked voice-pack destination and preserves its target", () => {
+    if (process.platform === "win32") return; // symlink privilege varies
+    const outside = path.join(fixture.globalStoragePath, "other-data");
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, "sentinel.txt"), "KEEP");
+    const linked = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.symlinkSync(outside, linked, "dir");
+    assert.throws(() => uninstallVoicePack(fixture.globalStoragePath), /destination is not a real directory/);
+    assert.equal(fs.lstatSync(linked).isSymbolicLink(), true);
+    assert.equal(fs.readFileSync(path.join(outside, "sentinel.txt"), "utf8"), "KEEP");
+  });
+
+  test("uninstall removes a manifest-owned pack even when an asset is corrupted", () => {
+    const dir = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.mkdirSync(dir);
+    for (const entry of buildFixturePackEntries()) {
+      const target = path.join(dir, entry.name);
+      if (entry.type === "5") fs.mkdirSync(target);
+      else fs.writeFileSync(target, entry.body ?? "");
+    }
+    fs.writeFileSync(path.join(dir, "piper", "piper.min.js"), "CORRUPTED");
+    uninstallVoicePack(fixture.globalStoragePath);
+    assert.equal(fs.existsSync(dir), false);
+    uninstallVoicePack(fixture.globalStoragePath);
+    assert.equal(fs.existsSync(dir), false);
+  });
+
+  test("uninstall refuses foreign content inside an otherwise owned pack", () => {
+    const dir = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.mkdirSync(dir);
+    for (const entry of buildFixturePackEntries()) {
+      const target = path.join(dir, entry.name);
+      if (entry.type === "5") fs.mkdirSync(target);
+      else fs.writeFileSync(target, entry.body ?? "");
+    }
+    const foreign = path.join(dir, "piper", "unrelated.txt");
+    fs.writeFileSync(foreign, "UNRELATED");
+    assert.throws(() => uninstallVoicePack(fixture.globalStoragePath), /unrecognized pack entry/);
+    assert.equal(fs.readFileSync(foreign, "utf8"), "UNRELATED");
+    assert.ok(fs.existsSync(path.join(dir, "voice-pack.manifest.json")));
+  });
+
+  test("storage file or nonabsolute path is refused before network download", async () => {
+    const file = path.join(fixture.globalStoragePath, "not-a-directory");
+    fs.writeFileSync(file, "OUTSIDE");
+    const { calls } = installFetchStub([]);
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: file, version: "5.2.0" }),
+      /storage root must be a real directory/,
+    );
+    await assert.rejects(
+      () => installVoicePack({ globalStoragePath: "relative/not-allowed", version: "5.2.0" }),
+      /storage root must be absolute/,
+    );
+    assert.equal(calls.length, 0);
+    assert.equal(fs.readFileSync(file, "utf8"), "OUTSIDE");
+  });
+
+  test("promotion failure reports install rather than a false download failure", async () => {
+    const finalDir = path.join(fixture.globalStoragePath, "voice-pack");
+    fs.writeFileSync(finalDir, "EXISTING UNRELATED FILE");
+    const bytes = buildFixturePackTar();
+    installFetchStub([
+      { url: /failsafe-voice-pack-5\.2\.0\.tar\.gz$/, body: bytes },
+      { url: /\.sha256$/, body: `${sha256OfBytes(bytes)}  failsafe-voice-pack-5.2.0.tar.gz\n` },
+    ]);
+    const phases: Array<{ phase: string; status: string; error?: string }> = [];
+    await assert.rejects(() => installVoicePack({
+      globalStoragePath: fixture.globalStoragePath, version: "5.2.0",
+      onProgress: event => { phases.push(event); },
+    }), /destination must be a real directory/);
+    const failure = phases[phases.length - 1];
+    assert.equal(failure.phase, "install");
+    assert.equal(failure.status, "error");
+    assert.match(failure.error || "", /destination must be a real directory/);
+    assert.equal(fs.readFileSync(finalDir, "utf8"), "EXISTING UNRELATED FILE");
+    assert.ok(phases.some(e => e.phase === "verify" && e.status === "success"));
   });
 });

@@ -8,11 +8,13 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { Readable } from 'stream';
+import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import { createHash } from 'crypto';
-import { spawn } from 'child_process';
+import { extractValidatedVoiceArchive } from './safe-archive';
+import { assertRemovableVoicePack } from './uninstall-boundary';
 import { fetchAllowlisted } from './allowlisted-fetch';
+import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
   InstallReport,
   InstallVoicePackOptions,
@@ -22,6 +24,8 @@ import {
 } from './types';
 
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
+const MAX_PACK_DOWNLOAD_BYTES = 96 * 1024 * 1024;
+const MAX_CHECKSUM_BYTES = 8 * 1024;
 const PACK_FILENAME = (version: string) => `failsafe-voice-pack-${version}.tar.gz`;
 const RELEASE_BASE = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download';
 
@@ -38,54 +42,109 @@ function resolveVoicePackChecksumUrl(version: string): string {
   return `${resolveVoicePackUrl(version)}.sha256`;
 }
 
+/** Resolve and verify both voice release downloads before touching installed assets. */
+async function downloadAndVerifyPack(
+  opts: InstallVoicePackOptions,
+  tarballUrl: string, checksumUrl: string, stagingTarball: string,
+) {
+  emit(opts, { phase: 'download', status: 'running' });
+  const tarball = await downloadToFile(tarballUrl, stagingTarball);
+  emit(opts, { phase: 'download', status: 'success' });
+
+  emit(opts, { phase: 'verify', status: 'running' });
+  const { expected, provenance: checksum } = await fetchChecksum(checksumUrl, path.basename(stagingTarball));
+  const actual = sha256OfFile(stagingTarball);
+  if (actual !== expected) {
+    throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
+  }
+  emit(opts, { phase: 'verify', status: 'success' });
+  logProvenance(opts, 'tarball', tarball, actual);
+  logProvenance(opts, 'checksum', checksum, expected);
+  return { tarball, checksum, actual };
+}
+
+/**
+ * The VS Code globalStorage path is trusted only when it names a real local
+ * directory. Never follow a link at the application storage boundary into
+ * another directory during an opt-in install or uninstall.
+ */
+function requireVoiceStorageRoot(root: string): string {
+  if (!path.isAbsolute(root)) throw new Error('voice pack storage root must be absolute');
+  const canonical = path.resolve(root);
+  if (canonical === path.parse(canonical).root) {
+    throw new Error('voice pack storage root must not be a filesystem root');
+  }
+  let cursor = path.parse(canonical).root;
+  // Check each existing ancestor before creating a missing child: recursive
+  // mkdir would otherwise follow a linked parent outside VS Code's storage.
+  for (const segment of canonical.slice(cursor.length).split(path.sep).filter(Boolean)) {
+    cursor = path.join(cursor, segment);
+    try {
+      const stat = fs.lstatSync(cursor);
+      if (!stat.isDirectory() || stat.isSymbolicLink()) {
+        throw new Error('voice pack storage root must be a real directory, without linked ancestors');
+      }
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+      fs.mkdirSync(cursor, { mode: 0o700 });
+    }
+  }
+  return canonical;
+}
+
 /** Public entry — download, verify, extract, atomic-rename. Throws on failure. */
 export async function installVoicePack(opts: InstallVoicePackOptions): Promise<InstallReport> {
   const { globalStoragePath, version } = opts;
   const tarballUrl = resolveVoicePackUrl(version);
   const checksumUrl = resolveVoicePackChecksumUrl(version);
 
+  // Refuse linked/untrusted storage before downloading unverified archive bytes.
+  const storageRoot = requireVoiceStorageRoot(globalStoragePath);
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'));
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
   try {
-    emit(opts, { phase: 'download', status: 'running' });
-    const tarball = await downloadToFile(tarballUrl, stagingTarball);
-    emit(opts, { phase: 'download', status: 'success' });
-
-    emit(opts, { phase: 'verify', status: 'running' });
-    const { expected, provenance: checksum } = await fetchChecksum(checksumUrl);
-    const actual = sha256OfFile(stagingTarball);
-    if (actual !== expected) {
-      throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
-    }
-    emit(opts, { phase: 'verify', status: 'success' });
-    logProvenance(opts, 'tarball', tarball, actual);
-    logProvenance(opts, 'checksum', checksum, expected);
+    const { tarball, checksum, actual } = await downloadAndVerifyPack(opts, tarballUrl, checksumUrl, stagingTarball);
 
     emit(opts, { phase: 'extract', status: 'running' });
-    await runTarExtract(stagingTarball, stagingDir);
+    // No external tar extraction. Complete header, path, type, size, manifest
+    // and SHA-256 validation before any voice asset is written to staging.
+    const manifest = extractValidatedVoiceArchive(stagingTarball, stagingDir, version);
     emit(opts, { phase: 'extract', status: 'success' });
-
-    emit(opts, { phase: 'manifest-verify', status: 'running' });
-    const manifest = readAndValidateExtractedManifest(stagingDir);
     emit(opts, { phase: 'manifest-verify', status: 'success' });
 
-    const finalDir = path.join(globalStoragePath, 'voice-pack');
-    atomicSwap(stagingDir, finalDir, stagingTarball);
+    const finalDir = path.join(storageRoot, 'voice-pack');
+    const swap = atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);
+    for (const warning of swap.cleanupWarnings) {
+      reportVoiceCleanupWarning(opts.output, warning);
+    }
 
     return { ok: true, version: manifest.version, finalPath: finalDir, provenance: { tarball, checksum, sha256: actual } };
   } catch (err) {
-    cleanup(stagingDir);
-    const msg = err instanceof Error ? err.message : String(err);
-    emit(opts, { phase: currentPhaseFromError(msg), status: 'error', error: msg });
-    throw err;
+    const originalMessage = err instanceof Error ? err.message : String(err);
+    const failure = preserveVoiceInstallFailure(stagingDir, err);
+    try {
+      emit(opts, { phase: currentPhaseFromError(originalMessage), status: 'error', error: failure.message });
+    } catch { /* a reporting callback must not replace the installation failure */ }
+    throw failure;
   }
 }
 
 /** Public entry — rm-rf <globalStoragePath>/voice-pack/. Idempotent. */
 export function uninstallVoicePack(globalStoragePath: string): void {
-  const packDir = path.join(globalStoragePath, 'voice-pack');
-  fs.rmSync(packDir, { recursive: true, force: true });
+  const storageRoot = requireVoiceStorageRoot(globalStoragePath);
+  const packDir = path.join(storageRoot, 'voice-pack');
+  let stat: fs.Stats;
+  try { stat = fs.lstatSync(packDir); }
+  catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw e;
+  }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error('voice pack uninstall refused: destination is not a real directory');
+  }
+  assertRemovableVoicePack(packDir);
+  fs.rmSync(packDir, { recursive: true, force: false });
 }
 
 // ── Internals ──────────────────────────────────────────────────────────
@@ -104,17 +163,40 @@ function logProvenance(opts: InstallVoicePackOptions, what: string, p: VoicePack
 async function downloadToFile(url: string, destPath: string): Promise<VoicePackDownloadProvenance> {
   const { response: res, requestedUrl, finalUrl } = await fetchAllowlisted(url, 'download failed');
   if (!res.body) throw new Error('download failed: empty response body');
-  await pipeline(Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream), fs.createWriteStream(destPath));
+  const claimed = Number(res.headers.get('content-length'));
+  if (Number.isFinite(claimed) && claimed > MAX_PACK_DOWNLOAD_BYTES) {
+    throw new Error('download failed: compressed voice pack exceeds size budget');
+  }
+  let received = 0;
+  const limiter = new Transform({
+    transform(chunk: Buffer, _encoding, done) {
+      received += chunk.length;
+      if (received > MAX_PACK_DOWNLOAD_BYTES) {
+        done(new Error('download failed: compressed voice pack exceeds size budget'));
+      } else done(null, chunk);
+    },
+  });
+  await pipeline(Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream),
+    limiter, fs.createWriteStream(destPath, { flags: 'wx', mode: 0o600 }));
   return { requestedUrl, finalUrl };
 }
 
-async function fetchChecksum(url: string): Promise<{ expected: string; provenance: VoicePackDownloadProvenance }> {
+async function fetchChecksum(url: string, expectedFilename: string): Promise<{ expected: string; provenance: VoicePackDownloadProvenance }> {
   const { response: res, requestedUrl, finalUrl } = await fetchAllowlisted(url, 'checksum fetch failed');
-  const text = await res.text();
-  // sha256 file format: "<64-char-hex>  <filename>\n"
-  const match = /^([a-f0-9]{64})\b/i.exec(text.trim());
-  if (!match) {
-    throw new Error('checksum fetch failed: malformed sha256 file');
+  if (!res.body) throw new Error('checksum fetch failed: empty body');
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  for await (const chunk of Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream)) {
+    bytes += chunk.length;
+    if (bytes > MAX_CHECKSUM_BYTES) throw new Error('checksum fetch failed: response exceeds budget');
+    chunks.push(Buffer.from(chunk));
+  }
+  const text = Buffer.concat(chunks).toString('utf8');
+  // Require the one exact output from our packager, not a digest prefix
+  // followed by a different asset name, extra records, or a shell marker.
+  const match = /^([a-f0-9]{64}) {2}([^\r\n]+)\r?\n?$/i.exec(text);
+  if (!match || match[2] !== expectedFilename) {
+    throw new Error('checksum fetch failed: malformed or mismatched archive filename');
   }
   return { expected: match[1].toLowerCase(), provenance: { requestedUrl, finalUrl } };
 }
@@ -123,90 +205,6 @@ function sha256OfFile(p: string): string {
   return createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 }
 
-function runTarExtract(tarballPath: string, destDir: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Portable extraction (plan-240 LD4b): GNU/Cygwin tar treat Windows
-    // drive-letter paths as `host:path` SSH remotes, but the GNU-only
-    // --force-local escape hatch is REJECTED by bsdtar 3.8.x (Windows'
-    // built-in tar.exe). Instead, spawn with cwd = the tarball's directory
-    // and pass a bare basename to `-f` so no drive-letter path reaches the
-    // remote heuristic; the absolute `-C` arg is exempt from that heuristic
-    // (the package-voice-pack.cjs assembler's `-C stagingDir` is the
-    // working precedent).
-    const child = spawn('tar', ['-xzf', path.basename(tarballPath), '-C', destDir], {
-      shell: false,
-      cwd: path.dirname(tarballPath),
-    });
-    let stderr = '';
-    child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-    child.on('error', reject);
-    child.on('close', (code: number) => {
-      if (code === 0) resolve();
-      else reject(new Error(`tar extract failed (exit ${code}): ${stderr.trim()}`));
-    });
-  });
-}
-
-function readAndValidateExtractedManifest(stagingDir: string): VoicePackManifest {
-  const manifestPath = path.join(stagingDir, 'voice-pack.manifest.json');
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error('extracted pack missing voice-pack.manifest.json');
-  }
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as VoicePackManifest;
-  for (const rel of manifest.expectedFiles) {
-    const abs = path.join(stagingDir, rel);
-    if (!fs.existsSync(abs)) {
-      throw new Error(`extracted pack missing ${rel}`);
-    }
-    const expected = manifest.sha256[rel];
-    if (!expected) {
-      throw new Error(`manifest missing sha256 for ${rel}`);
-    }
-    const actual = sha256OfFile(abs);
-    if (actual !== expected) {
-      throw new Error(`extracted file sha256 mismatch for ${rel}`);
-    }
-  }
-  return manifest;
-}
-
-function atomicSwap(stagingDir: string, finalDir: string, _stagingTarball: string): void {
-  // Move staging payload to a sibling next to finalDir, then rename swap.
-  // fs.renameSync is atomic on the same filesystem (globalStorage is one fs).
-  const parent = path.dirname(finalDir);
-  fs.mkdirSync(parent, { recursive: true });
-  const oldDir = `${finalDir}.old-${Date.now()}`;
-  const newDir = `${finalDir}.new-${Date.now()}`;
-  // Build the new dir from staging (exclude the staging tarball + the staging root)
-  fs.mkdirSync(newDir, { recursive: true });
-  copyExtractedPayload(stagingDir, newDir);
-  // Move existing finalDir aside (if any), then put newDir in place
-  if (fs.existsSync(finalDir)) {
-    fs.renameSync(finalDir, oldDir);
-  }
-  fs.renameSync(newDir, finalDir);
-  fs.rmSync(oldDir, { recursive: true, force: true });
-  fs.rmSync(stagingDir, { recursive: true, force: true });
-}
-
-function copyExtractedPayload(srcDir: string, destDir: string): void {
-  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
-    // Skip the tarball itself; keep only the extracted contents.
-    if (entry.name.startsWith('failsafe-voice-pack-') && entry.name.endsWith('.tar.gz')) continue;
-    const srcPath = path.join(srcDir, entry.name);
-    const destPath = path.join(destDir, entry.name);
-    if (entry.isDirectory()) {
-      fs.mkdirSync(destPath, { recursive: true });
-      copyExtractedPayload(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
-}
-
-function cleanup(stagingDir: string): void {
-  fs.rmSync(stagingDir, { recursive: true, force: true });
-}
 
 /** Classify by the failure prefix only; a message can quote a hostname (#538). */
 function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
@@ -214,5 +212,7 @@ function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
   if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch')) return 'verify';
   if (msg.startsWith('tar extract')) return 'extract';
   if (/^(extracted |manifest )/.test(msg)) return 'manifest-verify';
-  return 'download';
+  // A failed filesystem promotion or unsafe storage root must not tell the
+  // operator the network download failed. The exact cause remains in error.
+  return 'install';
 }

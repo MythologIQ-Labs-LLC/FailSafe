@@ -461,16 +461,21 @@ function setupVoicePackFixture(
   fs.mkdirSync(globalStoragePath, { recursive: true });
   if (fixtures.voicePackInstalled) {
     const packDir = path.join(globalStoragePath, 'voice-pack');
-    fs.mkdirSync(path.join(packDir, 'piper'), { recursive: true });
-    const piperContent = 'STUB-PIPER-PAYLOAD';
-    fs.writeFileSync(path.join(packDir, 'piper', 'piper.min.js'), piperContent, 'utf8');
+    const { VOICE_ASSETS } = require('../../../voice-pack/safe-archive') as typeof import('../../../voice-pack/safe-archive');
     const { createHash } = require('crypto') as typeof import('crypto');
-    const sha = createHash('sha256').update(piperContent).digest('hex');
+    const sha256: Record<string, string> = {};
+    for (const rel of VOICE_ASSETS) {
+      const asset = path.join(packDir, rel);
+      fs.mkdirSync(path.dirname(asset), { recursive: true });
+      const data = 'STUB-VOICE-ASSET:' + rel;
+      fs.writeFileSync(asset, data, 'utf8');
+      sha256[rel] = createHash('sha256').update(data).digest('hex');
+    }
     fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
       version,
       builtAt: new Date().toISOString(),
-      expectedFiles: ['piper/piper.min.js'],
-      sha256: { 'piper/piper.min.js': sha },
+      expectedFiles: [...VOICE_ASSETS],
+      sha256,
     }), 'utf8');
   }
   return globalStoragePath;
@@ -494,10 +499,11 @@ function registerVoicePackRouteOnHarness(
     onPackStateChanged: async () => {
       // Re-probe + update voicePackPath on the harness server so subsequent
       // /vendor mount reflects post-install/uninstall state.
-      const fsMod = require('fs') as typeof import('fs');
+      const { probeVoicePackState } = require('../../../voice-pack/voice-pack-detector') as typeof import('../../../voice-pack/voice-pack-detector');
+      const state = await probeVoicePackState(globalStoragePath, version);
       const packDir = path.join(globalStoragePath, 'voice-pack');
       (server as unknown as { setVoicePackPath: (p: string | null) => void })
-        .setVoicePackPath(fsMod.existsSync(packDir) ? packDir : null);
+        .setVoicePackPath(state.state === 'installed' ? packDir : null);
     },
   });
 }
