@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const cp = require("node:child_process");
-const { verifyCandidate, FILES } = require("../../../scripts/verify-voice-release-candidate.cjs");
+const { verifyCandidate, verifySourceBoundCandidate, FILES } = require("../../../scripts/verify-voice-release-candidate.cjs");
 
 const VERSION = "6.1.0";
 const SOURCE = "c".repeat(40);
@@ -142,3 +142,68 @@ test("candidate workflow never grants GitHub release or marketplace write author
   assert.match(source, /environment: production/);
   assert.match(source, /workflow_dispatch/);
 });
+
+
+function withCommittedVoiceFixture(run) {
+  withFixture(x => {
+    const repo = path.join(x.root, "repo");
+    const extension = path.join(repo, "FailSafe", "extension");
+    const vendor = path.join(extension, "src", "roadmap", "ui", "vendor");
+    fs.mkdirSync(vendor, { recursive: true });
+    fs.writeFileSync(path.join(extension, "package.json"), JSON.stringify({ version: VERSION }));
+    for (const name of FILES) {
+      const dest = path.join(vendor, name);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(path.join(x.stage, name), dest);
+    }
+    const git = (...args) => {
+      const proc = cp.spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+      assert.equal(proc.status, 0, proc.stderr || proc.error?.message);
+      return proc.stdout.trim();
+    };
+    git("init", "-q");
+    git("add", "--", "FailSafe/extension/package.json", "FailSafe/extension/src/roadmap/ui/vendor");
+    git("-c", "user.name=voice-fixture", "-c", "user.email=voice-fixture@example.invalid",
+      "-c", "commit.gpgsign=false", "commit", "-qm", "voice source fixture");
+    run(x, extension, git("rev-parse", "HEAD"));
+  });
+}
+
+test("candidate source binding passes for the exact six committed Git blobs", () =>
+  withCommittedVoiceFixture((x, extension, head) => {
+    const proof = verifySourceBoundCandidate(x.dist, VERSION, head, extension);
+    assert.equal(proof.sourceSha, head);
+    assert.equal(proof.filesVerified, 6);
+  }));
+
+test("self-consistent substituted archive cannot be authenticated as reviewed Git source", () =>
+  withCommittedVoiceFixture((x, extension, head) => {
+    const changed = Buffer.from("attacker-replaced-model");
+    fs.writeFileSync(path.join(x.stage, FILES[0]), changed);
+    x.manifest.sha256[FILES[0]] = hash(changed);
+    x.write();
+    x.pack();
+    assert.equal(verify(x).filesVerified, 6, "internal manifest/checksum alone admits forgery");
+    assert.throws(() => verifySourceBoundCandidate(x.dist, VERSION, head, extension),
+      /pinned committed browser voice asset mismatch/);
+  }));
+
+test("source binding rejects mismatched Git SHA and version before signing", () =>
+  withCommittedVoiceFixture((x, extension, head) => {
+    assert.throws(() => verifySourceBoundCandidate(x.dist, VERSION, "a".repeat(40), extension),
+      /Git HEAD differs from claimed source SHA/);
+    const pkg = path.join(extension, "package.json");
+    fs.writeFileSync(pkg, JSON.stringify({ version: "6.1.9" }));
+    // The committed manifest, not a mutable checkout copy, remains authoritative.
+    assert.equal(verifySourceBoundCandidate(x.dist, VERSION, head, extension).version, VERSION);
+  }));
+
+test("both candidate CLI and publisher signer enforce committed-source parity", () => {
+  const verifier = fs.readFileSync(
+    path.resolve(__dirname, "../../../scripts/verify-voice-release-candidate.cjs"), "utf8");
+  const signer = fs.readFileSync(
+    path.resolve(__dirname, "../../../scripts/voice-pack-sign-candidate.cjs"), "utf8");
+  assert.match(verifier, /const result = verifySourceBoundCandidate\(dist, version, source\)/);
+  assert.match(signer, /const verified = verifySourceBoundCandidate\(dir, version, sourceSha\)/);
+});
+
