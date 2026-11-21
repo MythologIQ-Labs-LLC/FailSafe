@@ -13,7 +13,7 @@
  * nowhere in the repository — it is operator memory. Its contents are NOT imported here; per
  * CLAUDE.md it holds pricing and tier internals.
  *
- * Pattern rows are skipped deliberately. 14 of the 68 registered paths are shapes, not files
+ * Pattern rows are skipped deliberately. In the original audit, 14 of 68 paths were shapes, not files
  * (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`); an existence check that did not
  * skip them would report 14 false positives on its first run. That was found by measuring
  * before writing the assertion, not by reasoning about it.
@@ -68,10 +68,18 @@ function declaredPrivatePrefixes(text) {
   return [...section[1].matchAll(/^- private-by-default:\s*`([^`]+)`/gm)].map((m) => m[1]);
 }
 
-function trackedFiles() {
-  const res = spawnSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' });
-  if (res.status !== 0) return null;         // not a git checkout
-  return new Set(res.stdout.split('\n').map((s) => s.trim()).filter(Boolean));
+function trackedFiles(repoRoot = REPO_ROOT) {
+  const cwd = { cwd: repoRoot, encoding: 'utf8' };
+  const probe = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], cwd);
+  if (probe.status !== 0) return null; // distribution without a Git checkout
+  assert.equal(probe.stdout.trim(), 'true', 'FX939 requires a non-bare Git checkout');
+
+  // Commit tree is authoritative: git ls-files would also include index-only
+  // staged files not present in this PR HEAD, falsely counting them as published.
+  // -z prevents filenames containing newlines or whitespace from being mangled.
+  const res = spawnSync('git', ['ls-tree', '-r', '-z', '--name-only', 'HEAD'], cwd);
+  assert.equal(res.status, 0, 'FX939 could not read the committed HEAD tree: ' + res.stderr);
+  return new Set(res.stdout.split('\0').filter(Boolean));
 }
 
 /**
@@ -93,16 +101,20 @@ function measuredPublicationCensus(text, tracked) {
 }
 
 function claimedPublicationCensus(text) {
-  const published = /(\d+) of the (\d+) paths registered below have had that done;\s*(\d+) have not/.exec(text);
-  const patterns = /(\d+) of the (\d+) are of that kind/.exec(text);
-  if (!published || !patterns || published[2] !== patterns[2]) {
+  // Do not accept an old count from a historical note outside the authoritative
+  // publication section, or silently take the first of two conflicting claims.
+  const section = /^## Publication status$([\s\S]*?)^## /m.exec(text);
+  if (!section) throw new Error('Missing publication status section in GOVERNANCE_INDEX');
+  const published = [...section[1].matchAll(/(\d+) of the (\d+) paths registered below have had that done;\s*(\d+) have not/g)];
+  const patterns = [...section[1].matchAll(/(\d+) of the (\d+) are of that kind/g)];
+  if (published.length !== 1 || patterns.length !== 1 || published[0][2] !== patterns[0][2]) {
     throw new Error('Missing or inconsistent publication census claims in GOVERNANCE_INDEX');
   }
   return {
-    registered: Number(published[2]),
-    tracked: Number(published[1]),
-    private: Number(published[3]),
-    shapes: Number(patterns[1]),
+    registered: Number(published[0][2]),
+    tracked: Number(published[0][1]),
+    private: Number(published[0][3]),
+    shapes: Number(patterns[0][1]),
   };
 }
 
@@ -179,6 +191,42 @@ describe('FX939 GOVERNANCE_INDEX publication status', () => {
     assert.throws(() => verifyPublicationCensus(
       actual.replace('- private-by-default: `docs/`', '- private-by-default: `.failsafe/`'), tracked
     ), /registered paths missing outside private-by-default prefixes/);
+  });
+
+  it('uses committed HEAD, never a staged-only phantom, for publication evidence', (t) => {
+    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-fx939-git-'));
+    t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+    const git = (...args) => {
+      const p = spawnSync('git', args, { cwd: tmp, encoding: 'utf8' });
+      assert.equal(p.status, 0, p.stderr);
+    };
+    git('init', '-q');
+    fs.writeFileSync(path.join(tmp, 'committed.md'), 'committed\n');
+    git('add', 'committed.md');
+    git('-c', 'user.name=FX939 Test', '-c', 'user.email=fx939@example.invalid',
+      'commit', '-qm', 'initial');
+    fs.writeFileSync(path.join(tmp, 'staged-only.md'), 'not published\n');
+    git('add', 'staged-only.md');
+    const tracked = trackedFiles(tmp);
+    assert.equal(tracked.has('committed.md'), true);
+    assert.equal(tracked.has('staged-only.md'), false);
+  });
+
+  it('accepts claims only inside one publication section, rejecting duplicate claims', () => {
+    const actual = '| \`docs/a.md\` | published |\n| \`docs/private.md\` | private |\n'
+      + '| \`docs/plan-*.md\` | shape |\n'
+      + '## Publication status\n- private-by-default: \`docs/\`\n'
+      + '1 of the 3 paths registered below have had that done; 1 have not.\n'
+      + '1 of the 3 are of that kind.\n## Out-of-tier paths\n';
+    const tracked = new Set(['docs/a.md']);
+    const falseHistorical = '99 of the 100 paths registered below have had that done; 1 have not.\n'
+      + '1 of the 100 are of that kind.\n';
+    assert.deepEqual(verifyPublicationCensus(falseHistorical + actual, tracked),
+      { registered: 3, tracked: 1, private: 1, shapes: 1 });
+    assert.throws(() => verifyPublicationCensus(
+      actual.replace('## Out-of-tier paths',
+        '1 of the 3 paths registered below have had that done; 1 have not.\n## Out-of-tier paths'), tracked
+    ), /Missing or inconsistent publication census claims/);
   });
 
   it('registers docs/README.md in some tier', () => {
