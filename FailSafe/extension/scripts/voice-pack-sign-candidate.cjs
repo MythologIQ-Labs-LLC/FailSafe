@@ -5,7 +5,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
-const { verifyCandidate } = require("./verify-voice-release-candidate.cjs");
+const { verifySourceBoundCandidate } = require("./verify-voice-release-candidate.cjs");
 const { signCandidate, verifySignedCandidate } = require("./voice-pack-auth.cjs");
 
 const PIN = path.resolve(__dirname, "..", "src", "voice-pack", "publisher-public-key.pem");
@@ -35,7 +35,7 @@ function requirePrivateKey() {
 function signApprovedCandidate(dir, version, sourceSha) {
   const pub = requirePublisherKey();
   const priv = requirePrivateKey();
-  const verified = verifyCandidate(dir, version, sourceSha);
+  const verified = verifySourceBoundCandidate(dir, version, sourceSha);
   const recorded = JSON.parse(fs.readFileSync(path.join(dir, "voice-pack-candidate.json"), "utf8"));
   assert.deepEqual(recorded, verified, "candidate receipt not bound to reverified archive");
   const signed = signCandidate(verified, priv, pub);
