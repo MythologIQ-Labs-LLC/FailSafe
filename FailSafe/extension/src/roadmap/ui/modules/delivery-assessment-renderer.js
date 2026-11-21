@@ -189,6 +189,9 @@ export class DeliveryAssessmentRenderer {
     this.container = document.getElementById(containerId);
     this.selectedId = null;
     this.message = null;
+    // Unsubmitted review text survives an overlapping refresh but is scoped to its intent and commit.
+    this.reviewNoteDraft = null;
+    this.reviewInFlight = false;
   }
 
   ensureStyle() {
@@ -369,17 +372,33 @@ export class DeliveryAssessmentRenderer {
     note.maxLength = 500;
     note.placeholder = 'Note (optional)';
     note.setAttribute('aria-label', 'Review note');
+    const restoreDraft = () => {
+      const draft = this.reviewNoteDraft;
+      note.value = draft && draft.intentId === view.intent.id && draft.commitSha === select.value ? draft.value : '';
+    };
+    restoreDraft();
+    note.addEventListener('input', () => {
+      this.reviewNoteDraft = { intentId: view.intent.id, commitSha: select.value, value: note.value };
+    });
+    select.addEventListener('change', restoreDraft);
     actions.appendChild(select);
     actions.appendChild(note);
     const reworkPicks = this.reworkPicks(view, linked);
     for (const pick of reworkPicks) actions.appendChild(pick.parentNode);
     const reworksOf = () => reworkPicks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
-    const record = (verdict, btn) => {
-      btn.disabled = true;
+    // One operator review request at a time: PASS and VETO must not race
+    // into contradictory ledger submissions while the first POST is pending.
+    const record = (verdict) => {
+      if (this.reviewInFlight) return;
+      this.reviewInFlight = true;
+      pass.disabled = true;
+      veto.disabled = true;
       void this.review(view.intent.id, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
     };
-    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS', pass));
-    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO', veto));
+    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS'));
+    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO'));
+    pass.disabled = this.reviewInFlight;
+    veto.disabled = this.reviewInFlight;
     actions.appendChild(pass);
     actions.appendChild(veto);
     return actions;
@@ -412,11 +431,22 @@ export class DeliveryAssessmentRenderer {
 
   async review(intentId, verdict, commitSha, note, reworks = []) {
     const body = reworks.length ? { intentId, verdict, commitSha, note, reworks } : { intentId, verdict, commitSha, note };
-    const { status, data } = await postJson('/api/actions/delivery/review', body);
-    this.message = status === 200
-      ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
-      : [data.error || `Recording the review failed (${status}).`, true];
-    await this.refresh();
+    const submittedDraft = this.reviewNoteDraft;
+    try {
+      const { status, data } = await postJson('/api/actions/delivery/review', body);
+      if (status === 200 && submittedDraft && this.reviewNoteDraft === submittedDraft &&
+          submittedDraft.intentId === intentId && submittedDraft.commitSha === commitSha && submittedDraft.value === note) {
+        this.reviewNoteDraft = null;
+      }
+      this.message = status === 200
+        ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
+        : [data.error || `Recording the review failed (${status}).`, true];
+    } catch (err) {
+      this.message = [`Recording the review failed: ${err && err.message ? err.message : err}`, true];
+    } finally {
+      this.reviewInFlight = false;
+      await this.refresh();
+    }
   }
 
   linkArchitecture(view, candidates) {
