@@ -101,6 +101,47 @@ suite('package-voice-pack.cjs exact asset inventory #707', () => {
     });
   });
 
+  test('linked dist cannot delete a foreign archive or checksum before asset validation', function () {
+    if (process.platform === 'win32') this.skip(); // Windows symlink privilege varies.
+    fixture(root => {
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '6.0.13' }));
+      const foreign = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-foreign-'));
+      try {
+        const archive = path.join(foreign, 'failsafe-voice-pack-6.0.13.tar.gz');
+        const checksum = archive + '.sha256';
+        fs.writeFileSync(archive, 'FOREIGN_ARCHIVE');
+        fs.writeFileSync(checksum, 'FOREIGN_CHECKSUM');
+        fs.symlinkSync(foreign, path.join(root, 'dist'), 'dir');
+        const result = execute(root);
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, /voice pack dist directory must be a real directory/);
+        assert.equal(fs.readFileSync(archive, 'utf8'), 'FOREIGN_ARCHIVE');
+        assert.equal(fs.readFileSync(checksum, 'utf8'), 'FOREIGN_CHECKSUM');
+      } finally { fs.rmSync(foreign, { recursive: true, force: true }); }
+    });
+  });
+
+  test('dangling dist symlink is an occupied path and never replaced', function () {
+    if (process.platform === 'win32') this.skip(); // Windows symlink privilege varies.
+    fixture(root => {
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '6.0.13' }));
+      const dist = path.join(root, 'dist');
+      fs.symlinkSync(path.join(root, 'not-present'), dist, 'dir');
+      const result = execute(root);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /voice pack dist directory must be a real directory/);
+      assert.equal(fs.lstatSync(dist).isSymbolicLink(), true);
+    });
+  });
+
+  test('invalid version is refused before any archive cleanup or directory creation', () => fixture(root => {
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '../../../../other' }));
+    const result = execute(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /version must be a safe SemVer identifier/);
+    assert.equal(fs.existsSync(path.join(root, 'dist')), false);
+  }));
+
   test('missing Piper asset causes a nonzero result and no successful tarball', () => fixture(root => {
     const source = seed(root);
     fs.rmSync(path.join(source, 'piper', 'piper.min.js'));

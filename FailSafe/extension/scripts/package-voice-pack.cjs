@@ -28,7 +28,10 @@ function main() {
   try {
     const version = readVersion();
     const distDir = path.join(REPO_ROOT, 'dist');
+    // Reject linked build output before deleting even a stale same-version file.
+    assertSafeDistDirectory(distDir);
     fs.mkdirSync(distDir, { recursive: true });
+    assertSafeDistDirectory(distDir);
 
     // Never leave a previous same-version release candidate available if a
     // later packaging attempt fails before producing new verified assets.
@@ -59,9 +62,13 @@ function main() {
     try {
       const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
       if (/^\d+\.\d+\.\d+$/.test(String(pkg.version || ''))) {
-        const candidate = path.join(REPO_ROOT, 'dist', `failsafe-voice-pack-${pkg.version}.tar.gz`);
-        fs.rmSync(candidate, { force: true });
-        fs.rmSync(candidate + '.sha256', { force: true });
+        const distDir = path.join(REPO_ROOT, 'dist');
+        // Cleanup must honor the same boundary as the normal write path.
+        if (assertSafeDistDirectory(distDir)) {
+          const candidate = path.join(distDir, `failsafe-voice-pack-${pkg.version}.tar.gz`);
+          fs.rmSync(candidate, { force: true });
+          fs.rmSync(candidate + '.sha256', { force: true });
+        }
       }
     } catch (cleanupErr) {
       process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\n');
@@ -73,10 +80,26 @@ function main() {
 
 function readVersion() {
   const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
-  if (typeof pkg.version !== 'string' || pkg.version.length === 0) {
-    throw new Error('package.json missing version field');
+  if (typeof pkg.version !== 'string' ||
+      !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version)) {
+    throw new Error('package.json version must be a safe SemVer identifier');
   }
   return pkg.version;
+}
+
+/** Build outputs must be a real in-root directory before any unlink/write. */
+function assertSafeDistDirectory(distDir) {
+  assertVendorAncestry(distDir, fs, REPO_ROOT);
+  let st;
+  try { st = fs.lstatSync(distDir); }
+  catch (err) {
+    if (err && err.code === 'ENOENT') return false;
+    throw err;
+  }
+  if (!st.isDirectory() || st.isSymbolicLink()) {
+    throw new Error('voice pack dist directory must be a real directory');
+  }
+  return true;
 }
 
 function collectFiles(vendorSourceRoot, stagingDir) {
