@@ -162,19 +162,19 @@ describe('FX939 GOVERNANCE_INDEX publication status', () => {
   });
 
   it('rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures', () => {
-    const rows = '| `docs/a.md` | published |\\n| `docs/private.md` | private |\\n| `docs/plan-*.md` | shape |\\n';
-    const section = '\\n## Publication status\\n- private-by-default: `docs/`\\n';
-    const ending = '\\n## Out-of-tier paths\\n';
+    const rows = '| `docs/a.md` | published |\n| `docs/private.md` | private |\n| `docs/plan-*.md` | shape |\n';
+    const section = '\n## Publication status\n- private-by-default: `docs/`\n';
+    const ending = '\n## Out-of-tier paths\n';
     const make = (claim) => rows + section + claim + ending;
-    const actual = make('1 of the 3 paths registered below have had that done; 1 have not.\\n1 of the 3 are of that kind.\\n');
+    const actual = make('1 of the 3 paths registered below have had that done; 1 have not.\n1 of the 3 are of that kind.\n');
     const tracked = new Set(['docs/a.md']);
     assert.deepEqual(verifyPublicationCensus(actual, tracked),
       { registered: 3, tracked: 1, private: 1, shapes: 1 });
     assert.throws(() => verifyPublicationCensus(
-      make('2 of the 3 paths registered below have had that done; 0 have not.\\n1 of the 3 are of that kind.\\n'), tracked
+      make('2 of the 3 paths registered below have had that done; 0 have not.\n1 of the 3 are of that kind.\n'), tracked
     ), /publication status counts disagree/);
     assert.throws(() => verifyPublicationCensus(
-      make('1 of the 3 paths registered below have had that done; 1 have not.\\n'), tracked
+      make('1 of the 3 paths registered below have had that done; 1 have not.\n'), tracked
     ), /Missing or inconsistent publication census claims/);
     assert.throws(() => verifyPublicationCensus(
       actual.replace('- private-by-default: `docs/`', '- private-by-default: `.failsafe/`'), tracked
