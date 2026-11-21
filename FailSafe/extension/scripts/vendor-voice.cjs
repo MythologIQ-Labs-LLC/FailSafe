@@ -321,8 +321,19 @@ function cleanupVoiceOutputs(io, staged, moved) {
   if (!moved) return [];
   const warnings = [];
   for (const item of moved) {
-    try { io.rmSync(item.backup, { force: true }); }
-    catch (e) { warnings.push('stale backup: ' + item.backup + ' (' + String(e) + ')'); }
+    try {
+      const backup = requireRegularVendorTarget(io, item.backup);
+      if (!backup || !item.original || !item.originalSha256 ||
+          (item.original.ino !== 0 &&
+            (backup.dev !== item.original.dev || backup.ino !== item.original.ino)) ||
+          backup.size !== item.original.size ||
+          !crypto.timingSafeEqual(
+            crypto.createHash('sha256').update(io.readFileSync(item.backup)).digest(),
+            item.originalSha256)) {
+        throw new Error('voice vendor cleanup refuses foreign backup');
+      }
+      io.rmSync(item.backup, { force: true });
+    } catch (e) { warnings.push('stale backup: ' + item.backup + ' (' + String(e) + ')'); }
   }
   return warnings;
 }

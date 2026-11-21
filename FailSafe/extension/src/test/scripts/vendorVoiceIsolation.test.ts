@@ -375,6 +375,39 @@ suite('voice vendor isolation #707', () => {
       'rollback does not overwrite or remove foreign backup');
   }));
 
+
+  test('successful promotion keeps a foreign substituted backup instead of deleting it', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    const displaced = path.join(root, 'original-backup');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let replacement = '';
+    const ops = {
+      ...fs,
+      renameSync(from: fs.PathLike, to: fs.PathLike) {
+        fs.renameSync(from, to);
+        if (String(from).includes('.new-')) {
+          const backup = String(from).replace('.new-', '.old-');
+          fs.renameSync(backup, displaced);
+          fs.writeFileSync(backup, 'FOREIGN-BACKUP');
+          replacement = backup;
+        }
+      },
+    };
+    const warnings: string[] = vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, ops, root,
+    );
+    assert.equal(fs.readFileSync(target, 'utf8'), 'PINNED', 'successful asset promotion stays intact');
+    assert.equal(fs.readFileSync(displaced, 'utf8'), 'ORIGINAL', 'original saved elsewhere remains');
+    assert.equal(fs.readFileSync(replacement, 'utf8'), 'FOREIGN-BACKUP',
+      'cleanup cannot remove a foreign backup');
+    assert.equal(warnings.length, 1, 'operator receives explicit stale-backup warning');
+    assert.match(warnings[0], /voice vendor cleanup refuses foreign backup/);
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+  }));
+
   test('recursive VSIX copy inventory admits only six voice assets and two vendor provenance notes', () => temporary(root => {
     const vendor = path.join(root, 'vendor');
     const piper = path.join(vendor, 'piper');
