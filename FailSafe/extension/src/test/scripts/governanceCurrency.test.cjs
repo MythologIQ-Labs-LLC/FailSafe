@@ -11,7 +11,11 @@ const CLI = path.join(__dirname, '..', '..', '..', 'scripts', 'check-governance-
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-doc-currency-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const tierOne = '\n## Tier 1 — Canonical Sources\n| Path | Purpose |\n| `FailSafe/extension/package.json` | Authoritative version source |\n';
   const write = (name, contents) => {
+    // Existing fixtures target release markers. Keep unrelated canonical
+    // registry authority valid unless a test provides a Tier-1 table itself.
+    if (name === 'docs/GOVERNANCE_INDEX.md' && !contents.includes('## Tier 1')) contents += tierOne;
     const file = path.join(root, ...name.split('/'));
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, contents);
@@ -144,4 +148,36 @@ test('refuses a canonical docs ancestor symlink even when the target remains in 
     throw error;
   }
   assert.throws(() => checkCurrency(f.root), /Not a regular file.*docs\//);
+});
+
+test('FC006 flags a phantom root package.json authority, preserving the index unchanged', t => {
+  const f = fixture(t);
+  const index = '**Last Reviewed**: 2026-11-13\n## Tier 1 — Canonical Sources\n'
+    + '| Path | Purpose |\n| `package.json` (root + extension) | Authoritative version source — current |\n';
+  f.write('docs/GOVERNANCE_INDEX.md', index);
+  const report = checkCurrency(f.root);
+  assert.deepEqual(report.findings.map(x => x.id), ['FC006']);
+  assert.match(report.findings[0].message, /FailSafe\/extension\/package\.json/);
+  assert.equal(f.run('--enforce').status, 1);
+  assert.equal(fs.readFileSync(path.join(f.root, 'docs/GOVERNANCE_INDEX.md'), 'utf8'), index);
+});
+
+test('FC006 detects missing and duplicated version authority rows, scoped to Tier 1', t => {
+  const f = fixture(t);
+  const header = '**Last Reviewed**: 2026-11-13\n## Tier 1 — Canonical Sources\n| Path | Purpose |\n';
+  f.write('docs/GOVERNANCE_INDEX.md', header + '| `docs/ARCHITECTURE_PLAN.md` | Current architecture |\n');
+  assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), ['FC006']);
+  const canonical = '| `FailSafe/extension/package.json` | Authoritative version source |\n';
+  f.write('docs/GOVERNANCE_INDEX.md', header + canonical + canonical);
+  assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), ['FC006']);
+  f.write('docs/GOVERNANCE_INDEX.md', header + canonical + '## Tier 2 — Historical\n'
+    + '| `package.json` | Authoritative version source in an archived record |\n');
+  assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), [],
+    'historical mentions outside the current Tier-1 table are not active authority');
+});
+
+test('FC006 refuses a missing Tier-1 section rather than silently passing', t => {
+  const f = fixture(t);
+  fs.writeFileSync(path.join(f.root, 'docs/GOVERNANCE_INDEX.md'), '**Last Reviewed**: 2026-11-13\n');
+  assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), ['FC006']);
 });
