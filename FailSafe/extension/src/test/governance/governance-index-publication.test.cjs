@@ -204,6 +204,7 @@ describe('FX939 GOVERNANCE_INDEX publication status', () => {
     fs.writeFileSync(path.join(tmp, 'committed.md'), 'committed\n');
     git('add', 'committed.md');
     git('-c', 'user.name=FX939 Test', '-c', 'user.email=fx939@example.invalid',
+      '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=' + path.join(tmp, 'no-hooks'),
       'commit', '-qm', 'initial');
     fs.writeFileSync(path.join(tmp, 'staged-only.md'), 'not published\n');
     git('add', 'staged-only.md');
