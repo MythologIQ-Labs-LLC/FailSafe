@@ -6,6 +6,14 @@ This page lists every integration FailSafe has on main, what each does for the c
 
 `FailSafe/extension/src/test/docs/integration-contracts.test.cjs` (FX1003) holds this page and the contracts to the code: coverage from the code, the citation grammar, the feature states, the tables below and the counts in [Scan counts](#scan-counts).
 
+## Current owner override: Bicameral integration deferred (2026-11-16)
+
+**Effective direction:** Freeze Bicameral-specific integration development for FailSafe v6.1.0 under [#692](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/692). The October 18 `COMPLETE / priority 1` work-queue entry and item 4 in the prioritized list below are **historical**, not an instruction to spend current development effort on Bicameral. They remain in the original matrix to preserve that dated decision and the test-checked inventory counts. Existing code and previously shipped behavior are unchanged by this documentation notice; the installed current-upstream compatibility is **not qualified**.
+
+**Why:** FailSafe currently speaks to a legacy Python `bicameral-mcp>=0.14,<0.16` tool contract with direct drift and ratification calls. Upstream [Bicameral](https://github.com/BicameralAI/bicameral) is consolidating a daemon-owned governed-domain product, while its [MCP client](https://github.com/BicameralAI/bicameral-mcp) now forwards `ToolRequest` v2 envelopes to the local daemon. Direct MCP ratification and several legacy tools have been retired. The consolidated repository does not yet publish a unified product release, and the native Windows customer journey remains unqualified. Source evidence establishes **contract drift**, not a reproduced installed failure.
+
+**Scope:** Keep historical tests, references and shipped opt-in behavior intact; do not adapt retired tool names, silently upgrade/install Bicameral, or assert end-to-end conformance. Reopen investment only after a stable supported daemon/MCP/host composition, authority boundary, installer/rollback, independent host acceptance and user value are demonstrated under #692. Separate confirmed security defects may still need bounded remediation. Prioritize FailSafe-owned governance, Qortara v6.1.0, agent-host compatibility and SHIELD/ledger correctness instead.
+
 ## Owner decision (#538)
 
 On 2026-10-18 the owner accepted the dispositions in the matrix below as owner-approved work-queue dispositions ([#538](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/538), "Ownership decisions for #532"): 15 COMPLETE, 13 MAINTAIN, 2 RETIRE and 0 INVEST. They began as the #532 part A recommendations. A disposition says what to do next; it is not a claim that a requirement is implemented.

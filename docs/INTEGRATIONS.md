@@ -1,10 +1,12 @@
 # Third-Party Integrations
 
-FailSafe v5.x ships a small, opinionated set of third-party integrations behind a single Command Center tab (**Integrations**). Each integration is **opt-in**, installed on the operator's own machine, and exposes a typed surface that FailSafe drives — nothing is bundled inside the VSIX.
+FailSafe v6.0.13 provides opt-in third-party capabilities in the Console's **Integrations** area. Each integration has its own trust boundary: some require local components or an MCP connection, while others, such as the Statewright AI card, only open the provider's website and do not establish an embedded connection. A visible card does not prove the provider is installed, compatible or governed by FailSafe. Check the current per-integration contract before installing software or sharing data.
 
 What each integration does for the customer, what leaves the machine and which of its capabilities are real is recorded per integration in the [Integration portfolio](architecture/INTEGRATION_PORTFOLIO.md).
 
 ## Bicameral MCP (v1)
+
+> **Compatibility notice (November 16, 2026):** This section documents FailSafe's **legacy** Bicameral v1 MCP integration, not a currently qualified connection to the restructured upstream Bicameral product. Bicameral's current MCP client forwards ToolRequest v2 to a separate local daemon, whose authority and review/signoff contract differs from the direct `bicameral.ratify` interface described below. The upstream consolidated product has no unified release and its Windows installed lifecycle is unqualified. **Do not use this historical setup/ratify guidance as authorization to install, upgrade, or connect a newer upstream version.** Bicameral-specific development is deferred for FailSafe v6.1.0 under [#692](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/692); the older opt-in code is retained without new compatibility claims.
 
 [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) maintains a per-workspace ledger of design decisions plus drift detection between those decisions and the code that bound them. When connected, FailSafe surfaces decision history, drifted bindings, and a one-click ratify/reject affordance for each open decision.
 

@@ -1,6 +1,6 @@
 # Bicameral MCP integration
 
-> One-line: connects FailSafe to a local Bicameral MCP server so decision-drift, preflight conflicts, and ratification verdicts flow into FailSafe's L3 approval queue and Risk Register — turning Bicameral's decision graph into governed, auditable enforcement events.
+> Legacy scope: optional local Bicameral v1 MCP transport, historical decision/drift and review routes, and partially wired governance mediators. Drift-to-L3 is inert on current main; compatibility with Bicameral's newer daemon-backed ToolRequest v2 is not qualified.
 
 - **Pattern:** mcp
 - **Direction:** governed execution (MCP stdio subprocess) + read-only upstream poll
@@ -8,8 +8,12 @@
 - **Official docs:** Upstream repo `BicameralAI/bicameral-mcp` (see contract review) · MCP — https://modelcontextprotocol.io
 - **Backlog:** B-BIC-* cluster, B-INT-2, B-INT-3, B-INT-4
 
+## Compatibility notice (2026-11-16)
+
+**Legacy adapter, development frozen for v6.1.0.** The shipped scope below is evidence of FailSafe's historical Python MCP implementation, **not** proof that it works with the current upstream Bicameral release. Upstream has moved to an MCP-to-local-daemon `ToolRequest` v2 boundary, with daemon-owned review/signoff and retired direct MCP ratification. The consolidated product has not yet issued a unified release. Do not automatically install, upgrade or assume compatibility with current upstream; do not replace its authority model with a local FailSafe interpretation. The owner has deferred new Bicameral-specific development pending [#692](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/692), including a native Windows installed-host compatibility and authority review. Existing opt-in behavior is unchanged by this documentation-only notice.
+
 ## What it does
-FailSafe spawns the Bicameral MCP server over stdio and wraps its tool surface in a typed client built on the shared `McpClientHost` substrate. Drift results are bridged into FailSafe's L3 approval queue (one entry per newly-drifted decision; an L3 verdict auto-ratifies or rejects upstream) and mirrored into the Risk Register. When a tier-3 action is queued for L3, the integration runs `bicameral.preflight` against the target file and attaches drift evidence to the pending approval. A periodic, read-only GitHub poll surfaces upstream release + open-issue counts on the Integrations card. The connection fails closed if the server reports a version below the supported floor.
+The legacy adapter can launch an explicitly configured Bicameral MCP executable over stdio and wraps its tool surface in a typed client built on the shared `McpClientHost` substrate. Its old contract includes drift, preflight and ratification routes, optional L3 and Risk Register mediators, and a periodic read-only GitHub upstream poll. **These are not all operational end to end:** the canonical [integration contract](../../../../../docs/architecture/integrations/bicameral.md) records drift-to-L3 as inert because its mediator is not wired after asynchronous client setup; the upstream snapshot route is also inert. Existing tests exercise components and stubbed paths, not installed compatibility with the current daemon-backed Bicameral product. A protocol-floor check rejects reported legacy versions below the pinned floor, but that does not establish ToolRequest v2 compatibility.
 
 ## Configuration
 | Setting | Default | Secret | Purpose |
