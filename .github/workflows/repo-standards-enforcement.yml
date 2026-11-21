@@ -47,6 +47,13 @@ jobs:
         working-directory: FailSafe/extension
         run: npm run governance:ledger-fork
 
+      # Fast governance regressions also run on stacked fix/** pushes, where
+      # the main-only full suite does not fire. Reuse this job's npm ci.
+      - name: Governance document and publication regressions
+        working-directory: FailSafe/extension
+        run: |
+          node --test src/test/governance/governance-index-publication.test.cjs src/test/scripts/governanceCurrency.test.cjs
+
       - name: Lint
         working-directory: FailSafe/extension
         run: npm run lint
