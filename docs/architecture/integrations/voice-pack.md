@@ -116,3 +116,11 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. In
 ## Open defects
 
 No Voice Pack release is published and no workflow publishes one, so Install fails with HTTP 404 [B287] `FailSafe/extension/src/voice-pack/install-handler.ts:26` (`MythologIQ-Labs-LLC/FailSafe/releases/download`).
+
+## Build-time dependency boundary — v6.1.0 candidate (#707)
+
+The 6.0.13 source originally carried `piper-tts-web` and `@xenova/transformers` in the **core root** `devDependencies`. This made ordinary `npm ci` attempt a native `onnxruntime-node@1.20.1` CUDA download via Piper, even though the shipped voice experience uses browser JS/WASM and the base VSIX excludes the separately downloaded voice pack. FailSafe governance is not a general-purpose inference runtime.
+
+Draft #712 proposes removing those root devDependencies and their unreferenced lock graph, preserving already committed browser assets, and supplying an explicit version/integrity-pinned `vendor:voice` workflow which obtains only the two npm tarballs and never installs their transitive native dependencies. `vendor:piper` stays as a pinned Piper-only compatibility entrypoint; `bundle.cjs` fails if required committed assets are absent. The vendor files document exact sources, filenames, and operator actions.
+
+**This is a candidate, not a shipped or qualified property.** The exact-head clean `npm ci`, cross-platform build/VSIX, voice browser execution, release package integrity and native governance must pass before these claims become a release guarantee. The archive extraction/installer security issues in #710 remain independent of this build-time separation.
