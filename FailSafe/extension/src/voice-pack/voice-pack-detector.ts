@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { VOICE_ASSETS } from './safe-archive';
+import * as publisher from './publisher-auth';
 import type { VoicePackManifest, VoicePackProbeResult } from './types';
 
 const MANIFEST = 'voice-pack.manifest.json';
@@ -40,8 +41,8 @@ function openChecked(file: string, before: fs.Stats): number {
   return fd;
 }
 
-function readManifest(file: string): unknown {
-  const before = regular(file, MAX_MANIFEST);
+function readBoundedBytes(file: string, limit: number): Buffer {
+  const before = regular(file, limit);
   const fd = openChecked(file, before);
   try {
     const bytes = Buffer.alloc(before.size);
@@ -54,7 +55,7 @@ function readManifest(file: string): unknown {
     if (fs.readSync(fd, Buffer.alloc(1), 0, 1, null) !== 0) {
       throw new Error('voice manifest grew during inspection');
     }
-    return JSON.parse(bytes.toString('utf8'));
+    return bytes;
   } finally {
     fs.closeSync(fd);
   }
@@ -102,7 +103,8 @@ function hashBounded(file: string, before: fs.Stats): string {
 function verifyPayload(packDir: string, manifest: VoicePackManifest): string[] {
   const bad: string[] = [];
   const top = fs.readdirSync(packDir, { withFileTypes: true });
-  const allowedTop = new Set([MANIFEST, 'piper', 'whisper']);
+  const allowedTop = new Set([MANIFEST, 'piper', 'whisper',
+    'voice-pack-release.json', 'voice-pack-release.json.sig']);
   for (const entry of top) if (!allowedTop.has(entry.name)) bad.push(entry.name);
 
   let total = 0;
@@ -166,14 +168,27 @@ export async function probeVoicePackState(
   }
   if (!pack.isDirectory() || pack.isSymbolicLink()) return corrupt();
   let manifest: unknown;
-  try { manifest = readManifest(manifestPath); }
-  catch { return corrupt(); }
+  let manifestSha = '';
+  try {
+    const raw = readBoundedBytes(manifestPath, MAX_MANIFEST);
+    manifestSha = createHash('sha256').update(raw).digest('hex');
+    manifest = JSON.parse(raw.toString('utf8'));
+  } catch { return corrupt(); }
   if (!validManifest(manifest)) return corrupt();
 
   let bad: string[];
   try { bad = verifyPayload(packDir, manifest); }
   catch { return corrupt(); }
   if (bad.length) return { state: 'corrupt', version: manifest.version, manifestPath, missingFiles: bad };
+  try {
+    const record = readBoundedBytes(path.join(packDir, 'voice-pack-release.json'), 4096);
+    const signature = readBoundedBytes(path.join(packDir, 'voice-pack-release.json.sig'), 90);
+    publisher.verifyInstalledVoiceAttestation(record, signature,
+      publisher.loadPinnedVoicePublisherKey(), manifest.version, manifestSha);
+  } catch {
+    // Local SHA-256s alone never establish who published the executable assets.
+    return corrupt(['voice-pack-release.json', 'voice-pack-release.json.sig']);
+  }
   if (!VERSION.test(requiredMinVersion)) return corrupt();
   if (compareVersions(manifest.version, requiredMinVersion) < 0) {
     return { state: 'stale', version: manifest.version, manifestPath };

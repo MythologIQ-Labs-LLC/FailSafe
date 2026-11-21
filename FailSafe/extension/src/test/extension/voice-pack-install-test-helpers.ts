@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, generateKeyPairSync } from "crypto";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -19,6 +19,56 @@ export interface TarFixtureEntry {
 }
 const ORIGINAL_FETCH = (globalThis as { fetch?: unknown }).fetch;
 const HAD_FETCH = Object.prototype.hasOwnProperty.call(globalThis, "fetch");
+type TestSigner = { privatePem: string; publicPem: string };
+let activeSigner: TestSigner | undefined;
+/** Test-only publisher key interception; production install has no key override. */
+function registerTestPublisher(): () => void {
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const privatePem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  const publicPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+  const auth = require('../../voice-pack/publisher-auth') as typeof import('../../voice-pack/publisher-auth');
+  const original = auth.loadPinnedVoicePublisherKey;
+  (auth as { loadPinnedVoicePublisherKey: () => string }).loadPinnedVoicePublisherKey = () => publicPem;
+  activeSigner = { privatePem, publicPem };
+  return () => {
+    (auth as { loadPinnedVoicePublisherKey: () => string }).loadPinnedVoicePublisherKey = original;
+    activeSigner = undefined;
+  };
+}
+
+function autoSignedHandlers(handlers: FetchHandler[]): FetchHandler[] {
+  if (!activeSigner) return handlers;
+  const tarUrl = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/v5.2.0-voice/failsafe-voice-pack-5.2.0.tar.gz';
+  // The genuine GitHub release hop is a 302 to a short-lived signed asset URL.
+  // Sign the bytes of the terminal mock, not the empty redirect response.
+  const entry = handlers.find(h => typeof h.url === 'string'
+    ? h.url === tarUrl : h.url.test(tarUrl));
+  const match = entry?.body instanceof Uint8Array ? entry
+    : entry?.location ? handlers.find(h => typeof h.url === 'string' &&
+      h.url === entry.location && h.body instanceof Uint8Array) : undefined;
+  if (!match || !(match.body instanceof Uint8Array)) return handlers;
+  const rawManifest = buildFixturePackEntries().find(x => x.name === 'voice-pack.manifest.json')?.body;
+  if (typeof rawManifest !== 'string') throw new Error('signed fixture manifest not present');
+  const candidate = {
+    status: 'UNSIGNED_CANDIDATE_ONLY',
+    repository: 'MythologIQ-Labs-LLC/FailSafe', version: '5.2.0',
+    sourceSha: 'a'.repeat(40),
+    filename: 'failsafe-voice-pack-5.2.0.tar.gz',
+    archiveSha256: sha256OfBytes(match.body),
+    manifestSha256: sha256OfBytes(Buffer.from(rawManifest)),
+    filesVerified: 6,
+  };
+  const signer = require('../../../scripts/voice-pack-auth.cjs') as {
+    signCandidate: (c: unknown, privatePem: string, publicPem: string) =>
+      { payload: Buffer; signature: Buffer };
+  };
+  const receipt = signer.signCandidate(candidate, activeSigner.privatePem, activeSigner.publicPem);
+  return [
+    ...handlers,
+    { url: /\/voice-pack-release\.json$/, body: receipt.payload },
+    { url: /\/voice-pack-release\.json\.sig$/, body: receipt.signature.toString('base64') + '\n' },
+  ];
+}
 const PLATFORM_REDIRECT_LIMIT = 20;
 const REQUIRED = [
   "piper/piper.min.js", "piper/piper_phonemize.wasm",
@@ -97,6 +147,7 @@ function mockResponse(handler: FetchHandler, requestedUrl: string, redirected = 
   };
 }
 export function installFetchStub(handlers: FetchHandler[], options: FetchStubOptions = {}) {
+  handlers = autoSignedHandlers(handlers);
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const find = (requested: string) => handlers.find(item => typeof item.url === "string"
     ? requested === item.url : item.url.test(requested));
@@ -128,5 +179,6 @@ export function originalFetch(): unknown { return ORIGINAL_FETCH; }
 /** The extractor no longer launches tar, so no spawn interception is needed. */
 export function makeInstallFixture(): InstallFixture {
   const globalStoragePath = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "failsafe-voice-pack-"));
-  return { globalStoragePath, restoreSpawn: () => {}, spawnCount: () => 0 };
+  const restorePublisher = registerTestPublisher();
+  return { globalStoragePath, restoreSpawn: restorePublisher, spawnCount: () => 0 };
 }

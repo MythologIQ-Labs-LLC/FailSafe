@@ -5,11 +5,18 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { createHash } from 'crypto';
+import { createHash, generateKeyPairSync } from 'crypto';
+import * as publisher from '../../voice-pack/publisher-auth';
 
 import { probeVoicePackState } from '../../voice-pack/voice-pack-detector';
 import { VOICE_ASSETS } from '../../voice-pack/safe-archive';
 import type { VoicePackManifest } from '../../voice-pack/types';
+
+interface TestSigner { privatePem: string; publicPem: string }
+let activeSigner: TestSigner | undefined;
+const signCandidate = require('../../../scripts/voice-pack-auth.cjs').signCandidate as
+  (candidate: unknown, privatePem: string, publicPem: string) =>
+    { payload: Buffer; signature: Buffer };
 
 function mkTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -54,11 +61,24 @@ function writePackFixture(globalStoragePath: string, opts: FixtureOptions): Voic
   };
 
   if (!opts.omitManifest) {
-    fs.writeFileSync(
-      path.join(packDir, 'voice-pack.manifest.json'),
-      JSON.stringify(manifest, null, 2),
-      'utf8',
-    );
+    const raw = Buffer.from(JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), raw);
+    if (activeSigner) {
+      const candidate = {
+        status: 'UNSIGNED_CANDIDATE_ONLY',
+        repository: 'MythologIQ-Labs-LLC/FailSafe',
+        version: opts.manifestVersion,
+        sourceSha: 'a'.repeat(40),
+        filename: 'failsafe-voice-pack-' + opts.manifestVersion + '.tar.gz',
+        archiveSha256: 'b'.repeat(64),
+        manifestSha256: createHash('sha256').update(raw).digest('hex'),
+        filesVerified: 6,
+      };
+      const signed = signCandidate(candidate, activeSigner.privatePem, activeSigner.publicPem);
+      fs.writeFileSync(path.join(packDir, 'voice-pack-release.json'), signed.payload);
+      fs.writeFileSync(path.join(packDir, 'voice-pack-release.json.sig'),
+        signed.signature.toString('base64') + '\n');
+    }
   }
   return manifest;
 }
@@ -66,11 +86,23 @@ function writePackFixture(globalStoragePath: string, opts: FixtureOptions): Voic
 suite('voice-pack-detector — probeVoicePackState', () => {
   let globalStoragePath: string;
 
+  let originalPublisher: typeof publisher.loadPinnedVoicePublisherKey;
   setup(() => {
     globalStoragePath = mkTempDir('failsafe-voice-pack-detector-');
+    const keys = generateKeyPairSync('ed25519');
+    activeSigner = {
+      privatePem: keys.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+      publicPem: keys.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    };
+    originalPublisher = publisher.loadPinnedVoicePublisherKey;
+    (publisher as { loadPinnedVoicePublisherKey: () => string })
+      .loadPinnedVoicePublisherKey = () => activeSigner!.publicPem;
   });
 
   teardown(() => {
+    (publisher as { loadPinnedVoicePublisherKey: () => string })
+      .loadPinnedVoicePublisherKey = originalPublisher;
+    activeSigner = undefined;
     fs.rmSync(globalStoragePath, { recursive: true, force: true });
   });
 

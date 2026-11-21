@@ -10,6 +10,7 @@ import * as path from 'path';
 import { createHash, randomBytes } from 'crypto';
 import { VOICE_ASSETS } from './safe-archive';
 import { assertRemovableVoicePack } from './uninstall-boundary';
+import * as publisher from './publisher-auth';
 
 export interface VoiceSwapOps {
   existsSync: typeof fs.existsSync;
@@ -27,6 +28,8 @@ export interface VoiceSwapResult {
 }
 
 const REQUIRED_FILES = new Set([...VOICE_ASSETS, 'voice-pack.manifest.json']);
+const SIGNED_FILES = ['voice-pack-release.json', 'voice-pack-release.json.sig'] as const;
+const KNOWN_FILES = new Set([...REQUIRED_FILES, ...SIGNED_FILES]);
 const REQUIRED_DIRS = new Set(['piper', 'whisper']);
 
 /** The copy phase must not trust a mutable staging directory's inventory. */
@@ -45,7 +48,7 @@ function copyPayload(
       io.mkdirSync(dest, { recursive: false, mode: 0o700 });
       copyPayload(src, dest, stagingTarball, io, seen, rel);
     } else if (ent.isFile()) {
-      if (!REQUIRED_FILES.has(rel) || seen.has(rel)) throw new Error('unlisted staged voice asset: ' + rel);
+      if (!KNOWN_FILES.has(rel) || seen.has(rel)) throw new Error('unlisted staged voice asset: ' + rel);
       io.copyFileSync(src, dest, fs.constants.COPYFILE_EXCL);
       seen.add(rel);
     } else {
@@ -58,8 +61,14 @@ function copyPayload(
 function verifyPrepared(prepared: string, seen: Set<string>, io: VoiceSwapOps, tarball: string): void {
   const requested = /^failsafe-voice-pack-(\d+\.\d+\.\d+)\.tar\.gz$/.exec(path.basename(tarball));
   if (!requested) throw new Error('unexpected voice archive filename for promotion');
-  if (seen.size !== REQUIRED_FILES.size || [...REQUIRED_FILES].some(name => !seen.has(name))) {
+  if ([...REQUIRED_FILES].some(name => !seen.has(name)) ||
+      seen.size !== REQUIRED_FILES.size +
+        SIGNED_FILES.filter(name => seen.has(name)).length) {
     throw new Error('incomplete staged voice asset inventory');
+  }
+  if (SIGNED_FILES.some(name => seen.has(name)) &&
+      !SIGNED_FILES.every(name => seen.has(name))) {
+    throw new Error('partial publisher attestation cannot be promoted');
   }
   let parsed: unknown;
   try { parsed = JSON.parse(io.readFileSync(path.join(prepared, 'voice-pack.manifest.json'), 'utf8')); }
@@ -84,6 +93,17 @@ function verifyPrepared(prepared: string, seen: Set<string>, io: VoiceSwapOps, t
         createHash('sha256').update(io.readFileSync(path.join(prepared, name))).digest('hex') !== value) {
       throw new Error('prepared voice asset checksum mismatch: ' + name);
     }
+  }
+  // Existing rollback unit fixtures may contain legacy unsigned packs.
+  // An installer-created signed pack must reverify the copied bytes, including
+  // the signed raw-manifest digest, before any existing pack is displaced.
+  if (SIGNED_FILES.every(name => seen.has(name))) {
+    const rawManifest = io.readFileSync(path.join(prepared, 'voice-pack.manifest.json'));
+    const manifestSha = createHash('sha256').update(rawManifest).digest('hex');
+    publisher.verifyInstalledVoiceAttestation(
+      io.readFileSync(path.join(prepared, SIGNED_FILES[0])),
+      io.readFileSync(path.join(prepared, SIGNED_FILES[1])),
+      publisher.loadPinnedVoicePublisherKey(), requested[1], manifestSha);
   }
 }
 

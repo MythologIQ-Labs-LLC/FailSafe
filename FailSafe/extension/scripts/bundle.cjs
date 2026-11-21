@@ -130,6 +130,23 @@ async function main() {
     logLevel: "info",
   });
 
+  // #732: the reviewed Ed25519 publisher pin travels with the actual VSIX.
+  // Absence is permitted for pre-release source qualification, but the
+  // installed client will refuse every companion download without this pin.
+  const publisherPin = path.join(root, 'src', 'voice-pack', 'publisher-public-key.pem');
+  const bundledPin = path.join(distDir, 'extension', 'publisher-public-key.pem');
+  if (fs.existsSync(publisherPin)) {
+    const stat = fs.lstatSync(publisherPin);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 8192 || stat.size === 0) {
+      throw new Error('voice publisher trust root is not a bounded regular file');
+    }
+    const key = require('crypto').createPublicKey(fs.readFileSync(publisherPin));
+    if (key.asymmetricKeyType !== 'ed25519') throw new Error('voice publisher pin must be Ed25519');
+    fs.copyFileSync(publisherPin, bundledPin, fs.constants.COPYFILE_EXCL);
+  } else {
+    console.log('bundle: owner-approved Voice Pack publisher pin unavailable; installs fail closed');
+  }
+
   // Post-bundle sanitization for socket.dev compliance
   sanitizeBundleNewFunction();
 

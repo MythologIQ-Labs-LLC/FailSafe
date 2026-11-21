@@ -14,6 +14,9 @@ import { createHash } from 'crypto';
 import { extractValidatedVoiceArchive } from './safe-archive';
 import { assertRemovableVoicePack } from './uninstall-boundary';
 import { fetchAllowlisted } from './allowlisted-fetch';
+import * as publisher from './publisher-auth';
+import { verifyPublisherBeforePromotion } from './release-attestation-fetch';
+import { refuseSignedVoiceDowngrade } from './signed-version-guard';
 import { atomicSwapVoicePack, preserveVoiceInstallFailure, reportVoiceCleanupWarning } from './transactional-swap';
 import {
   InstallReport,
@@ -57,7 +60,6 @@ async function downloadAndVerifyPack(
   if (actual !== expected) {
     throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
   }
-  emit(opts, { phase: 'verify', status: 'success' });
   logProvenance(opts, 'tarball', tarball, actual);
   logProvenance(opts, 'checksum', checksum, expected);
   return { tarball, checksum, actual };
@@ -100,10 +102,14 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
 
   // Refuse linked/untrusted storage before downloading unverified archive bytes.
   const storageRoot = requireVoiceStorageRoot(globalStoragePath);
+  // The canonical public key is part of the reviewed VSIX, never a field
+  // supplied by the caller or downloaded alongside the Voice Pack.
+  const pinnedPublisher = publisher.loadPinnedVoicePublisherKey();
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-staging-'));
   const stagingTarball = path.join(stagingDir, PACK_FILENAME(version));
 
   try {
+    await refuseSignedVoiceDowngrade(storageRoot, version);
     const { tarball, checksum, actual } = await downloadAndVerifyPack(opts, tarballUrl, checksumUrl, stagingTarball);
 
     emit(opts, { phase: 'extract', status: 'running' });
@@ -113,7 +119,21 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     emit(opts, { phase: 'extract', status: 'success' });
     emit(opts, { phase: 'manifest-verify', status: 'success' });
 
+    // Require a publisher signature bound to *this* archive and the exact
+    // verified manifest bytes, before displacing any existing installation.
+    const signed = await verifyPublisherBeforePromotion(version, actual,
+      path.join(stagingDir, 'voice-pack.manifest.json'), pinnedPublisher);
+    // Persist the exact authenticated receipt with the payload. On the next
+    // launch the read-only probe can independently reauthenticate the files.
+    fs.writeFileSync(path.join(stagingDir, 'voice-pack-release.json'),
+      signed.record, { flag: 'wx', mode: 0o600 });
+    fs.writeFileSync(path.join(stagingDir, 'voice-pack-release.json.sig'),
+      signed.signature, { flag: 'wx', mode: 0o600 });
+    emit(opts, { phase: 'verify', status: 'success' });
+
     const finalDir = path.join(storageRoot, 'voice-pack');
+    // A newer, still-authentic pack must not be replaced mid-download.
+    await refuseSignedVoiceDowngrade(storageRoot, version);
     const swap = atomicSwapVoicePack(stagingDir, finalDir, stagingTarball);
     for (const warning of swap.cleanupWarnings) {
       reportVoiceCleanupWarning(opts.output, warning);
@@ -209,7 +229,8 @@ function sha256OfFile(p: string): string {
 /** Classify by the failure prefix only; a message can quote a hostname (#538). */
 function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
   if (msg.startsWith('download failed')) return 'download';
-  if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch')) return 'verify';
+  if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch') ||
+      msg.startsWith('publisher authentication refused')) return 'verify';
   if (msg.startsWith('tar extract')) return 'extract';
   if (/^(extracted |manifest )/.test(msg)) return 'manifest-verify';
   // A failed filesystem promotion or unsafe storage root must not tell the
