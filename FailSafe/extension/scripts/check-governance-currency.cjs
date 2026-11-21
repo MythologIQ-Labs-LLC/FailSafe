@@ -92,6 +92,26 @@ function indexReviewDate(governance) {
   return releaseDate(matches[0][1]);
 }
 
+/**
+ * Verify that the current Tier-1 version authority is registered.
+ * This checks the explicit manifest declaration, not historical references
+ * or the full inventory of non-Markdown governance artifacts.
+ */
+function tier1ManifestIssue(governance) {
+  const lines = governance.split(/\r?\n/);
+  const start = lines.findIndex(line => /^## Tier 1(?:\s|$)/.test(line));
+  if (start < 0) return 'Missing canonical Tier 1 registry section';
+  const next = lines.findIndex((line, i) => i > start && /^## /.test(line));
+  const tier = lines.slice(start + 1, next < 0 ? undefined : next);
+  const rows = tier.filter(line => /^\|/.test(line) && line.split('|')[2]?.trim().startsWith('Authoritative version source'));
+  if (rows.length !== 1) return `Expected exactly one Tier 1 version authority row; found ${rows.length}`;
+  const declared = rows[0].split('|')[1]?.trim();
+  if (declared !== '`FailSafe/extension/package.json`') {
+    return `Tier 1 version authority declares ${declared || 'no path'}, but the canonical manifest is FailSafe/extension/package.json; verify the committed tree and reconcile the registry`;
+  }
+  return null;
+}
+
 /** Returns a report, not an audit verdict or publication authorization. */
 function checkCurrency(rootArg) {
   const source = loadSources(rootArg);
@@ -122,6 +142,9 @@ function checkCurrency(rootArg) {
   if (reviewedAt < publishedAt) {
     error('FC004', REL.governance, `Last Reviewed ${reviewedAt} predates CHANGELOG ${version} release date ${publishedAt}`);
   }
+
+  const manifestIssue = tier1ManifestIssue(source.governance);
+  if (manifestIssue) error('FC006', REL.governance, manifestIssue);
 
   const featureLead = source.features.slice(0, 550).match(/Single canonical cross-reference[^\n]*?v(\d+\.\d+\.\d+)/);
   if (featureLead && featureLead[1] !== version) {
