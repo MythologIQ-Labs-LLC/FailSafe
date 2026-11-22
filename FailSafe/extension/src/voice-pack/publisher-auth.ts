@@ -60,7 +60,9 @@ function parseSignedRelease(raw: Buffer): SignedRelease {
 
 function parseSignature(raw: Buffer): Buffer {
   if (raw.length < 86 || raw.length > 90) return refuse('invalid signature encoding');
-  const text = raw.toString('ascii');
+  // latin1 retains the high bit. Node's 'ascii' decoder silently strips it,
+  // allowing a mutated non-ASCII signature file to alias valid Base64 bytes.
+  const text = raw.toString('latin1');
   if (!/^[A-Za-z0-9+/]{86}==\n$/.test(text)) return refuse('invalid signature encoding');
   const result = Buffer.from(text.trimEnd(), 'base64');
   if (result.length !== 64 || result.toString('base64') + '\n' !== text) {

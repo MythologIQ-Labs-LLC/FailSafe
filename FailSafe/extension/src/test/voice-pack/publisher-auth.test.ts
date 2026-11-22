@@ -64,6 +64,17 @@ suite('publisher-auth — signer/client cryptographic contract #732', () => {
     assert.throws(() => verifyWith(x, { sig: Buffer.alloc(2) }), /signature encoding/);
   });
 
+  test('high-bit-altered signature bytes cannot alias canonical Base64', () => {
+    const x = signed();
+    const canonical = Buffer.from(x.sig.toString('base64') + '\n', 'ascii');
+    const altered = Buffer.from(canonical);
+    altered[0] |= 0x80;
+    assert.notDeepEqual(altered, canonical);
+    assert.throws(() => verifyVoicePublisherAttestation(
+      x.receipt, altered, x.pem, '6.1.0', x.archive, x.manifest),
+    /signature encoding/);
+  });
+
   test('a signed record cannot substitute a different extension version', () => {
     const x = signed();
     assert.throws(() => verifyVoicePublisherAttestation(
