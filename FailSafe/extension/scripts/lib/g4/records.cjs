@@ -128,11 +128,23 @@ async function writeNew(repoRoot, rels, make) {
     throw err;
   }
 
+  // Capture lock identity before any asynchronous TSA/key operation. A later
+  // writer must not trick cleanup into recursively deleting a replacement dir.
+  const ownedLock = fs.lstatSync(lock);
+  if (!ownedLock.isDirectory() || ownedLock.isSymbolicLink() || ownedLock.ino === 0) {
+    throw refuse("RECORD_BUSY", "G4 lock directory ownership could not be established; inspect it manually");
+  }
+  let ownedStage = null;
   const published = [];
   let retainLock = false;
   try {
     refuseExisting(targets, rels); // a writer may have raced the initial preflight
     const stage = fs.mkdtempSync(path.join(lock, "stage-"));
+    const stageInfo = fs.lstatSync(stage);
+    if (!stageInfo.isDirectory() || stageInfo.isSymbolicLink() || stageInfo.ino === 0) {
+      throw refuse("RECORD_BUSY", "G4 stage directory ownership could not be established; inspect it manually");
+    }
+    ownedStage = { path: stage, dev: stageInfo.dev, ino: stageInfo.ino };
     const out = await make(stage);
     if (!out || typeof out !== "object" || Array.isArray(out) ||
         Object.keys(out).length !== rels.length || rels.some((rel) => !Object.hasOwn(out, rel))) {
@@ -184,7 +196,30 @@ async function writeNew(repoRoot, rels, make) {
     }
     throw primary;
   } finally {
-    if (!retainLock) fs.rmSync(lock, { recursive: true, force: true });
+    if (!retainLock) {
+      // Never recursively delete an unknown replacement lock, a moved stage,
+      // or unrelated content injected under the owned lock. Any ambiguity is
+      // preserved for operator inspection, rather than silently lost.
+      let current;
+      try { current = fs.lstatSync(lock); }
+      catch { throw refuse("RECORD_BUSY", "G4 owned lock disappeared; manual inspection required"); }
+      if (!current.isDirectory() || current.isSymbolicLink() ||
+          current.dev !== ownedLock.dev || current.ino !== ownedLock.ino) {
+        throw refuse("RECORD_BUSY", "G4 lock identity changed; foreign directory preserved for manual inspection");
+      }
+      const entries = fs.readdirSync(lock);
+      if (ownedStage) {
+        const stageNow = fs.lstatSync(ownedStage.path);
+        if (!stageNow.isDirectory() || stageNow.isSymbolicLink() ||
+            stageNow.dev !== ownedStage.dev || stageNow.ino !== ownedStage.ino ||
+            entries.length !== 1 || entries[0] !== path.basename(ownedStage.path)) {
+          throw refuse("RECORD_BUSY", "G4 lock contents changed; manual inspection required");
+        }
+      } else if (entries.length) {
+        throw refuse("RECORD_BUSY", "G4 lock has unowned content; manual inspection required");
+      }
+      fs.rmSync(lock, { recursive: true, force: true });
+    }
   }
 }
 
