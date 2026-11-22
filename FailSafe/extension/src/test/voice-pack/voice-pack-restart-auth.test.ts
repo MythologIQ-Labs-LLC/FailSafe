@@ -77,6 +77,17 @@ suite('voice-pack signed restart evidence #732', () => {
     assert.equal((await probeVoicePackState(root, '5.2.0')).state, 'corrupt');
   });
 
+  test('high-bit signature encoding is refused after restart', async () => {
+    const { dir } = signedPack(root);
+    const file = path.join(dir, 'voice-pack-release.json.sig');
+    const canonical = fs.readFileSync(file);
+    const changed = Buffer.from(canonical);
+    changed[0] |= 0x80;
+    assert.notDeepEqual(changed, canonical);
+    fs.writeFileSync(file, changed);
+    assert.equal((await probeVoicePackState(root, '5.2.0')).state, 'corrupt');
+  });
+
   test('a forged local manifest and matching forged executable are still corrupt', async () => {
     const { dir, manifest } = signedPack(root);
     const asset = VOICE_ASSETS[0];
