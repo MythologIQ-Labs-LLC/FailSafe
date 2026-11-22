@@ -239,3 +239,41 @@ test("G4 #660: mismatched record inventory cannot publish", async () => {
     assert.equal(fs.existsSync(path.join(f.root, "escape")), false);
   } finally { f.cleanup(); }
 });
+
+
+test("G4 #660: replaced lock after asynchronous staging cannot delete foreign evidence", async () => {
+  const f = fixture();
+  try {
+    let foreignLock;
+    let movedLock;
+    await assert.rejects(writeNew(f.root, rels, async (stage) => {
+      foreignLock = path.dirname(stage);
+      movedLock = foreignLock + ".owned-original";
+      fs.renameSync(foreignLock, movedLock);
+      fs.mkdirSync(foreignLock);
+      fs.writeFileSync(path.join(foreignLock, "foreign-evidence.json"), "FOREIGN-PRESERVE");
+      throw new Error("injected asynchronous lock swap");
+    }), /G4 lock identity changed/);
+    assert.equal(fs.readFileSync(path.join(foreignLock, "foreign-evidence.json"), "utf8"),
+      "FOREIGN-PRESERVE", "an unrelated replacement lock cannot be removed by cleanup");
+    assert.ok(fs.existsSync(movedLock), "original lock and staged evidence remain for inspection");
+    assert.ok(f.targets.every(t => !fs.existsSync(t)));
+  } finally { f.cleanup(); }
+});
+
+test("G4 #660: unexpected file inside owned lock is retained for manual investigation", async () => {
+  const f = fixture();
+  try {
+    let lock;
+    await assert.rejects(writeNew(f.root, rels, async (stage) => {
+      lock = path.dirname(stage);
+      fs.writeFileSync(path.join(lock, "foreign-notice.json"), "DO-NOT-DELETE");
+      return f.maker();
+    }), /G4 lock contents changed/);
+    assert.equal(fs.readFileSync(path.join(lock, "foreign-notice.json"), "utf8"), "DO-NOT-DELETE");
+    assert.equal(fs.existsSync(lock), true, "lock must remain as a fail-closed incident signal");
+    assert.ok(f.targets.every(t => fs.lstatSync(t).isFile()),
+      "all three atomic links may already have published; never misreport rollback");
+    await assert.rejects(writeNew(f.root, rels, f.maker), /never replaced/);
+  } finally { f.cleanup(); }
+});
