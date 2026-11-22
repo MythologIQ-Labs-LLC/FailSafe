@@ -310,11 +310,14 @@ function cleanupVoiceOutputs(io, staged, moved) {
     try {
       const current = existingVendorEntry(io, item.pending);
       if (!current) continue;
-      // A different inode at this path is foreign. Do not delete it on rollback.
-      // A failed partial write has no captured inode; retain legacy best-effort cleanup.
-      if (item.pendingWritten &&
-          (item.pendingWritten.ino === 0 || current.dev !== item.pendingWritten.dev ||
-           current.ino !== item.pendingWritten.ino)) continue;
+      // A write that failed before recording an inode has UNKNOWN ownership.
+      // It may have hit EEXIST after another actor created this path. Never
+      // delete an unowned entry merely because it uses our random filename.
+      // A partial own write must be inspected/removed by the operator; the
+      // inventory guard refuses to ship leftover .new-* files in the VSIX.
+      if (!item.pendingWritten || !current.isFile() || current.isSymbolicLink() ||
+          item.pendingWritten.ino === 0 || current.dev !== item.pendingWritten.dev ||
+          current.ino !== item.pendingWritten.ino) continue;
       io.rmSync(item.pending, { force: true });
     } catch { /* unpromoted staging cleanup best-effort */ }
   }
