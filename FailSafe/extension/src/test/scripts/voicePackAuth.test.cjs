@@ -8,6 +8,7 @@ const path = require("node:path");
 const cp = require("node:child_process");
 const { signCandidate, verifySignedCandidate, publisherKeyId } =
   require("../../../scripts/voice-pack-auth.cjs");
+const { writeSignedArtifacts } = require("../../../scripts/voice-pack-sign-candidate.cjs");
 
 const candidate = () => ({
   status: "UNSIGNED_CANDIDATE_ONLY", repository: "MythologIQ-Labs-LLC/FailSafe",
@@ -118,5 +119,81 @@ test("signer CLI refuses when no owner key or signing credential is provisioned"
     assert.deepEqual(fs.readdirSync(dist), [], "no partial signed release artifacts");
   } finally {
     fs.rmSync(dist, { recursive: true, force: true });
+  }
+});
+
+
+test("signer rollback preserves a foreign replacement after signature EEXIST", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "voice-sign-foreign-"));
+  const record = path.join(dir, "voice-pack-release.json");
+  const sig = record + ".sig";
+  try {
+    const io = {
+      ...fs,
+      openSync(file, flags, mode) {
+        if (file === sig) {
+          fs.renameSync(record, record + ".original");
+          fs.writeFileSync(record, "FOREIGN-RECORD");
+          fs.writeFileSync(sig, "FOREIGN-SIGNATURE");
+        }
+        return fs.openSync(file, flags, mode);
+      },
+    };
+    assert.throws(() => writeSignedArtifacts(dir, Buffer.from("SIGNED-RECORD\n"),
+      Buffer.alloc(64, 7), io), /manual inspection required/);
+    assert.equal(fs.readFileSync(record, "utf8"), "FOREIGN-RECORD",
+      "rollback must never delete an inode it did not create");
+    assert.equal(fs.readFileSync(sig, "utf8"), "FOREIGN-SIGNATURE");
+    assert.equal(fs.readFileSync(record + ".original", "utf8"), "SIGNED-RECORD\n");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("signer signature collision rolls back only its own first output", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "voice-sign-collision-"));
+  const record = path.join(dir, "voice-pack-release.json");
+  const sig = record + ".sig";
+  try {
+    const io = {
+      ...fs,
+      openSync(file, flags, mode) {
+        if (file === sig) fs.writeFileSync(sig, "PRIOR-SIGNATURE", { flag: "wx" });
+        return fs.openSync(file, flags, mode);
+      },
+    };
+    assert.throws(() => writeSignedArtifacts(dir, Buffer.from("SIGNED-RECORD\n"),
+      Buffer.alloc(64, 3), io), err => err.code === "EEXIST");
+    assert.equal(fs.existsSync(record), false,
+      "only the file whose exact inode was recorded may be removed");
+    assert.equal(fs.readFileSync(sig, "utf8"), "PRIOR-SIGNATURE",
+      "the competing signature must never be removed");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("signer partial write is rolled back using the owned descriptor inode", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "voice-sign-enospc-"));
+  const record = path.join(dir, "voice-pack-release.json");
+  const sig = record + ".sig";
+  let calls = 0;
+  try {
+    const io = {
+      ...fs,
+      writeSync(fd, data, offset, length, position) {
+        if (++calls === 1) {
+          return fs.writeSync(fd, data, offset, Math.max(1, Math.floor(length / 2)), position);
+        }
+        if (calls === 2) throw Object.assign(new Error("injected ENOSPC"), { code: "ENOSPC" });
+        return fs.writeSync(fd, data, offset, length, position);
+      },
+    };
+    assert.throws(() => writeSignedArtifacts(dir, Buffer.from("SIGNED-RECORD-CONTENT\n"),
+      Buffer.alloc(64, 4), io), /injected ENOSPC/);
+    assert.equal(fs.existsSync(record), false, "owned partial record must be removed");
+    assert.equal(fs.existsSync(sig), false, "failed candidate must never have a signature");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 });
