@@ -275,6 +275,40 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     } finally { releaseDetail(); ctx.cleanup(); }
   });
 
+  test('#703: delayed candidates from a previous intent cannot overwrite the newly selected view', async () => {
+    const ctx = setupDom();
+    const g = global as unknown as { fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown> };
+    const prior = g.fetch;
+    let announce!: () => void;
+    let release!: () => void;
+    let delayFirst = true;
+    const started = new Promise<void>((resolve) => { announce = resolve; });
+    const suspended = new Promise<void>((resolve) => { release = resolve; });
+    g.fetch = async (url, init) => {
+      if (delayFirst && url === '/api/v1/delivery/candidates') {
+        delayFirst = false;
+        announce();
+        await suspended;
+      }
+      return prior(url, init);
+    };
+    try {
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      const earlier = renderer.refresh();
+      await started;
+      renderer.selectedId = SEALED;
+      await renderer.refresh();
+      const newPanel = ctx.doc.querySelector('.cc-dlv');
+      assert.ok(newPanel);
+      assert.match(newPanel.textContent || '', /PROJ-6/);
+      release();
+      await earlier;
+      assert.equal(ctx.doc.querySelector('.cc-dlv'), newPanel, 'stale candidates must not repaint');
+      assert.equal(renderer.selectedId, SEALED);
+      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null);
+    } finally { release(); ctx.cleanup(); }
+  });
+
   test('#703: an old failed GET must not overwrite a later successful Delivery view', async () => {
     const ctx = setupDom();
     const g = global as unknown as { fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown> };
