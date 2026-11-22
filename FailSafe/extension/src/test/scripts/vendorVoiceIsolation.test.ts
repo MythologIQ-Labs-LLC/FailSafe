@@ -75,7 +75,7 @@ suite('voice vendor isolation #707', () => {
     assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
   }));
 
-  test('partial staged write is removed, previous browser asset remains unchanged', () => temporary(root => {
+  test('unknown-ownership partial staging remains quarantined, previous asset is unchanged', () => temporary(root => {
     const vendor = path.join(root, 'vendor');
     const dir = path.join(vendor, 'piper');
     fs.mkdirSync(dir, { recursive: true });
@@ -95,7 +95,44 @@ suite('voice vendor isolation #707', () => {
       new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, ops, root,
     ), /simulated disk-full/);
     assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
-    assert.deepEqual(fs.readdirSync(dir).filter(x => x.includes('.new-') || x.includes('.old-')), []);
+    const leftovers = fs.readdirSync(dir).filter(x => x.includes('.new-') || x.includes('.old-'));
+    assert.equal(leftovers.length, 1, 'unknown ownership must not cause automatic deletion');
+    assert.match(leftovers[0], /\.new-/);
+    assert.equal(fs.readFileSync(path.join(dir, leftovers[0]), 'utf8'), 'PARTIAL');
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry/);
+  }));
+
+  test('concurrent foreign staged collision survives an exclusive-write EEXIST', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let intruded = '';
+    const ops = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+                    opts?: fs.WriteFileOptions) {
+        if (String(file).includes('.new-')) {
+          intruded = String(file);
+          fs.writeFileSync(file, 'FOREIGN-STAGED-ENTRY', { flag: 'wx' });
+          // The real exclusive create is now required to fail EEXIST.
+          fs.writeFileSync(file, data, opts);
+        } else {
+          fs.writeFileSync(file, data, opts);
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, ops, root,
+    ), /EEXIST/);
+    assert.ok(intruded, 'foreign staging collision must have been exercised');
+    assert.equal(fs.readFileSync(target, 'utf8'), 'ORIGINAL');
+    assert.equal(fs.readFileSync(intruded, 'utf8'), 'FOREIGN-STAGED-ENTRY',
+      'the rollback must not delete an entry whose inode it never claimed');
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry/);
   }));
 
   test('dangling vendor destination link refuses without staging or losing earlier assets', function () {
