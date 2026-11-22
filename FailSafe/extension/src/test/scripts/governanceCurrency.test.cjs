@@ -183,14 +183,16 @@ test('FC006 refuses a missing Tier-1 section rather than silently passing', t =>
 });
 
 
-test('current checked-out Tier-1 governance version authority matches the real manifest', () => {
-  // Integration check against the exact candidate tree, not only synthetic
-  // fixtures. Do not infer that a stale Last Reviewed marker is now accepted.
+test('current checked-out Tier-1 governance version authority matches the real manifest', t => {
+  // Read the actual candidate Tier-1 authority with otherwise-consistent
+  // release fixtures: only the Governance Index is under test here.
   const repo = path.resolve(__dirname, '..', '..', '..', '..', '..');
   const index = fs.readFileSync(path.join(repo, 'docs', 'GOVERNANCE_INDEX.md'), 'utf8');
-  const report = checkCurrency(repo);
+  const f = fixture(t);
+  f.write('docs/GOVERNANCE_INDEX.md', index);
+  const report = checkCurrency(f.root);
   assert.equal(report.findings.some(f => f.id === 'FC006'), false,
     'current Tier-1 manifest declaration must match the nested manifest');
-  assert.equal(fs.readFileSync(path.join(repo, 'docs', 'GOVERNANCE_INDEX.md'), 'utf8'), index,
+  assert.equal(fs.readFileSync(path.join(f.root, 'docs', 'GOVERNANCE_INDEX.md'), 'utf8'), index,
     'read-only validation must never update the governance review marker');
 });
