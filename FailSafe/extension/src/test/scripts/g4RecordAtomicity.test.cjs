@@ -277,3 +277,25 @@ test("G4 #660: unexpected file inside owned lock is retained for manual investig
     await assert.rejects(writeNew(f.root, rels, f.maker), /never replaced/);
   } finally { f.cleanup(); }
 });
+
+
+test("G4 #660: replaced stage directory cannot be deleted as owned evidence", async () => {
+  const f = fixture();
+  try {
+    let stage;
+    let moved;
+    await assert.rejects(writeNew(f.root, rels, async (ownedStage) => {
+      stage = ownedStage;
+      moved = stage + ".owned-original";
+      fs.renameSync(stage, moved);
+      fs.mkdirSync(stage);
+      fs.writeFileSync(path.join(stage, "foreign-token.tsr"), "FOREIGN-TIMESTAMP");
+      throw new Error("injected stage swap before record generation");
+    }), /G4 lock contents changed/);
+    assert.equal(fs.readFileSync(path.join(stage, "foreign-token.tsr"), "utf8"),
+      "FOREIGN-TIMESTAMP", "unowned replacement stage content must be preserved");
+    assert.ok(fs.existsSync(moved), "original owned stage is retained as evidence");
+    assert.equal(fs.existsSync(path.dirname(stage)), true, "ambiguous lock stays closed");
+    assert.ok(f.targets.every(t => !fs.existsSync(t)), "the aborted builder published no final records");
+  } finally { f.cleanup(); }
+});
