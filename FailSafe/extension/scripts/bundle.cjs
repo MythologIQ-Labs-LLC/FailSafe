@@ -1,7 +1,7 @@
 const esbuild = require("esbuild");
 const fs = require("fs");
 const path = require("path");
-const { assertVendorAncestry } = require('./vendor-voice.cjs');
+const { assertVendorAncestry, assertVoiceVendorInventory } = require('./vendor-voice.cjs');
 
 const root = path.resolve(__dirname, "..");
 const distDir = path.join(root, "dist");
@@ -38,6 +38,9 @@ function verifyVendoredVoiceAssets() {
       throw new Error('Invalid browser voice asset: ' + relative + '. Run npm run vendor:voice');
     }
   }
+  // Do not recursively copy abandoned .new/.old transaction files or unreviewed
+  // voice payloads merely because the six approved assets exist.
+  assertVoiceVendorInventory(path.join(root, 'src', 'roadmap', 'ui', 'vendor'), fs, root);
 }
 
 function sanitizeBetterSqlite3Metadata() {
