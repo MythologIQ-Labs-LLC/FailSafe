@@ -32,6 +32,83 @@ function requirePrivateKey() {
   if (bytes.toString("base64") !== b64) throw new Error("invalid signing credential encoding");
   return bytes.toString("utf8");
 }
+/**
+ * Signer output is never published or overwritten. Retain inode identity from
+ * the exclusive file descriptor before writing bytes. Rollback may unlink only
+ * exact regular-file inodes owned by this invocation; another writer's
+ * replacement is preserved with an explicit manual-inspection refusal.
+ * This is a synchronous best-effort rollback, NOT a race-free filesystem
+ * capability or multi-file crash-atomic transaction.
+ */
+function writeSignedArtifacts(dir, payload, signature, io = fs) {
+  const folder = io.lstatSync(dir);
+  if (!folder.isDirectory() || folder.isSymbolicLink() || folder.ino === 0) {
+    throw new Error("voice signer output directory is not a verifiable real directory");
+  }
+  const recordPath = path.join(dir, "voice-pack-release.json");
+  const sigPath = recordPath + ".sig";
+  const writes = [
+    { file: recordPath, bytes: Buffer.from(payload) },
+    { file: sigPath, bytes: Buffer.from(signature.toString("base64") + "\n", "utf8") },
+  ];
+  const owned = [];
+  try {
+    for (const item of writes) {
+      if (!item.bytes.length || item.bytes.length > 65536) {
+        throw new Error("voice signer output is missing or oversized");
+      }
+      const fd = io.openSync(item.file, "wx", 0o600);
+      try {
+        const stat = io.fstatSync(fd);
+        if (!stat.isFile() || stat.ino === 0) {
+          throw new Error("voice signer cannot prove exclusive file identity");
+        }
+        owned.push({ file: item.file, dev: stat.dev, ino: stat.ino });
+        for (let offset = 0; offset < item.bytes.length;) {
+          const wrote = io.writeSync(fd, item.bytes, offset, item.bytes.length - offset, offset);
+          if (!Number.isInteger(wrote) || wrote <= 0) {
+            throw new Error("voice signer output write made no progress");
+          }
+          offset += wrote;
+        }
+        io.fsyncSync(fd);
+      } finally {
+        io.closeSync(fd);
+      }
+    }
+  } catch (primary) {
+    const warnings = [];
+    let currentFolder;
+    try { currentFolder = io.lstatSync(dir); }
+    catch (e) { warnings.push(new Error("signing output directory disappeared")); }
+    if (!currentFolder || !currentFolder.isDirectory() || currentFolder.isSymbolicLink() ||
+        currentFolder.dev !== folder.dev || currentFolder.ino !== folder.ino) {
+      warnings.push(new Error("signing output directory identity changed"));
+    } else {
+      for (const item of owned.reverse()) {
+        let current;
+        try { current = io.lstatSync(item.file); }
+        catch (e) {
+          if (e.code !== "ENOENT") warnings.push(new Error("unable to inspect owned signing output"));
+          continue;
+        }
+        if (!current.isFile() || current.isSymbolicLink() ||
+            current.dev !== item.dev || current.ino !== item.ino) {
+          warnings.push(new Error("foreign signing output preserved: " + path.basename(item.file)));
+          continue;
+        }
+        try { io.unlinkSync(item.file); }
+        catch (e) { warnings.push(new Error("owned signing output cleanup failed: " + e.message)); }
+      }
+    }
+    if (warnings.length) {
+      throw new AggregateError([primary, ...warnings],
+        "voice signer refused: unknown output ownership; manual inspection required");
+    }
+    throw primary;
+  }
+}
+
 function signApprovedCandidate(dir, version, sourceSha) {
   const pub = requirePublisherKey();
   const priv = requirePrivateKey();
@@ -40,22 +117,7 @@ function signApprovedCandidate(dir, version, sourceSha) {
   assert.deepEqual(recorded, verified, "candidate receipt not bound to reverified archive");
   const signed = signCandidate(verified, priv, pub);
   verifySignedCandidate(verified, signed.payload, signed.signature, pub);
-  const recordPath = path.join(dir, "voice-pack-release.json");
-  const sigPath = recordPath + ".sig";
-  let createdRecord = false;
-  let createdSignature = false;
-  try {
-    fs.writeFileSync(recordPath, signed.payload, { flag: "wx", mode: 0o600 });
-    createdRecord = true;
-    fs.writeFileSync(sigPath, signed.signature.toString("base64") + "\n",
-      { flag: "wx", mode: 0o600 });
-    createdSignature = true;
-  } catch (e) {
-    // Never remove a pre-existing record/signature belonging to another run.
-    if (createdSignature) fs.rmSync(sigPath, { force: true });
-    if (createdRecord) fs.rmSync(recordPath, { force: true });
-    throw e;
-  }
+  writeSignedArtifacts(dir, signed.payload, signed.signature);
   return { status: "SIGNED_CANDIDATE_NOT_PUBLISHED", version, sourceSha,
     archiveSha256: verified.archiveSha256 };
 }
@@ -70,4 +132,4 @@ if (require.main === module) {
     process.exitCode = 1;
   }
 }
-module.exports = { signApprovedCandidate };
+module.exports = { signApprovedCandidate, writeSignedArtifacts };
