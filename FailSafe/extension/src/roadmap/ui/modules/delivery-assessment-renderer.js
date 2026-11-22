@@ -192,6 +192,7 @@ export class DeliveryAssessmentRenderer {
     // Unsubmitted review text survives an overlapping refresh but is scoped to its intent and commit.
     this.reviewNoteDraft = null;
     this.reviewInFlight = false;
+    this.refreshGeneration = 0;
   }
 
   ensureStyle() {
@@ -212,23 +213,30 @@ export class DeliveryAssessmentRenderer {
 
   async refresh() {
     if (!this.container) return;
+    // An older GET must never replace a newer selection or repaint its view.
+    const generation = ++this.refreshGeneration;
     this.ensureStyle();
     let state;
     try {
       const listing = await getJson('/api/v1/delivery/intents');
+      if (generation !== this.refreshGeneration) return;
       if (listing.integrity === 'invalid') { this.paint(this.container, { invalid: true }); return; }
       const intents = Array.isArray(listing.intents) ? listing.intents : [];
       const chosen = intents.find((i) => i.id === this.selectedId) || intents.find((i) => i.active) || intents[0];
       if (!chosen) { this.paint(this.container, { intents }); return; }
       this.selectedId = chosen.id;
       const view = await getJson(`/api/v1/delivery/intents/${encodeURIComponent(chosen.id)}`);
+      if (generation !== this.refreshGeneration) return;
       const candidates = view.linkable ? await getJson('/api/v1/delivery/candidates') : null;
+      if (generation !== this.refreshGeneration) return;
       state = { intents, view, candidates };
     } catch (err) {
+      if (generation !== this.refreshGeneration) return;
       this.paint(this.container, { error: `Could not load the delivery assessment: ${err && err.message ? err.message : err}` });
       return;
     }
     // Paint into the container current at completion (the TabGroup may have swapped it).
+    if (generation !== this.refreshGeneration) return;
     this.paint(this.container, state);
   }
 
