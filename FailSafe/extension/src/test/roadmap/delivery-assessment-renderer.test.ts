@@ -239,6 +239,75 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
+  test('#703: a stale detail response cannot repaint a newer selected intent', async () => {
+    const ctx = setupDom();
+    const g = global as unknown as { fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown> };
+    const prior = g.fetch;
+    let announceDetail!: () => void;
+    let releaseDetail!: () => void;
+    let delayFirst = true;
+    const started = new Promise<void>((resolve) => { announceDetail = resolve; });
+    const suspended = new Promise<void>((resolve) => { releaseDetail = resolve; });
+    g.fetch = async (url, init) => {
+      if (delayFirst && url === `/api/v1/delivery/intents/${ACTIVE}`) {
+        delayFirst = false;
+        announceDetail();
+        await suspended;
+      }
+      return prior(url, init);
+    };
+    try {
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      const earlier = renderer.refresh();
+      await started;
+      renderer.selectedId = SEALED; // Operator chose another intent while the detail GET was pending.
+      await renderer.refresh();
+      const currentPanel = ctx.doc.querySelector('.cc-dlv');
+      assert.ok(currentPanel, 'the newly chosen intent must render');
+      assert.match(currentPanel.textContent || '', /PROJ-6/);
+      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null, 'sealed intent cannot be reviewed');
+      releaseDetail();
+      await earlier;
+      assert.equal(ctx.doc.querySelector('.cc-dlv'), currentPanel,
+        'an older response must not replace the newer selected view');
+      assert.equal(renderer.selectedId, SEALED);
+      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null);
+    } finally { releaseDetail(); ctx.cleanup(); }
+  });
+
+  test('#703: an old failed GET must not overwrite a later successful Delivery view', async () => {
+    const ctx = setupDom();
+    const g = global as unknown as { fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown> };
+    const prior = g.fetch;
+    let announce!: () => void;
+    let release!: () => void;
+    let delayFirst = true;
+    const started = new Promise<void>((resolve) => { announce = resolve; });
+    const suspended = new Promise<void>((resolve) => { release = resolve; });
+    g.fetch = async (url, init) => {
+      if (delayFirst && url === '/api/v1/delivery/intents') {
+        delayFirst = false;
+        announce();
+        await suspended;
+        throw new Error('stale transport failure');
+      }
+      return prior(url, init);
+    };
+    try {
+      const renderer = new DeliveryAssessmentRenderer('workspace');
+      const earlier = renderer.refresh();
+      await started;
+      await renderer.refresh();
+      const currentPanel = ctx.doc.querySelector('.cc-dlv');
+      assert.ok(currentPanel);
+      assert.match(currentPanel.textContent || '', /PROJ-7/);
+      release();
+      await earlier;
+      assert.equal(ctx.doc.querySelector('.cc-dlv'), currentPanel);
+      assert.doesNotMatch(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /stale transport failure/);
+    } finally { release(); ctx.cleanup(); }
+  });
+
   for (const nextDraft of ['new unsent draft', 'submitted earlier']) {
     test(`#703: a later ${nextDraft === 'submitted earlier' ? 'same-text' : 'different-text'} edit survives a prior POST`, async () => {
       const ctx = setupDom();
