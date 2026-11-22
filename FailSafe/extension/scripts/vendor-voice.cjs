@@ -121,6 +121,68 @@ function assertVendorAncestry(target, io, trustedRoot, allowMissing = false) {
   }
 }
 
+/** lstat, not existsSync: a dangling symlink is still an occupied pathname. */
+function existingVendorEntry(io, file) {
+  try { return io.lstatSync(file); }
+  catch (err) {
+    if (err && err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+function requireRegularVendorTarget(io, file) {
+  const stat = existingVendorEntry(io, file);
+  if (stat && (!stat.isFile() || stat.isSymbolicLink())) {
+    throw new Error('unexpected vendor destination type');
+  }
+  return stat;
+}
+
+/**
+ * Metadata equality detects a replaced regular inode and routine edits to
+ * that inode between preflight and promotion. This is NOT an atomic guarantee
+ * against a concurrent same-user actor changing the path after rechecking.
+ */
+function sameVendorEntry(before, after) {
+  if (!before || !after) return before === after;
+  return before.dev === after.dev &&
+    before.ino === after.ino &&
+    before.size === after.size &&
+    before.mtimeMs === after.mtimeMs &&
+    before.ctimeMs === after.ctimeMs;
+}
+
+/**
+ * The build recursively copies the UI tree. Fail closed if a staged, backup,
+ * linked or otherwise unapproved voice file would be shipped in the VSIX.
+ * This is source-tree hygiene, not a replacement for pinned-byte validation.
+ */
+function assertVoiceVendorInventory(root = VENDOR, io = fs, trustedRoot = ROOT) {
+  const allowed = {
+    piper: new Set(['VENDOR.md', 'piper.min.js', 'piper_phonemize.wasm', 'piper_phonemize.data']),
+    whisper: new Set(['VENDOR.md', 'transformers.min.js', 'ort-wasm-simd.wasm', 'ort-wasm-simd-threaded.wasm']),
+  };
+  for (const [scope, files] of Object.entries(allowed)) {
+    const dir = path.join(root, scope);
+    assertVendorAncestry(dir, io, trustedRoot);
+    const directoryInfo = io.lstatSync(dir);
+    if (!directoryInfo.isDirectory() || directoryInfo.isSymbolicLink()) {
+      throw new Error('invalid browser voice vendor directory: ' + scope);
+    }
+    for (const entry of io.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (!files.has(entry.name) || !entry.isFile() || entry.isSymbolicLink()) {
+        throw new Error('unexpected browser voice vendor entry: ' + scope + '/' + entry.name);
+      }
+      assertVendorAncestry(full, io, trustedRoot);
+      const stat = io.lstatSync(full);
+      if (!stat.isFile() || stat.isSymbolicLink()) {
+        throw new Error('unexpected browser voice vendor entry: ' + scope + '/' + entry.name);
+      }
+    }
+  }
+}
+
 function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
   assertVendorAncestry(root, io, trustedRoot, true);
   io.mkdirSync(root, { recursive: true });
@@ -128,30 +190,71 @@ function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
     throw new Error('voice vendor root must be a real directory');
   }
+  // Preflight ALL destinations and transaction names before staging any bytes.
+  const prepared = [];
   for (const [rel, bytes] of outputs) {
     if (!/^(piper|whisper)\/[A-Za-z0-9_.-]+$/.test(rel)) throw new Error('invalid vendor destination');
     const target = path.join(root, rel);
     const dir = path.dirname(target);
     assertVendorAncestry(dir, io, trustedRoot, true);
     io.mkdirSync(dir, { recursive: true });
-    if (io.lstatSync(dir).isSymbolicLink()) throw new Error('vendor directory is a symlink');
-    assertVendorAncestry(target, io, trustedRoot);
-    if (io.existsSync(target) && !io.lstatSync(target).isFile()) {
-      throw new Error('unexpected vendor destination type');
+    const dirStat = io.lstatSync(dir);
+    if (!dirStat.isDirectory() || dirStat.isSymbolicLink()) {
+      throw new Error('vendor directory must be a real directory');
     }
+    assertVendorAncestry(target, io, trustedRoot);
+    const original = requireRegularVendorTarget(io, target);
     const pending = target + '.new-' + token;
     const backup = target + '.old-' + token;
-    if (io.existsSync(pending) || io.existsSync(backup)) throw new Error('voice vendor transaction collision');
+    if (existingVendorEntry(io, pending) || existingVendorEntry(io, backup)) {
+      throw new Error('voice vendor transaction collision');
+    }
+    if (!(Buffer.isBuffer(bytes) || bytes instanceof Uint8Array) ||
+        bytes.length === 0 || bytes.length > MAX_ASSET) {
+      throw new Error('invalid pinned vendor output bytes');
+    }
+    const expectedSha256 = crypto.createHash('sha256').update(bytes).digest();
+    const originalSha256 = original ? crypto.createHash('sha256').update(io.readFileSync(target)).digest() : null;
+    prepared.push({ target, pending, backup, original, originalSha256, bytes, expectedSize: bytes.length, expectedSha256 });
+  }
+  for (const { bytes, ...item } of prepared) {
     // Record first: writeFileSync can create a partial file before throwing.
-    staged.push({ target, pending, backup });
-    io.writeFileSync(pending, bytes, { flag: 'wx', mode: 0o600 });
+    staged.push(item);
+    io.writeFileSync(item.pending, bytes, { flag: 'wx', mode: 0o600 });
+    // Capture this transaction's newly created staging inode for later validation.
+    item.pendingWritten = requireRegularVendorTarget(io, item.pending);
+    if (!item.pendingWritten) throw new Error('voice vendor staged file vanished after write');
   }
 }
 
 function promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot) {
   for (const item of staged) {
     assertVendorAncestry(item.target, io, trustedRoot);
-    if (io.existsSync(item.target)) {
+    const original = requireRegularVendorTarget(io, item.target);
+    if (!sameVendorEntry(item.original, original)) {
+      throw new Error('voice vendor destination changed during promotion');
+    }
+    // An attacker or concurrent process may create a collision after preflight.
+    // This check is not a race-free directory-handle capability.
+    if (existingVendorEntry(io, item.backup)) {
+      throw new Error('voice vendor transaction collision');
+    }
+    const pending = existingVendorEntry(io, item.pending);
+    if (!pending || !pending.isFile() || pending.isSymbolicLink() ||
+        !sameVendorEntry(item.pendingWritten, pending)) {
+      throw new Error('voice vendor staged file changed during promotion');
+    }
+    // Enforce the exact pinned bytes, not merely a regular staged file.
+    // Stat checks alone cannot detect an in-place edit or copied replacement.
+    const stagedBytes = io.readFileSync(item.pending);
+    if (!Buffer.isBuffer(stagedBytes) || stagedBytes.length !== item.expectedSize ||
+        !crypto.timingSafeEqual(crypto.createHash('sha256').update(stagedBytes).digest(), item.expectedSha256)) {
+      throw new Error('voice vendor staged asset content mismatch');
+    }
+    if (!sameVendorEntry(pending, requireRegularVendorTarget(io, item.pending))) {
+      throw new Error('voice vendor staged file changed during promotion');
+    }
+    if (original) {
       io.renameSync(item.target, item.backup);
       moved.push(item);
     }
@@ -163,26 +266,77 @@ function promoteVoiceOutputs(staged, io, moved, promoted, trustedRoot) {
 function restoreVoiceOutputs(io, moved, promoted) {
   const failures = [];
   for (const item of promoted.reverse()) {
-    try { io.rmSync(item.target, { force: true }); }
-    catch (e) { failures.push(e); }
+    try {
+      const current = existingVendorEntry(io, item.target);
+      if (!current || !current.isFile() || current.isSymbolicLink() ||
+          !item.pendingWritten ||
+          (item.pendingWritten.ino !== 0 &&
+            (current.dev !== item.pendingWritten.dev || current.ino !== item.pendingWritten.ino)) ||
+          current.size !== item.expectedSize ||
+          !crypto.timingSafeEqual(
+            crypto.createHash('sha256').update(io.readFileSync(item.target)).digest(),
+            item.expectedSha256)) {
+        throw new Error('voice vendor rollback refuses changed promoted asset');
+      }
+      // Only the still-owned, byte-identical promoted output may be removed.
+      // This remains pathname based and does not claim race-free OS containment.
+      io.rmSync(item.target, { force: true });
+    } catch (e) { failures.push(e); }
   }
   for (const item of moved.reverse()) {
-    try { io.renameSync(item.backup, item.target); }
-    catch (e) { failures.push(e); }
+    try {
+      const backup = requireRegularVendorTarget(io, item.backup);
+      if (!backup || !item.original || !item.originalSha256 ||
+          (item.original.ino !== 0 &&
+            (backup.dev !== item.original.dev || backup.ino !== item.original.ino)) ||
+          backup.size !== item.original.size ||
+          !crypto.timingSafeEqual(
+            crypto.createHash('sha256').update(io.readFileSync(item.backup)).digest(),
+            item.originalSha256)) {
+        throw new Error('voice vendor rollback refuses changed backup');
+      }
+      // POSIX rename overwrites an occupied target, so refuse before restore.
+      if (existingVendorEntry(io, item.target)) {
+        throw new Error('voice vendor rollback refuses occupied destination');
+      }
+      io.renameSync(item.backup, item.target);
+    } catch (e) { failures.push(e); }
   }
   return failures;
 }
 
 function cleanupVoiceOutputs(io, staged, moved) {
   for (const item of staged) {
-    try { io.rmSync(item.pending, { force: true }); }
-    catch { /* unpromoted staging cleanup best-effort */ }
+    try {
+      const current = existingVendorEntry(io, item.pending);
+      if (!current) continue;
+      // A write that failed before recording an inode has UNKNOWN ownership.
+      // It may have hit EEXIST after another actor created this path. Never
+      // delete an unowned entry merely because it uses our random filename.
+      // A partial own write must be inspected/removed by the operator; the
+      // inventory guard refuses to ship leftover .new-* files in the VSIX.
+      if (!item.pendingWritten || !current.isFile() || current.isSymbolicLink() ||
+          item.pendingWritten.ino === 0 || current.dev !== item.pendingWritten.dev ||
+          current.ino !== item.pendingWritten.ino) continue;
+      io.rmSync(item.pending, { force: true });
+    } catch { /* unpromoted staging cleanup best-effort */ }
   }
   if (!moved) return [];
   const warnings = [];
   for (const item of moved) {
-    try { io.rmSync(item.backup, { force: true }); }
-    catch (e) { warnings.push('stale backup: ' + item.backup + ' (' + String(e) + ')'); }
+    try {
+      const backup = requireRegularVendorTarget(io, item.backup);
+      if (!backup || !item.original || !item.originalSha256 ||
+          (item.original.ino !== 0 &&
+            (backup.dev !== item.original.dev || backup.ino !== item.original.ino)) ||
+          backup.size !== item.original.size ||
+          !crypto.timingSafeEqual(
+            crypto.createHash('sha256').update(io.readFileSync(item.backup)).digest(),
+            item.originalSha256)) {
+        throw new Error('voice vendor cleanup refuses foreign backup');
+      }
+      io.rmSync(item.backup, { force: true });
+    } catch (e) { warnings.push('stale backup: ' + item.backup + ' (' + String(e) + ')'); }
   }
   return warnings;
 }
@@ -332,5 +486,5 @@ async function main() {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
-module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, assertVendorAncestry, commitOutputs, verifyPinnedVendorOutputs, verifyCommittedVendorOutputs };
+module.exports = { PACKAGES, assertPinnedDigest, downloadPinned, extractApprovedArchiveMembers, sanitizeWhisperBrowserBundle, assertVendorAncestry, assertVoiceVendorInventory, commitOutputs, verifyPinnedVendorOutputs, verifyCommittedVendorOutputs };
 if (require.main === module) main().catch(err => { console.error('[vendor:voice] ' + err.message); process.exitCode = 1; });

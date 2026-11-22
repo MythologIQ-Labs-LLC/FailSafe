@@ -75,7 +75,7 @@ suite('voice vendor isolation #707', () => {
     assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
   }));
 
-  test('partial staged write is removed, previous browser asset remains unchanged', () => temporary(root => {
+  test('unknown-ownership partial staging remains quarantined, previous asset is unchanged', () => temporary(root => {
     const vendor = path.join(root, 'vendor');
     const dir = path.join(vendor, 'piper');
     fs.mkdirSync(dir, { recursive: true });
@@ -95,8 +95,402 @@ suite('voice vendor isolation #707', () => {
       new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, ops, root,
     ), /simulated disk-full/);
     assert.equal(fs.readFileSync(target, 'utf8'), 'OLD');
-    assert.deepEqual(fs.readdirSync(dir).filter(x => x.includes('.new-') || x.includes('.old-')), []);
+    const leftovers = fs.readdirSync(dir).filter(x => x.includes('.new-') || x.includes('.old-'));
+    assert.equal(leftovers.length, 1, 'unknown ownership must not cause automatic deletion');
+    assert.match(leftovers[0], /\.new-/);
+    assert.equal(fs.readFileSync(path.join(dir, leftovers[0]), 'utf8'), 'PARTIAL');
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry/);
   }));
+
+  test('concurrent foreign staged collision survives an exclusive-write EEXIST', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let intruded = '';
+    const ops = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+                    opts?: fs.WriteFileOptions) {
+        if (String(file).includes('.new-')) {
+          intruded = String(file);
+          fs.writeFileSync(file, 'FOREIGN-STAGED-ENTRY', { flag: 'wx' });
+          // The real exclusive create is now required to fail EEXIST.
+          fs.writeFileSync(file, data, opts);
+        } else {
+          fs.writeFileSync(file, data, opts);
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, ops, root,
+    ), /EEXIST/);
+    assert.ok(intruded, 'foreign staging collision must have been exercised');
+    assert.equal(fs.readFileSync(target, 'utf8'), 'ORIGINAL');
+    assert.equal(fs.readFileSync(intruded, 'utf8'), 'FOREIGN-STAGED-ENTRY',
+      'the rollback must not delete an entry whose inode it never claimed');
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry/);
+  }));
+
+  test('dangling vendor destination link refuses without staging or losing earlier assets', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege varies.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const dir = path.join(vendor, 'piper');
+      fs.mkdirSync(dir, { recursive: true });
+      const prior = path.join(dir, 'piper_phonemize.wasm');
+      fs.writeFileSync(prior, 'PRESERVE');
+      const link = path.join(dir, 'piper.min.js');
+      const outside = path.join(root, 'missing-external-asset');
+      fs.symlinkSync(outside, link, 'file');
+      assert.equal(fs.existsSync(link), false, 'the regression requires a dangling link');
+      const outputs = new Map([
+        ['piper/piper_phonemize.wasm', Buffer.from('REPLACEMENT')],
+        ['piper/piper.min.js', Buffer.from('NEW')],
+      ]);
+      assert.throws(() => vendorTool.commitOutputs(outputs, vendor, fs, root),
+        /unexpected vendor destination type/);
+      assert.equal(fs.readFileSync(prior, 'utf8'), 'PRESERVE');
+      assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+      assert.equal(fs.readlinkSync(link), outside);
+      assert.equal(fs.existsSync(outside), false);
+      assert.deepEqual(fs.readdirSync(dir).sort(),
+        ['piper.min.js', 'piper_phonemize.wasm'].sort(), 'no staged files may remain');
+    });
+  });
+
+  test('dangling backup collision injected after staging is never overwritten', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege varies.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const dir = path.join(vendor, 'piper');
+      fs.mkdirSync(dir, { recursive: true });
+      const target = path.join(dir, 'piper.min.js');
+      fs.writeFileSync(target, 'PRESERVE');
+      const outside = path.join(root, 'missing-backup-asset');
+      let foreignBackup = '';
+      const io = {
+        ...fs,
+        writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+          opts?: fs.WriteFileOptions) {
+          fs.writeFileSync(file, data, opts);
+          if (String(file).includes('.new-')) {
+            foreignBackup = String(file).replace('.new-', '.old-');
+            fs.symlinkSync(outside, foreignBackup, 'file');
+          }
+        },
+      };
+      assert.throws(() => vendorTool.commitOutputs(
+        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, io, root,
+      ), /voice vendor transaction collision/);
+      assert.equal(fs.readFileSync(target, 'utf8'), 'PRESERVE');
+      assert.ok(foreignBackup);
+      assert.equal(fs.lstatSync(foreignBackup).isSymbolicLink(), true);
+      assert.equal(fs.readlinkSync(foreignBackup), outside);
+      assert.equal(fs.existsSync(outside), false);
+      assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+    });
+  });
+
+  test('destination replaced with dangling link during staging is refused at promotion', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege varies.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const dir = path.join(vendor, 'piper');
+      fs.mkdirSync(dir, { recursive: true });
+      const target = path.join(dir, 'piper.min.js');
+      fs.writeFileSync(target, 'ORIGINAL');
+      const outside = path.join(root, 'missing-mutation');
+      const io = {
+        ...fs,
+        writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+          opts?: fs.WriteFileOptions) {
+          fs.writeFileSync(file, data, opts);
+          if (String(file).includes('.new-')) {
+            fs.unlinkSync(target);
+            fs.symlinkSync(outside, target, 'file');
+          }
+        },
+      };
+      assert.throws(() => vendorTool.commitOutputs(
+        new Map([['piper/piper.min.js', Buffer.from('NEW')]]), vendor, io, root,
+      ), /unexpected vendor destination type/);
+      assert.equal(fs.lstatSync(target).isSymbolicLink(), true);
+      assert.equal(fs.readlinkSync(target), outside);
+      assert.equal(fs.existsSync(outside), false);
+      assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+    });
+  });
+
+  test('same-size regular-file replacement during stage is rejected without clobbering new owner', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    const displaced = path.join(root, 'original-displaced');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let replaced = false;
+    const io = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+        opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (!replaced && String(file).includes('.new-')) {
+          replaced = true;
+          fs.renameSync(target, displaced);
+          fs.writeFileSync(target, 'FOREIGN!');
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, io, root,
+    ), /voice vendor destination changed during promotion/);
+    assert.equal(replaced, true, 'the replacement must happen after original preflight');
+    assert.equal(fs.readFileSync(target, 'utf8'), 'FOREIGN!', 'foreign same-size regular file remains owned');
+    assert.equal(fs.readFileSync(displaced, 'utf8'), 'ORIGINAL', 'original file was not destroyed');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-') || name.includes('.old-')), []);
+  }));
+
+  test('in-place modification after preflight is rejected and preserves changed bytes', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let modified = false;
+    const io = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+        opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (!modified && String(file).includes('.new-')) {
+          modified = true;
+          fs.appendFileSync(target, ':FOREIGN');
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, io, root,
+    ), /voice vendor destination changed during promotion/);
+    assert.equal(modified, true);
+    assert.equal(fs.readFileSync(target, 'utf8'), 'ORIGINAL:FOREIGN');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-') || name.includes('.old-')), []);
+  }));
+
+  test('staged asset byte tampering cannot be promoted even when it remains a normal file', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let tampered = false;
+    const ops = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (!tampered && String(file).includes('.new-')) {
+          tampered = true;
+          fs.writeFileSync(file, 'POISON!', { flag: 'w' });
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED!')]]), vendor, ops, root,
+    ), /voice vendor staged asset content mismatch/);
+    assert.equal(tampered, true, 'the staged asset must be rewritten during the transaction');
+    assert.equal(fs.readFileSync(target, 'utf8'), 'ORIGINAL', 'installed asset is not overwritten');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-') || name.includes('.old-')), []);
+  }));
+
+  test('foreign pending inode substituted with identical bytes is refused and not deleted', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const primary = path.join(dir, 'piper.min.js');
+    const secondary = path.join(dir, 'piper_phonemize.wasm');
+    fs.writeFileSync(primary, 'ORIGINAL');
+    fs.writeFileSync(secondary, 'PREVIOUS');
+    let firstPending = '';
+    let injected = false;
+    const ops = {
+      ...fs,
+      writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, opts?: fs.WriteFileOptions) {
+        fs.writeFileSync(file, data, opts);
+        if (String(file).includes('piper.min.js.new-')) {
+          firstPending = String(file);
+        } else if (firstPending && String(file).includes('piper_phonemize.wasm.new-')) {
+          const other = path.join(root, 'foreign-staged-content');
+          fs.writeFileSync(other, 'PINNED!');
+          fs.renameSync(other, firstPending); // Windows permits replacing an existing file only on supported hosts.
+          injected = true;
+        }
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(new Map([
+      ['piper/piper.min.js', Buffer.from('PINNED!')],
+      ['piper/piper_phonemize.wasm', Buffer.from('NEW-WASM')],
+    ]), vendor, ops, root), /voice vendor staged file changed during promotion/);
+    assert.equal(injected, true);
+    assert.equal(fs.readFileSync(primary, 'utf8'), 'ORIGINAL');
+    assert.equal(fs.readFileSync(secondary, 'utf8'), 'PREVIOUS');
+    assert.equal(fs.readFileSync(firstPending, 'utf8'), 'PINNED!', 'foreign staged inode remains untouched');
+    assert.deepEqual(fs.readdirSync(dir).filter(x => x.includes('.old-')), []);
+    // Clean up foreign fixture after validating that rollback respected its ownership.
+    fs.rmSync(firstPending);
+  }));
+
+
+  test('failed later promotion preserves foreign replacement and original backup', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const first = path.join(dir, 'piper.min.js');
+    const second = path.join(dir, 'piper_phonemize.wasm');
+    fs.writeFileSync(first, 'FIRST-OLD');
+    fs.writeFileSync(second, 'SECOND-OLD');
+    let mutated = false;
+    const io = {
+      ...fs,
+      renameSync(from: fs.PathLike, to: fs.PathLike) {
+        if (!mutated && String(from).includes('piper_phonemize.wasm.new-')) {
+          mutated = true;
+          fs.unlinkSync(first);
+          fs.writeFileSync(first, 'FOREIGN-PROMOTED');
+          throw new Error('injected later promotion failure');
+        }
+        fs.renameSync(from, to);
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(new Map([
+      ['piper/piper.min.js', Buffer.from('FIRST-NEW')],
+      ['piper/piper_phonemize.wasm', Buffer.from('SECOND-NEW')],
+    ]), vendor, io, root), /recovery may be required/);
+    assert.equal(mutated, true);
+    assert.equal(fs.readFileSync(first, 'utf8'), 'FOREIGN-PROMOTED',
+      'rollback cannot remove a substituted installed target');
+    assert.equal(fs.readFileSync(second, 'utf8'), 'SECOND-OLD',
+      'unaffected second original is recovered');
+    const backups = fs.readdirSync(dir).filter(name => name.startsWith('piper.min.js.old-'));
+    assert.equal(backups.length, 1, 'do not discard unrecovered original');
+    assert.equal(fs.readFileSync(path.join(dir, backups[0]), 'utf8'), 'FIRST-OLD');
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+  }));
+
+  test('failed promotion refuses a substituted backup instead of installing it', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    const displaced = path.join(root, 'original-backup-preserved');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let replaced = false;
+    const io = {
+      ...fs,
+      renameSync(from: fs.PathLike, to: fs.PathLike) {
+        if (!replaced && String(from).includes('piper.min.js.new-')) {
+          replaced = true;
+          const backup = String(from).replace('.new-', '.old-');
+          fs.renameSync(backup, displaced);
+          fs.writeFileSync(backup, 'FOREIGN-BACKUP');
+          throw new Error('injected destination promotion failure');
+        }
+        fs.renameSync(from, to);
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(new Map([
+      ['piper/piper.min.js', Buffer.from('PINNED')],
+    ]), vendor, io, root), /recovery may be required/);
+    assert.equal(replaced, true);
+    assert.equal(fs.existsSync(target), false, 'foreign backup cannot be restored');
+    assert.equal(fs.readFileSync(displaced, 'utf8'), 'ORIGINAL');
+    const backups = fs.readdirSync(dir).filter(name => name.includes('.old-'));
+    assert.equal(backups.length, 1);
+    assert.equal(fs.readFileSync(path.join(dir, backups[0]), 'utf8'), 'FOREIGN-BACKUP',
+      'rollback does not overwrite or remove foreign backup');
+  }));
+
+
+  test('successful promotion keeps a foreign substituted backup instead of deleting it', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    const displaced = path.join(root, 'original-backup');
+    fs.writeFileSync(target, 'ORIGINAL');
+    let replacement = '';
+    const ops = {
+      ...fs,
+      renameSync(from: fs.PathLike, to: fs.PathLike) {
+        fs.renameSync(from, to);
+        if (String(from).includes('.new-')) {
+          const backup = String(from).replace('.new-', '.old-');
+          fs.renameSync(backup, displaced);
+          fs.writeFileSync(backup, 'FOREIGN-BACKUP');
+          replacement = backup;
+        }
+      },
+    };
+    const warnings: string[] = vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, ops, root,
+    );
+    assert.equal(fs.readFileSync(target, 'utf8'), 'PINNED', 'successful asset promotion stays intact');
+    assert.equal(fs.readFileSync(displaced, 'utf8'), 'ORIGINAL', 'original saved elsewhere remains');
+    assert.equal(fs.readFileSync(replacement, 'utf8'), 'FOREIGN-BACKUP',
+      'cleanup cannot remove a foreign backup');
+    assert.equal(warnings.length, 1, 'operator receives explicit stale-backup warning');
+    assert.match(warnings[0], /voice vendor cleanup refuses foreign backup/);
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.includes('.new-')), []);
+  }));
+
+  test('recursive VSIX copy inventory admits only six voice assets and two vendor provenance notes', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const piper = path.join(vendor, 'piper');
+    const whisper = path.join(vendor, 'whisper');
+    fs.mkdirSync(piper, { recursive: true });
+    fs.mkdirSync(whisper, { recursive: true });
+    for (const name of ['VENDOR.md', 'piper.min.js', 'piper_phonemize.wasm', 'piper_phonemize.data']) {
+      fs.writeFileSync(path.join(piper, name), 'APPROVED');
+    }
+    for (const name of ['VENDOR.md', 'transformers.min.js', 'ort-wasm-simd.wasm', 'ort-wasm-simd-threaded.wasm']) {
+      fs.writeFileSync(path.join(whisper, name), 'APPROVED');
+    }
+    assert.doesNotThrow(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root));
+
+    const foreign = path.join(piper, 'piper.min.js.new-orphan');
+    fs.writeFileSync(foreign, 'UNTRUSTED');
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry: piper\/piper.min.js.new-orphan/);
+    assert.equal(fs.readFileSync(foreign, 'utf8'), 'UNTRUSTED', 'read-only guard must not delete foreign content');
+    fs.rmSync(foreign);
+
+    const extraDir = path.join(whisper, 'unexpected-nested');
+    fs.mkdirSync(extraDir);
+    assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+      /unexpected browser voice vendor entry: whisper\/unexpected-nested/);
+    fs.rmSync(extraDir, { recursive: true });
+    assert.doesNotThrow(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root));
+  }));
+
+  test('recursive voice inventory refuses a symlinked approved file without following it', function () {
+    if (process.platform === 'win32') this.skip(); // symlink privilege depends on host configuration.
+    temporary(root => {
+      const vendor = path.join(root, 'vendor');
+      const piper = path.join(vendor, 'piper');
+      const whisper = path.join(vendor, 'whisper');
+      fs.mkdirSync(piper, { recursive: true });
+      fs.mkdirSync(whisper, { recursive: true });
+      const outside = path.join(root, 'outside.js');
+      fs.writeFileSync(outside, 'UNTRUSTED');
+      fs.symlinkSync(outside, path.join(piper, 'piper.min.js'), 'file');
+      assert.throws(() => vendorTool.assertVoiceVendorInventory(vendor, fs, root),
+        /unexpected browser voice vendor entry: piper\/piper.min.js/);
+      assert.equal(fs.readFileSync(outside, 'utf8'), 'UNTRUSTED');
+      assert.equal(fs.lstatSync(path.join(piper, 'piper.min.js')).isSymbolicLink(), true);
+    });
+  });
 
   test('vendor root symlink is refused before writing any assets', function () {
     if (process.platform === 'win32') this.skip(); // Windows symlink privileges vary.
