@@ -139,6 +139,48 @@ function requireRegularVendorTarget(io, file) {
 }
 
 /**
+ * Hash an already-installed asset through a bounded file descriptor. An lstat
+ * size check alone would still permit a concurrent writer to enlarge the file
+ * before an unbounded readFileSync. Verify inode/metadata on both sides and
+ * refuse a file that grows beyond the same budget as a pinned replacement.
+ * This is not same-principal race-free filesystem containment.
+ */
+function hashExistingVendorAsset(io, file, original) {
+  if (!Number.isSafeInteger(original.size) || original.size === 0 ||
+      original.size > MAX_ASSET) {
+    throw new Error('existing voice vendor asset exceeds size budget or is empty');
+  }
+  const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0);
+  const fd = io.openSync(file, flags);
+  try {
+    const initial = io.fstatSync(fd);
+    if (!initial.isFile() || !sameVendorEntry(original, initial)) {
+      throw new Error('existing voice vendor asset changed before read');
+    }
+    const digest = crypto.createHash('sha256');
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let total = 0;
+    for (;;) {
+      // Read at most MAX_ASSET+1 bytes, regardless of file changes.
+      const count = io.readSync(fd, buffer, 0,
+        Math.min(buffer.length, MAX_ASSET + 1 - total), null);
+      if (count === 0) break;
+      total += count;
+      if (total > MAX_ASSET) {
+        throw new Error('existing voice vendor asset exceeds size budget');
+      }
+      digest.update(buffer.subarray(0, count));
+    }
+    if (total !== original.size || !sameVendorEntry(original, io.fstatSync(fd))) {
+      throw new Error('existing voice vendor asset changed during read');
+    }
+    return digest.digest();
+  } finally {
+    io.closeSync(fd);
+  }
+}
+
+/**
  * Metadata equality detects a replaced regular inode and routine edits to
  * that inode between preflight and promotion. This is NOT an atomic guarantee
  * against a concurrent same-user actor changing the path after rechecking.
@@ -214,7 +256,7 @@ function stageVoiceOutputs(outputs, root, io, token, staged, trustedRoot) {
       throw new Error('invalid pinned vendor output bytes');
     }
     const expectedSha256 = crypto.createHash('sha256').update(bytes).digest();
-    const originalSha256 = original ? crypto.createHash('sha256').update(io.readFileSync(target)).digest() : null;
+    const originalSha256 = original ? hashExistingVendorAsset(io, target, original) : null;
     prepared.push({ target, pending, backup, original, originalSha256, bytes, expectedSize: bytes.length, expectedSha256 });
   }
   for (const { bytes, ...item } of prepared) {

@@ -56,6 +56,64 @@ suite('voice vendor isolation #707', () => {
     }), /invalid pinned/);
   }));
 
+  test('oversized or empty old asset is refused without reading, staging or overwriting', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    for (const size of [0, 75 * 1024 * 1024 + 1]) {
+      fs.writeFileSync(target, '');
+      fs.truncateSync(target, size); // sparse file: no 75-MiB allocation
+      let opened = 0;
+      let staged = 0;
+      const io = {
+        ...fs,
+        openSync(file: fs.PathLike, flags: string | number, mode?: fs.Mode) {
+          if (String(file) === target) opened++;
+          return fs.openSync(file, flags, mode);
+        },
+        writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
+          options?: fs.WriteFileOptions) {
+          if (String(file).includes('.new-')) staged++;
+          fs.writeFileSync(file, data, options);
+        },
+      };
+      assert.throws(() => vendorTool.commitOutputs(
+        new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, io, root,
+      ), /existing voice vendor asset exceeds size budget or is empty/);
+      assert.equal(opened, 0, 'the rejected existing file must never be opened for reading');
+      assert.equal(staged, 0, 'all preflight checks precede staging');
+      assert.equal(fs.statSync(target).size, size, 'the original file remains untouched');
+      assert.deepEqual(fs.readdirSync(dir), ['piper.min.js']);
+    }
+  }));
+
+  test('old file modified after open is refused without promoting', () => temporary(root => {
+    const vendor = path.join(root, 'vendor');
+    const dir = path.join(vendor, 'piper');
+    fs.mkdirSync(dir, { recursive: true });
+    const target = path.join(dir, 'piper.min.js');
+    fs.writeFileSync(target, 'OLD');
+    let mutated = false;
+    const io = {
+      ...fs,
+      readSync(fd: number, buffer: NodeJS.ArrayBufferView, offset: number,
+        length: number, position: number | null) {
+        if (!mutated) {
+          mutated = true;
+          fs.appendFileSync(target, Buffer.alloc(64 * 1024));
+        }
+        return fs.readSync(fd, buffer, offset, length, position);
+      },
+    };
+    assert.throws(() => vendorTool.commitOutputs(
+      new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, io, root,
+    ), /existing voice vendor asset changed during read/);
+    assert.equal(mutated, true);
+    assert.equal(fs.statSync(target).size, 3 + 64 * 1024);
+    assert.deepEqual(fs.readdirSync(dir), ['piper.min.js'], 'no staging or backup survives');
+  }));
+
   test('write transaction preserves previous file on failed promotion', () => temporary(root => {
     const dir = path.join(root, 'vendor', 'piper');
     fs.mkdirSync(dir, { recursive: true });
