@@ -394,6 +394,56 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     });
   }
 
+  for (const fail of [false, true]) {
+    test(`#703: ${fail ? 'failed' : 'successful'} review POST does not display its result on another intent`, async () => {
+      const ctx = setupDom();
+      const g = global as unknown as {
+        fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+      };
+      const prior = g.fetch;
+      let release!: () => void;
+      const pending = new Promise<void>((resolve) => { release = resolve; });
+      g.fetch = async (url, init) => {
+        if (url === '/api/actions/delivery/review' && init?.method === 'POST') {
+          await pending;
+          if (fail) throw new Error('late network failure');
+        }
+        return prior(url, init);
+      };
+      try {
+        const renderer = new DeliveryAssessmentRenderer('workspace');
+        const originalReview = renderer.review.bind(renderer);
+        let completed!: () => void;
+        const finished = new Promise<void>((resolve) => { completed = resolve; });
+        renderer.review = async (...args: unknown[]) => {
+          try { return await originalReview(...args); }
+          finally { completed(); }
+        };
+        await renderer.refresh();
+        (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+        // A different intent becomes visible while the earlier POST is pending.
+        renderer.selectedId = SEALED;
+        await renderer.refresh();
+        assert.match(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /PROJ-6/);
+        release();
+        await finished;
+        assert.equal(renderer.selectedId, SEALED);
+        assert.equal(ctx.doc.querySelector('.cc-dlv-result'), null,
+          'an older intent review must not be reported as this sealed intent result');
+        assert.match(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /PROJ-6/);
+        renderer.selectedId = ACTIVE;
+        await renderer.refresh();
+        const result = ctx.doc.querySelector('.cc-dlv-result')?.textContent || '';
+        assert.match(result, fail ? /Recording the review failed: late network failure/ : /Review PASS recorded/);
+        assert.equal(ctx.doc.querySelectorAll('.cc-dlv-result').length, 1,
+          'completion may be displayed once, only on its initiating intent');
+        await renderer.refresh();
+        assert.equal(ctx.doc.querySelector('.cc-dlv-result'), null,
+          'a consumed completion message may not replay on another refresh');
+      } finally { release(); ctx.cleanup(); }
+    });
+  }
+
   test('#703: PASS and VETO cannot both submit across an overlapping repaint', async () => {
     const ctx = setupDom();
     const g = global as unknown as {

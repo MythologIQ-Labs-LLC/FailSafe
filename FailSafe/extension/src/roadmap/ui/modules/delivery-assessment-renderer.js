@@ -249,7 +249,9 @@ export class DeliveryAssessmentRenderer {
     root.appendChild(this.legend());
     if (state.intents && state.intents.length) sub.appendChild(this.picker(state.intents));
     sub.appendChild(button('Refresh', 'cc-dlv-refresh', () => this.refresh()));
-    if (this.message) {
+    // Only the intent that initiated an operation may display its completion.
+    // A pending POST can resolve after the operator navigates to another intent.
+    if (this.message && (!this.message[2] || this.message[2] === state.view?.intent?.id)) {
       root.appendChild(el('p', `cc-dlv-result${this.message[1] ? ' cc-dlv-result-bad' : ''}`, this.message[0]));
       this.message = null;
     }
@@ -447,10 +449,10 @@ export class DeliveryAssessmentRenderer {
         this.reviewNoteDraft = null;
       }
       this.message = status === 200
-        ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
-        : [data.error || `Recording the review failed (${status}).`, true];
+        ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false, intentId]
+        : [data.error || `Recording the review failed (${status}).`, true, intentId];
     } catch (err) {
-      this.message = [`Recording the review failed: ${err && err.message ? err.message : err}`, true];
+      this.message = [`Recording the review failed: ${err && err.message ? err.message : err}`, true, intentId];
     } finally {
       this.reviewInFlight = false;
       await this.refresh();
@@ -509,8 +511,8 @@ export class DeliveryAssessmentRenderer {
     const url = action === 'unlink' ? '/api/actions/delivery/unlink' : '/api/actions/delivery/link';
     const { status, data } = await postJson(url, { intentId, edge, target });
     this.message = status === 200
-      ? [action === 'unlink' ? 'Link removed and recorded in the intent history.' : 'Link recorded in the intent history.', false]
-      : [data.error || `${action === 'unlink' ? 'Unlink' : 'Link'} failed (${status}).`, true];
+      ? [action === 'unlink' ? 'Link removed and recorded in the intent history.' : 'Link recorded in the intent history.', false, intentId]
+      : [data.error || `${action === 'unlink' ? 'Unlink' : 'Link'} failed (${status}).`, true, intentId];
     await this.refresh();
   }
 
