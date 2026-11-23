@@ -1,5 +1,7 @@
 # Governance Index
 
+**Last Reviewed**: 2026-11-23 (SUBSTANTIATE SEAL - **#707 browser voice vendoring isolated from core npm ci** (`plan-707-voice-dependency-isolation.md`, iteration 3, Tier 4 plans glob; PR #712): a fresh independent Judge re-ran /qor-substantiate after the #974 VETO and sealed it. S1 is closed by the owner-authorized UNPLANNED commit 6c7f8b22 (the 'Vacuous pass' glossary home is now `docs/SYSTEM_STATE.md`; `.qor/secret-scanner-allowlist` suppresses the fake ledger fixture token), and conditions C1-C8 are met. Ledger #975; report `.failsafe/governance/evidence/issue-707/SUBSTANTIATE-iter2.md` (covered by the `evidence/issue-<N>/*.md` Tier 4 row). Not merged, released or tagged.)
+**Last Reviewed**: 2026-11-23 (SUBSTANTIATE VETO - **#707 browser voice vendoring isolated from core npm ci** (`plan-707-voice-dependency-isolation.md`, iteration 3, Tier 4 plans glob; PR #712): an independent Judge verified Reality = Promise for the code and found conditions C1-C8 met, but refused the seal at skill Step 4.7, because the strict doc_integrity orphan home of the 'Vacuous pass' glossary term (qor/references/glossary.md:111) is a pre-existing gitignored file absent on this host. Ledger #970-#974; reports under `.failsafe/governance/evidence/issue-707/`; Shadow Genome #336. Not sealed, merged or released.)
 **Last Reviewed**: 2026-10-22 (SUBSTANTIATE — **Dependabot #584: ip-address 10.7.4** (`plan-dep-584.md`): clears GHSA-rxp7-6hxx-x8q5, published after the v6.0.10 release-prep merge, in the Console rate limiter's bundled dependency. Production npm audit 1 -> 0. The v6.0.10 notes and SYSTEM_STATE name the bump. Low exposure; no reproduction claimed. Ledger #911-#913 under the bounded 2026-10-21 v6.0.10 override (#467 unresolved; post-anchor DIRTY with exactly #341 and #382). Audit: `.failsafe/governance/audits-611/AUDIT_dep584-iter1.md`.)
 **Last Reviewed**: 2026-10-22 (SUBSTANTIATE — **v6.0.10 release preparation** (`plan-v6010-release-prep.md`, iteration 3 PASS after two VETOs): version 6.0.10, release notes checked line by line against the open BACKLOG rows and the code (the Lane D2 CHANGELOG line is corrected against B396; B402 is disclosed per the owner ruling of 2026-10-22), byte-identical root and extension CHANGELOGs, the B397 vscode-test profile-folder leak fixed, and the B400 timing-flake fixes with their falsifiers intact. No tag, no publication. Ledger #906-#910 under the bounded 2026-10-21 v6.0.10 override (#467 unresolved; post-anchor DIRTY with exactly #341 and #382). Audits: `.failsafe/governance/audits-611/AUDIT_rp-iter1..3.md`; deviations: `IMPLEMENT_rp-deviations.md`.)
 **Last Reviewed**: 2026-10-22 (SUBSTANTIATE — **Lane D2: Console request guard on resume-monitoring and verify-integrity** (`plan-d2-resume-guard.md`): the owner ruled it release-blocking. A local-browser web page can no longer restart a stopped Sentinel (overriding a Panic Stop and forging a PASS checkpoint) or run a chain verify. Both routes run consoleRequestGuard first, and verify is rate-limited after the guard. B383 is partly done; residuals B395 and B396. No new governance artifact; seal #905. META_LEDGER DAMAGED, carried under the owner's bounded 2026-10-21 v6.0.10 override (#467).)
@@ -109,7 +111,7 @@ Always-current. A stale Tier 1 doc IS a P0 governance bug.
 | `docs/BACKLOG.md` | All backlog items + version summary table | every cycle that ships, audits, or closes an item | row status diverges from `META_LEDGER` DELIVER |
 | `docs/FEATURE_INDEX.md` | Cross-reference of every feature → source / docs / test / verification status | `/qor-substantiate` (FEATURE_INDEX gate) | feature shipped without FX entry OR FX `unverified` for shipped feature |
 | `docs/GOVERNANCE_INDEX.md` (this file) | Authoritative map of every governance artifact in this repo | every cycle that touches governance | new governance doc created without index entry |
-| `FailSafe/extension/package.json` | Authoritative version source — every other version marker derives from this | `/qor-repo-release` release-gate.cjs | other version markers ahead of or behind this |
+| `FailSafe/extension/package.json` | Authoritative version source — canonical nested extension manifest; other version markers derive from its version | `/qor-repo-release` release-gate.cjs | other version markers ahead of or behind this |
 | `docs/roadmap/tracker-config.yaml` | Operator-declared tracker taxonomy (programs ∥ verticals + agent mappings) that records intended taxonomy (CLAUDE.md) (FX891). A local file, not in the repository (`docs/` is gitignored). Console navigation (`CONSOLE_VERTICALS`) is authoritative for each vertical's sub-views (#548, FX1007) | Workspace › Taxonomy editor (`POST /api/v1/tracker/config`); manual edits ok | declared vertical functionality differs from the Console sub-views (reported in Workspace › Taxonomy) |
 
 ---
@@ -184,6 +186,7 @@ Plans and their immediate audit/implementation/substantiation reports. Archive a
 | `AUDIT_REPORT_<plan>.md` | `.failsafe/governance/` | at substantiate of that plan |
 | `IMPLEMENTATION_REPORT_<plan>.md` | `.failsafe/governance/` | at substantiate of that plan |
 | `SUBSTANTIATE_REPORT_<plan>.md` | `.failsafe/governance/` | at next housekeeping cycle |
+| `evidence/issue-<N>/*.md` (plan iterations, audit, implementation and substantiation reports, pending ledger and Shadow Genome entry texts) | `.failsafe/governance/evidence/` | at substantiate seal of the plan |
 | Plan iteration drafts (v1/v2 superseded by final v3 etc.) | as above | at audit PASS of final iteration |
 
 **Outstanding Tier 4 cleanup:**
@@ -309,14 +312,14 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
 
 Registration in this index and presence in the repository are **different things**, and a reader of a clone cannot tell them apart without this section.
 
-`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 110 paths registered below have had that done; 15 have not (counted 2026-10-17, after #532 part A, by the FX939 rule: the first backticked `.md` path of each tier-table row, so `plan-*.md` counts once per row).
+`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 111 registered Markdown tier rows are tracked, 15 are private-by-default and 17 are patterns (measured 2026-11-23 on protected `main@b03e47b7`; the FX939 row rule counts the first backticked `.md` path of each tier-table row, including distinct `plan-*.md` pattern rows).
 
 An unpublished row is not drift. Whether a given governance doc *should* be published is a licensing decision the operator has explicitly deferred, and this index does not presume it.
 
 - private-by-default: `docs/`
 - private-by-default: `.failsafe/`
 
-`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) are skipped; 16 of the 110 are of that kind.
+`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`, `evidence/issue-<N>/*.md`) are skipped for existence checks; 17 of the 111 tier rows are of that kind.
 
 ---
 

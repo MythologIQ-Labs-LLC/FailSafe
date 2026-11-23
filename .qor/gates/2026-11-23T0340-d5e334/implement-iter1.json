@@ -1,0 +1,62 @@
+{
+  "phase": "implement",
+  "session_id": "2026-11-23T0340-d5e334",
+  "ts": "2026-11-23T05:26:06Z",
+  "files_touched": [
+    ".failsafe/governance/plans/plan-v610-707-voice-dependency-isolation-candidate.md",
+    ".gitattributes",
+    "FailSafe/extension/scripts/bundle.cjs",
+    "FailSafe/extension/scripts/package-voice-pack.cjs",
+    "FailSafe/extension/scripts/vendor-piper.cjs",
+    "FailSafe/extension/scripts/vendor-voice-fs.cjs",
+    "FailSafe/extension/scripts/vendor-voice-source.cjs",
+    "FailSafe/extension/scripts/vendor-voice-transaction.cjs",
+    "FailSafe/extension/scripts/vendor-voice-verify.cjs",
+    "FailSafe/extension/scripts/vendor-voice.cjs",
+    "FailSafe/extension/src/roadmap/ui/vendor/piper/VENDOR.md",
+    "FailSafe/extension/src/roadmap/ui/vendor/whisper/VENDOR.md",
+    "FailSafe/extension/src/test/scripts/packageVoicePack.test.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoiceAssets.test.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoiceExisting.test.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoiceIsolation.test.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoicePromotion.test.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoiceSource.test.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoiceStaging.test.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoiceTestSupport.ts",
+    "FailSafe/extension/src/test/scripts/vendorVoiceVerify.test.ts",
+    "docs/architecture/integrations/acp-devin.md",
+    "docs/architecture/integrations/voice-pack.md"
+  ],
+  "commits": [
+    "477955a7e44b337536ab17adcb90f320bdd14ae0",
+    "3d73c539d44b850008c3db008dc0b51b15044d29",
+    "4c49f98c100f1b9d126f096e339eeb43d1ccc556",
+    "04c69c85af1c155fca2d260064d4deae7475df27",
+    "b7c3cd0b6d9ff5e0784760e9c2a6a00e0fe2e6ae"
+  ],
+  "test_summary": {
+    "command": "npx mocha --ui tdd --timeout 60000 out/test/scripts/vendorVoice*.test.js out/test/scripts/packageVoicePack.test.js",
+    "passed": 36,
+    "failed": 0,
+    "skipped": 11,
+    "phase1b": "green 23 passing 7 pending; mutation fails ('must never be opened or read'); baseline red ('Missing expected exception')",
+    "phase1c": "check-attr red 'unspecified' -> green 'unset' x8; verify:voice-pins exit 0 on Windows",
+    "prerelease": "red: script exits on load; green; guard mutation fails ('6.1.0-rc.1: partial archive removed')",
+    "digests": "30 names equal; 29 of 30 test bodies and 3 of 3 helpers equal; declared exception: committed-HEAD parity test",
+    "full_gate": "lint 0 errors; test:node 1159 pass, FX1003 fixed (91/0), g4Witness pre-existing; test:ui 264; npm test 6192 pass, 4 Windows-host timeouts in #532 suites; build:package 6 assets"
+  },
+  "source_revision": "b7c3cd0b6d9ff5e0784760e9c2a6a00e0fe2e6ae",
+  "audited_source_revision": "a465bd85249862a9e355ad584a338ca6fc9aeb25",
+  "plan_sha256": "6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7",
+  "report_path": ".failsafe/governance/evidence/issue-707/IMPLEMENTATION.md",
+  "report_content_hash": "a701b695710c3cab25ae22fefff312e35e3bd641a061875505ff87c285b86de8",
+  "delivery_status": "UNSEALED; C2 post-split Linux run and substantiation pending",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "absent",
+    "ts": "2026-11-23T05:26:06Z"
+  }
+}
