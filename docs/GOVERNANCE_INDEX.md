@@ -312,14 +312,14 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
 
 Registration in this index and presence in the repository are **different things**, and a reader of a clone cannot tell them apart without this section.
 
-`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 111 registered Markdown tier rows are tracked, 15 are private-by-default and 17 are patterns (measured 2026-11-23 on protected `main@b03e47b7`; the FX939 row rule counts the first backticked `.md` path of each tier-table row, including distinct `plan-*.md` pattern rows).
+`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 111 paths registered below have had that done; 15 have not (measured 2026-11-23 on protected `main@b03e47b7` using FX939's first-backticked `.md` per-tier-table-row rule; pattern rows are counted separately).
 
 An unpublished row is not drift. Whether a given governance doc *should* be published is a licensing decision the operator has explicitly deferred, and this index does not presume it.
 
 - private-by-default: `docs/`
 - private-by-default: `.failsafe/`
 
-`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`, `evidence/issue-<N>/*.md`) are skipped for existence checks; 17 of the 111 tier rows are of that kind.
+`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`, `evidence/issue-<N>/*.md`) are skipped for existence checks; 17 of the 111 are of that kind.
 
 ---
 
