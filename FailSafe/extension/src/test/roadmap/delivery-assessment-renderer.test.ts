@@ -220,6 +220,13 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     const ctx = setupDom();
     try {
       const renderer = new DeliveryAssessmentRenderer('workspace');
+      const originalReview = renderer.review.bind(renderer);
+      let finishReview!: () => void;
+      const reviewFinished = new Promise<void>((resolve) => { finishReview = resolve; });
+      renderer.review = async (...args: unknown[]) => {
+        try { return await originalReview(...args); }
+        finally { finishReview(); }
+      };
       await renderer.refresh();
       const oldInput = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
       oldInput.value = 'keep this note';
@@ -231,7 +238,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
       assert.notEqual(newInput, oldInput, 'the refresh must replace the actual input');
       assert.equal(newInput.value, 'keep this note', 'unsent text must not disappear during a refresh');
       (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
-      await new Promise((res) => setTimeout(res, 20));
+      await reviewFinished;
       assert.deepEqual(ctx.posted, [
         { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'keep this note' } },
       ], 'only the real typed note may be recorded');
@@ -358,6 +365,13 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
           return prior(url, init);
         };
         const renderer = new DeliveryAssessmentRenderer('workspace');
+        const originalReview = renderer.review.bind(renderer);
+        let finishReview!: () => void;
+        const reviewFinished = new Promise<void>((resolve) => { finishReview = resolve; });
+        renderer.review = async (...args: unknown[]) => {
+          try { return await originalReview(...args); }
+          finally { finishReview(); }
+        };
         await renderer.refresh();
         const note = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
         const sendInput = () => note.dispatchEvent(
@@ -370,7 +384,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
         note.value = nextDraft;
         sendInput();
         finishPost!();
-        await new Promise((resolve) => setTimeout(resolve, 30));
+        await reviewFinished;
         assert.deepEqual(ctx.posted, [
           { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'submitted earlier' } },
         ]);
