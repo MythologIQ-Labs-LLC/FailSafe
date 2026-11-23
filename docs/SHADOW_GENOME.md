@@ -3206,3 +3206,25 @@ Iteration 2 of the native plan for PR #712 (#707). Most of the iteration 1 groun
 
 ### Remediation Attempted
 Iteration 2 amendment (answers to V1, V2, V4, V6 held under execution). VETO issued on four plan-text grounds; the Governor amends the plan and re-runs /qor-audit.
+
+## Failure Entry #336
+
+**Date**: 2026-11-23T06:10:24Z
+**Verdict ID**: SUBSTANTIATE plan-707-voice-dependency-isolation iteration 3 VETO (session 2026-11-23T0340-d5e334; report .failsafe/governance/evidence/issue-707/SUBSTANTIATE.md; ledger Entry #974)
+**Failure Mode**: documentation-integrity ABORT (orphan glossary home); a known pre-seal blocker carried to seal unremediated
+
+### What Failed
+The session seal for PR #712 (#707 voice dependency isolation). The implementation itself matched the plan under execution (patch custody, mutations, body digests, Razor, conditions C1-C8, Linux run 45118465441).
+
+### Why It Failed
+- Skill Step 4.7 strict doc_integrity raised ValueError: the 'Vacuous pass' glossary term (qor/references/glossary.md:111) names a home, .failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md, that is gitignored and absent on this host. The skill gives this ABORT no waiver path.
+- The defect is pre-existing at origin/main. Audit #972 printed it in its Documentation Drift section as one that "would hard-block at /qor-substantiate", and nobody acted on it before the seal.
+- Earlier seals passed the gate by supplying the gitignored brief from a local copy, so the gate's result depended on one workstation's untracked files.
+
+### Pattern to Avoid
+- A Documentation Drift item that an audit marks as substantiate-blocking is a seal obligation. Remediate it in the implement phase, or record a plan item for it, before claiming readiness to seal.
+- A glossary home must be a tracked file. A home that exists only in a gitignored local file passes on one machine and fails on every fresh checkout.
+- Before sealing, check that every ABORT-class gate passes in a fresh checkout, not only in a workspace with local leftovers.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or governance. Required: point the glossary home at an existing tracked file (recorded as UNPLANNED in the seal entry), add the pre-existing ledger fixture token to .qor/secret-scanner-allowlist before staging, and re-run /qor-substantiate.
