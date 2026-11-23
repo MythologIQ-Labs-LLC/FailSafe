@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-11-14 (v6.1.0 development and live-queue reconciliation; historical release events remain in their dated sections below).
+**Last Updated:** 2026-11-23 (#707 browser voice vendoring isolation sealed on PR #712 at ledger #975, not merged or released; historical release events remain in their dated sections below).
 **Current development:** v6.1.0 is planned and in progress under [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679), with the published v6.0.13 baseline unchanged. The root [Architecture Index](../ARCHITECTURE_INDEX.md) remains the design-authority entry point; the [Governance Index](GOVERNANCE_INDEX.md) governs artifact tiers and freshness. No v6.1.0 release or skill cutover is authorized by this status snapshot.
 **Live pull-request queue:** [GitHub's open PR list](https://github.com/MythologIQ-Labs-LLC/FailSafe/pulls?q=is%3Apr+is%3Aopen) is authoritative. This document deliberately does not label historical PR numbers or local branch names as currently open; earlier #442–#447 and September sprint references belong to historical context.
 **Current Release:** v6.0.13 (2026-11-13): sealed (#968) and G4-witnessed (genesis `g4-000001`, release verification PASS on H and M), published 2026-11-13 (tag `v6.0.13` object `62a28fc1` on `26c1161a`, release run 43337880053; VS Code Marketplace, Open VSX and GitHub Release verified byte-identical; ledger #969). Previous published release: v6.0.12 (2026-11-10, tag `v6.0.12` on `0e70e539`, release run 42842387243).
@@ -12,6 +12,14 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-11-23 — #707 browser voice vendoring isolated from core npm ci (SESSION SEAL #975; PR #712, not merged)
+
+- PR #712 (`fix/707-isolate-optional-voice-vendoring`) is sealed against `plan-707-voice-dependency-isolation.md` iteration 3: audit PASS #972, implementation #973, substantiation VETO #974 on a documentation-integrity orphan, then PASS at the re-run (#975). It is not merged or released, and no version bump or tag was made.
+- Core `npm ci` no longer installs `piper-tts-web` or `@xenova/transformers`, so `onnxruntime-node` and `sharp` are no longer installed. The six browser voice assets are committed under `FailSafe/extension/src/roadmap/ui/vendor/{piper,whisper}/`, are marked `-text` in `.gitattributes`, and are checked against their pinned upstream bytes by `npm run verify:voice-pins`. `bundle.cjs` refuses an empty, oversized or directory asset before it copies the vendor tree.
+- `vendor-voice.cjs` is split into source, fs, transaction and verify modules. An existing asset is hashed with a bounded read (the supplied `fix.patch`). `vendor-piper.cjs` is removed (`vendor:piper` runs `vendor-voice.cjs --piper-only`). Failure cleanup in `package-voice-pack.cjs` now also covers prerelease versions.
+- Governance: the glossary home of 'Vacuous pass' is now this file (the 2026-09-03 section below documents the same controls) instead of a gitignored brief that made strict doc_integrity abort on fresh checkouts. `.qor/secret-scanner-allowlist` suppresses the fake `xoxb-` fixture token quoted in the ledger.
+
 
 ## 2026-11-14 — v6.1.0 development-queue and release-witness documentation reconciliation
 
