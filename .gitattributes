@@ -11,3 +11,7 @@ tools/g4/transitions/** binary
 tools/g4/revocations.json -text
 tools/g4/tsa-policy.json -text
 tools/g4/HISTORICAL_GAPS.md -text
+# Browser voice vendor files (#707): verify:voice-pins compares exact committed bytes;
+# a CRLF checkout of the minified JS would change them. Never convert line endings.
+FailSafe/extension/src/roadmap/ui/vendor/piper/** -text
+FailSafe/extension/src/roadmap/ui/vendor/whisper/** -text

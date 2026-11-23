@@ -1,0 +1,9 @@
+{
+  "session": "2026-11-23T0340-d5e334",
+  "plan_path": ".failsafe/governance/plans/plan-707-voice-dependency-isolation.md",
+  "plan_hash": "6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7",
+  "audit_path": ".failsafe/governance/evidence/issue-707/AUDIT-PLAN-iter3.md",
+  "audit_hash": "90b1c15fd3bbed068fc6380ff95536660942de5e8752f90816c421a3ab75c1ac",
+  "head_commit": "a465bd85249862a9e355ad584a338ca6fc9aeb25",
+  "captured_ts": "2026-11-23T04:25:14.998005Z"
+}

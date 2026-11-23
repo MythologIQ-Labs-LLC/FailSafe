@@ -9,78 +9,141 @@ const fs = require('fs');
 const path = require('path');
 const { createHash } = require('crypto');
 const { spawnSync } = require('child_process');
+const { assertVendorAncestry } = require('./vendor-voice.cjs');
 
-const REPO_ROOT = process.env.FAILSAFE_REPO_ROOT || path.resolve(__dirname, '..');
-const VENDOR_SOURCE_DIRS = ['piper', 'whisper'];
-
-main();
+const REQUIRED_ASSETS = Object.freeze([
+  'piper/piper.min.js',
+  'piper/piper_phonemize.wasm',
+  'piper/piper_phonemize.data',
+  'whisper/transformers.min.js',
+  'whisper/ort-wasm-simd.wasm',
+  'whisper/ort-wasm-simd-threaded.wasm',
+]);
+const MAX_ASSET_BYTES = 75 * 1024 * 1024;
 
 function main() {
+  const repoRoot = process.env.FAILSAFE_REPO_ROOT || path.resolve(__dirname, '..');
   try {
-    const version = readVersion();
-    const distDir = path.join(REPO_ROOT, 'dist');
-    fs.mkdirSync(distDir, { recursive: true });
-
-    const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-voice-pack-build-'));
-    try {
-      const vendorSourceRoot = path.join(REPO_ROOT, 'dist', 'extension', 'ui', 'vendor');
-      const collected = collectFiles(vendorSourceRoot, stagingDir);
-
-      writeManifest(stagingDir, version, collected);
-
-      const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
-      runTarCreate(stagingDir, tarballPath);
-      writeSha256(tarballPath);
-
-      console.log(`[package-voice-pack] wrote ${tarballPath}`);
-      console.log(`[package-voice-pack] files: ${collected.length}`);
-    } finally {
-      fs.rmSync(stagingDir, { recursive: true, force: true });
-    }
+    packageVoicePack(repoRoot);
   } catch (err) {
     process.stderr.write(`[package-voice-pack] ERROR: ${err.message || err}\n`);
     process.exit(1);
   }
 }
 
-function readVersion() {
-  const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
-  if (typeof pkg.version !== 'string' || pkg.version.length === 0) {
-    throw new Error('package.json missing version field');
+/**
+ * Build the Voice Pack under repoRoot/dist. `repoRoot` is the single trusted
+ * root for the version, the dist directory and the vendor sources. Any failure
+ * removes this version's archive and checksum before rethrowing.
+ */
+function packageVoicePack(repoRoot, run = spawnSync) {
+  try {
+    const version = readVersion(repoRoot);
+    const distDir = path.join(repoRoot, 'dist');
+    // Reject linked build output before deleting even a stale same-version file.
+    assertSafeDistDirectory(repoRoot, distDir);
+    fs.mkdirSync(distDir, { recursive: true });
+
+    // Never leave a previous same-version release candidate available if a
+    // later packaging attempt fails before producing new verified assets.
+    // All failures must leave *neither* a publishable archive nor checksum.
+    const tarballPath = removeCandidateArtifacts(repoRoot, distDir, version);
+    buildVoicePack(repoRoot, version, tarballPath, run);
+  } catch (err) {
+    cleanupAfterFailure(repoRoot);
+    throw err;
+  }
+}
+
+/** Remove this version's archive and checksum, only inside a real in-root dist directory. */
+function removeCandidateArtifacts(repoRoot, distDir, version) {
+  const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
+  if (assertSafeDistDirectory(repoRoot, distDir)) {
+    fs.rmSync(tarballPath, { force: true });
+    fs.rmSync(`${tarballPath}.sha256`, { force: true });
+  }
+  return tarballPath;
+}
+
+function buildVoicePack(repoRoot, version, tarballPath, run) {
+  const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-voice-pack-build-'));
+  try {
+    const vendorSourceRoot = path.join(repoRoot, 'dist', 'extension', 'ui', 'vendor');
+    const collected = collectFiles(repoRoot, vendorSourceRoot, stagingDir);
+
+    writeManifest(stagingDir, version, collected);
+
+    runTarCreate(stagingDir, tarballPath, run);
+    writeSha256(tarballPath);
+
+    console.log(`[package-voice-pack] wrote ${tarballPath}`);
+    console.log(`[package-voice-pack] files: ${collected.length}`);
+  } finally {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+  }
+}
+
+function cleanupAfterFailure(repoRoot) {
+  // A partial tarball or stale checksum is not a valid release candidate.
+  // An unreadable or unsafe version has no candidate to clean up.
+  let version;
+  try { version = readVersion(repoRoot); } catch { return; }
+  try {
+    // Cleanup must honor the same boundary as the normal write path, for
+    // every version readVersion accepts, prereleases included (#707 V3).
+    removeCandidateArtifacts(repoRoot, path.join(repoRoot, 'dist'), version);
+  } catch (cleanupErr) {
+    process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\n');
+  }
+}
+
+function readVersion(repoRoot) {
+  const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  if (typeof pkg.version !== 'string' ||
+      !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version)) {
+    throw new Error('package.json version must be a safe SemVer identifier');
   }
   return pkg.version;
 }
 
-function collectFiles(vendorSourceRoot, stagingDir) {
-  if (!fs.existsSync(vendorSourceRoot)) {
-    throw new Error(`vendor source dir not found: ${vendorSourceRoot}`);
+/** Build outputs must be a real in-root directory before any unlink/write. */
+function assertSafeDistDirectory(repoRoot, distDir) {
+  assertVendorAncestry(distDir, fs, repoRoot);
+  let st;
+  try { st = fs.lstatSync(distDir); }
+  catch (err) {
+    if (err && err.code === 'ENOENT') return false;
+    throw err;
   }
-  const collected = [];
-  for (const sub of VENDOR_SOURCE_DIRS) {
-    const subSrc = path.join(vendorSourceRoot, sub);
-    if (!fs.existsSync(subSrc)) continue;
-    walkAndCopy(subSrc, sub, stagingDir, collected);
+  if (!st.isDirectory() || st.isSymbolicLink()) {
+    throw new Error('voice pack dist directory must be a real directory');
   }
-  if (collected.length === 0) {
-    throw new Error(`vendor dirs empty under ${vendorSourceRoot} — no piper/whisper files found`);
-  }
-  return collected;
+  return true;
 }
 
-function walkAndCopy(absSrcDir, relPrefix, stagingDir, collected) {
-  for (const entry of fs.readdirSync(absSrcDir, { withFileTypes: true })) {
-    const absSrc = path.join(absSrcDir, entry.name);
-    const relPath = `${relPrefix}/${entry.name}`;
-    const absDest = path.join(stagingDir, relPath);
-    if (entry.isDirectory()) {
-      fs.mkdirSync(absDest, { recursive: true });
-      walkAndCopy(absSrc, relPath, stagingDir, collected);
-    } else if (entry.isFile()) {
-      fs.mkdirSync(path.dirname(absDest), { recursive: true });
-      fs.copyFileSync(absSrc, absDest);
-      collected.push({ rel: relPath, abs: absSrc });
-    }
+function collectFiles(repoRoot, vendorSourceRoot, stagingDir) {
+  if (!fs.existsSync(vendorSourceRoot)) {
+    throw new Error('vendor source dir not found: ' + vendorSourceRoot);
   }
+  const collected = [];
+  for (const rel of REQUIRED_ASSETS) {
+    // The shared vendor guard rejects symlink/junction ancestry before copying.
+    assertVendorAncestry(path.join(vendorSourceRoot, ...rel.split('/')), fs, repoRoot);
+    const absSrc = path.join(vendorSourceRoot, ...rel.split('/'));
+    let stat;
+    try { stat = fs.lstatSync(absSrc); }
+    catch { throw new Error('required voice asset missing: ' + rel); }
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0 || stat.size > MAX_ASSET_BYTES) {
+      throw new Error('required voice asset invalid: ' + rel);
+    }
+    const absDest = path.join(stagingDir, ...rel.split('/'));
+    fs.mkdirSync(path.dirname(absDest), { recursive: true });
+    fs.copyFileSync(absSrc, absDest, fs.constants.COPYFILE_EXCL);
+    // Hash the exact staged bytes that will enter the archive, not a source
+    // file that could change after copy.
+    collected.push({ rel, abs: absDest });
+  }
+  return collected;
 }
 
 function writeManifest(stagingDir, version, collected) {
@@ -101,7 +164,7 @@ function writeManifest(stagingDir, version, collected) {
   );
 }
 
-function runTarCreate(stagingDir, tarballPath) {
+function runTarCreate(stagingDir, tarballPath, run = spawnSync) {
   const entries = fs.readdirSync(stagingDir);
   // Portability: BSD tar (macOS default) and bsdtar do NOT accept
   // `--force-local`, which previously broke `npm test` on those hosts. The
@@ -115,7 +178,7 @@ function runTarCreate(stagingDir, tarballPath) {
   const tarballDir = path.dirname(tarballPath);
   const tarballName = path.basename(tarballPath);
   const args = ['-czf', tarballName, '-C', stagingDir, ...entries];
-  const result = spawnSync('tar', args, {
+  const result = run('tar', args, {
     shell: false,
     encoding: 'utf8',
     cwd: tarballDir,
@@ -129,3 +192,6 @@ function writeSha256(tarballPath) {
   const sha = createHash('sha256').update(fs.readFileSync(tarballPath)).digest('hex');
   fs.writeFileSync(`${tarballPath}.sha256`, `${sha}  ${path.basename(tarballPath)}\n`, 'utf8');
 }
+
+module.exports = { packageVoicePack };
+if (require.main === module) main();

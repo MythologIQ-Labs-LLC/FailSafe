@@ -1,6 +1,7 @@
 const esbuild = require("esbuild");
 const fs = require("fs");
 const path = require("path");
+const { assertCommittedVoiceAssets } = require('./vendor-voice.cjs');
 
 const root = path.resolve(__dirname, "..");
 const distDir = path.join(root, "dist");
@@ -14,24 +15,6 @@ function resetDist() {
 function copyDir(source, target) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.cpSync(source, target, { recursive: true });
-}
-
-function vendorWhisper() {
-  const srcDir = path.join(root, "node_modules", "@xenova", "transformers", "dist");
-  const destDir = path.join(root, "src", "roadmap", "ui", "vendor", "whisper");
-  const files = ["transformers.min.js", "ort-wasm-simd.wasm", "ort-wasm-simd-threaded.wasm"];
-
-  fs.mkdirSync(destDir, { recursive: true });
-  let copied = 0;
-  for (const file of files) {
-    const src = path.join(srcDir, file);
-    const dest = path.join(destDir, file);
-    if (!fs.existsSync(dest) && fs.existsSync(src)) {
-      fs.copyFileSync(src, dest);
-      copied++;
-    }
-  }
-  if (copied > 0) console.log(`  Vendored ${copied} Whisper file(s)`);
 }
 
 function sanitizeBetterSqlite3Metadata() {
@@ -81,7 +64,7 @@ function sanitizeBundleNewFunction() {
 
 function sanitizeVendorPatterns() {
   // Whisper/Transformers.js: strip eval shim and new Function("return this")
-  const whisperPath = path.join(root, "src", "roadmap", "ui", "vendor", "whisper", "transformers.min.js");
+  const whisperPath = path.join(distDir, "extension", "ui", "vendor", "whisper", "transformers.min.js");
   if (fs.existsSync(whisperPath)) {
     let code = fs.readFileSync(whisperPath, "utf8");
     const original = code;
@@ -97,7 +80,7 @@ function sanitizeVendorPatterns() {
   }
 
   // 3d-force-graph: replace new Function with indirect constructor reference
-  const graphPath = path.join(root, "src", "roadmap", "ui", "vendor", "3d-force-graph", "3d-force-graph.min.js");
+  const graphPath = path.join(distDir, "extension", "ui", "vendor", "3d-force-graph", "3d-force-graph.min.js");
   if (fs.existsSync(graphPath)) {
     let code = fs.readFileSync(graphPath, "utf8");
     const original = code;
@@ -127,15 +110,15 @@ async function main() {
   // Post-bundle sanitization for socket.dev compliance
   sanitizeBundleNewFunction();
 
-  // Auto-vendor Whisper (Transformers.js) files before UI copy
-  vendorWhisper();
-  sanitizeVendorPatterns();
+  assertCommittedVoiceAssets(path.join(root, 'src', 'roadmap', 'ui', 'vendor'), fs, root);
   sanitizeBetterSqlite3Metadata();
 
   copyDir(
     path.join(root, "src", "roadmap", "ui"),
     path.join(distDir, "extension", "ui"),
   );
+  // Rewrite build outputs, never the committed browser-vendor source files.
+  sanitizeVendorPatterns();
 
   // Educational Component (v5.2.0): emit the browser-ESM education modules
   // into dist so the /education mount resolves in the packaged VSIX. The
