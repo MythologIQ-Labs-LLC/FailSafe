@@ -1,7 +1,7 @@
 const esbuild = require("esbuild");
 const fs = require("fs");
 const path = require("path");
-const { assertVendorAncestry, assertVoiceVendorInventory } = require('./vendor-voice.cjs');
+const { assertCommittedVoiceAssets } = require('./vendor-voice.cjs');
 
 const root = path.resolve(__dirname, "..");
 const distDir = path.join(root, "dist");
@@ -15,32 +15,6 @@ function resetDist() {
 function copyDir(source, target) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.cpSync(source, target, { recursive: true });
-}
-
-function verifyVendoredVoiceAssets() {
-  // The browser assets are shipped from committed vendor files, not installed
-  // by core npm ci. Re-vendoring is explicit: npm run vendor:voice (#707).
-  const required = [
-    'piper/piper.min.js',
-    'piper/piper_phonemize.wasm',
-    'piper/piper_phonemize.data',
-    'whisper/transformers.min.js',
-    'whisper/ort-wasm-simd.wasm',
-    'whisper/ort-wasm-simd-threaded.wasm',
-  ];
-  for (const relative of required) {
-    const file = path.join(root, 'src', 'roadmap', 'ui', 'vendor', relative);
-    assertVendorAncestry(file, fs, root);
-    let stat;
-    try { stat = fs.lstatSync(file); }
-    catch { throw new Error('Missing browser voice asset: ' + relative + '. Run npm run vendor:voice'); }
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0) {
-      throw new Error('Invalid browser voice asset: ' + relative + '. Run npm run vendor:voice');
-    }
-  }
-  // Do not recursively copy abandoned .new/.old transaction files or unreviewed
-  // voice payloads merely because the six approved assets exist.
-  assertVoiceVendorInventory(path.join(root, 'src', 'roadmap', 'ui', 'vendor'), fs, root);
 }
 
 function sanitizeBetterSqlite3Metadata() {
@@ -136,8 +110,7 @@ async function main() {
   // Post-bundle sanitization for socket.dev compliance
   sanitizeBundleNewFunction();
 
-  // Voice files are maintained by the explicit pinned vendor:voice command.
-  verifyVendoredVoiceAssets();
+  assertCommittedVoiceAssets(path.join(root, 'src', 'roadmap', 'ui', 'vendor'), fs, root);
   sanitizeBetterSqlite3Metadata();
 
   copyDir(

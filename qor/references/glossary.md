@@ -108,7 +108,7 @@ definition: |
   (inspects 0 sessions and prints "completeness is unverified, not confirmed" before exiting 0), secret_scanner
   --staged (0 staged bytes), governance-index --cross-check-ledger (0 bytes of output on both pass and fail),
   and the post-anchor ledger fork guard (only reachable when the forked entry is the ledger's high-water mark).
-home: .failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md
+home: docs/SYSTEM_STATE.md
 introduced_in_plan: plan-qor169-sprint1-seal-unblock
 referenced_by:
   - docs/FEATURE_INDEX.md
