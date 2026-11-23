@@ -64,14 +64,16 @@ suite('voice vendor isolation #707', () => {
     for (const size of [0, 75 * 1024 * 1024 + 1]) {
       fs.writeFileSync(target, '');
       fs.truncateSync(target, size); // sparse file: no 75-MiB allocation
-      let opened = 0;
+      // Count every io path that could read the target, not only openSync:
+      // a readFileSync or stream on the original must fail this test (#707 V1).
+      let reads = 0;
       let staged = 0;
+      const onTarget = (file: unknown) => { if (String(file) === target) reads++; };
       const io = {
         ...fs,
-        openSync(file: fs.PathLike, flags: string | number, mode?: fs.Mode) {
-          if (String(file) === target) opened++;
-          return fs.openSync(file, flags, mode);
-        },
+        openSync: (...a: Parameters<typeof fs.openSync>) => { onTarget(a[0]); return fs.openSync(...a); },
+        readFileSync: (...a: Parameters<typeof fs.readFileSync>) => { onTarget(a[0]); return fs.readFileSync(...a); },
+        createReadStream: (...a: Parameters<typeof fs.createReadStream>) => { onTarget(a[0]); return fs.createReadStream(...a); },
         writeFileSync(file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView,
           options?: fs.WriteFileOptions) {
           if (String(file).includes('.new-')) staged++;
@@ -81,7 +83,7 @@ suite('voice vendor isolation #707', () => {
       assert.throws(() => vendorTool.commitOutputs(
         new Map([['piper/piper.min.js', Buffer.from('PINNED')]]), vendor, io, root,
       ), /existing voice vendor asset exceeds size budget or is empty/);
-      assert.equal(opened, 0, 'the rejected existing file must never be opened for reading');
+      assert.equal(reads, 0, 'the rejected existing file must never be opened or read');
       assert.equal(staged, 0, 'all preflight checks precede staging');
       assert.equal(fs.statSync(target).size, size, 'the original file remains untouched');
       assert.deepEqual(fs.readdirSync(dir), ['piper.min.js']);
