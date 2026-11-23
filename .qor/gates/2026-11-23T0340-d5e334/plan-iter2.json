@@ -1,0 +1,72 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-23T0340-d5e334",
+  "ts": "2026-11-23T03:59:57Z",
+  "plan_path": ".failsafe/governance/plans/plan-707-voice-dependency-isolation.md",
+  "phases": [
+    "Apply the bounded-read patch verbatim",
+    "Make the oversized-asset test detect the defect",
+    "Committed voice assets check out byte-exact",
+    "Behaviour-preserving split to meet the Razor",
+    "Records"
+  ],
+  "open_questions": [],
+  "doc_tier": "standard",
+  "terms": [],
+  "change_class": "feature",
+  "originating_remediation": "FailSafe #707 (PR #712)",
+  "boundaries": {
+    "limitations": [
+      "re-vendoring needs registry.npmjs.org and tar",
+      "pathname-based transaction, not race-free against a same-user process",
+      "size- or inode-checked reads (baseline lines 249, 277, 294, 334, 394) stay exposed to a same-user growth race",
+      "vendor:voice refuses to replace an empty or over-75-MiB existing asset; operator removes it first",
+      "Windows symlink tests pending without privilege; Linux run evidences them",
+      "pre-rule checkouts re-check-out the six assets once"
+    ],
+    "non_goals": [
+      "#710 installer",
+      "voice activation and consent",
+      "#695 dependency remediation (lock overlap handled at integration)",
+      "frozen Qor-logic pins",
+      "version bump, tag or release"
+    ],
+    "exclusions": [
+      ".github/workflows/**",
+      "pre-existing bundle.cjs Razor findings at origin/main"
+    ]
+  },
+  "feature_inventory_touches": [
+    {
+      "entry_id": "n/a-justified",
+      "operation": "n/a-justified",
+      "test_path": "FailSafe/extension/src/test/scripts/vendorVoiceExisting.test.ts",
+      "test_descriptor": "an oversized pre-existing vendor asset is refused before any read of it and no file changes"
+    }
+  ],
+  "ci_commands": [
+    "npm ci",
+    "npm run compile",
+    "npm run lint",
+    "npx mocha --ui tdd --timeout 60000 out/test/scripts/vendorVoice*.test.js out/test/scripts/packageVoicePack.test.js",
+    "npm run verify:voice-pins",
+    "npm run bundle",
+    "npm run test:node",
+    "npm run test:runner-coverage",
+    "npm run test:ui",
+    "npm test",
+    "npm run build:package"
+  ],
+  "iteration": 2,
+  "supersedes_plan_sha256": "283c74365940e83fa321a3c6606eb1d0b08d36e5b9835fa71dead7e605f0fc60",
+  "source_revision": "a465bd85249862a9e355ad584a338ca6fc9aeb25",
+  "plan_sha256": "c27e11615904a7294f5347452a3608afd286b0772caba26fb2ce36569c40bc82",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "absent",
+    "ts": "2026-11-23T03:59:57Z"
+  }
+}

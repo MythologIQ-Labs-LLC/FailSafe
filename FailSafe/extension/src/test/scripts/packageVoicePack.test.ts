@@ -191,4 +191,28 @@ suite('package-voice-pack.cjs exact asset inventory #707', () => {
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /vendor source dir not found/);
   }));
+
+  // #707 V3: the normal path already deletes stale files before packaging, so
+  // only a failure after tar writes a partial archive reaches failure cleanup.
+  test('a tar failure after writing a partial prerelease archive leaves no archive or checksum', () => fixture(root => {
+    seed(root);
+    const producer = require(SCRIPT);
+    for (const version of ['6.1.0-rc.1', '6.1.0']) {
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version }));
+      const tarball = path.join(root, 'dist', `failsafe-voice-pack-${version}.tar.gz`);
+      let calls = 0;
+      let existedOnReturn = false;
+      const run = (_command: string, args: string[], opts: { cwd: string }) => {
+        calls++;
+        fs.writeFileSync(path.join(opts.cwd, args[1]), 'partial archive');
+        existedOnReturn = fs.existsSync(tarball);
+        return { status: 1, stderr: 'simulated tar failure' };
+      };
+      assert.throws(() => producer.packageVoicePack(root, run), /tar -czf failed \(exit 1\): simulated tar failure/);
+      assert.equal(calls, 1, version + ': tar ran once');
+      assert.equal(existedOnReturn, true, version + ': the partial archive existed when tar returned');
+      assert.equal(fs.existsSync(tarball), false, version + ': partial archive removed');
+      assert.equal(fs.existsSync(tarball + '.sha256'), false, version + ': no checksum');
+    }
+  }));
 });

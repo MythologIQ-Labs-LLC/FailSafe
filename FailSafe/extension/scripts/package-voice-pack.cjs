@@ -11,7 +11,6 @@ const { createHash } = require('crypto');
 const { spawnSync } = require('child_process');
 const { assertVendorAncestry } = require('./vendor-voice.cjs');
 
-const REPO_ROOT = process.env.FAILSAFE_REPO_ROOT || path.resolve(__dirname, '..');
 const REQUIRED_ASSETS = Object.freeze([
   'piper/piper.min.js',
   'piper/piper_phonemize.wasm',
@@ -22,64 +21,84 @@ const REQUIRED_ASSETS = Object.freeze([
 ]);
 const MAX_ASSET_BYTES = 75 * 1024 * 1024;
 
-main();
-
 function main() {
+  const repoRoot = process.env.FAILSAFE_REPO_ROOT || path.resolve(__dirname, '..');
   try {
-    const version = readVersion();
-    const distDir = path.join(REPO_ROOT, 'dist');
-    // Reject linked build output before deleting even a stale same-version file.
-    assertSafeDistDirectory(distDir);
-    fs.mkdirSync(distDir, { recursive: true });
-    assertSafeDistDirectory(distDir);
-
-    // Never leave a previous same-version release candidate available if a
-    // later packaging attempt fails before producing new verified assets.
-    // All failures must leave *neither* a publishable archive nor checksum.
-    const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
-    const checksumPath = `${tarballPath}.sha256`;
-    fs.rmSync(tarballPath, { force: true });
-    fs.rmSync(checksumPath, { force: true });
-
-    const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-voice-pack-build-'));
-    try {
-      const vendorSourceRoot = path.join(REPO_ROOT, 'dist', 'extension', 'ui', 'vendor');
-      const collected = collectFiles(vendorSourceRoot, stagingDir);
-
-      writeManifest(stagingDir, version, collected);
-
-      runTarCreate(stagingDir, tarballPath);
-      writeSha256(tarballPath);
-
-      console.log(`[package-voice-pack] wrote ${tarballPath}`);
-      console.log(`[package-voice-pack] files: ${collected.length}`);
-    } finally {
-      fs.rmSync(stagingDir, { recursive: true, force: true });
-    }
+    packageVoicePack(repoRoot);
   } catch (err) {
-    // A partial tarball or stale checksum is not a valid release candidate.
-    // Cleanup is best-effort, but any failure still exits nonzero.
-    try {
-      const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
-      if (/^\d+\.\d+\.\d+$/.test(String(pkg.version || ''))) {
-        const distDir = path.join(REPO_ROOT, 'dist');
-        // Cleanup must honor the same boundary as the normal write path.
-        if (assertSafeDistDirectory(distDir)) {
-          const candidate = path.join(distDir, `failsafe-voice-pack-${pkg.version}.tar.gz`);
-          fs.rmSync(candidate, { force: true });
-          fs.rmSync(candidate + '.sha256', { force: true });
-        }
-      }
-    } catch (cleanupErr) {
-      process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\n');
-    }
     process.stderr.write(`[package-voice-pack] ERROR: ${err.message || err}\n`);
     process.exit(1);
   }
 }
 
-function readVersion() {
-  const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+/**
+ * Build the Voice Pack under repoRoot/dist. `repoRoot` is the single trusted
+ * root for the version, the dist directory and the vendor sources. Any failure
+ * removes this version's archive and checksum before rethrowing.
+ */
+function packageVoicePack(repoRoot, run = spawnSync) {
+  try {
+    const version = readVersion(repoRoot);
+    const distDir = path.join(repoRoot, 'dist');
+    // Reject linked build output before deleting even a stale same-version file.
+    assertSafeDistDirectory(repoRoot, distDir);
+    fs.mkdirSync(distDir, { recursive: true });
+
+    // Never leave a previous same-version release candidate available if a
+    // later packaging attempt fails before producing new verified assets.
+    // All failures must leave *neither* a publishable archive nor checksum.
+    const tarballPath = removeCandidateArtifacts(repoRoot, distDir, version);
+    buildVoicePack(repoRoot, version, tarballPath, run);
+  } catch (err) {
+    cleanupAfterFailure(repoRoot);
+    throw err;
+  }
+}
+
+/** Remove this version's archive and checksum, only inside a real in-root dist directory. */
+function removeCandidateArtifacts(repoRoot, distDir, version) {
+  const tarballPath = path.join(distDir, `failsafe-voice-pack-${version}.tar.gz`);
+  if (assertSafeDistDirectory(repoRoot, distDir)) {
+    fs.rmSync(tarballPath, { force: true });
+    fs.rmSync(`${tarballPath}.sha256`, { force: true });
+  }
+  return tarballPath;
+}
+
+function buildVoicePack(repoRoot, version, tarballPath, run) {
+  const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-voice-pack-build-'));
+  try {
+    const vendorSourceRoot = path.join(repoRoot, 'dist', 'extension', 'ui', 'vendor');
+    const collected = collectFiles(repoRoot, vendorSourceRoot, stagingDir);
+
+    writeManifest(stagingDir, version, collected);
+
+    runTarCreate(stagingDir, tarballPath, run);
+    writeSha256(tarballPath);
+
+    console.log(`[package-voice-pack] wrote ${tarballPath}`);
+    console.log(`[package-voice-pack] files: ${collected.length}`);
+  } finally {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+  }
+}
+
+function cleanupAfterFailure(repoRoot) {
+  // A partial tarball or stale checksum is not a valid release candidate.
+  // An unreadable or unsafe version has no candidate to clean up.
+  let version;
+  try { version = readVersion(repoRoot); } catch { return; }
+  try {
+    // Cleanup must honor the same boundary as the normal write path, for
+    // every version readVersion accepts, prereleases included (#707 V3).
+    removeCandidateArtifacts(repoRoot, path.join(repoRoot, 'dist'), version);
+  } catch (cleanupErr) {
+    process.stderr.write('[package-voice-pack] artifact cleanup warning: ' + cleanupErr.message + '\n');
+  }
+}
+
+function readVersion(repoRoot) {
+  const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
   if (typeof pkg.version !== 'string' ||
       !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version)) {
     throw new Error('package.json version must be a safe SemVer identifier');
@@ -88,8 +107,8 @@ function readVersion() {
 }
 
 /** Build outputs must be a real in-root directory before any unlink/write. */
-function assertSafeDistDirectory(distDir) {
-  assertVendorAncestry(distDir, fs, REPO_ROOT);
+function assertSafeDistDirectory(repoRoot, distDir) {
+  assertVendorAncestry(distDir, fs, repoRoot);
   let st;
   try { st = fs.lstatSync(distDir); }
   catch (err) {
@@ -102,14 +121,14 @@ function assertSafeDistDirectory(distDir) {
   return true;
 }
 
-function collectFiles(vendorSourceRoot, stagingDir) {
+function collectFiles(repoRoot, vendorSourceRoot, stagingDir) {
   if (!fs.existsSync(vendorSourceRoot)) {
     throw new Error('vendor source dir not found: ' + vendorSourceRoot);
   }
   const collected = [];
   for (const rel of REQUIRED_ASSETS) {
     // The shared vendor guard rejects symlink/junction ancestry before copying.
-    assertVendorAncestry(path.join(vendorSourceRoot, ...rel.split('/')), fs, REPO_ROOT);
+    assertVendorAncestry(path.join(vendorSourceRoot, ...rel.split('/')), fs, repoRoot);
     const absSrc = path.join(vendorSourceRoot, ...rel.split('/'));
     let stat;
     try { stat = fs.lstatSync(absSrc); }
@@ -145,7 +164,7 @@ function writeManifest(stagingDir, version, collected) {
   );
 }
 
-function runTarCreate(stagingDir, tarballPath) {
+function runTarCreate(stagingDir, tarballPath, run = spawnSync) {
   const entries = fs.readdirSync(stagingDir);
   // Portability: BSD tar (macOS default) and bsdtar do NOT accept
   // `--force-local`, which previously broke `npm test` on those hosts. The
@@ -159,7 +178,7 @@ function runTarCreate(stagingDir, tarballPath) {
   const tarballDir = path.dirname(tarballPath);
   const tarballName = path.basename(tarballPath);
   const args = ['-czf', tarballName, '-C', stagingDir, ...entries];
-  const result = spawnSync('tar', args, {
+  const result = run('tar', args, {
     shell: false,
     encoding: 'utf8',
     cwd: tarballDir,
@@ -173,3 +192,6 @@ function writeSha256(tarballPath) {
   const sha = createHash('sha256').update(fs.readFileSync(tarballPath)).digest('hex');
   fs.writeFileSync(`${tarballPath}.sha256`, `${sha}  ${path.basename(tarballPath)}\n`, 'utf8');
 }
+
+module.exports = { packageVoicePack };
+if (require.main === module) main();

@@ -1,5 +1,6 @@
 # Prospective FailSafe 6.1.0 plan: separate browser voice vendoring from core npm install (#707)
 
+**Superseded by:** the native plan `.failsafe/governance/plans/plan-707-voice-dependency-isolation.md` (independent PASS L3, ledger Entry #972). This draft is kept as its source.
 **Status:** UNQUALIFIED DRAFT IMPLEMENTATION CANDIDATE, not a native /qor-plan, /qor-audit PASS, /qor-implement, /qor-substantiate, seal, or merge GO.
 **Source:** main 0c0e30e042f628455c2a7f4d1287b5efd9d3ecfc, Node extension manifest at FailSafe/extension/package.json (v6.0.13), lockfile blob 358848b5ff56d44ebd2ca0c492a5eeadf0a30e56.
 **Owner decision:** FailSafe is a governance extension, not a native inference runtime. Keep optional browser Whisper/Piper features, remove their native ONNX toolchain from ordinary npm ci.

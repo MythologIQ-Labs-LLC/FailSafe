@@ -3154,3 +3154,77 @@ For security verifiers, accept a check only when a mutation that deletes it make
 ### Remediation
 
 Iteration 2 (PASS #931) adds isolated attacks for every surviving check. The auditor's own 32 mutations are now all caught. The only survivor is the token `granted` check, which `openssl ts -verify` already makes impossible to exercise; it is documented as defense in depth.
+
+## Failure Entry #334
+
+**Date**: 2026-11-23T03:54:10Z
+**Verdict ID**: GATE TRIBUNAL plan-707-voice-dependency-isolation iteration 1 VETO (session 2026-11-23T0340-d5e334; report .failsafe/governance/evidence/issue-707/AUDIT-PLAN-iter1.md)
+**Failure Mode**: COMPLEXITY_VIOLATION; GHOST_PATH (untested qualification path); ORPHAN
+
+### What Failed
+The native plan for PR #712 (#707 voice dependency isolation) together with the supplied bounded-read patch.
+
+### Why It Failed
+- A regression test claimed "refused without reading" but spied on io.openSync, which fs.readFileSync never calls. A mutant that restores the exact defect passes it.
+- The new read-only release-integrity command (verify:voice-pins) compares working-tree bytes with no .gitattributes protection, so it fails on every default Windows checkout. The plan never ran it.
+- The plan's Razor measurements were incomplete: it kept a nesting-4 main and moved a 44-line test body "verbatim". Its exclusion text called a file it modifies untouched.
+- Behaviour-preservation of a module split was "proved" by test names only, on a host where 7 of 28 tests skip.
+- A legacy wrapper (vendor-piper.cjs) was left with no caller.
+- The packaging failure cleanup's version guard is narrower than the accepted version format.
+- The patch silently removed the documented repair path for an empty existing asset.
+
+### Pattern to Avoid
+- A spy must intercept the code path the defect actually uses. Prove each regression test with a mutant that reintroduces the defect.
+- Any byte-equality check against the working tree must account for line-ending conversion, or the files must be marked -text/binary as the G4 files are.
+- A "verbatim move" claim must be reconciled with the Razor limits before the plan asserts compliance.
+- Prove a split by body digests on a host where the moved logic actually executes.
+- Boundary text must not call a file untouched when the scoped diff changes it.
+
+### Remediation Attempted
+None yet. VETO issued; the Governor must amend the plan, and the defects route to /qor-debug (V2), /qor-refactor (V4) and /qor-organize (V6).
+
+## Failure Entry #335
+
+**Date**: 2026-11-23T04:06:37Z
+**Verdict ID**: GATE TRIBUNAL plan-707-voice-dependency-isolation iteration 2 VETO (session 2026-11-23T0340-d5e334; report .failsafe/governance/evidence/issue-707/AUDIT-PLAN-iter2.md)
+**Failure Mode**: GHOST_PATH (test that cannot reach the changed branch); specification drift; unsourced evidence
+
+### What Failed
+Iteration 2 of the native plan for PR #712 (#707). Most of the iteration 1 grounds were answered, and the answers held when executed (Phase 1b mutation detection, the .gitattributes -text rule, verify:voice-pins exit 0 on Windows, the 30-test map, the vendor-piper.cjs deletion).
+
+### Why It Failed
+- The test added to prove the prerelease failure-cleanup fix seeds a missing asset. package-voice-pack.cjs removes stale same-version artifacts on the normal path (lines 41-42) before that failure (line 116), so the test passes on the unfixed baseline (executed). The changed catch-path branch (lines 62-72) is never reached.
+- The V8 answer covered empty and wrong-type assets but not over-75-MiB ones, while the boundary text claimed the build message covers both. The moved check has no upper size bound.
+- The Linux run became the sole evidence for 7 symlink tests and for half of a condition, but no Linux source was named. The host has no WSL or Docker, and the plan itself excludes CI as native acceptance.
+- A Razor cap (bundle.cjs main at most 93) was set against a measured 94 with no prescribed change that reaches it.
+
+### Pattern to Avoid
+- Prove a fix with a red run against the unfixed code before declaring the test, and make sure the fixture reaches the changed branch, not an earlier path with the same outcome.
+- When answering a prior ground, answer every case the ground names ("the same applies to ...").
+- Every evidence requirement must name where it will be executed and whether that source counts as acceptance.
+- A numeric cap below the measured baseline needs a named change that reaches it.
+
+### Remediation Attempted
+Iteration 2 amendment (answers to V1, V2, V4, V6 held under execution). VETO issued on four plan-text grounds; the Governor amends the plan and re-runs /qor-audit.
+
+## Failure Entry #336
+
+**Date**: 2026-11-23T06:10:24Z
+**Verdict ID**: SUBSTANTIATE plan-707-voice-dependency-isolation iteration 3 VETO (session 2026-11-23T0340-d5e334; report .failsafe/governance/evidence/issue-707/SUBSTANTIATE.md; ledger Entry #974)
+**Failure Mode**: documentation-integrity ABORT (orphan glossary home); a known pre-seal blocker carried to seal unremediated
+
+### What Failed
+The session seal for PR #712 (#707 voice dependency isolation). The implementation itself matched the plan under execution (patch custody, mutations, body digests, Razor, conditions C1-C8, Linux run 45118465441).
+
+### Why It Failed
+- Skill Step 4.7 strict doc_integrity raised ValueError: the 'Vacuous pass' glossary term (qor/references/glossary.md:111) names a home, .failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md, that is gitignored and absent on this host. The skill gives this ABORT no waiver path.
+- The defect is pre-existing at origin/main. Audit #972 printed it in its Documentation Drift section as one that "would hard-block at /qor-substantiate", and nobody acted on it before the seal.
+- Earlier seals passed the gate by supplying the gitignored brief from a local copy, so the gate's result depended on one workstation's untracked files.
+
+### Pattern to Avoid
+- A Documentation Drift item that an audit marks as substantiate-blocking is a seal obligation. Remediate it in the implement phase, or record a plan item for it, before claiming readiness to seal.
+- A glossary home must be a tracked file. A home that exists only in a gitignored local file passes on one machine and fails on every fresh checkout.
+- Before sealing, check that every ABORT-class gate passes in a fresh checkout, not only in a workspace with local leftovers.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or governance. Required: point the glossary home at an existing tracked file (recorded as UNPLANNED in the seal entry), add the pre-existing ledger fixture token to .qor/secret-scanner-allowlist before staging, and re-run /qor-substantiate.
