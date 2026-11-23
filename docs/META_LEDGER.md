@@ -36731,3 +36731,82 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: RELEASE RECORD for FailSafe v6.0.13. Owner release GO 2026-11-12. Annotated tag v6.0.13 object 62a28fc12679a816d8a3307a280d6aa0b8421140 on release commit M 26c1161adc440c00ee29c6b053bb5953d27e8a38 (parents 23e254d9 and qualified head H a7839b75; M tree equals H tree 89dee954; FailSafe/extension subtree 6263c6d041643e1d84e0ee0fd3cab2c146327b41 equals sealed S 589b5157). Rule suite 5085534132 for 23e254d9 -> 26c1161a: result=pass. Release run 43337880053: SemVer gate, Build & Test, Publish to VS Code Marketplace, Publish to Open VSX and Create GitHub Release all succeeded; production environment approved by the owner. GitHub Release https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.13 published 2026-11-13T01:09:48Z with eight VSIX targets, FailSafe-v6.0.13-Release-Notes.pdf (sha256 1b179d725f37e113fa35b9f3d804326636cd27fcc2ca345dfb26c46e06b30c80) and SHA256SUMS.txt (sha256 b9f8d9355fe10fa6f94446139d4de3580b935f96b5945d62c5825c91fa4f4dc0, the content hash of this entry). Verified on the owner workstation: all nine published files match SHA256SUMS.txt; every VSIX reports version 6.0.13, carries the v6.0.13 README markers and only its own target's native prebuild; verify-release-provenance reported 16 of 16 marketplace packages (VS Code Marketplace and Open VSX, all eight targets) byte-identical to the published set, independently of the release run, which reported the same. No GitHub artifact attestation exists or is claimed. G4: first witnessed release; owner key FailSafe-G4-Ledger-Witness, certificate fingerprint a50c00715e7275a86fad338c80ceacd161da02bdf2b75c60b1082eb518265d8b; genesis g4-000001 attesting seal record R 9defb9510ffd91e405ffb108d34f33594fc36e8c, trusted head g4-000001:8089c1827434dda60d6ed485e708fce755b8b17e3976c5fbbe1b722dcb14edc4, FreeTSA token 2026-11-13T00:01:49Z; release-mode verification PASS OK with no limitation on fresh full clones of H and M using the owner's independently retained values, which verifiers must take from an independent source, not from this entry. Native darwin-arm64 load qualified by supplementary run 43336186066 on macos-15-arm64 for the identical extension subtree; the cancelled original job on H is not recorded as passed; #669 stays open. Record: .failsafe/governance/evidence/v6013-release/published/POST_PUBLICATION_RECORD.md.
 
 ---
+
+### Entry #970: GATE TRIBUNAL - plan-707-voice-dependency-isolation (iteration 1) VETO
+
+**Timestamp**: 2026-11-23T03:54:10Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-23T0340-d5e334`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-707-voice-dependency-isolation.md` (iteration 1, sha256 283c74365940e83fa321a3c6606eb1d0b08d36e5b9835fa71dead7e605f0fc60)
+**Report**: `.failsafe/governance/evidence/issue-707/AUDIT-PLAN-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-23T0340-d5e334/audit-iter1.json`
+
+**Content Hash**: `d8918b322d732d117a27606930e75c385a24826af64fe90ec581c10f1115ac1b`
+**Previous Hash**: `9aecdbf5f3650ebce54675fbdccfecc2874347076821883cbe892081c367ffc9`
+**Chain Hash (Merkle seal)**: `2ab41b3864fe196e163c5500e13bbdbf96d5b74bedd4549424693f7132ee8949`
+
+**Decision**: GATE TRIBUNAL VETO for plan-707-voice-dependency-isolation.md iteration 1 (PR #712 head a465bd85249862a9e355ad584a338ca6fc9aeb25, merge base 0c0e30e042f628455c2a7f4d1287b5efd9d3ecfc, plus fix.patch sha256 2ff29ced70c74795f0c3a9c0393a710c201308b78315ff41fe69ddd07ada8458), by a fresh-context independent auditor, solo mode; risk grade L3. Eight grounds. V1 test-failure: the patch test "refused without reading" counts io.openSync on a copied fs object, cannot see io.readFileSync, and a mutant restoring the unbounded read before the size check still passes it. V2 coverage-gap: verify:voice-pins exits 1 at head on a default Windows checkout (core.autocrlf=true, no .gitattributes rule for the vendor assets; piper.min.js and transformers.min.js check out CRLF), and no CI command or DoD item runs it. V3 coverage-gap: package-voice-pack.cjs failure cleanup accepts only X.Y.Z (line 64) while readVersion accepts prereleases (line 84); untested. V4 razor-overage: vendor-voice.cjs main nesting 4 is kept, a 44-line test body (603-646) is moved verbatim, and LD5 is incomplete. V5 specification-drift: the exclusion says bundle.cjs is untouched, but the planned diff grows it from 313 to 323 lines. V6 orphan-file: scripts/vendor-piper.cjs has no remaining caller. V7 coverage-gap: the Phase 2 proof compares test names only, 7 of 28 tests are pending on Windows, and no POSIX run is required. V8 specification-drift: the patch refuses an empty existing asset that bundle.cjs:38 tells the operator to repair with vendor:voice; undisclosed. Verified clean: all LD citations reproduce; git apply --check passes; SHA-512 pins match the live registry tarballs; the lock is consistent (npm ls offline) with no onnxruntime, sharp or @img entries; the patched suite passes on Windows (23 passing, 7 pending with bsdtar); the red run fails as planned. Required next actions: Governor amends the plan (V1, V3, V5, V7, V8); /qor-debug (V2); /qor-refactor (V4); /qor-organize (V6); re-run /qor-audit.
+
+---
+
+### Entry #971: GATE TRIBUNAL - plan-707-voice-dependency-isolation (iteration 2) VETO
+
+**Timestamp**: 2026-11-23T04:06:37Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-23T0340-d5e334`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-707-voice-dependency-isolation.md` (iteration 2, sha256 c27e11615904a7294f5347452a3608afd286b0772caba26fb2ce36569c40bc82)
+**Report**: `.failsafe/governance/evidence/issue-707/AUDIT-PLAN-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-23T0340-d5e334/audit-iter2.json`
+
+**Content Hash**: `cb39080f3cebba200146787bc63661d68b437fb6694bc596bf589f9053d4b585`
+**Previous Hash**: `2ab41b3864fe196e163c5500e13bbdbf96d5b74bedd4549424693f7132ee8949`
+**Chain Hash (Merkle seal)**: `4ff8115bb0a67c152fc5a344da777a1492c1bf0fa207994d82a21a1190663295`
+
+**Decision**: GATE TRIBUNAL VETO for plan-707-voice-dependency-isolation.md iteration 2 (PR #712 head a465bd85249862a9e355ad584a338ca6fc9aeb25, merge base 0c0e30e042f628455c2a7f4d1287b5efd9d3ecfc, plus fix.patch sha256 2ff29ced70c74795f0c3a9c0393a710c201308b78315ff41fe69ddd07ada8458), by a fresh-context independent auditor (Option B), solo mode; risk grade L3. Iteration 1 grounds answered and verified by execution: V1 (a scratch model of the Phase 1b assertion passes on the patched source and fails under the recorded mutation and at the baseline), V2 (in a core.autocrlf=true scratch clone the -text rule yields w/lf attr/-text, git check-attr prints text: unset for all 8 paths, and vendor-voice.cjs --verify exits 0), V4, V6 (LD10 empty). Four grounds remain. V1 test-failure: the planned prerelease cleanup test (missing asset) passes on the unfixed baseline, because package-voice-pack.cjs:41-42 removes stale artifacts before the line-116 failure (executed at a465bd85); the changed catch-path branch (62-72) is never reached. V2 specification-drift: the boundary claims the build message tells the operator to remove an over-75-MiB asset, but the moved check (bundle.cjs:37) has no upper bound and no oversized test is planned. V3 coverage-gap: the Linux run that is the sole evidence for 7 symlink tests and C1's Linux half has no named source; the host has no WSL or Docker, and plan:34 excludes CI as native acceptance; C1's Linux verify:voice-pins is not in the DoD. V4 specification-drift: bundle.cjs main must be at most 93 lines, it is measured at 94, and Phase 2 prescribes only a call substitution. All LD1-LD10 citations reproduce; the Entry #970 chain recomputes. Required next action: Governor amends the plan text (V1-V4) and re-runs /qor-audit.
+
+---
+
+### Entry #972: GATE TRIBUNAL - plan-707-voice-dependency-isolation (iteration 3) PASS
+
+**Timestamp**: 2026-11-23T04:21:43Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-23T0340-d5e334`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-707-voice-dependency-isolation.md` (iteration 3, sha256 6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7)
+**Report**: `.failsafe/governance/evidence/issue-707/AUDIT-PLAN-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-23T0340-d5e334/audit-iter3.json` (singleton `audit.json` identical)
+
+**Content Hash**: `90b1c15fd3bbed068fc6380ff95536660942de5e8752f90816c421a3ab75c1ac`
+**Previous Hash**: `4ff8115bb0a67c152fc5a344da777a1492c1bf0fa207994d82a21a1190663295`
+**Chain Hash (Merkle seal)**: `8cd8b4b6f0859b44d559f2df0f6a11309604fa9bd3e9b35a6991880495b9d2c8`
+
+**Decision**: GATE TRIBUNAL PASS for plan-707-voice-dependency-isolation.md iteration 3 (PR #712 head a465bd85249862a9e355ad584a338ca6fc9aeb25, merge base 0c0e30e042f628455c2a7f4d1287b5efd9d3ecfc, plus fix.patch sha256 2ff29ced70c74795f0c3a9c0393a710c201308b78315ff41fe69ddd07ada8458), by a fresh-context independent auditor (Option B), solo mode; risk grade L3. All iteration 2 grounds answered and checked by execution or recomputation. V1: a scratch model of packageVoicePack(repoRoot, run) removes the partial 6.1.0-rc.1 archive, leaves it when the baseline stable-only guard is restored (test fails), passes 6.1.0 both ways, and its CLI path reproduces the baseline producer and stale-repack results. V2: assertCommittedVoiceAssets refuses assets over MAX_ASSET with the remove-then-revendor message; a 75 MiB+1 truncated file stats as a regular oversized file; the largest committed asset is 46656168 bytes. V3: LD11 run 44988318243 (merge of a465bd85 into its merge base) lists 28 vendor and 11 packaging tests passing, none pending; LD12 run 44694011230 (head 22fc2837 = 7278ffdc plus a CI-only workflow step, conclusion cancelled after the verify step succeeded) used pins and verify functions byte-identical to a465bd85, with six identical asset blobs; PR Full Test runs on draft PRs, so the post-split source exists. V4: bundle.cjs:139 is inside main (94 lines), so removing it gives 93. Phases 1, 1b and 1c are unchanged; no iteration 1 answer regressed. LD1-LD12 re-walked and reproduced; Entries #970 and #971 recompute. Notes: N1 Windows pending count is 11, not 9; N2 LD12 record imprecise; N3 plan:14 still says 314; N4 LD11 is pre-patch (28, not 30). Binding implementation conditions C1-C8 (Linux record identities, post-split log record, helper digest unit, single repoRoot trusted root and cleanup ordering, LD1 refusal, non-vacuous prerelease test, bundle wiring record, exact Windows pending set). Next: /qor-implement.
+
+---
+
+### Entry #973: IMPLEMENT - plan-707-voice-dependency-isolation (iteration 3); not sealed
+
+**Timestamp**: 2026-11-23T05:26:06Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-11-23T0340-d5e334`
+**Risk Grade**: L3
+**Target**: `.failsafe/governance/plans/plan-707-voice-dependency-isolation.md` (iteration 3, sha256 6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7)
+**Report**: `.failsafe/governance/evidence/issue-707/IMPLEMENTATION.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-23T0340-d5e334/implement.json`
+
+**Content Hash**: `a701b695710c3cab25ae22fefff312e35e3bd641a061875505ff87c285b86de8`
+**Previous Hash**: `8cd8b4b6f0859b44d559f2df0f6a11309604fa9bd3e9b35a6991880495b9d2c8`
+**Chain Hash (Merkle seal)**: `77d3bfc13666326cd8d9f9afd8bc18021c3fe09f828bb55075195a8ea9d78108`
+
+**Decision**: IMPLEMENT record for plan-707 iteration 3 after independent PASS L3 Entry #972; the iteration 1 and 2 VETOs (Entries #970, #971) stand. Commits 477955a7, 3d73c539, 4c49f98c, 04c69c85, b7c3cd0b on fix/707-isolate-optional-voice-vendoring over audited source a465bd85. Phase 1 applied fix.patch verbatim (sha256 2ff29ced70c74795f0c3a9c0393a710c201308b78315ff41fe69ddd07ada8458) after the LD1 checks. Phase 1b: the strengthened oversized-asset test fails under the recorded readFileSync mutation and against the baseline source. Phase 1c: .gitattributes -text for the piper and whisper vendor directories; check-attr red then green; verify:voice-pins exit 0 on Windows. Phase 2: vendor-voice split into four modules plus the CLI, tests into five files plus support; body-digest inventory 30 names, 29 test and 3 helper digests equal, one declared exception; packageVoicePack(repoRoot, run) seam with prerelease cleanup (red, green, guard mutation fails); assertCommittedVoiceAssets refuses oversized assets; vendor-piper.cjs deleted. Razor: every Phase 2 file at most 198 lines, no function or test body over 40, bundle.cjs main 93 and file 297. Windows focused run 36 passing, 11 pending (the 11 win32-skipped tests), 0 failing. Full gate: lint 0 errors, test:ui 264, build:package 6 assets, test:node one fixed citation and the pre-existing g4Witness failure, npm test 4 Windows-host timeouts in #532 suites that #712 does not touch. Outstanding: condition C2 (post-split Linux run) and substantiation. This entry is not a seal, merge or release.
+
+---
