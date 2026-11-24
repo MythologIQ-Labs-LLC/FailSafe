@@ -142,7 +142,7 @@ These refusal paths return `step: 'noop'` with an explicit warning rather than f
 
 ## End-to-end scenario and measurable acceptance
 
-Scenario: run FailSafe Organize, answer Yes, and find a `fix/organize-<timestamp>` branch with one commit of exactly the changed files, pushed, and a PR whose URL is shown `FailSafe/extension/src/test/extension/governedCommitFlow.test.ts:59` (`approved + token → drives the ladder to a PR; branch is timestamp-stamped`).
+Scenario: run FailSafe Organize, answer Yes, and find a `fix/organize-<timestamp>` branch with one commit of exactly the changed files, pushed, and a PR whose URL is shown `FailSafe/extension/src/test/extension/governedCommitFlow.test.ts:82` (`approved + token → drives the ladder to a PR; branch is timestamp-stamped`).
 Metric: zero commits on No, exactly one commit on Yes, staged paths equal to the changed set (threshold: exact) `FailSafe/extension/src/test/extension/governedCommit.test.ts:80` (`stages exactly the named paths`).
 Existing test: `FailSafe/extension/src/test/extension/governedCommit.test.ts:35` (`commitPushOpenPr — governed Organize ladder`) (unit), with injected git and POST.
 Installed-extension test: no test runs the real git, a real remote or GitHub for this flow (unverified).
