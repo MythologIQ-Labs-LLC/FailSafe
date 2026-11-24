@@ -1,0 +1,36 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-11-23T0340-d5e334",
+  "ts": "2026-11-23T06:38:28Z",
+  "verdict": "PASS",
+  "merkle_seal": "b9571093ac543c0e291850bfe05627da2e4e2e8cfbd584a68a60c9f031413510",
+  "content_hash": "6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7",
+  "previous_hash": "81dba9657d2bff4d9e45f4ebf07d016ca75f9472e038228cab33d26cb964467e",
+  "ledger_entry": 975,
+  "entry_id": "e40d415e2c32",
+  "iteration": 2,
+  "reality_check": {
+    "missing": [],
+    "unplanned": [
+      "docs/architecture/integrations/acp-devin.md",
+      "qor/references/glossary.md",
+      ".qor/secret-scanner-allowlist"
+    ],
+    "matches": 22
+  },
+  "intent_lock_state": "verified",
+  "boundary_scope": "structural",
+  "report_path": ".failsafe/governance/evidence/issue-707/SUBSTANTIATE-iter2.md",
+  "source_revision": "6c7f8b2292ec32859eb6aaedb69b36c9ec2c0f47",
+  "plan_sha256": "6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7",
+  "supersedes": "substantiate-iter1.json (Entry #974 VETO, S1 closed)",
+  "sealed": true,
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "pass",
+    "ts": "2026-11-23T06:49:54Z"
+  }
+}
