@@ -140,6 +140,8 @@ suite('voice-pack publisher authentication #732', () => {
     await assert.rejects(() => installVoicePack({
       globalStoragePath: fixture.globalStoragePath, version: '5.2.0',
     }), /publisher authentication refused: redirect target rejected: host/);
-    assert.equal(calls.some(c => c.url.includes('evil.example.com')), false);
+    assert.ok(calls.length > 0, 'the intercepted fetch log must contain the initial requests');
+    assert.equal(calls.some(c => new URL(c.url).hostname === 'evil.example.com'), false,
+      'the rejected redirect hostname must never receive a request');
   });
 });
