@@ -99,6 +99,61 @@ suite('#532 governed commit link (B286)', () => {
     assert.doesNotMatch(c.shown[0].detail, /already staged/);
   });
 
+  for (const injectionPhase of ['pre-existing', 'checkout', 'post-add'] as const) {
+    test(\`#715: ignored staged gitlink at \${injectionPhase} cannot escape the index guard\`, async () => {
+      // Real Git repro: .gitmodules ignore=all makes a staged 160000 entry
+      // invisible to git diff --cached unless --ignore-submodules=none is set.
+      const gitModules = '[submodule "sub"]\n\tpath = sub\n\turl = ./disconnected\n\tignore = all\n';
+      fs.writeFileSync(path.join(ws.root, '.gitmodules'), gitModules);
+      const originalHead = git(ws.root, 'rev-parse', 'HEAD');
+      const stageGitlink = () => {
+        git(ws.root, 'update-index', '--add', '--cacheinfo', \`160000,\${originalHead},sub\`);
+      };
+      if (injectionPhase === 'pre-existing') stageGitlink();
+      const check = (withOverride: boolean) => spawnSync(
+        'git',
+        ['diff', '--cached', '--quiet', '--exit-code',
+          ...(withOverride ? ['--ignore-submodules=none'] : []), '--'],
+        { cwd: ws.root, encoding: 'utf8' },
+      ).status;
+      if (injectionPhase === 'pre-existing') {
+        assert.equal(check(false), 0, 'fixture must reproduce ignored staged gitlink');
+        assert.equal(check(true), 1, 'explicit override must detect the gitlink');
+      }
+
+      let injected = 0;
+      const wrap = injectionPhase === 'pre-existing' ? undefined : (inner: GitRunner): GitRunner =>
+        async (args, cwd) => {
+          const result = await inner(args, cwd);
+          if (result.code === 0 && injected === 0 &&
+              (injectionPhase === 'checkout' ? args[0] === 'checkout' && args[1] === '-b'
+                : args[0] === 'add')) {
+            stageGitlink();
+            injected++;
+          }
+          return result;
+        };
+      const run = await governedCommit(wrap);
+      assert.equal(run.step, 'noop', JSON.stringify(run));
+      assert.equal(run.sha, undefined, 'an ignored foreign gitlink may never become a bound commit');
+      assert.match(run.warning || '', injectionPhase === 'pre-existing'
+        ? /pre-existing staged/i
+        : injectionPhase === 'checkout'
+          ? /staged changes appeared during checkout/i
+          : /staged changes outside selected paths/i);
+      if (injectionPhase !== 'pre-existing') {
+        assert.equal(injected, 1, 'fixture must inject the gitlink at the intended Git seam');
+      }
+      assert.match(git(ws.root, 'ls-files', '--stage', '--', 'sub'),
+        /^160000 [a-f0-9]{40} 0\tsub/m,
+        'the refused gitlink remains inspectable in the index');
+      assert.equal(git(ws.root, 'rev-parse', 'HEAD'), originalHead,
+        'no unauthorized commit may be created');
+      assert.equal(check(false), 0, 'ignore=all still masks the real staged entry');
+      assert.equal(check(true), 1, 'fail-closed override detects it');
+    });
+  }
+
   test('#715: pre-staged unrelated content refuses automated commit and remains staged', async () => {
     await importedIntent(service);
     fs.mkdirSync(path.join(ws.root, 'notes'), { recursive: true });

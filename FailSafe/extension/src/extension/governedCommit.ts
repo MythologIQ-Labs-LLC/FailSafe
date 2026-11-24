@@ -127,9 +127,11 @@ export async function commitPushOpenPr(
   if (status.stdout.trim() === '') return { step: 'noop' };
 
   // An automated commit cannot silently include content staged before this offer.
+  // Explicitly include submodule changes: repository .gitmodules ignore=all can
+  // otherwise conceal a staged 160000 gitlink from all three diff checks.
   // Git diff --cached returns 0 for an empty index (including unborn HEAD), 1 for
   // staged content and >1 on errors; only 0 authorizes the next step.
-  const initialIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--'], cwd);
+  const initialIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--ignore-submodules=none', '--'], cwd);
   if (initialIndex.code !== 0) return { step: 'noop', branch: req.branch,
     warning: initialIndex.code === 1
       ? 'pre-existing staged changes require manual review; no branch, commit, push or PR attempted'
@@ -151,7 +153,7 @@ export async function commitPushOpenPr(
   }
 
   // A checkout hook may have staged different content; refuse before touching it.
-  const switchedIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--'], cwd);
+  const switchedIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--ignore-submodules=none', '--'], cwd);
   if (switchedIndex.code !== 0) return { step: 'noop', branch: req.branch,
     warning: switchedIndex.code === 1
       ? 'staged changes appeared during checkout; no add, commit, push or PR attempted'
@@ -176,7 +178,7 @@ export async function commitPushOpenPr(
       warning: 'repository-relative scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
   }
   const outsideSelection = await git([
-    'diff', '--cached', '--quiet', '--exit-code', '--', ':(top)',
+    'diff', '--cached', '--quiet', '--exit-code', '--ignore-submodules=none', '--', ':(top)',
     ...req.paths.map((path) => `:(exclude,top,literal)${prefix}${path}`),
   ], cwd);
   if (outsideSelection.code !== 0) return { step: 'noop', branch: req.branch,
