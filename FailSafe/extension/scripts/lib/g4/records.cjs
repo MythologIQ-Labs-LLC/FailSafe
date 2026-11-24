@@ -96,6 +96,22 @@ function assertOwnedOutputDirectory(repoRoot, parent, ownedParent) {
   }
 }
 
+/** Check the original lock AND stage identity before writing or publishing.
+ * A malicious same-principal actor can still race between path operations,
+ * but a completed asynchronous replacement must never be trusted.
+ */
+function assertOwnedStaging(lock, ownedLock, ownedStage) {
+  for (const [dir, expected] of [[lock, ownedLock], [ownedStage.path, ownedStage]]) {
+    let current;
+    try { current = fs.lstatSync(dir); }
+    catch { throw refuse("RECORD_BUSY", "G4 owned staging path disappeared; manual inspection required"); }
+    if (!current.isDirectory() || current.isSymbolicLink() ||
+        current.ino === 0 || current.dev !== expected.dev || current.ino !== expected.ino) {
+      throw refuse("RECORD_BUSY", "G4 staging directory identity changed; manual inspection required");
+    }
+  }
+}
+
 function refuseExisting(targets, rels) {
   for (let i = 0; i < targets.length; i++) {
     try {
@@ -199,11 +215,13 @@ async function writeNew(repoRoot, rels, make) {
     };
     const out = await make(stage, markStageFile);
     assertOwnedOutputDirectory(repoRoot, parent, ownedParent);
+    assertOwnedStaging(lock, ownedLock, ownedStage);
     if (!out || typeof out !== "object" || Array.isArray(out) ||
         Object.keys(out).length !== rels.length || rels.some((rel) => !Object.hasOwn(out, rel))) {
       throw refuse("RECORD_OUTPUT", "the prepared record file set differs from the requested record");
     }
     const staged = rels.map((rel, index) => {
+      assertOwnedStaging(lock, ownedLock, ownedStage);
       const bytes = out[rel];
       if (!(Buffer.isBuffer(bytes) || bytes instanceof Uint8Array) || bytes.length === 0) {
         throw refuse("RECORD_OUTPUT", "record output must contain nonempty binary data");
@@ -219,6 +237,7 @@ async function writeNew(repoRoot, rels, make) {
     refuseExisting(targets, rels); // any existing destination, including a dangling link, must refuse
     for (let i = 0; i < targets.length; i++) {
       assertOwnedOutputDirectory(repoRoot, parent, ownedParent);
+      assertOwnedStaging(lock, ownedLock, ownedStage);
       // hardlink is atomic and fails EEXIST; unlike rename it NEVER overwrites.
       const info = fs.lstatSync(staged[i]);
       fs.linkSync(staged[i], targets[i]);

@@ -409,3 +409,43 @@ test("G4 #660: owned TSA temporary files are cleaned without blocking a valid re
     assert.ok(f.targets.every(target => fs.lstatSync(target).isFile()));
   } finally { f.cleanup(); }
 });
+
+test("G4 #660: stage directory replacement during successful async builder cannot publish", async () => {
+  const f = fixture();
+  let stage, moved;
+  try {
+    await assert.rejects(writeNew(f.root, rels, async (ownedStage) => {
+      stage = ownedStage;
+      moved = stage + ".owned-original";
+      fs.renameSync(stage, moved);
+      fs.mkdirSync(stage);
+      fs.writeFileSync(path.join(stage, "foreign.json"), "DO-NOT-TOUCH");
+      return f.maker(); // valid record bytes, not an injected builder error
+    }), /G4 lock contents changed|G4 staging directory identity changed/);
+    assert.equal(fs.readFileSync(path.join(stage, "foreign.json"), "utf8"), "DO-NOT-TOUCH");
+    assert.ok(fs.existsSync(moved), "original staging inode is preserved for inspection");
+    assert.ok(f.targets.every(target => !fs.existsSync(target)),
+      "a replaced staging directory must not result in published record files");
+    assert.ok(fs.readdirSync(f.parent).some(name => name.endsWith(".lock")),
+      "ambiguous staging retains the owned lock");
+  } finally { f.cleanup(); }
+});
+
+test("G4 #660: lock directory replacement during successful async builder cannot publish", async () => {
+  const f = fixture();
+  let foreignLock, moved;
+  try {
+    await assert.rejects(writeNew(f.root, rels, async (stage) => {
+      foreignLock = path.dirname(stage);
+      moved = foreignLock + ".owned-original";
+      fs.renameSync(foreignLock, moved);
+      fs.mkdirSync(foreignLock);
+      fs.writeFileSync(path.join(foreignLock, "foreign.json"), "DO-NOT-DELETE");
+      return f.maker(); // valid record bytes, but lock path changed
+    }), /G4 lock identity changed|G4 staging directory identity changed/);
+    assert.equal(fs.readFileSync(path.join(foreignLock, "foreign.json"), "utf8"), "DO-NOT-DELETE");
+    assert.ok(fs.existsSync(moved), "original lock/stage remain inspectable");
+    assert.ok(f.targets.every(target => !fs.existsSync(target)),
+      "a replaced lock must not allow any final record publication");
+  } finally { f.cleanup(); }
+});
