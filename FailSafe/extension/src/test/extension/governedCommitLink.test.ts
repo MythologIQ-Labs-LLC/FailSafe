@@ -110,10 +110,11 @@ suite('#532 governed commit link (B286)', () => {
         git(ws.root, 'update-index', '--add', '--cacheinfo', `160000,${originalHead},sub`);
       };
       if (injectionPhase === 'pre-existing') stageGitlink();
-      const check = (withOverride: boolean) => spawnSync(
+      const check = (withOverride: boolean, outsideSelection = false) => spawnSync(
         'git',
         ['diff', '--cached', '--quiet', '--exit-code',
-          ...(withOverride ? ['--ignore-submodules=none'] : []), '--'],
+          ...(withOverride ? ['--ignore-submodules=none'] : []), '--',
+          ...(outsideSelection ? [':(top)', ':(exclude,top,literal)docs/new.md'] : [])],
         { cwd: ws.root, encoding: 'utf8' },
       ).status;
       if (injectionPhase === 'pre-existing') {
@@ -149,8 +150,13 @@ suite('#532 governed commit link (B286)', () => {
         'the refused gitlink remains inspectable in the index');
       assert.equal(git(ws.root, 'rev-parse', 'HEAD'), originalHead,
         'no unauthorized commit may be created');
-      assert.equal(check(false), 0, 'ignore=all still masks the real staged entry');
-      assert.equal(check(true), 1, 'fail-closed override detects it');
+      // After git add, the operator-approved file is legitimately staged;
+      // exclude it to measure ONLY the attacker-supplied gitlink.
+      const outsideSelection = injectionPhase === 'post-add';
+      assert.equal(check(false, outsideSelection), 0,
+        'ignore=all still conceals the foreign gitlink outside approved scope');
+      assert.equal(check(true, outsideSelection), 1,
+        'fail-closed override detects the foreign gitlink');
     });
   }
 
