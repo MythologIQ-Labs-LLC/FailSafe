@@ -10,6 +10,18 @@ import type { GitRunner } from '../../extension/governedCommit';
 
 function defaultFor(args: string[]): { code: number; stdout: string; stderr: string } {
   if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
+  if (args[0] === 'rev-parse' && args.includes('--show-prefix')) return { code: 0, stdout: '', stderr: '' };
+  // Mock only the precise read-only manifest commands. Real-Git tests validate
+  // the same snapshot against a genuine filesystem and index.
+  const selected = args.slice(args.indexOf('--') + 1).filter(x => x.startsWith(':(literal)'))
+    .map(x => x.slice(':(literal)'.length));
+  if (args[0] === 'status' && args.includes('-z')) {
+    return { code: 0, stdout: selected.map(p => ' M ' + p + '\\0').join('').replaceAll('\\0', '\0'), stderr: '' };
+  }
+  if (args[0] === 'ls-files' && args.includes('--stage')) {
+    return { code: 0, stdout: selected.map(p => '100644 ' + 'f'.repeat(40) + ' 0\\t' + p + '\\0').join('').replaceAll('\\t', '\t').replaceAll('\\0', '\0'), stderr: '' };
+  }
+  if (args[0] === 'hash-object') return { code: 0, stdout: 'f'.repeat(40), stderr: '' };
   const bindingOp = args.join(' ');
   if (bindingOp === 'rev-parse --verify --quiet HEAD') return { code: 0, stdout: 'a'.repeat(40), stderr: '' };
   if (bindingOp === 'rev-parse --verify HEAD') return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
@@ -22,12 +34,23 @@ function defaultFor(args: string[]): { code: number; stdout: string; stderr: str
   if (args[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
   return { code: 0, stdout: '', stderr: '' };
 }
+// File-only approvals now require valid raw filesystem identities before
+// consent. These are mock-Git unit fixtures, not a substitute for the real-Git
+// coverage in governedCommitSelection.test.ts.
+const flowRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-715-flow-files-'));
+for (const name of ['.gitignore', '.editorconfig', 'src/a.ts', 'src/b.ts', 'src/c.ts']) {
+  const disk = path.join(flowRoot, name);
+  fs.mkdirSync(path.dirname(disk), { recursive: true });
+  fs.writeFileSync(disk, 'test fixture\n');
+}
+process.on('exit', () => fs.rmSync(flowRoot, { recursive: true, force: true }));
+
 const git: GitRunner = async (args) => defaultFor(args);
 const DEST = ' Git push destination: https://github.com/o/r.git. Repository: github.com/o/r.';
 
 function baseDeps(over: Partial<GovernedFlowDeps>): GovernedFlowDeps {
   return {
-    workspaceRoot: '/ws', git, confirm: async () => true, recordDeclined: async () => {},
+    workspaceRoot: flowRoot, git, confirm: async () => true, recordDeclined: async () => {},
     now: () => '2026-06-10T12:00:00.000Z', ...over,
   };
 }

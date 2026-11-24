@@ -162,7 +162,7 @@ async function prepareDirectorySelection(
   if (!broadPaths.some(Boolean)) {
     const display = exactFileDisplay(changedPaths);
     if (display === null) return { ok: false, warning: OVERSIZED_LIST };
-    return { ok: true, paths: changedPaths, display };
+    return prepareExactFileSelection(deps, changedPaths, display);
   }
   const result = await snapshotExactSelection(deps.git, deps.workspaceRoot, changedPaths);
   if (!result.ok) return result;
@@ -181,4 +181,28 @@ const OVERSIZED_LIST = 'exact changed-file list exceeds safe confirmation size; 
 function exactFileDisplay(paths: string[]): string | null {
   const display = '\nExact changed files to commit (' + paths.length + '):\n' + paths.map(p => ' • ' + p).join('\n');
   return display.length > 8192 ? null : display;
+}
+
+
+/**
+ * #715: A named file is not permission to commit different bytes later.
+ * Reuse the directory manifest's read-only, pre-consent raw-blob snapshot
+ * for file-only selection, then recheck it both after consent and in the
+ * staged-index verifier. This is not a defense against same-principal races.
+ */
+async function prepareExactFileSelection(
+  deps: GovernedFlowDeps, changedPaths: string[], display: string,
+): Promise<
+  | { ok: true; paths: string[]; display: string; snapshot: ExactSelection }
+  | { ok: false; warning: string }
+> {
+  const inspected = await snapshotExactSelection(deps.git, deps.workspaceRoot, changedPaths);
+  if (!inspected.ok) return inspected;
+  const files = inspected.selection.files;
+  const desired = new Set(changedPaths);
+  if (desired.size !== changedPaths.length || files.length !== changedPaths.length ||
+      files.some(file => !desired.has(file.path))) {
+    return { ok: false, warning: 'selected file manifest is incomplete or duplicated; no commit, push or PR attempted' };
+  }
+  return { ok: true, paths: changedPaths, display, snapshot: inspected.selection };
 }

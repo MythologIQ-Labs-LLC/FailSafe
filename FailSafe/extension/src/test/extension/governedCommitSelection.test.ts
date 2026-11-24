@@ -304,6 +304,37 @@ suite('#715 exact-directory manifest, real Git', () => {
     assert.equal(git(root, 'branch', '--list', 'fix/organize-20261118120000'), '');
   });
 
+  test('#715: changed contents of a selected single file after approval refuse before checkout', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# reviewed\n');
+    const before = git(root, 'symbolic-ref', '--short', 'HEAD');
+    const run = await runGovernedCommitFlow('organize', ['docs/approved.md'], ['Update approved file'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => {
+        assert.match(text, /Exact changed files to commit \(1\):/);
+        assert.match(text, /docs\/approved\.md/);
+        fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# swapped after consent\n');
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(run.step, 'noop', JSON.stringify(run));
+    assert.match('warning' in run ? run.warning || '' : '', /manifest changed after approval/i);
+    assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), before);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+    assert.equal(git(root, 'branch', '--list', 'fix/organize-20261118120000'), '');
+  });
+
+  test('#715: unchanged selected single file is committed with the same content identity', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# reviewed\n');
+    const run = await runGovernedCommitFlow('organize', ['docs/approved.md'], ['Update approved file'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { assert.match(text, /docs\/approved\.md/); return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(run.step, 'committed', JSON.stringify(run));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+  });
+
   test('changed contents after directory approval refuse even when filename set is unchanged', async () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
     const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
