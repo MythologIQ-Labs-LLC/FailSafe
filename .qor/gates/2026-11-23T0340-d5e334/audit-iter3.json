@@ -1,0 +1,20 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-23T0340-d5e334",
+  "ts": "2026-11-23T04:21:43Z",
+  "target": ".failsafe/governance/plans/plan-707-voice-dependency-isolation.md",
+  "target_content_hash": "6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7",
+  "verdict": "PASS",
+  "report_path": ".failsafe/governance/evidence/issue-707/AUDIT-PLAN-iter3.md",
+  "risk_grade": "L3",
+  "findings_categories": [],
+  "violations": [],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "pass",
+    "ts": "2026-11-23T04:23:53Z"
+  }
+}

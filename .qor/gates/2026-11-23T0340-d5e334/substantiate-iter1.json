@@ -1,0 +1,31 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-11-23T0340-d5e334",
+  "ts": "2026-11-23T06:10:24Z",
+  "verdict": "FAIL",
+  "merkle_seal": "81dba9657d2bff4d9e45f4ebf07d016ca75f9472e038228cab33d26cb964467e",
+  "content_hash": "d53edc5973afd55701d2a066fb637c2ff335a6c6c570e1163bddf389a83a7f77",
+  "ledger_entry": 974,
+  "reality_check": {
+    "missing": [],
+    "unplanned": [
+      "docs/architecture/integrations/acp-devin.md"
+    ],
+    "matches": 22
+  },
+  "intent_lock_state": "verified",
+  "boundary_scope": "structural",
+  "report_path": ".failsafe/governance/evidence/issue-707/SUBSTANTIATE.md",
+  "source_revision": "f4251d8908e27d5ad088a7150b21d1c69afe7521",
+  "plan_sha256": "6191b7a3218fd639b0925ceffcb0e00f65a58ea9ce48176f5470a520776bfbe7",
+  "abort_step": "4.7 doc_integrity strict: Orphan home 'Vacuous pass' (qor/references/glossary.md:111)",
+  "sealed": false,
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "veto",
+    "ts": "2026-11-23T06:15:36Z"
+  }
+}
