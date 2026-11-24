@@ -15,7 +15,7 @@ function defaultFor(args: string[]): { code: number; stdout: string; stderr: str
   // the same snapshot against a genuine filesystem and index.
   const selected = args.slice(args.indexOf('--') + 1).filter(x => x.startsWith(':(literal)'))
     .map(x => x.slice(':(literal)'.length));
-  if (args[0] === 'status' && args.includes('-z')) {
+  if (args.includes('status') && args.includes('-z')) {
     return { code: 0, stdout: selected.map(p => ' M ' + p + '\\0').join('').replaceAll('\\0', '\0'), stderr: '' };
   }
   if (args[0] === 'ls-files' && args.includes('--stage')) {
