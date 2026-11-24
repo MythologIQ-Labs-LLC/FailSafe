@@ -18,14 +18,23 @@ const { noticeImprint } = require("./notices.cjs");
 const { SCHEMA, transitionImprint } = require("./transition.cjs");
 
 /** Request a granted RFC 3161 token for `imprintHex`; returns its bytes. */
-async function requestToken(imprintHex, tsa, stageDir) {
+async function requestToken(imprintHex, tsa, stageDir, markStageFile) {
   const bin = ts.requireOpenssl();
   const tsq = path.join(stageDir, "request.tsq");
   const tsr = path.join(stageDir, "reply.tsr");
+  // Reserved TSA temp names are not permission to overwrite foreign evidence.
+  // Register each exclusive create before invoking OpenSSL or awaiting the TSA.
+  const queryFd = fs.openSync(tsq, "wx", 0o600);
+  try { if (markStageFile) markStageFile("request.tsq"); }
+  finally { fs.closeSync(queryFd); }
   ts.buildQuery(bin, imprintHex, tsq);
   const bytes = await tsa.request(fs.readFileSync(tsq));
   if (!bytes || bytes.length === 0) throw block("TSA_OFFLINE", "the TSA returned no token");
-  fs.writeFileSync(tsr, bytes);
+  const replyFd = fs.openSync(tsr, "wx", 0o600);
+  try {
+    if (markStageFile) markStageFile("reply.tsr");
+    fs.writeFileSync(replyFd, bytes);
+  } finally { fs.closeSync(replyFd); }
   if (!ts.tokenInfo(bin, tsr).granted) throw block("TSA_REJECTED", "the TSA did not grant the request");
   return bytes;
 }
@@ -167,6 +176,7 @@ async function writeNew(repoRoot, rels, make) {
   }
   let ownedStage = null;
   const ownedOutputs = new Map();
+  const ownedTsaTemps = new Map();
   const published = [];
   let retainLock = false;
   try {
@@ -177,7 +187,17 @@ async function writeNew(repoRoot, rels, make) {
       throw refuse("RECORD_BUSY", "G4 stage directory ownership could not be established; inspect it manually");
     }
     ownedStage = { path: stage, dev: stageInfo.dev, ino: stageInfo.ino };
-    const out = await make(stage);
+    const markStageFile = (name) => {
+      if ((name !== "request.tsq" && name !== "reply.tsr") || ownedTsaTemps.has(name)) {
+        throw refuse("RECORD_BUSY", "invalid or duplicate G4 temporary-file ownership claim");
+      }
+      const info = fs.lstatSync(path.join(stage, name));
+      if (!info.isFile() || info.isSymbolicLink() || info.ino === 0) {
+        throw refuse("RECORD_BUSY", "G4 temporary-file identity cannot be trusted");
+      }
+      ownedTsaTemps.set(name, { dev: info.dev, ino: info.ino });
+    };
+    const out = await make(stage, markStageFile);
     assertOwnedOutputDirectory(repoRoot, parent, ownedParent);
     if (!out || typeof out !== "object" || Array.isArray(out) ||
         Object.keys(out).length !== rels.length || rels.some((rel) => !Object.hasOwn(out, rel))) {
@@ -289,6 +309,11 @@ async function writeNew(repoRoot, rels, make) {
             if (!owned || info.dev !== owned.dev || info.ino !== owned.ino) {
               throw refuse("RECORD_BUSY", "G4 stage contains unowned staged output; manual inspection required");
             }
+          } else {
+            const owned = ownedTsaTemps.get(name);
+            if (!owned || info.dev !== owned.dev || info.ino !== owned.ino) {
+              throw refuse("RECORD_BUSY", "G4 stage contains unowned TSA temporary file; manual inspection required");
+            }
           }
         }
         for (const name of stageEntries) fs.unlinkSync(path.join(ownedStage.path, name));
@@ -305,7 +330,7 @@ async function stampRegistry({ repoRoot, tsa, commit = "HEAD" }) {
   const { version } = registry.parse(bytes);
   if (version < 2) throw refuse("REGISTRY_UNCHANGED", "registry version 1 needs no notice token");
   const rel = layout.noticeTokenPath(version);
-  return writeNew(repoRoot, [rel], async (stage) => ({ [rel]: await requestToken(noticeImprint(bytes), tsa, stage) }));
+  return writeNew(repoRoot, [rel], async (stage, markStageFile) => ({ [rel]: await requestToken(noticeImprint(bytes), tsa, stage, markStageFile) }));
 }
 
 /**
@@ -324,10 +349,10 @@ async function writeTransition({ repoRoot, kind, fromFingerprint, toFingerprint,
   const signatureBytes = signer.sign(recordBytes);
   if (!verifySignature(recordBytes, signatureBytes, loadCertificate(signer.certificateDer))) throw refuse("SIGNATURE_INVALID", "signer output does not verify");
   const p = layout.transitionPaths(fromFingerprint);
-  return writeNew(repoRoot, [p.record, p.signature, p.token], async (stage) => ({
+  return writeNew(repoRoot, [p.record, p.signature, p.token], async (stage, markStageFile) => ({
     [p.record]: recordBytes,
     [p.signature]: signatureBytes,
-    [p.token]: await requestToken(transitionImprint(recordBytes, signatureBytes), tsa, stage),
+    [p.token]: await requestToken(transitionImprint(recordBytes, signatureBytes), tsa, stage, markStageFile),
   }));
 }
 

@@ -376,3 +376,36 @@ test("G4 #660: an output directory replaced during async signing remains foreign
       "the original owned lock and staging directory remain for manual inspection");
   } finally { f.cleanup(); }
 });
+
+for (const tempName of ["request.tsq", "reply.tsr"]) {
+  test(`G4 #660: foreign ${tempName} survives reserved-name cleanup`, async () => {
+    const f = fixture();
+    let foreign;
+    try {
+      await assert.rejects(writeNew(f.root, rels, async (stage) => {
+        foreign = path.join(stage, tempName);
+        fs.writeFileSync(foreign, "FOREIGN-TSA-EVIDENCE", { flag: "wx" });
+        throw new Error("injected builder rejection before TSA ownership");
+      }), /G4 stage contains unowned TSA temporary file/);
+      assert.equal(fs.readFileSync(foreign, "utf8"), "FOREIGN-TSA-EVIDENCE");
+      assert.equal(fs.existsSync(path.dirname(foreign)), true, "retained stage is inspectable");
+      assert.ok(f.targets.every(target => !fs.existsSync(target)), "no G4 record published");
+      await assert.rejects(writeNew(f.root, rels, f.maker), /earlier writer or interrupted record owns the lock/);
+    } finally { f.cleanup(); }
+  });
+}
+
+test("G4 #660: owned TSA temporary files are cleaned without blocking a valid record", async () => {
+  const f = fixture();
+  try {
+    assert.deepEqual(await writeNew(f.root, rels, async (stage, markStageFile) => {
+      for (const name of ["request.tsq", "reply.tsr"]) {
+        fs.writeFileSync(path.join(stage, name), "TEST-ONLY-TSA-BYTES", { flag: "wx" });
+        markStageFile(name);
+      }
+      return f.maker();
+    }), rels);
+    assert.deepEqual(fs.readdirSync(f.parent).sort(), [...names].sort());
+    assert.ok(f.targets.every(target => fs.lstatSync(target).isFile()));
+  } finally { f.cleanup(); }
+});
