@@ -139,7 +139,9 @@ function verifyPayload(packDir: string, manifest: VoicePackManifest): string[] {
 }
 
 function compareVersions(a: string, b: string): number {
-  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  // Keep semver components exact. Number rounds distinct signed versions above
+  // MAX_SAFE_INTEGER together and can report a stale pack as installed.
+  const x = a.split('.').map(BigInt), y = b.split('.').map(BigInt);
   for (let i = 0; i < 3; i++) {
     if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
   }

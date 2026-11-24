@@ -133,6 +133,18 @@ suite('voice-pack-detector — probeVoicePackState', () => {
     assert.strictEqual(result.version, '5.1.0');
   });
 
+  test('signed versions beyond Number.MAX_SAFE_INTEGER remain ordered exactly', async () => {
+    // Both versions are syntactically valid and publisher-authenticated. Number
+    // rounds these values together; BigInt must label the lower pack stale.
+    const lower = '9007199254740992.0.0';
+    const higher = '9007199254740993.0.0';
+    writePackFixture(globalStoragePath, { manifestVersion: lower });
+    const stale = await probeVoicePackState(globalStoragePath, higher);
+    assert.strictEqual(stale.state, 'stale');
+    assert.strictEqual(stale.version, lower);
+    assert.strictEqual((await probeVoicePackState(globalStoragePath, lower)).state, 'installed');
+  });
+
   test('returns corrupt when manifest exists but a referenced file fails sha256', async () => {
     writePackFixture(globalStoragePath, {
       manifestVersion: '5.2.0',
