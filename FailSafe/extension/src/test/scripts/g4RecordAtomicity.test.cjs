@@ -261,6 +261,41 @@ test("G4 #660: replaced lock after asynchronous staging cannot delete foreign ev
   } finally { f.cleanup(); }
 });
 
+test("G4 #660: foreign file inside owned stage survives successful publication cleanup", async () => {
+  const f = fixture();
+  let injected;
+  try {
+    await assert.rejects(writeNew(f.root, rels, async (stage) => {
+      injected = path.join(stage, "foreign-custody-proof.txt");
+      fs.writeFileSync(injected, "DO-NOT-DELETE");
+      return f.maker();
+    }), /G4 stage contains unowned files/);
+    assert.equal(fs.readFileSync(injected, "utf8"), "DO-NOT-DELETE");
+    assert.equal(fs.existsSync(path.dirname(injected)), true,
+      "ambiguous stage and lock must remain for investigation");
+    assert.ok(f.targets.every((target) => fs.lstatSync(target).isFile()),
+      "publication may already have completed; preserve actual trust files");
+    await assert.rejects(writeNew(f.root, rels, f.maker), /never replaced|owns the lock/);
+  } finally { f.cleanup(); }
+});
+
+test("G4 #660: foreign stage evidence survives an asynchronous builder failure", async () => {
+  const f = fixture();
+  let injected;
+  try {
+    await assert.rejects(writeNew(f.root, rels, async (stage) => {
+      injected = path.join(stage, "foreign-custody-proof.txt");
+      fs.writeFileSync(injected, "PRESERVE-AFTER-ERROR");
+      throw new Error("injected builder failure");
+    }), /G4 stage contains unowned files/);
+    assert.equal(fs.readFileSync(injected, "utf8"), "PRESERVE-AFTER-ERROR");
+    assert.ok(f.targets.every((target) => !fs.existsSync(target)),
+      "builder failure cannot publish partial trust evidence");
+    assert.equal(fs.existsSync(path.dirname(injected)), true,
+      "foreign files keep the owned lock for operator inspection");
+  } finally { f.cleanup(); }
+});
+
 test("G4 #660: unexpected file inside owned lock is retained for manual investigation", async () => {
   const f = fixture();
   try {

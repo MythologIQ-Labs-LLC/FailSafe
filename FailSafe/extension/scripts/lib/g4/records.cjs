@@ -218,7 +218,31 @@ async function writeNew(repoRoot, rels, make) {
       } else if (entries.length) {
         throw refuse("RECORD_BUSY", "G4 lock has unowned content; manual inspection required");
       }
-      fs.rmSync(lock, { recursive: true, force: true });
+      // The stage may contain only files this transaction could have created.
+      // A foreign file under an otherwise-owned stage is not our evidence to
+      // delete. Never recursively remove the lock, even after an lstat check:
+      // rmdir fails closed if anything new appears before final removal.
+      if (ownedStage) {
+        const allowed = new Set([
+          "request.tsq", "reply.tsr",
+          ...rels.map((_, index) => `output-${index}`),
+        ]);
+        const stageEntries = fs.readdirSync(ownedStage.path);
+        if (stageEntries.some((name) => !allowed.has(name))) {
+          throw refuse("RECORD_BUSY", "G4 stage contains unowned files; manual inspection required");
+        }
+        // Check every entry before removing any. Symlinks, replacement
+        // directories and other unsupported node types are never unlinked.
+        for (const name of stageEntries) {
+          const info = fs.lstatSync(path.join(ownedStage.path, name));
+          if (!info.isFile() || info.isSymbolicLink()) {
+            throw refuse("RECORD_BUSY", "G4 stage contains nonregular files; manual inspection required");
+          }
+        }
+        for (const name of stageEntries) fs.unlinkSync(path.join(ownedStage.path, name));
+        fs.rmdirSync(ownedStage.path);
+      }
+      fs.rmdirSync(lock);
     }
   }
 }
