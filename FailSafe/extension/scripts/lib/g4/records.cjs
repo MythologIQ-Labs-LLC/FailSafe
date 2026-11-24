@@ -61,6 +61,32 @@ function realOutputDirectory(repoRoot, rels) {
   return { parent, targets };
 }
 
+/**
+ * Revalidate every ancestor and the exact output-directory inode after async
+ * signing/TSA work. A pathname that now resolves to a symlink or a replacement
+ * directory is not the directory in which this attempt acquired its lock.
+ */
+function assertOwnedOutputDirectory(repoRoot, parent, ownedParent) {
+  const root = path.resolve(repoRoot);
+  let current = root;
+  const parts = [null, ...path.relative(root, parent).split(path.sep).filter(Boolean)];
+  for (const segment of parts) {
+    if (segment !== null) current = path.join(current, segment);
+    let info;
+    try { info = fs.lstatSync(current); }
+    catch (err) {
+      if (err.code === "ENOENT") throw refuse("RECORD_PATH", "record output ancestor disappeared during preparation; manual inspection required");
+      throw err;
+    }
+    if (!info.isDirectory() || info.isSymbolicLink()) {
+      throw refuse("RECORD_PATH", "record output ancestor changed into a linked or non-directory path; manual inspection required");
+    }
+    if (current === parent && (info.dev !== ownedParent.dev || info.ino !== ownedParent.ino)) {
+      throw refuse("RECORD_PATH", "record output directory identity changed during preparation; manual inspection required");
+    }
+  }
+}
+
 function refuseExisting(targets, rels) {
   for (let i = 0; i < targets.length; i++) {
     try {
@@ -123,6 +149,7 @@ function syncDirectory(dir) {
  */
 async function writeNew(repoRoot, rels, make) {
   const { parent, targets } = realOutputDirectory(repoRoot, rels);
+  const ownedParent = fs.lstatSync(parent);
   refuseExisting(targets, rels);
   const lock = path.join(parent, ".g4-record-" + sha256(Buffer.from([...rels].sort().join("\n"))).slice(0, 20) + ".lock");
   try { fs.mkdirSync(lock, { mode: 0o700 }); }
@@ -151,6 +178,7 @@ async function writeNew(repoRoot, rels, make) {
     }
     ownedStage = { path: stage, dev: stageInfo.dev, ino: stageInfo.ino };
     const out = await make(stage);
+    assertOwnedOutputDirectory(repoRoot, parent, ownedParent);
     if (!out || typeof out !== "object" || Array.isArray(out) ||
         Object.keys(out).length !== rels.length || rels.some((rel) => !Object.hasOwn(out, rel))) {
       throw refuse("RECORD_OUTPUT", "the prepared record file set differs from the requested record");
@@ -167,8 +195,10 @@ async function writeNew(repoRoot, rels, make) {
       }
       return name;
     });
+    assertOwnedOutputDirectory(repoRoot, parent, ownedParent);
     refuseExisting(targets, rels); // any existing destination, including a dangling link, must refuse
     for (let i = 0; i < targets.length; i++) {
+      assertOwnedOutputDirectory(repoRoot, parent, ownedParent);
       // hardlink is atomic and fails EEXIST; unlike rename it NEVER overwrites.
       const info = fs.lstatSync(staged[i]);
       fs.linkSync(staged[i], targets[i]);
@@ -178,6 +208,14 @@ async function writeNew(repoRoot, rels, make) {
     return [...rels];
   } catch (primary) {
     const cleanupErrors = [];
+    if (published.length) {
+      try { assertOwnedOutputDirectory(repoRoot, parent, ownedParent); }
+      catch (pathError) {
+        retainLock = true;
+        throw new AggregateError([primary, pathError],
+          "G4 record publication failed; output directory ownership changed; retained lock requires manual inspection");
+      }
+    }
     for (const item of published.reverse()) {
       try {
         const current = fs.lstatSync(item.dest);
@@ -202,6 +240,9 @@ async function writeNew(repoRoot, rels, make) {
     throw primary;
   } finally {
     if (!retainLock) {
+      // Do not follow a replaced output parent even to clean up a known lock.
+      // The original lock/stage must remain for manual inspection if moved.
+      assertOwnedOutputDirectory(repoRoot, parent, ownedParent);
       // Never recursively delete an unknown replacement lock, a moved stage,
       // or unrelated content injected under the owned lock. Any ambiguity is
       // preserved for operator inspection, rather than silently lost.

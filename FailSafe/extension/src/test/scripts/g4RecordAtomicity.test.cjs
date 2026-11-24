@@ -353,3 +353,26 @@ test("G4 #660: a foreign file under an expected output name survives failed stag
     await assert.rejects(writeNew(f.root, rels, f.maker), /earlier writer or interrupted record owns the lock/);
   } finally { f.cleanup(); }
 });
+
+test("G4 #660: an output directory replaced during async signing remains foreign and is never published", async () => {
+  const f = fixture();
+  let retainedParent;
+  try {
+    await assert.rejects(writeNew(f.root, rels, async () => {
+      // The signed bytes are prepared asynchronously after the original path
+      // has been checked and a lock created inside the original directory.
+      retainedParent = f.parent + ".owned-original";
+      fs.renameSync(f.parent, retainedParent);
+      fs.mkdirSync(f.parent);
+      fs.writeFileSync(path.join(f.parent, "foreign-evidence.json"), "FOREIGN-PRESERVE");
+      return f.maker();
+    }), /record output directory identity changed during preparation/);
+    assert.deepEqual(fs.readdirSync(f.parent), ["foreign-evidence.json"],
+      "a replacement directory must not receive records or have its files deleted");
+    assert.equal(fs.readFileSync(path.join(f.parent, "foreign-evidence.json"), "utf8"), "FOREIGN-PRESERVE");
+    assert.ok(f.targets.every((target) => !fs.existsSync(target)),
+      "no final trust evidence may publish to a different output directory");
+    assert.ok(fs.readdirSync(retainedParent).some((name) => name.endsWith(".lock")),
+      "the original owned lock and staging directory remain for manual inspection");
+  } finally { f.cleanup(); }
+});
