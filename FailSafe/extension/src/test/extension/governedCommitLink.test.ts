@@ -100,14 +100,14 @@ suite('#532 governed commit link (B286)', () => {
   });
 
   for (const injectionPhase of ['pre-existing', 'checkout', 'post-add'] as const) {
-    test(\`#715: ignored staged gitlink at \${injectionPhase} cannot escape the index guard\`, async () => {
+    test(`#715: ignored staged gitlink at ${injectionPhase} cannot escape the index guard`, async () => {
       // Real Git repro: .gitmodules ignore=all makes a staged 160000 entry
       // invisible to git diff --cached unless --ignore-submodules=none is set.
       const gitModules = '[submodule "sub"]\n\tpath = sub\n\turl = ./disconnected\n\tignore = all\n';
       fs.writeFileSync(path.join(ws.root, '.gitmodules'), gitModules);
       const originalHead = git(ws.root, 'rev-parse', 'HEAD');
       const stageGitlink = () => {
-        git(ws.root, 'update-index', '--add', '--cacheinfo', \`160000,\${originalHead},sub\`);
+        git(ws.root, 'update-index', '--add', '--cacheinfo', `160000,${originalHead},sub`);
       };
       if (injectionPhase === 'pre-existing') stageGitlink();
       const check = (withOverride: boolean) => spawnSync(
