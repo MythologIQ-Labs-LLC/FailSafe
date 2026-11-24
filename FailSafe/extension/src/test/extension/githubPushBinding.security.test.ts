@@ -4,6 +4,7 @@ import { strict as assert } from 'assert';
 import { commitPushOpenPr, type GitRunner } from '../../extension/governedCommit';
 import { runGovernedCommitFlow } from '../../extension/governedCommitFlow';
 import { inspectPushBinding } from '../../extension/githubPushBinding';
+import { createApprovalFixture } from '../shared/governedCommitApprovalFixture';
 
 const FETCH = 'https://github.com/acme/repo.git';
 const SSH_PUSH = 'git@github.com:acme/repo.git';
@@ -50,6 +51,8 @@ function count(calls: string[][], name: string) {
 }
 
 suite('#476 effective push-target binding (public GitHub + GHES)', () => {
+  const approval = createApprovalFixture(['file.txt']);
+  suiteTeardown(() => approval.cleanup());
   test('ordinary public GitHub resolves one approved effective destination', async () => {
     const m = mockGit();
     const bound = await inspectPushBinding(m.git, '/ws', FETCH);
@@ -141,7 +144,7 @@ suite('#476 effective push-target binding (public GitHub + GHES)', () => {
     const m = mockGit({ pushes: [SSH_PUSH] });
     const prompts: string[] = [];
     const result = await runGovernedCommitFlow('organize', ['file.txt'], ['edit'], {
-      workspaceRoot: '/ws', git: m.git,
+      workspaceRoot: approval.workspaceRoot, git: approval.wrap(m.git),
       now: () => '2026-06-10T12:00:00.000Z',
       confirm: async message => { prompts.push(message); return true; },
       recordDeclined: async () => {},
@@ -155,7 +158,7 @@ suite('#476 effective push-target binding (public GitHub + GHES)', () => {
     const m = mockGit({ pushes: [FETCH, BAD] });
     let posts = 0;
     const result = await runGovernedCommitFlow('organize', ['file.txt'], ['edit'], {
-      workspaceRoot: '/ws', git: m.git,
+      workspaceRoot: approval.workspaceRoot, git: approval.wrap(m.git),
       now: () => '2026-06-10T12:00:00.000Z',
       confirm: async () => true, recordDeclined: async () => {},
       token: 'fixture-token',

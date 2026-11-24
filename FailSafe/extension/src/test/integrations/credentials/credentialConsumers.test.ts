@@ -18,6 +18,7 @@ import { runGitHubAdvisory, type GitHubAdvisoryOptions } from '../../../extensio
 import { resolveSentryOptions } from '../../../integrations/sentry/sentry-settings';
 import { governedCommitPrStep, runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
 import type { GitRunner } from '../../../extension/governedCommit';
+import { createApprovalFixture } from '../../shared/governedCommitApprovalFixture';
 import type { ImportUi } from '../../../integrations/credentials/importUi';
 import { FakeInspector, FakeSecretStore, RecordingLogger } from './fakes';
 import { findCredentialReads } from './credentialScan';
@@ -122,6 +123,8 @@ suite('requireCredential and providerConnection (FX965 #482)', () => {
 });
 
 suite('integration consumers (FX965 #482)', () => {
+  const approval = createApprovalFixture(['.gitignore']);
+  suiteTeardown(() => approval.cleanup());
   test('runLinearImport: after migration the transport receives the migrated key; with only plain text it is never called', async () => {
     const x = await h();
     x.config.set('failsafe.integrations.linear.apiKey', 'user', TOKEN);
@@ -291,8 +294,8 @@ suite('integration consumers (FX965 #482)', () => {
       const auth: string[] = [];
       const commits: string[][] = [];
       const r = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-        workspaceRoot: '/ws', confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-15T00:00:00Z',
-        git: async (a, cwd) => { if (a[0] === 'commit') commits.push(a); return git(a, cwd); },
+        workspaceRoot: approval.workspaceRoot, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-15T00:00:00Z',
+        git: approval.wrap(async (a, cwd) => { if (a[0] === 'commit') commits.push(a); return git(a, cwd); }),
         ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), async (_u, headers) => {
           auth.push(String(headers.Authorization));
           return { status: 201, body: '{"html_url":"https://github.com/o/r/pull/1"}' };

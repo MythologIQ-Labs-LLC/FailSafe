@@ -23,6 +23,7 @@ import {
 } from '../../../integrations/credentials/credentialGates';
 import { governedCommitPrStep, runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
 import type { GitRunner } from '../../../extension/governedCommit';
+import { createApprovalFixture } from '../../shared/governedCommitApprovalFixture';
 import { FakeInspector, FakeSecretStore, RecordingLogger } from '../credentials/fakes';
 import { productionSources, SRC_ROOT } from './source-scan';
 
@@ -201,6 +202,8 @@ const fakeGit: GitRunner = async (a) => {
 };
 
 suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
+  const approval = createApprovalFixture(['.gitignore']);
+  suiteTeardown(() => approval.cleanup());
   test('G3b request options keep the port, strip IPv6 brackets, guard loopback http and refuse network http', () => {
     const https443 = githubRequestOptions('https://ghe.example:8443/api/v3/x', 'GET', {});
     assert.ok(https443);
@@ -311,10 +314,10 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
       const r = recorder();
       let prompt = '';
       const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-        workspaceRoot: '/ws', git: async (args, cwd) => {
+        workspaceRoot: approval.workspaceRoot, git: approval.wrap(async (args, cwd) => {
           const res = await fakeGit(args, cwd);
           return !endpoint && args[0] === 'remote' ? { ...res, stdout: 'https://github.com/o/r.git' } : res;
-        }, confirm: async (message) => { prompt = message; return true; }, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+        }), confirm: async (message) => { prompt = message; return true; }, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
         ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), r.post),
       });
       return { step: (result as { step: string }).step, sent: r.sent, prompt };
@@ -342,7 +345,7 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
       return fakeGit(args, cwd);
     };
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-      workspaceRoot: '/ws', git,
+      workspaceRoot: approval.workspaceRoot, git: approval.wrap(git),
       confirm: async (message) => {
         assert.ok(message.includes('Git push destination: https://ghe.example/o/r.git'));
         remote = 'https://ghe.example/other/repository.git';
@@ -371,7 +374,7 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
       return res;
     };
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-      workspaceRoot: '/ws', git, confirm: async () => true,
+      workspaceRoot: approval.workspaceRoot, git: approval.wrap(git), confirm: async () => true,
       recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
       post: r.post, token: TOKEN, apiBaseUrl: GHE,
     });
@@ -398,7 +401,7 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
         return fakeGit(args, cwd);
       };
       const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-        workspaceRoot: '/ws', git, confirm: async () => true,
+        workspaceRoot: approval.workspaceRoot, git: approval.wrap(git), confirm: async () => true,
         recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
         post: r.post, token: TOKEN, apiBaseUrl: GHE,
       });
@@ -412,7 +415,7 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
   test('S9 invalid untrusted GHES API base blocks both Git push and authenticated PR', async () => {
     const r = recorder();
     const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-      workspaceRoot: '/ws', git: fakeGit, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+      workspaceRoot: approval.workspaceRoot, git: approval.wrap(fakeGit), confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
       post: r.post, token: TOKEN, apiBaseUrl: 'http://ghe.example/api/v3',
     }) as { step: string; warning?: string };
     assert.equal(r.sent.length, 0);

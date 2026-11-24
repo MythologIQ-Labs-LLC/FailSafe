@@ -216,14 +216,17 @@ suite('runGovernedCommitFlow - affected architecture decisions through describe 
 
   test('the prompt carries review text, a capped long path and at most 3 lines, then "and N more"', async () => {
     const prompts: string[] = [];
-    await runGovernedCommitFlow('organize', [LONG, 'src/a.ts', 'src/b.ts', 'src/c.ts'], ['x'], baseDeps({
-      confirm: async (m) => { prompts.push(m); return true; }, describeArchitecture: describe,
+    // Approval tests must use real, bounded filenames. Warn-only architecture
+    // context may still describe a long path without authorizing that path.
+    await runGovernedCommitFlow('organize', ['src/a.ts', 'src/b.ts', 'src/c.ts'], ['x'], baseDeps({
+      confirm: async (m) => { prompts.push(m); return true; },
+      describeArchitecture: async () => describe([LONG, 'src/a.ts', 'src/b.ts', 'src/c.ts']),
     }));
     const p = prompts[0];
     const segment = p.split('; ').find((s) => s.includes('src/LLL')) ?? '';
     const long = segment.slice(segment.indexOf('src/LLL'));
     assert.ok(long.length > 0 && Array.from(long).length <= 240 && long.endsWith('...'), long);
-    assert.ok(p.includes('; and 1 more.' + DEST + '\nExact changed files to commit (4):'), p);
+    assert.ok(p.includes('; and 1 more.' + DEST + '\nExact changed files to commit (3):'), p);
     assert.ok(!p.includes('src/c.ts: c '), 'the fourth line is not shown');
   });
 
