@@ -195,15 +195,15 @@ export async function commitPushOpenPr(
       return { step: 'noop', branch: req.branch,
         warning: 'approved file blobs could not be verified; no commit, push or PR attempted (inspect index)' };
     }
-    const actual = new Map<string, string>();
+    const actual = new Map<string, { blob: string; mode: '100644' | '100755' }>();
     for (const row of stagedFiles.stdout.slice(0, -1).split('\0').filter(Boolean)) {
       // Reject symlink, gitlink and unmerged-index stages until reviewed.
-      const match = /^(?:100644|100755) ([a-f0-9]{40}(?:[a-f0-9]{24})?) 0\t(.+)$/.exec(row);
-      if (!match || actual.has(match[2])) {
+      const match = /^(100644|100755) ([a-f0-9]{40}(?:[a-f0-9]{24})?) 0\t(.+)$/.exec(row);
+      if (!match || actual.has(match[3])) {
         return { step: 'noop', branch: req.branch,
           warning: 'approved file blobs were ambiguous; no commit, push or PR attempted (inspect index)' };
       }
-      actual.set(match[2], match[1]);
+      actual.set(match[3], { blob: match[2], mode: match[1] as '100644' | '100755' });
     }
     const approved = new Map(req.approvedFiles.map(file => [file.path, file.blob]));
     if (approved.size !== req.approvedFiles.length ||
@@ -212,14 +212,19 @@ export async function commitPushOpenPr(
         warning: 'staged file set differs from approved manifest; no commit, push or PR attempted (inspect index)' };
     }
     for (const file of req.approvedFiles) {
-      const stagedObject = actual.get(file.path) ?? null;
+      const stagedEntry = actual.get(file.path) ?? null;
       if (file.blob === null) {
-        if (stagedObject !== null) return { step: 'noop', branch: req.branch,
+        if (file.mode !== null || stagedEntry !== null) return { step: 'noop', branch: req.branch,
           warning: 'approved deletion changed before commit; no commit, push or PR attempted (inspect index)' };
         continue;
       }
-      if (stagedObject === null) return { step: 'noop', branch: req.branch,
+      if (stagedEntry === null) return { step: 'noop', branch: req.branch,
         warning: 'approved file missing from staged index; no commit, push or PR attempted (inspect index)' };
+      if ((file.mode !== '100644' && file.mode !== '100755') || stagedEntry.mode !== file.mode) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'staged executable mode differs from approved file; no commit, push or PR attempted (inspect index)' };
+      }
+      const stagedObject = stagedEntry.blob;
       const raw = await git(['hash-object', '--no-filters', '--', file.path], cwd);
       if (raw.code !== 0 || raw.stdout.trim() !== file.blob) {
         return { step: 'noop', branch: req.branch,

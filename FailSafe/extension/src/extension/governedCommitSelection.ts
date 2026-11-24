@@ -17,6 +17,8 @@ export interface ApprovedFile {
   state: string;
   /** Raw working-tree blob ID (no Git filters before consent), or null for a tracked deletion. */
   blob: string | null;
+  /** Git executable mode to which the operator consented; null for deletion. */
+  mode: '100644' | '100755' | null;
 }
 export interface ExactSelection { files: ApprovedFile[]; }
 export type SelectionResult =
@@ -176,7 +178,7 @@ export async function snapshotExactSelection(
     } catch (e) {
       const missing = (e as NodeJS.ErrnoException).code === 'ENOENT';
       if (missing && state.includes('D')) {
-        files.push({ path, state, blob: null });
+        files.push({ path, state, blob: null, mode: null });
         continue;
       }
       return refuse('selected filesystem entry cannot be inspected');
@@ -199,12 +201,31 @@ export async function snapshotExactSelection(
     if (blob.code !== 0) {
       // A missing tracked file is meaningful only for a Git-declared deletion.
       if (!state.includes('D')) return refuse('could not hash selected file');
-      files.push({ path, state, blob: null });
+      files.push({ path, state, blob: null, mode: null });
       continue;
     }
     const objectId = blob.stdout.trim();
     if (!FULL_BLOB.test(objectId)) return refuse('unverifiable Git file content hash');
-    files.push({ path, state, blob: objectId });
+    // Content SHA alone does not bind the executable bit (100644 vs 100755).
+    // On POSIX, Git uses the observed executable permission when filemode is
+    // honored. Windows cannot reliably expose that bit through fs.stat: bind
+    // the cached Git mode for an existing regular file, or 100644 for a new file.
+    let mode: '100644' | '100755' = info.mode & 0o111 ? '100755' : '100644';
+    if (process.platform === 'win32') {
+      const cached = await git(['ls-files', '--stage', '-z', '--', ':(literal)' + path], cwd);
+      if (cached.code !== 0 || cached.stdout.length > 4096 ||
+        (cached.stdout !== '' && !cached.stdout.endsWith('\0'))) return refuse('Git file mode could not be verified');
+      if (cached.stdout) {
+        const rows = cached.stdout.slice(0, -1).split('\0');
+        if (rows.length !== 1) return refuse('Git file mode is ambiguous');
+        const matched = /^(100644|100755) [a-f0-9]{40}(?:[a-f0-9]{24})? 0\t(.+)$/.exec(rows[0]);
+        if (!matched || matched[2] !== path) return refuse('Git file mode is untrusted');
+        mode = matched[1] as '100644' | '100755';
+      } else {
+        mode = '100644';
+      }
+    }
+    files.push({ path, state, blob: objectId, mode });
   }
   return { ok: true, selection: { files } };
 }
@@ -212,5 +233,6 @@ export async function snapshotExactSelection(
 /** Compare both exact filenames/status and actual working-tree blob identity. */
 export function sameExactSelection(a: ExactSelection, b: ExactSelection): boolean {
   return a.files.length === b.files.length && a.files.every((f, i) =>
-    f.path === b.files[i].path && f.state === b.files[i].state && f.blob === b.files[i].blob);
+    f.path === b.files[i].path && f.state === b.files[i].state &&
+    f.blob === b.files[i].blob && f.mode === b.files[i].mode);
 }

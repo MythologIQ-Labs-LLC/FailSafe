@@ -74,7 +74,7 @@ suite('#715 exact-directory manifest, real Git', () => {
     fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
     fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), '# unreviewed\n');
     for (const approvedFiles of [undefined, [
-      { path: 'docs/approved.md', state: '??', blob: git(root, 'hash-object', '--no-filters', '--', 'docs/approved.md') },
+      { path: 'docs/approved.md', state: '??', blob: git(root, 'hash-object', '--no-filters', '--', 'docs/approved.md'), mode: '100644' as const },
     ]]) {
       const before = git(root, 'symbolic-ref', '--short', 'HEAD');
       const result = await commitPushOpenPr({
@@ -87,6 +87,45 @@ suite('#715 exact-directory manifest, real Git', () => {
       assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), before);
       assert.equal(git(root, 'branch', '--list', 'fix/unsafe-dir'), '');
     }
+  });
+
+
+  test('approved regular-file mode must also bind the executable bit in the staged Git index', async () => {
+    if (process.platform === 'win32') return; // Native Windows stat permissions do not represent Git executable mode.
+    const file = path.join(root, 'docs', 'reviewed.sh');
+    fs.writeFileSync(file, 'echo baseline\\n');
+    fs.chmodSync(file, 0o644);
+    git(root, 'config', 'core.filemode', 'true');
+    git(root, 'add', '--', 'docs/reviewed.sh');
+    git(root, 'commit', '-qm', 'baseline');
+    fs.writeFileSync(file, 'echo modified\\n');
+    const approved = await snapshotExactSelection(defaultGitRunner, root, ['docs/reviewed.sh']);
+    assert.equal(approved.ok, true, JSON.stringify(approved));
+    if (!approved.ok) return;
+    assert.equal(approved.selection.files[0].mode, '100644');
+    const approvedBlob = approved.selection.files[0].blob;
+    const baselineHead = git(root, 'rev-parse', 'HEAD');
+
+    // A post-approval chmod changes executable authority but not the content SHA.
+    fs.chmodSync(file, 0o755);
+    assert.equal(git(root, 'hash-object', '--no-filters', '--', 'docs/reviewed.sh'), approvedBlob);
+    const rescanned = await snapshotExactSelection(defaultGitRunner, root, ['docs/reviewed.sh']);
+    assert.equal(rescanned.ok, true, JSON.stringify(rescanned));
+    if (!rescanned.ok) return;
+    assert.equal(rescanned.selection.files[0].mode, '100755');
+    assert.equal(sameExactSelection(approved.selection, rescanned.selection), false);
+
+    // Exercise the lower-level call directly to prove staged-index verification
+    // still rejects the mode change if a caller fails to resnapshot.
+    const result = await commitPushOpenPr({
+      workspaceRoot: root, paths: ['docs/reviewed.sh'], approvedFiles: approved.selection.files,
+      branch: 'fix/mode-approval', message: 'must-not-commit', base: 'main', prTitle: 'test', prBody: '',
+    }, { git: defaultGitRunner });
+    assert.equal(result.step, 'noop', JSON.stringify(result));
+    assert.match(result.warning ?? '', /staged executable mode differs from approved file/);
+    assert.equal(git(root, 'rev-parse', 'HEAD'), baselineHead, 'unapproved executable mode must never commit');
+    assert.equal(git(root, 'ls-files', '--stage', '--', 'docs/reviewed.sh').split(' ')[0], '100755',
+      'the negative test must prove Git actually staged the changed executable mode');
   });
 
   test('untracked directory is expanded to reviewed individual filenames, not "docs/"', async () => {
