@@ -127,7 +127,115 @@ function verifyPublicationCensus(text, tracked) {
   return counts;
 }
 
+
+/**
+ * Tier 1 is an authority registry, not the historical Markdown publication census.
+ * Inspect EVERY backticked path in its first column, including multi-path rows,
+ * JSON and YAML. Otherwise a missing second agent instruction or version manifest
+ * can remain invisible while FX939's first-.md-path census still reports green.
+ */
+function tierOneRegistrations(text) {
+  const match = /^## Tier 1[^\n]*$/m.exec(text);
+  assert.ok(match, 'Missing canonical Tier 1 section');
+  const rest = text.slice(match.index + match[0].length);
+  const next = rest.search(/^## /m);
+  const section = next < 0 ? rest : rest.slice(0, next);
+  const registrations = [];
+  for (const line of section.split(/\r?\n/)) {
+    if (!/^\|\s*\x60/.test(line)) continue;
+    const cell = line.split('|')[1] || '';
+    for (const m of cell.matchAll(/\x60([^\x60]+)\x60/g)) {
+      registrations.push({ path: m[1], row: line });
+    }
+  }
+  assert.ok(registrations.length, 'Tier 1 section contains no registered paths');
+  return registrations;
+}
+
+/** Read committed object modes, never staged-only index paths or workspace links. */
+function committedModes(repoRoot = REPO_ROOT) {
+  const cwd = { cwd: repoRoot, encoding: 'utf8' };
+  const probe = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], cwd);
+  if (probe.status !== 0) return null;
+  assert.equal(probe.stdout.trim(), 'true', 'Tier-1 census requires a Git checkout');
+  const result = spawnSync('git', ['ls-tree', '-r', '-z', 'HEAD'], cwd);
+  assert.equal(result.status, 0, 'Cannot inspect committed Tier-1 files: ' + result.stderr);
+  const modes = new Map();
+  for (const entry of result.stdout.split('\0').filter(Boolean)) {
+    const tab = entry.indexOf('\t');
+    assert.ok(tab > 0, 'Malformed committed-tree entry');
+    const metadata = entry.slice(0, tab).split(' ');
+    assert.equal(metadata.length, 3, 'Malformed committed-tree metadata');
+    modes.set(entry.slice(tab + 1), metadata[0]);
+  }
+  return modes;
+}
+
+function verifyTierOneRegistrations(text, modes) {
+  const rows = tierOneRegistrations(text);
+  const names = rows.map((row) => row.path);
+  assert.equal(new Set(names).size, names.length, 'Tier 1 has duplicate canonical paths');
+  const localOnly = 'docs/roadmap/tracker-config.yaml';
+  for (const { path: registered, row } of rows) {
+    if (registered === localOnly) {
+      assert.ok(row.includes('A local file, not in the repository'),
+        'The one operator-local Tier-1 exception must explicitly disclose its absence');
+      assert.equal(modes.has(registered), false,
+        'Operator-local tracker unexpectedly published; review its authority classification');
+      continue;
+    }
+    assert.equal(modes.get(registered), '100644',
+      'Tier-1 canonical authority is absent from committed HEAD or not a regular-file blob: ' + registered);
+  }
+  assert.ok(names.includes('FailSafe/extension/package.json'),
+    'Canonical nested Node manifest must remain a registered Tier-1 authority');
+  return { paths: names.length, committed: names.length - 1, localOnly };
+}
+
+
 describe('FX939 GOVERNANCE_INDEX publication status', () => {
+
+  it('binds every explicit Tier-1 authority to a regular tracked HEAD blob, except one disclosed local YAML', () => {
+    const modes = committedModes();
+    if (modes === null) return; // Archive/package without Git: no branch-authority claim.
+    const result = verifyTierOneRegistrations(indexText(), modes);
+    assert.ok(result.paths >= 19, 'Tier-1 registration coverage unexpectedly contracted');
+    assert.equal(result.committed, result.paths - 1);
+  });
+
+  it('rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions', () => {
+    const text = indexText();
+    const registrations = tierOneRegistrations(text);
+    const names = registrations.map((row) => row.path);
+    assert.ok(names.includes('.github/copilot-instructions.md'),
+      'Fixture requires the agent-instruction multi-path row');
+    const modes = new Map(names.filter((name) => name !== 'docs/roadmap/tracker-config.yaml')
+      .map((name) => [name, '100644']));
+    assert.equal(verifyTierOneRegistrations(text, modes).paths, names.length);
+    modes.delete('GEMINI.md');
+    assert.throws(() => verifyTierOneRegistrations(text, modes),
+      /Tier-1 canonical authority is absent/);
+    modes.set('GEMINI.md', '100644');
+    modes.set('.github/copilot-instructions.md', '120000');
+    assert.throws(() => verifyTierOneRegistrations(text, modes),
+      /not a regular-file blob/);
+    modes.set('.github/copilot-instructions.md', '100644');
+    modes.set('docs/roadmap/tracker-config.yaml', '100644');
+    assert.throws(() => verifyTierOneRegistrations(text, modes),
+      /Operator-local tracker unexpectedly published/);
+    modes.delete('docs/roadmap/tracker-config.yaml');
+    assert.throws(() => verifyTierOneRegistrations(
+      text.replace('A local file, not in the repository', 'published authority'), modes
+    ), /operator-local Tier-1 exception/);
+    assert.throws(() => verifyTierOneRegistrations(
+      text.replace('\x60GEMINI.md\x60', '\x60AGENTS.md\x60'), modes
+    ), /duplicate canonical paths/);
+    assert.throws(() => verifyTierOneRegistrations(
+      text.replace('\x60FailSafe/extension/package.json\x60', '\x60package.json\x60'), modes
+    ), /Tier-1 canonical authority is absent/);
+  });
+
+
   it('registers no path that is neither tracked nor under a declared-private prefix', () => {
     const text = indexText();
     const tracked = trackedFiles();
