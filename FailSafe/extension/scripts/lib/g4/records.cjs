@@ -73,9 +73,13 @@ function refuseExisting(targets, rels) {
 }
 
 /** Write complete staged bytes with exclusive create; flush bytes before publishing links. */
-function stageOutput(file, bytes) {
+function stageOutput(file, bytes, onCreated) {
   const fd = fs.openSync(file, "wx", 0o600);
   try {
+    // Bind the staged output to the inode created by our own exclusive open.
+    // A foreign file using an expected name must never be deleted at cleanup.
+    const info = fs.fstatSync(fd);
+    onCreated({ dev: info.dev, ino: info.ino });
     const data = Buffer.from(bytes);
     for (let offset = 0; offset < data.length;) {
       const written = fs.writeSync(fd, data, offset, data.length - offset, offset);
@@ -135,6 +139,7 @@ async function writeNew(repoRoot, rels, make) {
     throw refuse("RECORD_BUSY", "G4 lock directory ownership could not be established; inspect it manually");
   }
   let ownedStage = null;
+  const ownedOutputs = new Map();
   const published = [];
   let retainLock = false;
   try {
@@ -156,7 +161,7 @@ async function writeNew(repoRoot, rels, make) {
         throw refuse("RECORD_OUTPUT", "record output must contain nonempty binary data");
       }
       const name = path.join(stage, `output-${index}`);
-      stageOutput(name, bytes);
+      stageOutput(name, bytes, (info) => ownedOutputs.set(path.basename(name), info));
       if (!fs.readFileSync(name).equals(Buffer.from(bytes))) {
         throw refuse("RECORD_OUTPUT", "staged record bytes changed before publication");
       }
@@ -237,6 +242,12 @@ async function writeNew(repoRoot, rels, make) {
           const info = fs.lstatSync(path.join(ownedStage.path, name));
           if (!info.isFile() || info.isSymbolicLink()) {
             throw refuse("RECORD_BUSY", "G4 stage contains nonregular files; manual inspection required");
+          }
+          if (name.startsWith("output-")) {
+            const owned = ownedOutputs.get(name);
+            if (!owned || info.dev !== owned.dev || info.ino !== owned.ino) {
+              throw refuse("RECORD_BUSY", "G4 stage contains unowned staged output; manual inspection required");
+            }
           }
         }
         for (const name of stageEntries) fs.unlinkSync(path.join(ownedStage.path, name));

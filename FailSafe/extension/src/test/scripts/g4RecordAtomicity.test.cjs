@@ -334,3 +334,22 @@ test("G4 #660: replaced stage directory cannot be deleted as owned evidence", as
     assert.ok(f.targets.every(t => !fs.existsSync(t)), "the aborted builder published no final records");
   } finally { f.cleanup(); }
 });
+
+test("G4 #660: a foreign file under an expected output name survives failed staging cleanup", async () => {
+  const f = fixture();
+  let injected;
+  try {
+    await assert.rejects(writeNew(f.root, rels, async (stage) => {
+      injected = path.join(stage, "output-0");
+      fs.writeFileSync(injected, "FOREIGN-STAGED-OUTPUT", { flag: "wx" });
+      return f.maker();
+    }), /G4 stage contains unowned staged output/);
+    assert.equal(fs.readFileSync(injected, "utf8"), "FOREIGN-STAGED-OUTPUT",
+      "cleanup must not unlink a file it did not create, even if its name is reserved");
+    assert.equal(fs.existsSync(path.dirname(injected)), true,
+      "ambiguous stage and lock remain for operator inspection");
+    assert.ok(f.targets.every((target) => !fs.existsSync(target)),
+      "a failed exclusive staged create cannot publish final trust records");
+    await assert.rejects(writeNew(f.root, rels, f.maker), /earlier writer or interrupted record owns the lock/);
+  } finally { f.cleanup(); }
+});
