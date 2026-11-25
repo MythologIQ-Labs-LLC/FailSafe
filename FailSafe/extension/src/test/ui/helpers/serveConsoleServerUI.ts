@@ -403,6 +403,7 @@ export async function serveConsoleServerUI(
   }
 
   const voicePackVersion = fixtures.voicePackVersion ?? '5.2.0';
+  const releaseVoiceTrust = fixtures.voicePackInstalled ? acquireUiVoiceTrust() : () => undefined;
   const voicePackGlobalStorage = setupVoicePackFixture(workspaceRoot, fixtures, voicePackVersion);
   if (fixtures.voicePackInstalled) {
     (server as unknown as { setVoicePackPath: (p: string) => void }).setVoicePackPath(
@@ -444,11 +445,44 @@ export async function serveConsoleServerUI(
   attachWebSocket(server, harness, sockets, fakes.hubRef, fixtures.liveHubInit === true);
 
   const url = await listenAndResolveUrl(harness);
-  const controller = buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });
+  const controller = buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); releaseVoiceTrust(); });
   return Object.assign(controller, {
     themeKey: server.getThemeKey(),
     setTheme: (theme: string) => server.getThemeAuthority().set(theme),
   });
+}
+
+interface UiVoiceTrust {
+  privatePem: string; publicPem: string; refs: number;
+  restore: () => void;
+}
+let uiVoiceTrust: UiVoiceTrust | undefined;
+function acquireUiVoiceTrust(): () => void {
+  if (!uiVoiceTrust) {
+    const { generateKeyPairSync } = require('crypto') as typeof import('crypto');
+    const pair = generateKeyPairSync('ed25519');
+    const privatePem = pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const publicPem = pair.publicKey.export({ type: 'spki', format: 'pem' }).toString();
+    const auth = require('../../../voice-pack/publisher-auth') as
+      typeof import('../../../voice-pack/publisher-auth');
+    const old = auth.loadPinnedVoicePublisherKey;
+    (auth as { loadPinnedVoicePublisherKey: () => string })
+      .loadPinnedVoicePublisherKey = () => publicPem;
+    uiVoiceTrust = { privatePem, publicPem, refs: 0, restore: () => {
+      (auth as { loadPinnedVoicePublisherKey: () => string })
+        .loadPinnedVoicePublisherKey = old;
+    } };
+  }
+  uiVoiceTrust.refs++;
+  let finished = false;
+  return () => {
+    if (finished || !uiVoiceTrust) return;
+    finished = true;
+    if (--uiVoiceTrust.refs === 0) {
+      uiVoiceTrust.restore();
+      uiVoiceTrust = undefined;
+    }
+  };
 }
 
 function setupVoicePackFixture(
@@ -461,17 +495,38 @@ function setupVoicePackFixture(
   fs.mkdirSync(globalStoragePath, { recursive: true });
   if (fixtures.voicePackInstalled) {
     const packDir = path.join(globalStoragePath, 'voice-pack');
-    fs.mkdirSync(path.join(packDir, 'piper'), { recursive: true });
-    const piperContent = 'STUB-PIPER-PAYLOAD';
-    fs.writeFileSync(path.join(packDir, 'piper', 'piper.min.js'), piperContent, 'utf8');
+    const { VOICE_ASSETS } = require('../../../voice-pack/safe-archive') as typeof import('../../../voice-pack/safe-archive');
     const { createHash } = require('crypto') as typeof import('crypto');
-    const sha = createHash('sha256').update(piperContent).digest('hex');
-    fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
+    const sha256: Record<string, string> = {};
+    for (const rel of VOICE_ASSETS) {
+      const asset = path.join(packDir, rel);
+      fs.mkdirSync(path.dirname(asset), { recursive: true });
+      const data = 'STUB-VOICE-ASSET:' + rel;
+      fs.writeFileSync(asset, data, 'utf8');
+      sha256[rel] = createHash('sha256').update(data).digest('hex');
+    }
+    const manifest = Buffer.from(JSON.stringify({
       version,
       builtAt: new Date().toISOString(),
-      expectedFiles: ['piper/piper.min.js'],
-      sha256: { 'piper/piper.min.js': sha },
+      expectedFiles: [...VOICE_ASSETS],
+      sha256,
     }), 'utf8');
+    fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), manifest);
+    const signCandidate = require(path.resolve(__dirname, '../../../../scripts/voice-pack-auth.cjs'))
+      .signCandidate as (candidate: unknown, priv: string, pub: string) =>
+        { payload: Buffer; signature: Buffer };
+    if (!uiVoiceTrust) throw new Error('UI voice publisher fixture not initialized');
+    const signed = signCandidate({
+      status: 'UNSIGNED_CANDIDATE_ONLY',
+      repository: 'MythologIQ-Labs-LLC/FailSafe', version,
+      sourceSha: 'a'.repeat(40), filename: 'failsafe-voice-pack-' + version + '.tar.gz',
+      archiveSha256: 'b'.repeat(64),
+      manifestSha256: createHash('sha256').update(manifest).digest('hex'),
+      filesVerified: 6,
+    }, uiVoiceTrust.privatePem, uiVoiceTrust.publicPem);
+    fs.writeFileSync(path.join(packDir, 'voice-pack-release.json'), signed.payload);
+    fs.writeFileSync(path.join(packDir, 'voice-pack-release.json.sig'),
+      signed.signature.toString('base64') + '\n');
   }
   return globalStoragePath;
 }
@@ -494,10 +549,11 @@ function registerVoicePackRouteOnHarness(
     onPackStateChanged: async () => {
       // Re-probe + update voicePackPath on the harness server so subsequent
       // /vendor mount reflects post-install/uninstall state.
-      const fsMod = require('fs') as typeof import('fs');
+      const { probeVoicePackState } = require('../../../voice-pack/voice-pack-detector') as typeof import('../../../voice-pack/voice-pack-detector');
+      const state = await probeVoicePackState(globalStoragePath, version);
       const packDir = path.join(globalStoragePath, 'voice-pack');
       (server as unknown as { setVoicePackPath: (p: string | null) => void })
-        .setVoicePackPath(fsMod.existsSync(packDir) ? packDir : null);
+        .setVoicePackPath(state.state === 'installed' ? packDir : null);
     },
   });
 }
