@@ -1,0 +1,21 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-24T1904-4e594e",
+  "ts": "2026-11-25T06:06:14Z",
+  "target": ".failsafe/governance/plans/plan-703-delivery-review-refresh-race.md",
+  "target_content_hash": "49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891",
+  "verdict": "PASS",
+  "report_path": ".failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter7.md",
+  "risk_grade": "L2",
+  "findings_categories": [],
+  "report_content_hash": "d68be3fedec7870247d6a6fbe330129dee9513dc60242e61a5f8e37f2879d735",
+  "reviews_remediate_gate": ".qor/gates/2026-11-24T1904-4e594e/remediate.json",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "pass",
+    "ts": "2026-11-25T06:06:14Z"
+  }
+}

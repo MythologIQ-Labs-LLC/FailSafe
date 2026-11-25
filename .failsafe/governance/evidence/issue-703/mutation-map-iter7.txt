@@ -1,0 +1,175 @@
+== mutants703.py
+KILLED    K1 in-flight early return and disabled removed
+            - #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED    K2 message not intent-scoped
+            - #703: a failed review POST does not display its result on another intent
+            - #703: a held completion message is not consumed by an error panel and shows on the next view of its intent
+            - #703: a refused link POST does not display its result on another intent
+            - #703: a refused review POST does not display its result on another intent
+            - #703: a successful link POST does not display its result on another intent
+            - #703: a successful review POST does not display its result on another intent
+KILLED    K3 no check after listing
+            - #703: a selection-less stale listing response neither repaints, reselects nor fetches the details it would have chosen
+            - #703: an empty stale listing response neither repaints, reselects nor fetches the details it would have chosen
+            - #703: an invalid stale listing response neither repaints, reselects nor fetches the details it would have chosen
+            - #703: the same stale listing response neither repaints, reselects nor fetches the details it would have chosen
+KILLED    K4 no check after detail
+            - #703: a stale detail response cannot repaint a newer selected intent
+KILLED    K5 no check in catch
+            - #703: an old failed GET must not overwrite a later successful Delivery view
+KILLED    K6 no check before paint
+            - #703: delayed candidates from a previous intent cannot overwrite the newly selected view
+KILLED    K7 draft cleared unconditionally on 200
+            - #703: a later different-text edit survives a prior POST
+            - #703: a later same-text edit survives a prior POST
+            - #703: a refused (HTTP 409) POST keeps the note and re-enables review
+            - #703: recording a review on one commit keeps the unsent note of another
+KILLED    K8 no draft restore on commit change
+            - #703: a note belongs to its commit: changing the picked commit hides it and changing back restores it
+            - #703: recording a review on one commit keeps the unsent note of another
+KILLED    K9 draft not intent-scoped
+            - #703: a note and commit pick belong to their intent: another linkable intent starts empty
+            - #703: a note typed on the shown intent while an intent switch is pending stays with the shown intent
+KILLED    K9b draft not commit-scoped
+            - #703: a note belongs to its commit: changing the picked commit hides it and changing back restores it
+            - #703: recording a review on one commit keeps the unsent note of another
+KILLED    K10 link success message not intent-scoped
+            - #703: a successful link POST does not display its result on another intent
+KILLED    K10b link failure message not intent-scoped
+            - #703: a refused link POST does not display its result on another intent
+KILLED    K15 review HTTP failure message not intent-scoped
+            - #703: a refused (HTTP 409) POST keeps the note and re-enables review
+            - #703: a refused review POST does not display its result on another intent
+KILLED    K16 review network failure message not intent-scoped
+            - #703: a failed review POST does not display its result on another intent
+            - #703: a rejected network POST keeps the note and re-enables review
+KILLED    K11 picked commit not restored
+            - #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent
+            - #703: a round trip through the intent picker keeps the note and the commit pick
+            - #703: a successful PASS keeps the picked commit for the next review
+            - #703: an older picked commit, its note and the rework pick survive a repaint and are posted
+            - #703: each rework pick is kept for its own VETO
+            - #703: with no VETO, a picked older commit survives a repaint
+KILLED    K12 rework pick not restored
+            - #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick
+            - #703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the rework pick
+            - #703: a rework pick is kept by VETO id when another VETO leaves the list
+            - #703: an older picked commit, its note and the rework pick survive a repaint and are posted
+            - #703: each rework pick is kept for its own VETO
+KILLED    K13 form not intent-scoped
+            - #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent
+            - #703: a note and commit pick belong to their intent: another linkable intent starts empty
+KILLED    K14 in-flight not reset after review
+            - #703: PASS and VETO cannot both submit across an overlapping repaint
+            - #703: a refused (HTTP 409) POST keeps the note and re-enables review
+            - #703: a rejected network POST keeps the note and re-enables review
+            - #703: each rework pick is kept for its own VETO
+            - Record PASS and Record VETO on a linked commit, with a note, each post once; a sealed intent has no review controls
+== jmut.py
+KILLED   J1 picked commit restored even when no longer linked | #703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the rework pick
+KILLED   J2 commit-pick change not remembered (rework change only) | #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent; #703: a round trip through the intent picker keeps the note and the commit pick; #703: a successful PASS keeps the picked commit for the next review; #703: an older picked commit, its note and th
+KILLED   J3 rework change not remembered | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick; #703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the rework pick; #703: a rework pick is kept by VETO id when another VETO leaves the list; #703: an
+KILLED   J4a only early return removed | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED   J4b only disabled-on-paint removed | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED   J4c click does not disable buttons | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED   J5 rework kept by first value regardless of VETO id | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick; #703: a rework pick is kept by VETO id when another VETO leaves the list; #703: each rework pick is kept for its own VETO
+KILLED   J6 reworks not sent on PASS | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick; #703: an older picked commit, its note and the rework pick survive a repaint and are posted; #703: each rework pick is kept for its own VETO; B344 (red-first): "Reworked by" appears only on trust
+KILLED   J7 reworks sent on VETO too | #703: each rework pick is kept for its own VETO
+KILLED   J8 note draft stamped with newest commit, not picked | #703: a round trip through the intent picker keeps the note and the commit pick; #703: an older picked commit, its note and the rework pick survive a repaint and are posted
+KILLED   J9 restore on change ignores commit (keeps note) | #703: a note belongs to its commit: changing the picked commit hides it and changing back restores it; #703: recording a review on one commit keeps the unsent note of another
+KILLED   J10 form reset on every paint (reviewForm=null at refresh) | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick; #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent; #703: a picked commit that is no longer linked falls back to the newest linked commit and 
+KILLED   J11 draft reset on every paint | #703: a later different-text edit survives a prior POST; #703: a later same-text edit survives a prior POST; #703: a note and commit pick belong to their intent: another linkable intent starts empty; #703: a note typed on the shown intent while an intent switch is pending stays with the shown intent
+KILLED   J12 message consumed but never shown | #703: a failed review POST does not display its result on another intent; #703: a held completion message is not consumed by an error panel and shows on the next view of its intent; #703: a refused (HTTP 409) POST keeps the note and re-enables review; #703: a refused link POST does not display its r
+== jmut2.py
+SURVIVED J13 draft clear ignores commit | 
+SURVIVED J14 draft clear ignores text | 
+SURVIVED J15 draft clear ignores intent | 
+KILLED   J16 draft clear by identity only | #703: recording a review on one commit keeps the unsent note of another
+KILLED   J17 reviewInFlight reset before POST settles | #703: PASS and VETO cannot both submit across an overlapping repaint
+== xmut.py
+KILLED   X1 commit-pick change drops rework picks | 48 pass 1 fail | #703: each rework pick is kept for its own VETO
+KILLED   X2 draft cleared on any status | 48 pass 1 fail | #703: a refused (HTTP 409) POST keeps the note and re-enables review
+KILLED   X3 draft cleared on network failure | 48 pass 1 fail | #703: a rejected network POST keeps the note and re-enables review
+KILLED   X4 message not consumed (replayed) | 44 pass 5 fail | #703: a failed review POST does not display its result on another intent; #703: a refused link POST does not display its result on another intent; #703: a refused review POST does not display its result on another intent; #703: a successful link POST does not display its result on another intent; #703: a successful review POST does not display its result on another intent
+KILLED   X5 in-flight reset after the refresh | 44 pass 5 fail | #703: PASS and VETO cannot both submit across an overlapping repaint; #703: a refused (HTTP 409) POST keeps the note and re-enables review; #703: a rejected network POST keeps the note and re-enables review; #703: each rework pick is kept for its own VETO; Record PASS and Record VETO on a linked commit, with a note, each post once; a sealed intent has no review controls
+KILLED   X6 oldest commit is the default | 43 pass 6 fail | #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent; #703: a note and commit pick belong to their intent: another linkable intent starts empty; #703: a note belongs to its commit: changing the picked commit hides it and changing back restores it; #703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the r
+KILLED   X7 empty rework picks posted | 47 pass 2 fail | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick; #703: each rework pick is kept for its own VETO
+KILLED   X8 selection written before the listing check | 46 pass 3 fail | #703: a selection-less stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an empty stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an invalid stale listing response neither repaints, reselects nor fetches the details it would have chosen
+KILLED   X9 note listens on change not input | 38 pass 11 fail | #703: a later different-text edit survives a prior POST; #703: a later same-text edit survives a prior POST; #703: a note and commit pick belong to their intent: another linkable intent starts empty; #703: a note belongs to its commit: changing the picked commit hides it and changing back restores it; #703: a note typed on the shown intent while an intent switch is pending stays with the shown int
+KILLED   X10 review message tagged with selectedId | 48 pass 1 fail | #703: a successful review POST does not display its result on another intent
+KILLED   X11 link message tagged with selectedId | 48 pass 1 fail | #703: a successful link POST does not display its result on another intent
+KILLED   X12 no repaint after review | 42 pass 7 fail | #703: PASS and VETO cannot both submit across an overlapping repaint; #703: a held completion message is not consumed by an error panel and shows on the next view of its intent; #703: a refused (HTTP 409) POST keeps the note and re-enables review; #703: a rejected network POST keeps the note and re-enables review; #703: each rework pick is kept for its own VETO; Record PASS and Record VETO on a li
+SURVIVED X13 form survives across intents (no intent check on rework) | 49 pass 0 fail | 
+KILLED   X14 draft written without intent | 48 pass 1 fail | #703: a note typed on the shown intent while an intent switch is pending stays with the shown intent
+KILLED   X15 draft captured after POST | 48 pass 1 fail | #703: a later same-text edit survives a prior POST
+KILLED   X16 candidates fetched for stale view then painted w/o pre-paint check | 47 pass 2 fail | #703: a stale detail response cannot repaint a newer selected intent; #703: delayed candidates from a previous intent cannot overwrite the newly selected view
+KILLED   X17 buttons enabled on paint even in flight but click guard kept | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED   X18 rework restore ignores VETO id but uses commit match | 47 pass 2 fail | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick; #703: each rework pick is kept for its own VETO
+== ymut-iter4-auditor.py
+KILLED   Y1 generation captured after the listing GET | 45 pass 4 fail | #703: a selection-less stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an empty stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an invalid stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: the same stale listing response neither repaints, reselects nor fetches the details it would have chosen
+KILLED   Y2 draft clear drops the identity clause | 47 pass 2 fail | #703: a later different-text edit survives a prior POST; #703: a later same-text edit survives a prior POST
+KILLED   Y3 unlinked picked commit falls back to the oldest | 48 pass 1 fail | #703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the rework pick
+KILLED   Y4 in-flight reset only on a settled POST (rejection leaves it set) | 48 pass 1 fail | #703: a rejected network POST keeps the note and re-enables review
+KILLED   Y5 review non-200 sets no message | 47 pass 2 fail | #703: a refused (HTTP 409) POST keeps the note and re-enables review; #703: a refused review POST does not display its result on another intent
+KILLED   Y6 message scoped to selectedId instead of the painted view | 48 pass 1 fail | #703: a held completion message is not consumed by an error panel and shows on the next view of its intent
+KILLED   Y7 draft-clear null guard dropped | 47 pass 2 fail | #703: a held completion message is not consumed by an error panel and shows on the next view of its intent; #703: a successful review POST does not display its result on another intent
+KILLED   Y8 refresh after review not awaited | 43 pass 6 fail | #703: PASS and VETO cannot both submit across an overlapping repaint; #703: a refused (HTTP 409) POST keeps the note and re-enables review; #703: a rejected network POST keeps the note and re-enables review; #703: each rework pick is kept for its own VETO; Record PASS and Record VETO on a linked commit, with a note, each post once; a sealed intent has no review controls; a typed review note survives an async repaint and posts exactly once before the draft is cleared (#703)
+SURVIVED Y9 form mutated in place (same intent) instead of replaced | 49 pass 0 fail | 
+KILLED   Y10 PASS reworks captured at paint time | 47 pass 2 fail | #703: each rework pick is kept for its own VETO; B344 (red-first): "Reworked by" appears only on trusted VETO records, and Record PASS posts the chosen reworks once
+KILLED   Y11 message consumed on every paint | 44 pass 5 fail | #703: a failed review POST does not display its result on another intent; #703: a refused link POST does not display its result on another intent; #703: a refused review POST does not display its result on another intent; #703: a successful link POST does not display its result on another intent; #703: a successful review POST does not display its result on another intent
+KILLED   Y12 posted note read from the draft, not the input | 47 pass 2 fail | #703: recording a review on one commit keeps the unsent note of another; Record PASS and Record VETO on a linked commit, with a note, each post once; a sealed intent has no review controls
+KILLED   Y13 rework restore only when the form commit is still linked | 48 pass 1 fail | #703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the rework pick
+KILLED   Y14 commit pick restored only when the note draft is absent | 47 pass 2 fail | #703: a round trip through the intent picker keeps the note and the commit pick; #703: an older picked commit, its note and the rework pick survive a repaint and are posted
+KILLED   Y15 in-flight guard released when the button is repainted | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED   Y16 draft cleared on 200 for any draft of the same intent | 46 pass 3 fail | #703: a later different-text edit survives a prior POST; #703: a later same-text edit survives a prior POST; #703: recording a review on one commit keeps the unsent note of another
+KILLED   Y17 stale catch paints the error on the newer view (check after paint) | 48 pass 1 fail | #703: an old failed GET must not overwrite a later successful Delivery view
+SURVIVED Y18 draft commit read via options[selectedIndex] (equivalent by construction) | 49 pass 0 fail | 
+KILLED   Y19 message for link refusal dropped | 48 pass 1 fail | #703: a refused link POST does not display its result on another intent
+KILLED   Y20 X8 + selection written only when unchanged (stale listing still writes) | 46 pass 3 fail | #703: a selection-less stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an empty stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an invalid stale listing response neither repaints, reselects nor fetches the details it would have chosen
+== zmut-iter5-auditor.py
+KILLED   Z1 review POST carries renderer.selectedId, not the painted intent | 48 pass 1 fail | #703: a review clicked on the shown intent while an intent switch is pending is posted for the shown intent
+KILLED   Z2 form tagged with renderer.selectedId, not the painted intent | 48 pass 1 fail | #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent
+KILLED   Z3 message consumed even when it belongs to another intent | 44 pass 5 fail | #703: a failed review POST does not display its result on another intent; #703: a refused link POST does not display its result on another intent; #703: a refused review POST does not display its result on another intent; #703: a successful link POST does not display its result on another intent; #703: a successful review POST does not display its result on another intent
+KILLED   Z4 form cleared after a successful review | 47 pass 2 fail | #703: a successful PASS keeps the picked commit for the next review; #703: each rework pick is kept for its own VETO
+KILLED   Z5 form cleared after any review completion | 47 pass 2 fail | #703: a successful PASS keeps the picked commit for the next review; #703: each rework pick is kept for its own VETO
+KILLED   Z6 only the click-time early return removed (disabled kept) | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED   Z7 note restore not run when the controls are built | 40 pass 9 fail | #703: a later different-text edit survives a prior POST; #703: a later same-text edit survives a prior POST; #703: a note and commit pick belong to their intent: another linkable intent starts empty; #703: a note typed on the shown intent while an intent switch is pending stays with the shown intent; #703: a refused (HTTP 409) POST keeps the note and re-enables review; #703: a rejected network POS
+KILLED   Z8 rework restore keyed by position, not VETO id | 48 pass 1 fail | #703: a rework pick is kept by VETO id when another VETO leaves the list
+KILLED   Z9 generation check after detail moved after the candidates GET | 48 pass 1 fail | #703: a stale detail response cannot repaint a newer selected intent
+KILLED   Z10 stale catch still records selection reset (selectedId=null) before its check | 48 pass 1 fail | #703: an old failed GET does not change the selected intent
+KILLED   Z11 selection written before the listing check only for valid listings | 48 pass 1 fail | #703: a selection-less stale listing response neither repaints, reselects nor fetches the details it would have chosen
+KILLED   Z12 draft captured at click time vs in review (captured after a microtask) | 48 pass 1 fail | #703: a later same-text edit survives a prior POST
+KILLED   Z13 in-flight not set on click (disable only) | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED   Z14 commit pick restored only when the form has rework picks | 45 pass 4 fail | #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent; #703: a round trip through the intent picker keeps the note and the commit pick; #703: a successful PASS keeps the picked commit for the next review; #703: with no VETO, a picked older commit survives a repaint
+KILLED   Z15 rework pick restored only when the form commit is the newest | 46 pass 3 fail | #703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the rework pick; #703: an older picked commit, its note and the rework pick survive a repaint and are posted; #703: each rework pick is kept for its own VETO
+KILLED   Z16 message shown on panels without a view (error/invalid/empty) | 48 pass 1 fail | #703: a held completion message is not consumed by an error panel and shows on the next view of its intent
+KILLED   Z17 link message on network rejection not applicable; link message dropped on 200 | 48 pass 1 fail | #703: a successful link POST does not display its result on another intent
+KILLED   Z18 stale listing check only for the invalid branch | 46 pass 3 fail | #703: a selection-less stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an empty stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: the same stale listing response neither repaints, reselects nor fetches the details it would have chosen
+SURVIVED Z19 draft clear compares note text only to the draft (not the posted note) | 49 pass 0 fail | 
+KILLED   Z20 draft tagged with renderer.selectedId (= X14) | 48 pass 1 fail | #703: a note typed on the shown intent while an intent switch is pending stays with the shown intent
+KILLED   Z21 form listeners registered only when there are rework picks | 45 pass 4 fail | #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent; #703: a round trip through the intent picker keeps the note and the commit pick; #703: a successful PASS keeps the picked commit for the next review; #703: with no VETO, a picked older commit survives a repaint
+== wmut-iter6-auditor.py
+KILLED    W1 R13 repainted PASS not disabled (VETO kept) | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED    W2 R13 repainted VETO not disabled (PASS kept) | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED    W3 R13 click disables only PASS | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED    W4 R13 click disables only VETO | 48 pass 1 fail | #703: PASS and VETO cannot both submit across an overlapping repaint
+KILLED    W5 R5 review 200 message tagged with selectedId at completion | 48 pass 1 fail | #703: a successful review POST does not display its result on another intent
+SURVIVED  W6 R5 message held also shown on invalid panel | 49 pass 0 fail | 
+SURVIVED  W7 R5 message shown on empty (no intents) panel | 49 pass 0 fail | 
+SURVIVED  W8 R6 draft cleared on any 200 even if different text | 49 pass 0 fail | 
+KILLED    W9 R8 draft cleared on non-200 too | 48 pass 1 fail | #703: a refused (HTTP 409) POST keeps the note and re-enables review
+KILLED    W10 R13 reviewInFlight not reset on network failure path | 47 pass 2 fail | #703: a refused (HTTP 409) POST keeps the note and re-enables review; #703: a rejected network POST keeps the note and re-enables review
+KILLED    W11 R11 rework kept by commit not VETO id | 48 pass 1 fail | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick
+KILLED    W12 R10 picked commit dropped when it is the oldest | 44 pass 5 fail | #703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent; #703: a round trip through the intent picker keeps the note and the commit pick; #703: a successful PASS keeps the picked commit for the next review; #703: an older picked commit, its note and th
+KILLED    W13 R12 form cleared on intent switch picker | 48 pass 1 fail | #703: a round trip through the intent picker keeps the note and the commit pick
+KILLED    W14 R9 draft cleared on intent switch picker | 48 pass 1 fail | #703: a round trip through the intent picker keeps the note and the commit pick
+KILLED    W15 R14 VETO posts reworks too | 48 pass 1 fail | #703: each rework pick is kept for its own VETO
+KILLED    W16 R14 PASS posts all rework picks incl none | 47 pass 2 fail | #703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick; #703: each rework pick is kept for its own VETO
+KILLED    W17 R1 stale listing check after the selection write | 46 pass 3 fail | #703: a selection-less stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an empty stale listing response neither repaints, reselects nor fetches the details it would have chosen; #703: an invalid stale listing response neither repaints, reselects 
+KILLED    W18 R4 stale failure check removed but no paint when message | 48 pass 1 fail | #703: an old failed GET must not overwrite a later successful Delivery view
+KILLED    W19 R6 posted note read from draft not input | 47 pass 2 fail | #703: recording a review on one commit keeps the unsent note of another; Record PASS and Record VETO on a linked commit, with a note, each post once; a sealed intent has no review controls
+KILLED    W20 R7 draft clear when same text even if new object | 48 pass 1 fail | #703: a later same-text edit survives a prior POST
+KILLED    W22 R12 form not kept after a VETO completes (cleared on 200 VETO) | 48 pass 1 fail | #703: each rework pick is kept for its own VETO
+KILLED    W23 R12 form cleared after a 200 PASS only | 48 pass 1 fail | #703: a successful PASS keeps the picked commit for the next review
+KILLED    W24 R12 form commit reset after any completed review (reworks kept) | 47 pass 2 fail | #703: a successful PASS keeps the picked commit for the next review; #703: each rework pick is kept for its own VETO
+done

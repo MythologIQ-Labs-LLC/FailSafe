@@ -36858,3 +36858,162 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: SESSION SEAL for plan-707 iteration 3, by a fresh-context independent Judge, at a /qor-substantiate re-run after the #974 VETO. Reality = Promise, with disclosures. The only #974 blocking ground (S1) is closed: strict doc_integrity (skill Step 4.7) passes on the real worktree with no placeholder, and reverting only qor/references/glossary.md:111 in a scratch export reproduces exactly the S1 ValueError. Source and tests are unchanged since f4251d89 (git diff f4251d89 HEAD touches no path under FailSafe/), so C2 holds: PR Full Test run 45118465441 at f4251d89 checked out merge f01c36c9 (parents 0c0e30e0 and f4251d89, tree e8dd4dd7 equal to the f4251d89 tree; origin/main is still 0c0e30e0), with extension host 6215 passing and 15 pending, test:node 1170 tests, 1135 pass, 0 fail, and the 35 vendor and 12 packaging tests passing. Re-executed here: plan hash equal; intent_lock VERIFIED; fix.patch sha256 2ff29ced70c74795f0c3a9c0393a710c201308b78315ff41fe69ddd07ada8458 is inside archive 89e9f70ac7ed174941c9c05630595b937663a7f967fb2f7180733233373e5377, and applied to the a465bd85 blobs it gives blobs 49399337 and b4d30c50, identical to 477955a7; hashExistingVendorAsset is textually identical at 477955a7 and in vendor-voice-fs.cjs:66 at HEAD. The focused Windows mocha run gives 36 passing, 11 pending (exactly the C8 set) and 0 failing. In a scratch copy, the Phase 1b mutation (readFileSync, and separately createReadStream, of the rejected original) and the prerelease mutation (restoring the release-only guard in cleanupAfterFailure) each fail their test, and the restored files compare equal. TS-AST Razor: no #712 function or test body over 36 lines, nesting at most 3, no nested ternary; the bundle.cjs main 93 and bundlePattern exclusions are unchanged. C1 (eol attributes and verify:voice-pins exit 0 on Windows), C4, C7 and D1-D4 were re-checked. C3 is carried from #974 (unchanged bytes). Conditions C1-C8 are met. Ledger: #970-#974 content and chain hashes recompute; verify-ledger --post-anchor --boundary 382 is clean. UNPLANNED (WARNING), owner-authorized commit 6c7f8b22: (U1) qor/references/glossary.md:111, the 'Vacuous pass' home now points at docs/SYSTEM_STATE.md (tracked; its 2026-09-03 section documents the same five controls), replacing the gitignored brief; (U2) new .qor/secret-scanner-allowlist with a single token, the fake Slack-format fixture quoted in the ledger since 7e3c35be (also integration-health.test.ts:94). Without it, secret_scanner on META_LEDGER.md BLOCKs (1 slack-token); with it, rc 0. Both are one-purpose, minimal, honestly described, and pre-existing on origin/main. Also UNPLANNED: docs/architecture/integrations/acp-devin.md (04c69c85, a citation shift forced by bundle.cjs). Planned files missing: none. Disclosures carried from #974 and re-verified where relied on: N1 publication_boundary_lint rc 1, scope structural, 537 findings at HEAD and at f4251d89, 528 at origin/main; the 9 added are generic OS install paths in #712 records, none of them a doctrine-prohibited workspace or repository reference; 6c7f8b22 and 7003e07e add 0. N2 is resolved by U2. N3 Phase 1b counts openSync, readFileSync and createReadStream, not readSync. N4 cleanupAfterFailure drops the duplicate warning for an unreadable package.json. N5 three asset-name lists can drift. N6 pre-existing nesting 4 at dependencyFloor.test.cjs:125-146 and bundlePattern. N7 g4Witness.test.cjs:110 fails in a full clone (local test:node 1160 pass, 1 fail, 9 skipped) and passes on the depth-1 CI checkout; pre-existing. N8 the #532 Windows timeouts are not attributable to #712. N9 doc currency WARN: README.md and CHANGELOG.md are untouched for a feature class with no release in scope. N10 install_drift_check OK may be vacuous. N11 acp-devin.md as above. New: N12 secret_scanner reports the ledger finding at line 30367; the physical line is 32531. N13 substantiate_gates passes (10 gates, order verified) only when given the installed SKILL.md via --skill, and substantiate-capability crashes (SKIP). N14 SKIP or inapplicable: version_applicability (needs pyproject.toml) and Step 7.5/7.6/9.5.5, because there is no root manifest and the plan non_goals forbid any bump, tag or release (feature class; FailSafe/extension/package.json 6.0.13 equals tag v6.0.13; nothing was bumped, stamped or tagged); seal_entry_check (no numeric phase in this ledger dialect, per the #601 precedent, so the chain, plan binding and ASCII were verified directly); seal_artifacts (.claude/agents absent); gate_chain_completeness (0 sessions inspected; the four session gate artifacts were verified directly); data_api_acl_lint (no migrations; a disclosed-skip event was emitted and closed at emission by permanent_skips); dist_compile (no qor/skills in this consumer; a real run would write into the frozen install). N15 the GOVERNANCE_INDEX Tier 4 archive-at-seal rule is not performed, matching #968, because the ledger, intent lock and gates cite the plan path. Acceptance-criteria close guard: no closing references in the PR #712 body. BACKLOG has no open Security or Development Blockers. Not merged, released or tagged; no version bump.
 
 ---
+
+### Entry #976: GATE TRIBUNAL - plan-703-delivery-review-refresh-race (iteration 1) VETO
+
+**Timestamp**: 2026-11-24T19:18:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 1, sha256 80bd7180578e38f8a72b7d7dd1877513b604e6816400a44013647164cdeed9d9)
+**Report**: `.failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/audit-iter1.json` (also audit.json)
+
+**Content Hash**: `d40c94874b21debb370f4c68a95ac78f188ff5b778e8a37e89918461ac2bc23a`
+**Previous Hash**: `b9571093ac543c0e291850bfe05627da2e4e2e8cfbd584a68a60c9f031413510`
+**Chain Hash (Merkle seal)**: `ae062a3f91d8a3e039a3d1001ec0b6b2fa35a366f83ca39568adc07c0effcb88`
+
+**Decision**: GATE TRIBUNAL VETO for plan-703-delivery-review-refresh-race.md iteration 1 (PR #706 head c38f970d045bb0fddad53bcd5436f4c642690f23, merge base b03e47b75a1e0c5f486e3b0a3051005e8719dd55, plus the planned Phase 2 refactor), by a fresh-context independent auditor (the Option B review that audit_risk_score requires), solo mode; risk grade L2. Verified by execution in a scratch copy (nothing written under FailSafe/): head 25 passing; the origin/main renderer fails exactly the ten #703 cases. Four grounds. V1 coverage-gap (code defect, /qor-debug): a repaint still loses operator review input. reviewControls forces the newest commit (renderer:379) and restores the note only for the selected commit (387), so selecting an older linked commit, typing a note and repainting leaves the picker on the newest commit and the note empty (probe reproduced). Rework picks also reset (421-439). D1 says the note survives any repaint, and the limitations do not disclose this. V2 test-failure: the plan's own mutation M3 (delete the generation check after the detail GET, renderer:229) survives all 25 tests, so D4 is unachievable as written; checks 222, 231 and 239 also survive individually, and only the catch check 234 is killed alone. V3 coverage-gap: draft intent and commit scoping (M9), draft restore on commit change (M8) and intent-scoped link messages (M12) survive, so the LD4, LD5 and D1 claims are unproven. V4 razor-overage (/qor-refactor): the plan's scope grows the test file from 380 to 691 lines and the renderer from 482 to 522; the exclusion covers only pre-existing findings and does not disclose the growth or the 577-line suite callback. Verified clean: LD1, LD2, LD5, LD6, LD8 and LD9 reproduce exactly; LD3 and LD4 are abridged; LD7 is off by one on three functions under 40 lines; M1, M2 and M4 are killed as planned; security, OWASP, ghost-UI, dependency, orphan and macro passes PASS; ledger post-anchor clean. Required next actions: /qor-debug (V1); Governor amends the plan (V2, V3); /qor-refactor (V4); re-run /qor-audit.
+
+---
+
+### Entry #977: GATE TRIBUNAL - plan-703-delivery-review-refresh-race (iteration 2) VETO
+
+**Timestamp**: 2026-11-24T19:52:25Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 2, sha256 59b15b1c2cbc0429d21e49bf3c45c9bff8a4d0abc9a38b46480e039b28cae485; candidate patch sha256 6dfac518c6226ad2677e6edc41668f1bd44bc54da972c689ca7e69609559d0ed)
+**Report**: `.failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/audit-iter2.json` (also audit.json)
+
+**Content Hash**: `c6d1036d870b2f6ecd198faa8dd5c2fc16516bc7fb553c0c19f37d52171621da`
+**Previous Hash**: `ae062a3f91d8a3e039a3d1001ec0b6b2fa35a366f83ca39568adc07c0effcb88`
+**Chain Hash (Merkle seal)**: `bc2097d92361ebe6e1ab824a27901ab8f3a4a13c4b3728df5704fc8f47f51a44`
+
+**Decision**: GATE TRIBUNAL VETO for plan-703-delivery-review-refresh-race.md iteration 2 (PR #706 head c38f970d045bb0fddad53bcd5436f4c642690f23 plus the Phase 2 candidate patch), by a second fresh-context independent auditor (the Option B review that audit_risk_score requires), solo mode; risk grade L2. Verified by execution in the Judge's own scratch worktree (nothing written under FailSafe/ in the main tree): the candidate applies cleanly, 32 passing; red-first reproduces (c38f970d renderer 1 failing, origin/main renderer exactly the 17 #703 cases failing); tsc rc 0; npm run lint 0 errors; 8 ms and 40 ms injected fetch latency both 32 passing; the author's 18 mutants K1-K16 are all killed. Iteration-1 grounds V2, V3 and V4 (and note N3) are closed. V1 is closed in code (PROBE-A passes) but not in proof. Three grounds. V1 coverage-gap: removing the commit-pick change listener (J2, delivery-review-controls.js:106) restores the exact iteration-1 V1 reproduction and all 32 cases pass, because the only picked-commit test also changes a rework pick, which re-records the commit. V2 coverage-gap: locked LD10 and LD4 behaviours lack a killing test: the fallback when the picked commit is no longer linked (J1, controls:25, reachable through Unlink), rework picks kept per VETO id (J5, controls:63, every fixture has one VETO), and the draft-clear scoping that stops a review of one commit from erasing the unsent note kept for another (J16, renderer:358-359, PROBE-C). V3 infrastructure-mismatch: LD8 cites src/test/shared/governedCommitApprovalFixture.ts, which exists nowhere in the tree. Security, OWASP, ghost-UI, Razor (renderer 433, old test 296, new files under 250, suite callbacks disclosed), dependency, orphan, macro and filter-order passes PASS; ledger post-anchor clean. No code defect found. Required next action: Governor amends the plan and the candidate tests (V1-V3), re-records the patch sha256 and re-runs /qor-audit.
+
+---
+
+### Entry #978: GATE TRIBUNAL - plan-703-delivery-review-refresh-race (iteration 3) VETO
+
+**Timestamp**: 2026-11-24T20:15:08Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 3, sha256 427eab02b2af1926b92df990ce32908a6bb8b73ecd6fdf3147eacc48b8c3deb3; candidate patch sha256 ee8f30c38acb911924b18d77f6450378e3b60bf5da6a962752fc9003b53ad7f3)
+**Report**: `.failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/audit-iter3.json` (also audit.json)
+
+**Content Hash**: `85b30a359ee4ee3d4f5b0d5a2a2e23ddca61f003421a36453fefe3c65e1dcd45`
+**Previous Hash**: `bc2097d92361ebe6e1ab824a27901ab8f3a4a13c4b3728df5704fc8f47f51a44`
+**Chain Hash (Merkle seal)**: `2762f6968608ad6d3e682f56664bfdeb947b3fc20cbd3fb6e6ffed9940980b33`
+
+**Decision**: GATE TRIBUNAL VETO for plan-703-delivery-review-refresh-race.md iteration 3 (PR #706 head c38f970d045bb0fddad53bcd5436f4c642690f23 plus the Phase 2 candidate patch), issued by a third fresh-context independent auditor (the Option B review that audit_risk_score requires) in solo mode; risk grade L2. Verified by execution in the Judge's own scratch worktree (nothing written under FailSafe/ in the main tree). The candidate passes 35 of 35 cases. Red-first gives 2 failures on the c38f970d renderer and 19 on origin/main; the assertion inventory gives 106 / 128 with 4 recorded renames. All iteration-1 grounds (V1-V4) and iteration-2 grounds (V1-V3) are closed: K1-K16, J1-J12, J16 and J17 are killed and J13-J15 are equivalent; the LD8 precedent exists; the full LD1-LD10 re-walk reproduces. No code defect was found. New grounds, both coverage-gap. V1: LD4 "cleared only on HTTP 200" is unproven; dropping the status clause (renderer:358) or clearing the note on a network failure (renderer:365) passes all 35 cases, so a refused or failed review erases the operator's unsent note. V2: rework picks are not proven to survive a commit change made after them; a commit-pick listener that discards the rework picks (controls:103-106) passes all 35 cases. Judge probes kill all three mutants (X1-X3). Required next action: Governor amends the plan and the candidate tests for V1 and V2, re-records the patch sha256, and re-runs /qor-audit. Shadow Genome Failure Entry #339.
+
+---
+
+### Entry #979: GATE TRIBUNAL - plan-703-delivery-review-refresh-race (iteration 4) VETO
+
+**Timestamp**: 2026-11-24T20:42:15Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 4, sha256 7cf505cd00e3e6f41e96208424d2ca5065f5910fc28a0cd0e59be722d283ec92; candidate patch sha256 fe1b63e90d1c95f2e9b5939846265a8f1b00ad95d8d45e72272699cacd351c21)
+**Report**: `.failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter4.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/audit-iter4.json` (also audit.json)
+
+**Content Hash**: `1de2ce45908ac0cd896de1d1903233d187fdf55e5bee14ca195d40e6752c0d18`
+**Previous Hash**: `2762f6968608ad6d3e682f56664bfdeb947b3fc20cbd3fb6e6ffed9940980b33`
+**Chain Hash (Merkle seal)**: `5ef487766ea9e2dd46a1b00724de4044718e57df2f00a9016e37c417856c2064`
+
+**Decision**: GATE TRIBUNAL VETO for plan-703-delivery-review-refresh-race.md iteration 4 (PR #706 head c38f970d045bb0fddad53bcd5436f4c642690f23 plus the Phase 2 candidate patch), issued by a fourth fresh-context independent auditor (the Option B review that audit_risk_score requires) in solo mode; risk grade L2. Verified by execution in the Judge's own scratch worktree (nothing written under FailSafe/ in the main tree). The candidate passes 36 of 36 cases. Red-first gives 2 failures on the c38f970d renderer and 20 on origin/main. The assertion inventory gives 106 / 130 with 5 recorded replacements. tsc rc 0, lint 0 errors, and the FX589 and workspace-delivery Playwright specs pass (5). All iteration-1, -2 and -3 grounds are closed: K1-K16, J1-J12, J16, J17 and X1-X7, X9-X12, X15-X18 are killed, and J13-J15, X13 and X14 are equivalent. The full LD1-LD10 re-walk reproduces. No code defect was found. New grounds, both coverage-gap, each confirmed by a Judge probe that the candidate passes. V1: LD10 restores each rework pick by VETO id even when the picked commit falls back. Coupling the rework restore to the form's commit still being linked (Y13, controls:63) passes all 36 cases, so an Unlink of the reviewed commit resets the operator's rework picks. V2: D1 says an older GET never changes the selected intent or replaces a newer view. D4 records X8 (listing check moved below the selection write, renderer:212-217) as surviving, giving a reason the Judge's probes falsify: a stale listing that is invalid or empty repaints the newer view, and one that lacks the selection rewrites selectedId after the newer refresh has finished. Judge mutants Y1-Y20 and probes are in the evidence folder. Required next action: Governor amends the plan and the candidate tests for V1 and V2, re-records the patch sha256, and re-runs /qor-audit. Shadow Genome Failure Entry #340.
+
+---
+
+### Entry #980: GATE TRIBUNAL - plan-703-delivery-review-refresh-race (iteration 5) VETO
+
+**Timestamp**: 2026-11-24T21:16:39Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 5, sha256 d1e14594f7d76611fb21a5948ec2f63d61b84b7536a7fa41030cb3888302b47f; candidate patch sha256 c3ae5645f1e4f7db2576c976c1565f12abcf513a34359ef737af0568cfb9ae9c)
+**Report**: `.failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter5.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/audit-iter5.json` (also audit.json)
+
+**Content Hash**: `05519fc4d6446bc204a08792449da9caeac043717ef1a773c4af9a3f4fcefad6`
+**Previous Hash**: `5ef487766ea9e2dd46a1b00724de4044718e57df2f00a9016e37c417856c2064`
+**Chain Hash (Merkle seal)**: `7826a8a574c63a95173e42fbe85a923cb0166455cca27599ee3b89d6de34efcd`
+
+**Decision**: GATE TRIBUNAL VETO for plan-703-delivery-review-refresh-race.md iteration 5 (PR #706 head c38f970d045bb0fddad53bcd5436f4c642690f23 plus the Phase 2 candidate patch), issued by a fifth fresh-context independent auditor (the Option B review that audit_risk_score requires) in solo mode; risk grade L2. Verified by execution in the Judge's own scratch worktree (nothing written under FailSafe/ in the main tree). The candidate passes 39 of 39 cases. Red-first gives 3 failures on the c38f970d renderer and 24 on origin/main. The assertion inventory gives 106 / 131 with 5 recorded replacements. tsc rc 0. The full LD1-LD10 re-walk reproduces, and no code defect was found. Both iteration-4 grounds are closed (Y13 and X8 killed), as is every earlier ground except the iteration-3 X14 equivalence, which is reopened. K1-K16, J1-J12, J16, J17, X1-X12, X15-X18 and Y1-Y5, Y7, Y8, Y10-Y17, Y19, Y20 are killed. New grounds, all coverage-gap, each confirmed by a Judge probe that the candidate passes and the mutant fails. V1: the picked-commit restore is proven only on intents with a VETO; Z14 and Z21 (restore or listeners gated on rework picks, controls:25, :106) pass all 39 cases. V2: the rework restore by VETO id is proven only for a stable VETO set; Z8 (restore by position, controls:63) passes all 39 cases. V3: D4 records X14 as equivalent, but during a pending intent switch (renderer:280, :258) a note typed or a commit picked on the still-shown panel is tagged with the other intent under X14 and Z2 (controls:42, :104), and no planned test fails. Judge mutants Z1-Z21 and probes are in the evidence folder. This is the third consecutive {coverage-gap} VETO in the session, so the cycle-count escalator applies and the legal next action is /qor-remediate. After that, the Governor amends the plan and the candidate tests for V1-V3, re-records the patch sha256, and re-runs /qor-audit. Disclosure: the gate payload ts and the report's Tribunal Date read 2026-11-24T21:40:00Z, a value entered before the write and later than the actual write time; ai_provenance.ts 2026-11-24T21:16:39Z is the actual time. Shadow Genome Failure Entry #341.
+
+---
+
+### Entry #981: GATE TRIBUNAL - plan-703-delivery-review-refresh-race (iteration 6) VETO
+
+**Timestamp**: 2026-11-24T22:37:47Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 6, sha256 eaceb5df6f33ff26c1987f05d32e7e90960f95b4e3e029350a2da9754170d649; candidate patch sha256 dc1adb1b7bce9f8bae9cc670ae0184854f865c78c83670d217957dd12b4b19b7; plan gate plan.json = plan-iter7.json, payload iteration 6)
+**Report**: `.failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter6.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/audit-iter6.json` (also audit.json), reviews_remediate_gate `.qor/gates/2026-11-24T1904-4e594e/remediate.json`
+
+**Content Hash**: `e49ad941acba85242a2cc9d2f4d4ad69823f308b6fa2937ae1c819fe1b627ded`
+**Previous Hash**: `7826a8a574c63a95173e42fbe85a923cb0166455cca27599ee3b89d6de34efcd`
+**Chain Hash (Merkle seal)**: `7f07c0e611d2ddd71e12eb26c992e31d2788a91d87da06d6720b9867fc3a927d`
+
+**Decision**: GATE TRIBUNAL VETO for plan-703-delivery-review-refresh-race.md iteration 6 (PR #706 head c38f970d045bb0fddad53bcd5436f4c642690f23 plus the Phase 2 candidate patch), the final audit named by the /qor-remediate proposal (skill arg reviews-remediate:.qor/gates/2026-11-24T1904-4e594e/remediate.json), issued by a sixth fresh-context independent auditor (Option B) in solo mode; risk grade L2. Audited under the remediation's bounded-claim rule (closed claim table R1-R15). Verified by execution in the Judge's own scratch worktrees (nothing written under FailSafe/ in the main tree). The candidate passes 46 of 46 cases. Red-first gives 6 failures on the c38f970d renderer and 29 on origin/main. The assertion inventory gives 106 / 143 with 5 recorded replacements. tsc rc 0. The LD1-LD10 re-walk reproduces, and no code defect was found. All six earlier mutant scripts reproduce mutation-map-iter6.txt (89 KILLED; 7 SURVIVED: J13-J15, X13, Y9, Y18, Z19, each re-verified equivalent). Every mutant listed in R1-R14 is killed by a test its row lists, and every ground of Entries #976-#980 is closed. New grounds, all coverage-gap, from Judge mutants W1-W24 (wmut-iter6-auditor.py), each confirmed by a Judge probe (probe-iter6-auditor.test.ts) that the candidate passes and the mutant fails. V1 (R11 "kept per VETO id"): W11, a restore not keyed by VETO id (controls:63), survives; a VETO left at none beside a picked VETO receives the other's pick, and PASS posts an unchosen rework. V2 (R13 "PASS and VETO are disabled, also on a repainted panel"): W1 (delete controls:85) survives. V3 (R12 "not cleared by a completed review"): W23 (clear the form after a 200 PASS) survives; the only test reads the form after a VETO. The remediation's closed table is sound and hides no behaviour #703 needs, but its closure enforcer (/qor-audit Step 3) failed on R11-R13. The Step 4.2 review-pass flip (remediate_mark_addressed.mark_addressed) was NOT performed, and the 10 capability_shortfall events stay unaddressed. Required next action: the Governor adopts PROBE-W1, PROBE-W11 and PROBE-W23 as named tests (or narrows R11-R13), re-records the patch sha256 and mutation map, and re-runs /qor-audit. The cycle-count escalator remains at /qor-remediate (signature d3d29c40b9855932); the remediation has run, so the next step is the operator's decision. Report Tribunal Date 2026-11-24T22:35:43Z (composition); gate ts 2026-11-24T22:37:47Z (write). Shadow Genome Failure Entry #342.
+
+---
+
+### Entry #982: GATE TRIBUNAL - plan-703-delivery-review-refresh-race (iteration 7) PASS
+
+**Timestamp**: 2026-11-25T06:06:14Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 7, sha256 49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891; candidate patch sha256 34fc82e83db985c0434dfecf2d018f91289ce542b2898fd61f301f9acff8b7e5; plan gate plan.json = plan-iter8.json, payload iteration 7)
+**Report**: `.failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter7.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/audit-iter7.json` (also audit.json), reviews_remediate_gate `.qor/gates/2026-11-24T1904-4e594e/remediate.json`
+
+**Content Hash**: `d68be3fedec7870247d6a6fbe330129dee9513dc60242e61a5f8e37f2879d735`
+**Previous Hash**: `7f07c0e611d2ddd71e12eb26c992e31d2788a91d87da06d6720b9867fc3a927d`
+**Chain Hash (Merkle seal)**: `9a80ca5d98931df582aea6581cbf7bafeb86b7b37a8f9c720fe3a477c428a433`
+
+**Decision**: GATE TRIBUNAL PASS for plan-703-delivery-review-refresh-race.md iteration 7 (PR #706 head c38f970d045bb0fddad53bcd5436f4c642690f23 plus the Phase 2 candidate patch), a closure re-check of the iteration-6 grounds (Entry #981) by the same auditor, by operator decision 2026-11-25; escalator recommendation (/qor-remediate, signature d3d29c40b9855932, cycle_count 4) overridden with orchestration_override event 05e2ca3b598324cac2f1012b0743d5654ade4a1c3982104c808804083140dfcd because the remediation for this loop had already run. Verified by execution in the Judge's own scratch worktrees (nothing written under FailSafe/ in the main tree). src/roadmap/ is byte-identical to iteration 6. The candidate passes 49 of 49 cases (52 with the Judge's probes). Red-first gives 9 failures on the c38f970d renderer and 32 on origin/main. The assertion inventory gives 106 / 151 with the same 5 replacements. tsc rc 0; eslint 0 errors. All seven mutant scripts (K, J, J2, X, Y, Z, W) reproduce mutation-map-iter7.txt: 109 KILLED; 10 SURVIVED (J13-J15, X13, Y9, Y18, Z19 and W8, all equivalent; W6 and W7, unclaimed insertions after R5 was narrowed). A mechanical check of the Judge's run gives three results: every killed mutant is listed in exactly one R row; each listed mutant is killed by a test that row names; no killed mutant is unlisted. Grounds closed: V1 (W11), killed by the new "a VETO left at none stays none ..." test (R11, R14); V2 (W1), killed by the repainted-PASS assertion (R13); V3 (W23), killed by "a successful PASS keeps the picked commit ..." (R12). Notes closed: N2 (R5 narrowed to the error panel), N3 (W13 and W14 killed by the picker round-trip test), N4 (unlink messages not claimed). No earlier ground reopened. Fresh Judge mutants A1 and A2 were killed. Step 4.2 review-pass flip performed: remediate_mark_addressed.mark_addressed(10 addressed_event_ids, closure_enforcer "/qor-audit Step 3", review_pass_artifact_path .qor/gates/2026-11-24T1904-4e594e/audit.json) returned MarkResult(changed=10, missing=[], skipped=[]). Next phase: /qor-implement (apply candidate-iter7.patch byte-for-byte after the LD1 checks); D4 C3 (full suites without skip flags, installed Windows VSIX observation) remains for substantiation. Report Tribunal Date 2026-11-25T06:05:06Z (composition); gate ts 2026-11-25T06:06:14Z (write).
+
+---
+
+### Entry #983: IMPLEMENT - plan-703-delivery-review-refresh-race (iteration 7); not sealed
+
+**Timestamp**: 2026-11-25T17:19:19Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Target**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 7, sha256 49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891)
+**Report**: `.failsafe/governance/evidence/issue-703/IMPLEMENTATION.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/implement.json`
+
+**Content Hash**: `4f2cd1c4b5401db391efdd7ea2d0a6a272d7594f047012490bb630b00eab072b`
+**Previous Hash**: `9a80ca5d98931df582aea6581cbf7bafeb86b7b37a8f9c720fe3a477c428a433`
+**Chain Hash (Merkle seal)**: `da6b48d319f8c81869dd81262bc175a6f48b2d9df583f8ddd04bb4d52c45a75b`
+
+**Decision**: IMPLEMENT record for plan-703 iteration 7 after audit PASS Entry #982 (closure re-check by the iteration-6 auditor, operator decision 2026-11-25); the VETOs of Entries #976-#981 stand; remediation REMEDIATE-703.md reviewed and flipped (MarkResult changed 10). Commit 71d3a1c5 on fix/703-delivery-review-note-refresh-race over audited source c38f970d applies candidate-iter7.patch (sha256 34fc82e83db985c0434dfecf2d018f91289ce542b2898fd61f301f9acff8b7e5) byte-for-byte after the LD1 checks; verdict_reconcile 0 findings; intent lock captured. Focused jsdom 49 passing. Full local gate (prepush-validate, no skip flags, after npm ci): lint 0 errors; npm test 6230 passing, 34 pending, 0 failing; architecture host 19; test:node 1160 pass, 1 fail, 9 skipped, the failure g4Witness.test.cjs:110, pre-existing in a full clone (Entry #975 N7); then test:ui 264 passed, 4 skipped; package-target and validate-vsix PASS. Two local environment defects found and fixed outside the change: a pre-rule CRLF checkout of two committed voice assets (re-checked out) and stale node_modules (npm ci). Installed Windows VSIX acceptance (VSIX sha256 e82522332f2ea6669d258d1d1d57f81d640ba18d3d3a5821645516555f881323; VS Code 1.147.0, Electron 43.8.9, Node 24.22.1; owner operated the native dialog): refused, not-confirmed and confirmed PASS gave POSTs 409, 409, 200, exactly one DELIVERY_REVIEWED row and one REVIEWED line; picked commit and note survived repaints; completion messages shown once on their own intent. FEATURE_INDEX FX1010 updated. Outstanding: substantiation, exact-head CI on the pushed head, owner source-bound GO. This entry is not a seal, merge or release.
+
+---

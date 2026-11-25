@@ -3228,3 +3228,137 @@ The session seal for PR #712 (#707 voice dependency isolation). The implementati
 
 ### Remediation Attempted
 None by the Judge, who may not edit source or governance. Required: point the glossary home at an existing tracked file (recorded as UNPLANNED in the seal entry), add the pre-existing ledger fixture token to .qor/secret-scanner-allowlist before staging, and re-run /qor-substantiate.
+
+## Failure Entry #337
+
+**Date**: 2026-11-24T19:18:46Z
+**Verdict ID**: GATE TRIBUNAL plan-703-delivery-review-refresh-race iteration 1 VETO (session 2026-11-24T1904-4e594e; report .failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter1.md; ledger Entry #976)
+**Failure Mode**: GHOST_PATH (claimed behaviour with no killing test); COMPLEXITY_VIOLATION (file growth past the Razor under a pre-existing exclusion)
+
+### What Failed
+The native plan for PR #706 (#703 Delivery review note, refresh and result attribution races; FX589 readiness wait), covering the committed source at c38f970d and a planned Phase 2 Razor refactor.
+
+### Why It Failed
+- The fix restored the note only for the commit selected at paint time, while every paint resets the commit picker to the newest commit. An operator who reviews an older linked commit still loses the typed note (and the commit choice) on a repaint, which is the defect class the issue fixes. The plan claimed the note "survives any repaint".
+- The plan predicted that a mutation (deleting one of five layered generation checks) would fail a named test. It survives, because a later check catches the same stale completion. The prediction was written, not run.
+- Behaviours locked as decisions (draft scoping by intent and commit, intent-scoped link and unlink messages) had no test that a mutant could fail.
+- The plan excluded the "pre-existing" over-limit file lengths while its own scope grew the test file from 380 to 691 lines.
+
+### Pattern to Avoid
+- When a fix preserves one piece of operator input across a repaint, check every input the same repaint resets (selection, related pickers) and test with more than one option present.
+- Run each mutation before naming it as evidence. With layered guards, a mutant that removes one layer is often equivalent; either kill each layer with its own test or claim only the layers proven.
+- Every Locked Decision behaviour needs a test that fails when that behaviour alone is removed.
+- An exclusion for pre-existing Razor findings must disclose any growth the plan itself adds to those files.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: /qor-debug (V1), the Governor amends the plan (V2, V3), /qor-refactor (V4), then re-run /qor-audit.
+
+## Failure Entry #338
+
+**Date**: 2026-11-24T19:52:25Z
+**Verdict ID**: GATE TRIBUNAL plan-703-delivery-review-refresh-race iteration 2 VETO (session 2026-11-24T1904-4e594e; report .failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter2.md; ledger Entry #977)
+**Failure Mode**: GHOST_PATH (claimed behaviour with no killing test); HALLUCINATION (cited precedent file that does not exist)
+
+### What Failed
+Iteration 2 of the native plan for PR #706 (#703 Delivery review form, refresh and result attribution races), with a Phase 2 candidate patch that keeps the review form (picked commit, rework picks) on the renderer across repaints.
+
+### Why It Failed
+- The fix for the iteration-1 defect (a repaint resets the picked older commit and hides its note) is correct in code, but its only test changes a rework pick after the commit pick, and that second change re-records the commit. Removing the commit-pick listener brings the original defect back with every test passing. The author's own mutant deleted the restore step, not the recording step.
+- Three other locked behaviours had no test that fails when they alone are removed: the fallback when the picked commit is unlinked, rework picks kept per VETO id (the fixture has one VETO), and the draft-clear check that keeps another commit's unsent note after a review.
+- A locked decision cited a precedent file path that does not exist in the repository.
+
+### Pattern to Avoid
+- When state is saved by several listeners, mutate each listener (the write side), not only the read or restore side. A test that triggers two writers cannot prove either one.
+- Test the original defect's exact reproduction as its own case, without extra interactions that mask it.
+- For every clause of a locked decision ("still linked", "per VETO id", "same commit"), name the mutant that drops that clause and the test that kills it; fixtures need at least two of whatever the clause distinguishes.
+- Re-run a citation before writing it; never cite a precedent path from memory.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: the Governor amends the plan and the candidate tests (kill J1, J2, J5 and J16 or narrow the claims; correct the LD8 citation), re-records the patch sha256, then re-runs /qor-audit.
+
+## Failure Entry #339
+
+**Date**: 2026-11-24T20:15:08Z
+**Verdict ID**: GATE TRIBUNAL plan-703-delivery-review-refresh-race iteration 3 VETO (session 2026-11-24T1904-4e594e; report .failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter3.md; ledger Entry #978)
+**Failure Mode**: GHOST_PATH (claimed behaviour with no killing test)
+
+### What Failed
+Iteration 3 of the native plan for PR #706 (#703 Delivery review form, refresh and result attribution races). It closed every ground of iterations 1 and 2 by adding tests for the mutants those auditors named, but the claims were still not enumerated clause by clause.
+
+### Why It Failed
+- LD4 locks "the draft is cleared only on HTTP 200", but no test types a note before a refused (409) or rejected review. Dropping the status clause, or clearing the note in the network-failure catch, passes every case, so an async completion can erase the operator's unsent note before the promised retry: the #703 defect class.
+- D1 and LD10 lock that rework picks survive any repaint, but every test that keeps a rework pick changes the commit before the rework, never after. A commit-pick listener that discards the rework picks passes every case. This is iteration-2 V1 (J2) with the order reversed.
+
+### Pattern to Avoid
+- Answering a VETO by killing exactly the named mutants leaves the neighbouring ones alive. For each locked clause ("only on HTTP 200", "rework picks survive"), derive the mutants yourself: delete the clause, take the failure path (HTTP refusal and network rejection), and reverse the order of the interactions that write the state.
+- When one listener writes several fields, test each order of the inputs that trigger it, so that no single interaction re-records the field under test.
+- A failure-path test that asserts only the message and the re-enabled button does not prove the operator's input survived; assert the input too.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: the Governor amends the plan and the candidate tests so that X1, X2 and X3 are each killed by a named test (or narrows LD4, LD10 and D1), re-records the patch sha256, then re-runs /qor-audit.
+
+## Failure Entry #340
+
+**Date**: 2026-11-24T20:42:15Z
+**Verdict ID**: GATE TRIBUNAL plan-703-delivery-review-refresh-race iteration 4 VETO (session 2026-11-24T1904-4e594e; report .failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter4.md; ledger Entry #979)
+**Failure Mode**: GHOST_PATH (claimed behaviour with no killing test; a surviving mutant disclosed with an unverified reason)
+
+### What Failed
+Iteration 4 of the native plan for PR #706 (#703 Delivery review form, refresh and result attribution races). It killed the three mutants iteration 3 named (X1-X3) and recorded the remaining survivors in D4, but one survivor's recorded reason was never checked, and one more writer interaction was never tested.
+
+### Why It Failed
+- LD10 restores each rework pick by its VETO id even when the picked commit is no longer linked and falls back to the newest. The fallback test has no VETO and the rework test never unlinks, so coupling the rework restore to the commit's link state (dropping the picks on fallback) passes every case. An Unlink then resets the operator's "Reworked by" picks on the next repaint.
+- D4 accepted X8 (the stale-listing check moved below the selection write) as surviving because the difference is "overwritten by the newer refresh". Probes show otherwise. A stale listing that is invalid or empty repaints the newer view, and one that lacks the selection rewrites selectedId after the newer refresh has finished. The only stale-listing test serves a listing identical to the current one, so it cannot separate the two orders.
+
+### Pattern to Avoid
+- Before recording a survivor as harmless or equivalent, write the probe that would distinguish it and run it. A reason that has not been executed is a claim, not evidence.
+- A stale-response test whose stale payload equals the fresh payload cannot prove a guard's position. Vary the stale content (invalid, empty, missing the current selection) so that every branch after the guard is reachable.
+- For state that one value carries several fields of (a commit pick and rework picks), test every writer against every field: the change listeners, the fallback, and the unlink path.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: the Governor amends the plan and the candidate tests so that Y13 and X8 are each killed by a named test (or narrows LD10, D1 and the D4 sentence accurately), re-records the patch sha256, then re-runs /qor-audit.
+
+## Failure Entry #341
+
+**Date**: 2026-11-24T21:16:39Z
+**Verdict ID**: GATE TRIBUNAL plan-703-delivery-review-refresh-race iteration 5 VETO (session 2026-11-24T1904-4e594e; report .failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter5.md; ledger Entry #980)
+**Failure Mode**: GHOST_PATH (claimed behaviour with no killing test; a surviving mutant recorded as equivalent without a distinguishing probe)
+
+### What Failed
+Iteration 5 of the native plan for PR #706 (#703 Delivery review form, refresh and result attribution races). It killed the two mutants iteration 4 named (Y13, X8) and nothing more. Three further variations of the same form state remained unproven, and one inherited equivalence claim (X14) was false.
+
+### Why It Failed
+- Every test of "the picked commit survives a repaint" configures a trusted VETO. Gating the commit restore, or the form's change listeners, on rework picks existing (Z14, Z21) passes every case, so the ordinary pre-review path is unproven.
+- The only multi-VETO test keeps the same VETO set in the same order. Restoring rework picks by position instead of by VETO id (Z8) passes every case, although a VETO can leave the list (for example, when its row stops verifying) while another stays.
+- X14 (note draft tagged with selectedId) was recorded as "equivalent in every reachable state" across two audits. The intent picker writes selectedId before the refresh, and the old panel stays editable until the new view paints. Input in that window is misattributed under X14 and under its form sibling Z2. The intent-scoping test awaits every switch before typing, so it cannot separate the two.
+
+### Pattern to Avoid
+- Answering only the named mutants of a VETO invites the next auditor to find the next unenumerated variation. Enumerate every writer of each piece of state and every input variation (with and without a VETO; a stable and a changing VETO set; shown intent equal to and different from selectedId), then record each pair as killed or equivalent with an executed probe.
+- An equivalence claim inherited from an earlier audit is still a claim. Re-probe it, especially when it depends on two values (selectedId and the shown intent) always being equal.
+- A test that awaits a navigation before interacting cannot prove behaviour during the navigation. Hold the navigation's request and interact in the window.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: /qor-remediate (third consecutive same-signature VETO), then the Governor amends the plan and the candidate tests so that Z14, Z21, Z8, X14 and Z2 are each killed by a named test (or narrows D1, LD4, LD10 and the limitations accurately), re-records the patch sha256, and re-runs /qor-audit.
+
+## Failure Entry #342
+
+**Date**: 2026-11-24T22:37:47Z
+**Verdict ID**: GATE TRIBUNAL plan-703-delivery-review-refresh-race iteration 6 VETO (session 2026-11-24T1904-4e594e; report .failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter6.md; ledger Entry #981; reviews-remediate gate .qor/gates/2026-11-24T1904-4e594e/remediate.json, flip not performed)
+**Failure Mode**: GHOST_PATH (a closed claim row whose wording is wider than its tests: the row names two subjects or a general class, the tests exercise one member)
+
+### What Failed
+Iteration 6 applied the /qor-remediate closed claim table (R1-R15). Every mutant the table lists is killed by a listed test, and every earlier ground is closed. Three rows still claim more than their tests prove:
+- R11 "kept per VETO id": W11 (restore not keyed by id) survives because no test has an unpicked VETO beside a picked one across a repaint.
+- R13 "PASS and VETO are disabled, also on a repainted panel": W1 (delete the PASS line) survives because only the repainted VETO is asserted.
+- R12 "not cleared by a completed review": W23 (clear after a 200 PASS) survives because only a VETO completion is followed by a read of the form.
+
+### Why It Failed
+The table was built by mapping the existing mutant sets onto rows, not by checking each clause of each row against a mutant of its own. Row text then kept plural or general wording ("PASS and VETO", "a completed review", "per VETO id") while the tests cover one member, or one arrangement in which the general rule and a narrower rule agree.
+
+### Pattern to Avoid
+- When writing a claim row, split every conjunction and every general noun in it, and name for each part a mutant that breaks only that part, with the test that kills it. "PASS and VETO" needs a PASS mutant and a VETO mutant; "a completed review" needs PASS and VETO completions; "per id" needs a case where an id-keyed and a non-id-keyed restore disagree (mixed picked and unpicked entries that both remain listed).
+- A test fixture where every entry has a value cannot distinguish keyed lookup from any other lookup that returns a value. Leave at least one entry at its default.
+- Narrowing the row is an equally valid fix; the bound only helps if row text and tests match clause for clause.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: the Governor adopts PROBE-W1, PROBE-W11 and PROBE-W23 (.failsafe/governance/evidence/issue-703/probe-iter6-auditor.test.ts) as named tests, or narrows R11-R13 and the plan:12 limitation, adds W1, W11 and W23 to the rows, re-records the patch sha256 and the mutation map (with wmut-iter6-auditor.py), and re-runs /qor-audit.

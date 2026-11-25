@@ -1,0 +1,1678 @@
+diff --git a/FailSafe/extension/src/roadmap/ui/modules/delivery-assessment-renderer.js b/FailSafe/extension/src/roadmap/ui/modules/delivery-assessment-renderer.js
+index a455ab1d..3aad7ffe 100644
+--- a/FailSafe/extension/src/roadmap/ui/modules/delivery-assessment-renderer.js
++++ b/FailSafe/extension/src/roadmap/ui/modules/delivery-assessment-renderer.js
+@@ -23,6 +23,9 @@
+  * on its Refresh button, after a link or unlink, and on a `delivery.changed` event.
+  */
+ 
++import { el, button } from './delivery-dom.js';
++import { reviewControls } from './delivery-review-controls.js';
++
+ const STYLE_ID = 'cc-dlv-style';
+ const STYLE = `
+ .cc-dlv { display:flex; flex-direction:column; gap:12px; }
+@@ -91,24 +94,10 @@ function linkedBy(rec) {
+   return 'not recorded';
+ }
+ 
+-function el(tag, cls, text) {
+-  const node = document.createElement(tag);
+-  if (cls) node.className = cls;
+-  if (text !== undefined && text !== null) node.textContent = String(text);
+-  return node;
+-}
+-
+ function pill(label, cls) {
+   return el('span', `cc-dlv-pill ${cls}`, label);
+ }
+ 
+-function button(label, cls, onClick) {
+-  const b = el('button', `cc-dlv-btn${cls ? ` ${cls}` : ''}`, label);
+-  b.type = 'button';
+-  b.addEventListener('click', onClick);
+-  return b;
+-}
+-
+ function row(key, value) {
+   const r = el('div', 'cc-dlv-row');
+   r.appendChild(el('span', 'cc-dlv-key', key));
+@@ -189,7 +178,8 @@ export class DeliveryAssessmentRenderer {
+     this.container = document.getElementById(containerId);
+     this.selectedId = null;
+     this.message = null;
+-    // Unsubmitted review text survives an overlapping refresh but is scoped to its intent and commit.
++    // #703: the review form survives a repaint (delivery-review-controls.js); one review request at a time.
++    this.reviewForm = null;
+     this.reviewNoteDraft = null;
+     this.reviewInFlight = false;
+     this.refreshGeneration = 0;
+@@ -228,7 +218,6 @@ export class DeliveryAssessmentRenderer {
+       const view = await getJson(`/api/v1/delivery/intents/${encodeURIComponent(chosen.id)}`);
+       if (generation !== this.refreshGeneration) return;
+       const candidates = view.linkable ? await getJson('/api/v1/delivery/candidates') : null;
+-      if (generation !== this.refreshGeneration) return;
+       state = { intents, view, candidates };
+     } catch (err) {
+       if (generation !== this.refreshGeneration) return;
+@@ -251,7 +240,7 @@ export class DeliveryAssessmentRenderer {
+     sub.appendChild(button('Refresh', 'cc-dlv-refresh', () => this.refresh()));
+     // Only the intent that initiated an operation may display its completion.
+     // A pending POST can resolve after the operator navigates to another intent.
+-    if (this.message && (!this.message[2] || this.message[2] === state.view?.intent?.id)) {
++    if (this.message && this.message[2] === state.view?.intent?.id) {
+       root.appendChild(el('p', `cc-dlv-result${this.message[1] ? ' cc-dlv-result-bad' : ''}`, this.message[0]));
+       this.message = null;
+     }
+@@ -357,88 +346,10 @@ export class DeliveryAssessmentRenderer {
+     }
+     if (view.linkable && candidates && step.key === 'architecture') card.appendChild(this.linkArchitecture(view, candidates));
+     if (view.linkable && candidates && step.key === 'code') card.appendChild(this.linkCommit(view, candidates));
+-    if (view.linkable && step.key === 'review') card.appendChild(this.reviewControls(view));
++    if (view.linkable && step.key === 'review') card.appendChild(reviewControls(this, view));
+     return card;
+   }
+ 
+-  /** plan-b320 LD9: Record PASS / Record VETO on one linked commit, with a note; each posts once. */
+-  reviewControls(view) {
+-    const actions = el('div', 'cc-dlv-actions cc-dlv-review-actions');
+-    const linked = view.edges.filter((e) => e.edge === 'committed-under');
+-    if (!linked.length) {
+-      actions.appendChild(el('span', 'cc-dlv-line', 'Link a commit first; a review is recorded on one linked commit.'));
+-      return actions;
+-    }
+-    const select = el('select', 'cc-dlv-select cc-dlv-review-pick');
+-    select.setAttribute('aria-label', 'Commit to review');
+-    for (const e of linked) {
+-      const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
+-      opt.value = e.target;
+-      select.appendChild(opt);
+-    }
+-    select.selectedIndex = linked.length - 1;
+-    const note = el('input', 'cc-dlv-select cc-dlv-review-note');
+-    note.type = 'text';
+-    note.maxLength = 500;
+-    note.placeholder = 'Note (optional)';
+-    note.setAttribute('aria-label', 'Review note');
+-    const restoreDraft = () => {
+-      const draft = this.reviewNoteDraft;
+-      note.value = draft && draft.intentId === view.intent.id && draft.commitSha === select.value ? draft.value : '';
+-    };
+-    restoreDraft();
+-    note.addEventListener('input', () => {
+-      this.reviewNoteDraft = { intentId: view.intent.id, commitSha: select.value, value: note.value };
+-    });
+-    select.addEventListener('change', restoreDraft);
+-    actions.appendChild(select);
+-    actions.appendChild(note);
+-    const reworkPicks = this.reworkPicks(view, linked);
+-    for (const pick of reworkPicks) actions.appendChild(pick.parentNode);
+-    const reworksOf = () => reworkPicks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
+-    // One operator review request at a time: PASS and VETO must not race
+-    // into contradictory ledger submissions while the first POST is pending.
+-    const record = (verdict) => {
+-      if (this.reviewInFlight) return;
+-      this.reviewInFlight = true;
+-      pass.disabled = true;
+-      veto.disabled = true;
+-      void this.review(view.intent.id, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
+-    };
+-    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS'));
+-    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO'));
+-    pass.disabled = this.reviewInFlight;
+-    veto.disabled = this.reviewInFlight;
+-    actions.appendChild(pass);
+-    actions.appendChild(veto);
+-    return actions;
+-  }
+-
+-  /**
+-   * #532 B344 (plan-b344 LD5): a "Reworked by" select on each blocking trusted VETO (a sealed row's
+-   * commit): none, or a linked commit other than the vetoed one. The server verifies the relation.
+-   */
+-  reworkPicks(view, linked) {
+-    const step = ((view.assessment && view.assessment.steps) || []).find((s) => s.key === 'review');
+-    const vetoes = ((step && step.records) || []).filter((r) => r.record === 'blocking' && r.kind === 'veto' && r.commitState === 'sealed' && r.commitSha);
+-    return vetoes.map((r) => {
+-      const wrap = el('label', 'cc-dlv-line cc-dlv-rework', `Reworked by (VETO #${r.id} on ${String(r.commitSha).slice(0, 12)}): `);
+-      const pick = el('select', 'cc-dlv-select cc-dlv-rework-pick');
+-      pick.setAttribute('data-veto', String(r.id));
+-      pick.setAttribute('aria-label', `Linked commit that reworks the VETO in ledger entry #${r.id}`);
+-      const none = el('option', null, 'none');
+-      none.value = '';
+-      pick.appendChild(none);
+-      for (const e of linked.filter((x) => x.target !== r.commitSha)) {
+-        const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
+-        opt.value = e.target;
+-        pick.appendChild(opt);
+-      }
+-      wrap.appendChild(pick);
+-      return pick;
+-    });
+-  }
+-
+   async review(intentId, verdict, commitSha, note, reworks = []) {
+     const body = reworks.length ? { intentId, verdict, commitSha, note, reworks } : { intentId, verdict, commitSha, note };
+     const submittedDraft = this.reviewNoteDraft;
+diff --git a/FailSafe/extension/src/roadmap/ui/modules/delivery-dom.js b/FailSafe/extension/src/roadmap/ui/modules/delivery-dom.js
+new file mode 100644
+index 00000000..d53caa15
+--- /dev/null
++++ b/FailSafe/extension/src/roadmap/ui/modules/delivery-dom.js
+@@ -0,0 +1,15 @@
++/** DOM helpers shared by the Workspace "Delivery" sub-view modules. Text is set with textContent, never as HTML. */
++
++export function el(tag, cls, text) {
++  const node = document.createElement(tag);
++  if (cls) node.className = cls;
++  if (text !== undefined && text !== null) node.textContent = String(text);
++  return node;
++}
++
++export function button(label, cls, onClick) {
++  const b = el('button', `cc-dlv-btn${cls ? ` ${cls}` : ''}`, label);
++  b.type = 'button';
++  b.addEventListener('click', onClick);
++  return b;
++}
+diff --git a/FailSafe/extension/src/roadmap/ui/modules/delivery-review-controls.js b/FailSafe/extension/src/roadmap/ui/modules/delivery-review-controls.js
+new file mode 100644
+index 00000000..e4756b17
+--- /dev/null
++++ b/FailSafe/extension/src/roadmap/ui/modules/delivery-review-controls.js
+@@ -0,0 +1,113 @@
++/**
++ * Delivery review controls (plan-b320 LD9, #703): Record PASS / Record VETO on one linked commit of
++ * the active intent, with a note and (B344) a "Reworked by" pick per trusted VETO.
++ *
++ * #703: the Delivery panel is repainted by refreshes the operator does not control, so the review
++ * form is kept on the renderer, never in the DOM: the picked commit and rework picks per intent
++ * (`reviewForm`), and the unsent note per intent and commit (`reviewNoteDraft`). Only one review
++ * request is in flight at a time (`reviewInFlight`), so PASS and VETO cannot race into
++ * contradictory submissions. The server's review lock remains the authority (FX1010).
++ */
++import { el, button } from './delivery-dom.js';
++
++function linkedOption(e) {
++  const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
++  opt.value = e.target;
++  return opt;
++}
++
++/** The commit to review: the operator's earlier pick on this intent while still linked, else the newest. */
++function commitPick(linked, form) {
++  const select = el('select', 'cc-dlv-select cc-dlv-review-pick');
++  select.setAttribute('aria-label', 'Commit to review');
++  for (const e of linked) select.appendChild(linkedOption(e));
++  select.selectedIndex = linked.length - 1;
++  if (form && linked.some((e) => e.target === form.commitSha)) select.value = form.commitSha;
++  return select;
++}
++
++/** The note input, showing the unsent draft for this intent and the picked commit only. */
++function noteInput(renderer, intentId, select) {
++  const note = el('input', 'cc-dlv-select cc-dlv-review-note');
++  note.type = 'text';
++  note.maxLength = 500;
++  note.placeholder = 'Note (optional)';
++  note.setAttribute('aria-label', 'Review note');
++  const restore = () => {
++    const draft = renderer.reviewNoteDraft;
++    note.value = draft && draft.intentId === intentId && draft.commitSha === select.value ? draft.value : '';
++  };
++  restore();
++  note.addEventListener('input', () => {
++    renderer.reviewNoteDraft = { intentId, commitSha: select.value, value: note.value };
++  });
++  select.addEventListener('change', restore);
++  return note;
++}
++
++/**
++ * #532 B344 (plan-b344 LD5): a "Reworked by" select on each blocking trusted VETO (a sealed row's
++ * commit): none, or a linked commit other than the vetoed one. The server verifies the relation.
++ */
++function reworkPicks(view, linked, form) {
++  const step = ((view.assessment && view.assessment.steps) || []).find((s) => s.key === 'review');
++  const vetoes = ((step && step.records) || []).filter((r) => r.record === 'blocking' && r.kind === 'veto' && r.commitState === 'sealed' && r.commitSha);
++  return vetoes.map((r) => {
++    const wrap = el('label', 'cc-dlv-line cc-dlv-rework', `Reworked by (VETO #${r.id} on ${String(r.commitSha).slice(0, 12)}): `);
++    const pick = el('select', 'cc-dlv-select cc-dlv-rework-pick');
++    pick.setAttribute('data-veto', String(r.id));
++    pick.setAttribute('aria-label', `Linked commit that reworks the VETO in ledger entry #${r.id}`);
++    const none = el('option', null, 'none');
++    none.value = '';
++    pick.appendChild(none);
++    const kept = form ? form.reworks[String(r.id)] : '';
++    for (const e of linked.filter((x) => x.target !== r.commitSha)) {
++      const opt = linkedOption(e);
++      opt.selected = opt.value === kept;
++      pick.appendChild(opt);
++    }
++    wrap.appendChild(pick);
++    return pick;
++  });
++}
++
++/** PASS and VETO: one review request at a time, across repaints. */
++function reviewButtons(renderer, intentId, select, note, reworksOf) {
++  const record = (verdict) => {
++    if (renderer.reviewInFlight) return;
++    renderer.reviewInFlight = true;
++    pass.disabled = true;
++    veto.disabled = true;
++    void renderer.review(intentId, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
++  };
++  const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS'));
++  const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO'));
++  pass.disabled = renderer.reviewInFlight;
++  veto.disabled = renderer.reviewInFlight;
++  return [pass, veto];
++}
++
++/** plan-b320 LD9: the review controls for the active intent's view. */
++export function reviewControls(renderer, view) {
++  const actions = el('div', 'cc-dlv-actions cc-dlv-review-actions');
++  const linked = view.edges.filter((e) => e.edge === 'committed-under');
++  if (!linked.length) {
++    actions.appendChild(el('span', 'cc-dlv-line', 'Link a commit first; a review is recorded on one linked commit.'));
++    return actions;
++  }
++  const intentId = view.intent.id;
++  const form = renderer.reviewForm && renderer.reviewForm.intentId === intentId ? renderer.reviewForm : null;
++  const select = commitPick(linked, form);
++  const note = noteInput(renderer, intentId, select);
++  const picks = reworkPicks(view, linked, form);
++  const remember = () => {
++    renderer.reviewForm = { intentId, commitSha: select.value, reworks: Object.fromEntries(picks.map((p) => [p.getAttribute('data-veto'), p.value])) };
++  };
++  for (const control of [select, ...picks]) control.addEventListener('change', remember);
++  actions.appendChild(select);
++  actions.appendChild(note);
++  for (const pick of picks) actions.appendChild(pick.parentNode);
++  const reworksOf = () => picks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
++  for (const b of reviewButtons(renderer, intentId, select, note, reworksOf)) actions.appendChild(b);
++  return actions;
++}
+diff --git a/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.refresh.test.ts b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.refresh.test.ts
+new file mode 100644
+index 00000000..7fd79419
+--- /dev/null
++++ b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.refresh.test.ts
+@@ -0,0 +1,179 @@
++// #703: overlapping refreshes and late operation results in the Workspace "Delivery" sub-view.
++// An older GET (listing, detail, candidates, or a failure) must not change the selection, repaint
++// a newer view or keep fetching; a late review or link result is shown only on the intent that
++// initiated it, once. Each case suspends one request with an explicit promise gate, never a sleep.
++
++import { strict as assert } from 'assert';
++// @ts-expect-error untyped JS module
++import { DeliveryAssessmentRenderer } from '../../../src/roadmap/ui/modules/delivery-assessment-renderer.js';
++import { ACTIVE, INTENTS, SEALED, holdFirstGet, holdPosts, resetFixture, settled, setupDom } from './deliveryRendererFixture';
++
++const DETAIL = `/api/v1/delivery/intents/${ACTIVE}`;
++const REVIEW = '/api/actions/delivery/review';
++const LINK = '/api/actions/delivery/link';
++const click = (doc: Document, selector: string) => (doc.querySelector(selector) as HTMLButtonElement).click();
++
++// Each case starts an operation on ACTIVE and views SEALED while it is pending; `expected` is the
++// completion text then shown once on ACTIVE.
++const LATE_RESULTS = [
++  { name: 'successful review POST', url: REVIEW, fail: 'none', method: 'review', button: '.cc-dlv-review-pass', expected: /Review PASS recorded/ },
++  { name: 'failed review POST', url: REVIEW, fail: 'network', method: 'review', button: '.cc-dlv-review-pass', expected: /Recording the review failed: late network failure/ },
++  { name: 'refused review POST', url: REVIEW, fail: 'http', method: 'review', button: '.cc-dlv-review-pass', expected: /late refusal/ },
++  { name: 'successful link POST', url: LINK, fail: 'none', method: 'post', button: '.cc-dlv-link-arch', expected: /Link recorded in the intent history/ },
++  { name: 'refused link POST', url: LINK, fail: 'http', method: 'post', button: '.cc-dlv-link-arch', expected: /late refusal/ },
++] as const;
++
++suite('DeliveryAssessmentRenderer stale refresh and result attribution (#703, jsdom)', () => {
++  setup(() => resetFixture());
++
++  // The stale listing may differ from the current one: it is checked before it can select or paint.
++  const STALE_LISTINGS: Array<[string, unknown]> = [
++    ['the same', undefined], ['an invalid', { integrity: 'invalid' }], ['an empty', { integrity: 'valid', intents: [] }],
++    ['a selection-less', { integrity: 'valid', intents: [INTENTS.intents[0]] }],
++  ];
++  for (const [kind, body] of STALE_LISTINGS) test(`#703: ${kind} stale listing response neither repaints, reselects nor fetches the details it would have chosen`, async () => {
++    const ctx = setupDom();
++    const hold = holdFirstGet('/api/v1/delivery/intents', { body });
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const earlier = renderer.refresh();
++      await hold.started;
++      renderer.selectedId = SEALED;
++      await renderer.refresh();
++      const panel = ctx.doc.querySelector('.cc-dlv');
++      const fetchedBefore = ctx.fetched.length;
++      hold.release();
++      await earlier;
++      assert.equal(ctx.doc.querySelector('.cc-dlv'), panel);
++      assert.equal(renderer.selectedId, SEALED);
++      assert.deepEqual(ctx.fetched.slice(fetchedBefore), ['/api/v1/delivery/intents'],
++        'only the held listing completes; an obsolete refresh must stop at its first stale response');
++    } finally { hold.release(); ctx.cleanup(); }
++  });
++
++  test('#703: a stale detail response cannot repaint a newer selected intent', async () => {
++    const ctx = setupDom();
++    const hold = holdFirstGet(DETAIL);
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const earlier = renderer.refresh();
++      await hold.started;
++      renderer.selectedId = SEALED; // Operator chose another intent while the detail GET was pending.
++      await renderer.refresh();
++      const currentPanel = ctx.doc.querySelector('.cc-dlv');
++      assert.ok(currentPanel, 'the newly chosen intent must render');
++      assert.match(currentPanel.textContent || '', /PROJ-6/);
++      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null, 'sealed intent cannot be reviewed');
++      const fetchedBefore = ctx.fetched.length;
++      hold.release();
++      await earlier;
++      assert.equal(ctx.doc.querySelector('.cc-dlv'), currentPanel,
++        'an older response must not replace the newer selected view');
++      assert.equal(renderer.selectedId, SEALED);
++      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null);
++      assert.deepEqual(ctx.fetched.slice(fetchedBefore), [DETAIL], 'only the held detail completes; it must not fetch candidates');
++    } finally { hold.release(); ctx.cleanup(); }
++  });
++
++  test('#703: delayed candidates from a previous intent cannot overwrite the newly selected view', async () => {
++    const ctx = setupDom();
++    const hold = holdFirstGet('/api/v1/delivery/candidates');
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const earlier = renderer.refresh();
++      await hold.started;
++      renderer.selectedId = SEALED;
++      await renderer.refresh();
++      const newPanel = ctx.doc.querySelector('.cc-dlv');
++      assert.ok(newPanel);
++      assert.match(newPanel.textContent || '', /PROJ-6/);
++      hold.release();
++      await earlier;
++      assert.equal(ctx.doc.querySelector('.cc-dlv'), newPanel, 'stale candidates must not repaint');
++      assert.equal(renderer.selectedId, SEALED);
++      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null);
++    } finally { hold.release(); ctx.cleanup(); }
++  });
++
++  test('#703: an old failed GET must not overwrite a later successful Delivery view', async () => {
++    const ctx = setupDom();
++    const hold = holdFirstGet('/api/v1/delivery/intents', { failWith: 'stale transport failure' });
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const earlier = renderer.refresh();
++      await hold.started;
++      await renderer.refresh();
++      const currentPanel = ctx.doc.querySelector('.cc-dlv');
++      assert.ok(currentPanel);
++      assert.match(currentPanel.textContent || '', /PROJ-7/);
++      hold.release();
++      await earlier;
++      assert.equal(ctx.doc.querySelector('.cc-dlv'), currentPanel);
++      assert.doesNotMatch(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /stale transport failure/);
++    } finally { hold.release(); ctx.cleanup(); }
++  });
++
++  test('#703: an old failed GET does not change the selected intent', async () => {
++    const ctx = setupDom();
++    const hold = holdFirstGet('/api/v1/delivery/intents', { failWith: 'stale' });
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const earlier = renderer.refresh();
++      await hold.started;
++      renderer.selectedId = SEALED;
++      await renderer.refresh();
++      hold.release();
++      await earlier;
++      assert.equal(renderer.selectedId, SEALED);
++    } finally { hold.release(); ctx.cleanup(); }
++  });
++
++  test('#703: a held completion message is not consumed by an error panel and shows on the next view of its intent', async () => {
++    const ctx = setupDom();
++    const hold = holdPosts(REVIEW);
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(renderer, 'review');
++      await renderer.refresh();
++      click(ctx.doc, '.cc-dlv-review-pass');
++      const fail = holdFirstGet('/api/v1/delivery/intents', { failWith: 'down' });
++      hold.release();
++      fail.release();
++      await reviewed();
++      assert.equal(ctx.doc.querySelector('.cc-dlv-result'), null, 'not shown on the error panel');
++      await renderer.refresh();
++      assert.match(ctx.doc.querySelector('.cc-dlv-result')?.textContent || '', /Review PASS recorded/);
++    } finally { hold.release(); ctx.cleanup(); }
++  });
++
++  for (const c of LATE_RESULTS) {
++    test(`#703: a ${c.name} does not display its result on another intent`, async () => {
++      const ctx = setupDom();
++      const hold = holdPosts(c.url, c.fail);
++      try {
++        const renderer = new DeliveryAssessmentRenderer('workspace');
++        const finished = settled(renderer, c.method);
++        await renderer.refresh();
++        click(ctx.doc, c.button);
++        assert.ok(hold.held(), 'the operation must still be pending');
++        renderer.selectedId = SEALED; // A different intent becomes visible while the POST is pending.
++        await renderer.refresh();
++        assert.match(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /PROJ-6/);
++        hold.release();
++        await finished();
++        assert.equal(renderer.selectedId, SEALED);
++        assert.equal(ctx.doc.querySelector('.cc-dlv-result'), null,
++          'an older intent operation must not be reported as this sealed intent result');
++        assert.match(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /PROJ-6/);
++        renderer.selectedId = ACTIVE;
++        await renderer.refresh();
++        assert.match(ctx.doc.querySelector('.cc-dlv-result')?.textContent || '', c.expected);
++        assert.equal(ctx.doc.querySelectorAll('.cc-dlv-result').length, 1,
++          'completion may be displayed once, only on its initiating intent');
++        await renderer.refresh();
++        assert.equal(ctx.doc.querySelector('.cc-dlv-result'), null,
++          'a consumed completion message may not replay on another refresh');
++      } finally { hold.release(); ctx.cleanup(); }
++    });
++  }
++});
+diff --git a/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.review.test.ts b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.review.test.ts
+new file mode 100644
+index 00000000..0f6332c9
+--- /dev/null
++++ b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.review.test.ts
+@@ -0,0 +1,227 @@
++// #703: the Delivery review form across repaints. The operator's picked commit, rework picks and
++// unsent note survive a refresh; a note belongs to one intent and commit; a newer edit is never
++// erased by an older POST; PASS and VETO cannot both be submitted; a failed POST allows a retry.
++// Pending requests are held with explicit promise gates, never sleeps.
++
++import { strict as assert } from 'assert';
++// @ts-expect-error untyped JS module
++import { DeliveryAssessmentRenderer } from '../../../src/roadmap/ui/modules/delivery-assessment-renderer.js';
++import { ACTIVE, REVIEW, SEALED, SHA, SHA2, SHA3, fire, fx, holdPosts, pick, q, resetFixture, settled, setupDom, typeNote, value, vetoes } from './deliveryRendererFixture';
++
++
++suite('DeliveryAssessmentRenderer review form across repaints (#703, jsdom)', () => {
++  setup(() => resetFixture());
++
++  test('a typed review note survives an async repaint and posts exactly once before the draft is cleared (#703)', async () => {
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(renderer, 'review');
++      await renderer.refresh();
++      const oldInput = typeNote(ctx.doc, 'keep this note');
++      // This recreates reviewControls, just as an overlapping API refresh does in the real UI.
++      await renderer.refresh();
++      const newInput = q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note');
++      assert.notEqual(newInput, oldInput, 'the refresh must replace the actual input');
++      assert.equal(newInput.value, 'keep this note', 'unsent text must not disappear during a refresh');
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++      await reviewed();
++      assert.deepEqual(ctx.posted, [
++        { url: REVIEW, body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'keep this note' } },
++      ], 'only the real typed note may be recorded');
++      assert.equal(q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note').value, '', 'a successful post clears the private draft');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: an older picked commit, its note and the rework pick survive a repaint and are posted', async () => {
++    fx.extraLinked = [SHA2];
++    fx.reviewOverride = vetoes([8, SHA2]);
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(renderer, 'review');
++      await renderer.refresh();
++      assert.equal(q<HTMLSelectElement>(ctx.doc, '.cc-dlv-review-pick').value, SHA2, 'the newest linked commit is the default');
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      typeNote(ctx.doc, 'older commit note');
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-review-pick'), SHA, 'the commit pick alone is kept');
++      pick(ctx.doc, '.cc-dlv-rework-pick', SHA);
++      await renderer.refresh();
++      assert.equal(q<HTMLSelectElement>(ctx.doc, '.cc-dlv-review-pick').value, SHA, 'the picked commit survives');
++      assert.equal(q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note').value, 'older commit note');
++      assert.equal(q<HTMLSelectElement>(ctx.doc, '.cc-dlv-rework-pick').value, SHA, 'the rework pick survives');
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++      await reviewed();
++      assert.deepEqual(ctx.posted, [{ url: REVIEW, body: {
++        intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'older commit note', reworks: [{ vetoEntryId: 8, reworkCommit: SHA }] } }]);
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a note belongs to its commit: changing the picked commit hides it and changing back restores it', async () => {
++    fx.extraLinked = [SHA2];
++    const ctx = setupDom();
++    try {
++      await new DeliveryAssessmentRenderer('workspace').refresh();
++      typeNote(ctx.doc, 'about the newest commit');
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      assert.equal(q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note').value, '', 'another commit starts with no note');
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA2);
++      assert.equal(q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note').value, 'about the newest commit');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a note and commit pick belong to their intent: another linkable intent starts empty', async () => {
++    fx.extraLinked = [SHA2];
++    fx.secondLinkable = true;
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const show = async (id: string) => { renderer.selectedId = id; await renderer.refresh(); };
++      await renderer.refresh();
++      typeNote(ctx.doc, 'about the active intent'); // on the newest commit, which SEALED also links
++      await show(SEALED);
++      assert.equal(q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note').value, '', 'a draft is not shown on another intent');
++      await show(ACTIVE);
++      assert.equal(q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note').value, 'about the active intent');
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      await show(SEALED);
++      assert.equal(q<HTMLSelectElement>(ctx.doc, '.cc-dlv-review-pick').value, SHA2, 'another intent starts at the newest commit');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a picked commit that is no longer linked falls back to the newest linked commit and keeps the rework pick', async () => {
++    fx.extraLinked = [SHA2, SHA3];
++    fx.reviewOverride = vetoes([8, SHA3]);
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA2);
++      pick(ctx.doc, '.cc-dlv-rework-pick[data-veto="8"]', SHA);
++      fx.extraLinked = [SHA3]; // SHA2 was unlinked
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-review-pick'), SHA3);
++      assert.equal(value(ctx.doc, '.cc-dlv-rework-pick[data-veto="8"]'), SHA, 'the rework pick does not depend on the picked commit');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: each rework pick is kept for its own VETO', async () => {
++    fx.extraLinked = [SHA2, SHA3];
++    fx.reviewOverride = vetoes([8, SHA2], [10, SHA3]);
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      pick(ctx.doc, '.cc-dlv-rework-pick[data-veto="8"]', SHA3);
++      pick(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]', SHA);
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-rework-pick[data-veto="8"]'), SHA3);
++      assert.equal(value(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]'), SHA);
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA2); // a later commit change keeps the rework picks
++      await renderer.refresh();
++      assert.deepEqual([value(ctx.doc, '.cc-dlv-rework-pick[data-veto="8"]'), value(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]')], [SHA3, SHA]);
++      const reviewed = settled(renderer, 'review');
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-veto').click();
++      await reviewed();
++      pick(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]', '');
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++      await reviewed();
++      assert.deepEqual(ctx.posted.map((p) => p.body), [
++        { intentId: ACTIVE, verdict: 'VETO', commitSha: SHA2, note: '' },
++        { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA2, note: '', reworks: [{ vetoEntryId: 8, reworkCommit: SHA3 }] },
++      ], 'a VETO never carries rework claims, and a PASS carries only the picked ones');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: recording a review on one commit keeps the unsent note of another', async () => {
++    fx.extraLinked = [SHA2];
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(renderer, 'review');
++      await renderer.refresh();
++      typeNote(ctx.doc, 'about the newest commit');
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++      await reviewed();
++      assert.deepEqual(ctx.posted, [{ url: REVIEW, body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: '' } }]);
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA2);
++      assert.equal(value(ctx.doc, '.cc-dlv-review-note'), 'about the newest commit');
++    } finally { ctx.cleanup(); }
++  });
++
++  for (const nextDraft of ['new unsent draft', 'submitted earlier']) {
++    test(`#703: a later ${nextDraft === 'submitted earlier' ? 'same-text' : 'different-text'} edit survives a prior POST`, async () => {
++      const ctx = setupDom();
++      const hold = holdPosts(REVIEW);
++      try {
++        const renderer = new DeliveryAssessmentRenderer('workspace');
++        const reviewed = settled(renderer, 'review');
++        await renderer.refresh();
++        typeNote(ctx.doc, 'submitted earlier');
++        q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++        assert.ok(hold.held(), 'POST must remain pending');
++        typeNote(ctx.doc, nextDraft);
++        hold.release();
++        await reviewed();
++        assert.deepEqual(ctx.posted, [
++          { url: REVIEW, body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'submitted earlier' } },
++        ]);
++        assert.equal(q<HTMLInputElement>(ctx.doc, '.cc-dlv-review-note').value, nextDraft,
++          'a newer unsent draft must not be cleared by completion of the older request');
++      } finally { hold.release(); ctx.cleanup(); }
++    });
++  }
++
++  test('#703: PASS and VETO cannot both submit across an overlapping repaint', async () => {
++    const ctx = setupDom();
++    const hold = holdPosts(REVIEW);
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(renderer, 'review');
++      await renderer.refresh();
++      const pass = q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass');
++      pass.click();
++      assert.equal(pass.disabled, true);
++      const veto = q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-veto');
++      assert.equal(veto.disabled, true, 'the opposite outcome must be unavailable while PASS is pending');
++      // An HTTP snapshot can repaint the whole panel while an earlier review POST is pending.
++      await renderer.refresh();
++      const repaintedVeto = q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-veto');
++      assert.notEqual(veto, repaintedVeto);
++      assert.equal(repaintedVeto.disabled, true, 'a new panel must not bypass the in-flight guard');
++      assert.equal(q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').disabled, true, 'the repainted PASS is disabled too');
++      fire(ctx.doc, repaintedVeto, 'click');
++      hold.release();
++      await reviewed();
++      assert.equal(ctx.posted.length, 1, 'only one backend review may be submitted');
++      assert.equal(ctx.posted[0].body.verdict, 'PASS');
++      assert.equal(q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-veto').disabled, false,
++        'controls become available once the request completes');
++    } finally { hold.release(); ctx.cleanup(); }
++  });
++
++  for (const failure of ['network', 'http'] as const) {
++    test(`#703: a ${failure === 'network' ? 'rejected network' : 'refused (HTTP 409)'} POST keeps the note and re-enables review`, async () => {
++      const ctx = setupDom();
++      const hold = holdPosts(REVIEW, failure);
++      try {
++        const renderer = new DeliveryAssessmentRenderer('workspace');
++        const reviewed = settled(renderer, 'review');
++        await renderer.refresh();
++        typeNote(ctx.doc, 'retry me');
++        q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++        hold.release();
++        await reviewed();
++        assert.match(q(ctx.doc, '.cc-dlv-result')?.textContent || '', failure === 'network' ? /Recording the review failed: late network failure/ : /late refusal/);
++        assert.equal(value(ctx.doc, '.cc-dlv-review-note'), 'retry me', 'a review that was not recorded keeps its note');
++        const veto = q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-veto');
++        assert.equal(veto.disabled, false, 'the operator may retry after failure');
++        veto.click();
++        await reviewed();
++        assert.deepEqual(ctx.posted.map((p) => [p.body.verdict, p.body.note]), [['VETO', 'retry me']]);
++      } finally { hold.release(); ctx.cleanup(); }
++    });
++  }
++});
+diff --git a/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.switch.test.ts b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.switch.test.ts
+new file mode 100644
+index 00000000..157482f0
+--- /dev/null
++++ b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.switch.test.ts
+@@ -0,0 +1,156 @@
++// #703: the review form while the panel is between views. Choosing another intent sets the selection
++// before its view arrives, and the old panel stays usable until then: whatever the operator does on
++// the shown panel belongs to the shown intent. Also the picked commit without any VETO, and rework
++// picks kept by VETO id when the VETO set changes. Held requests use promise gates, never sleeps.
++// The cases were first written as probes by the iteration-5 plan-703 auditor (remediation, R-table).
++
++import { strict as assert } from 'assert';
++// @ts-expect-error untyped JS module
++import { DeliveryAssessmentRenderer } from '../../../src/roadmap/ui/modules/delivery-assessment-renderer.js';
++import {
++  ACTIVE, SEALED, SHA, SHA2, SHA3, fx, holdFirstGet, pick, q, resetFixture, settled, setupDom, typeNote, value, vetoes,
++} from './deliveryRendererFixture';
++
++/** Choose SEALED in the intent picker and hold its detail GET, so ACTIVE stays shown. */
++async function switchHeld(doc: Document, renderer: Record<string, unknown>) {
++  const hold = holdFirstGet(`/api/v1/delivery/intents/${SEALED}`);
++  const refreshed = settled(renderer, 'refresh');
++  pick(doc, '.cc-dlv-picker', SEALED);
++  await hold.started;
++  assert.equal(q(doc, '.cc-dlv')?.getAttribute('data-intent'), ACTIVE, 'ACTIVE is still shown while SEALED loads');
++  return { hold, refreshed };
++}
++
++suite('DeliveryAssessmentRenderer review form between views (#703, jsdom)', () => {
++  setup(() => resetFixture());
++
++  test('#703: with no VETO, a picked older commit survives a repaint', async () => {
++    fx.extraLinked = [SHA2];
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-review-pick'), SHA);
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a rework pick is kept by VETO id when another VETO leaves the list', async () => {
++    fx.extraLinked = [SHA2, SHA3];
++    fx.reviewOverride = vetoes([8, SHA2], [10, SHA3]);
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      pick(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]', SHA);
++      fx.reviewOverride = vetoes([10, SHA3]); // VETO #8 is no longer blocking
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]'), SHA);
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a VETO left at none stays none beside a picked VETO after a repaint, and PASS posts only the pick', async () => {
++    fx.extraLinked = [SHA2, SHA3];
++    fx.reviewOverride = vetoes([8, SHA2], [10, SHA3]);
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(renderer, 'review');
++      await renderer.refresh();
++      pick(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]', SHA);
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-rework-pick[data-veto="8"]'), '');
++      assert.equal(value(ctx.doc, '.cc-dlv-rework-pick[data-veto="10"]'), SHA);
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++      await reviewed();
++      assert.deepEqual(ctx.posted[0].body.reworks, [{ vetoEntryId: 10, reworkCommit: SHA }]);
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a successful PASS keeps the picked commit for the next review', async () => {
++    fx.extraLinked = [SHA2];
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(renderer, 'review');
++      await renderer.refresh();
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++      await reviewed();
++      assert.equal(ctx.posted[0].body.commitSha, SHA);
++      assert.equal(value(ctx.doc, '.cc-dlv-review-pick'), SHA, 'a completed PASS does not clear the form');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a round trip through the intent picker keeps the note and the commit pick', async () => {
++    fx.extraLinked = [SHA2];
++    fx.secondLinkable = true;
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      const refreshed = settled(renderer, 'refresh');
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      typeNote(ctx.doc, 'kept across the picker');
++      pick(ctx.doc, '.cc-dlv-picker', SEALED);
++      await refreshed();
++      pick(ctx.doc, '.cc-dlv-picker', ACTIVE);
++      await refreshed();
++      assert.equal(value(ctx.doc, '.cc-dlv-review-pick'), SHA);
++      assert.equal(value(ctx.doc, '.cc-dlv-review-note'), 'kept across the picker');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a note typed on the shown intent while an intent switch is pending stays with the shown intent', async () => {
++    fx.extraLinked = [SHA2];
++    fx.secondLinkable = true;
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      const { hold, refreshed } = await switchHeld(ctx.doc, renderer);
++      typeNote(ctx.doc, 'typed on ACTIVE');
++      hold.release();
++      await refreshed();
++      assert.equal(q(ctx.doc, '.cc-dlv')?.getAttribute('data-intent'), SEALED);
++      assert.equal(value(ctx.doc, '.cc-dlv-review-note'), '', 'not shown on SEALED');
++      renderer.selectedId = ACTIVE;
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-review-note'), 'typed on ACTIVE', 'kept for ACTIVE');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a commit picked on the shown intent while an intent switch is pending stays with the shown intent', async () => {
++    fx.extraLinked = [SHA2];
++    fx.secondLinkable = true;
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      const { hold, refreshed } = await switchHeld(ctx.doc, renderer);
++      pick(ctx.doc, '.cc-dlv-review-pick', SHA);
++      hold.release();
++      await refreshed();
++      assert.equal(value(ctx.doc, '.cc-dlv-review-pick'), SHA2, 'SEALED starts at the newest');
++      renderer.selectedId = ACTIVE;
++      await renderer.refresh();
++      assert.equal(value(ctx.doc, '.cc-dlv-review-pick'), SHA, 'ACTIVE keeps its pick');
++    } finally { ctx.cleanup(); }
++  });
++
++  test('#703: a review clicked on the shown intent while an intent switch is pending is posted for the shown intent', async () => {
++    fx.secondLinkable = true;
++    const ctx = setupDom();
++    try {
++      const renderer = new DeliveryAssessmentRenderer('workspace');
++      await renderer.refresh();
++      const reviewed = settled(renderer, 'review');
++      const { hold } = await switchHeld(ctx.doc, renderer);
++      q<HTMLButtonElement>(ctx.doc, '.cc-dlv-review-pass').click();
++      hold.release();
++      await reviewed();
++      assert.equal(ctx.posted[0].body.intentId, ACTIVE);
++    } finally { ctx.cleanup(); }
++  });
++});
+diff --git a/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.test.ts b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.test.ts
+index 3f8df229..2413c993 100644
+--- a/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.test.ts
++++ b/FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.test.ts
+@@ -12,108 +12,16 @@
+ // assessed" only while the ledger or git cannot be read; blocking items with their commit state;
+ // reviews with reviewer, what the confirmation proves and the ledger entry; Record PASS / Record
+ // VETO on a linked commit with a note, each posting once; none of it for a sealed intent.
++// #703: the fixture lives in deliveryRendererFixture.ts; the race and review-form cases are in
++// delivery-assessment-renderer.refresh.test.ts and delivery-assessment-renderer.review.test.ts.
+ 
+ import { strict as assert } from 'assert';
+-import { JSDOM } from 'jsdom';
+ // @ts-expect-error untyped JS module
+ import { DeliveryAssessmentRenderer, DELIVERY_SCOPE_LINE, COMPLETE_LINE } from '../../../src/roadmap/ui/modules/delivery-assessment-renderer.js';
+-
+-const SCOPE = 'This assessment uses only the links you recorded here and evidence already in the FailSafe ledger. ' +
+-  'Nothing is inferred and nothing leaves this machine. Receipts are unavailable until the ledger repair (#467). ' +
+-  'Recorded means the evidence is present, not that it passed.';
+-
+-const ACTIVE = '11111111-1111-4111-8111-111111111111';
+-const SEALED = '22222222-2222-4222-8222-222222222222';
+-const SHA = 'a'.repeat(40);
+-const TREE = 'b'.repeat(40);
+-const SHA2 = '9'.repeat(40);
+-
+-const DECISION_NOTE = 'Recorded in the local intent history; the chain shows the entry is unchanged since it was chained, not who wrote it.';
+-let decision: { status: string; actor: string; timestamp: string; entryHash: string } | null = null;
+-let overall = 'incomplete';
+-let reachable: string[] = [];
+-let reviewOverride: { status: string; reason: string; records: Array<Record<string, unknown>> } | null = null;
+-const AWAITING = 'Awaiting review: no PASS is recorded on a linked commit. Record a PASS or VETO on the newest linked commit (Workspace > Delivery, or the command FailSafe: Record a Delivery Review).';
+-
+-function view(id: string, linkable: boolean, purpose: string) {
+-  const vetoed = decision?.status === 'VETO';
+-  return {
+-    integrity: 'valid', found: true, linkable,
+-    intent: {
+-      id, purpose, status: linkable ? 'PULSE' : 'SEALED', active: linkable, sealed: !linkable,
+-      createdBy: 'user', createdAt: '2026-10-17T00:00:00.000Z', createdEntryHash: 'e'.repeat(64), decision,
+-    },
+-    edges: [
+-      { edge: 'implements', target: 'runtime', provenance: { docPath: '<b>docs/RUNTIME.md</b>' }, linkedAt: 't', actor: 'user', entryHash: 'h1' },
+-      { edge: 'committed-under', target: SHA, provenance: { sha: SHA, tree: TREE, branch: 'main' }, linkedAt: 't', actor: 'user', entryHash: 'h2' },
+-    ],
+-    assessment: {
+-      intentId: id, overall, gaps: overall === 'evidence-complete-except-receipt' ? [] : ['architecture', 'review', 'governance'],
+-      completeReachable: reachable.length === 0, completeBlockedBy: reachable,
+-      steps: [
+-        { key: 'issue', label: 'External issue', status: 'recorded', reason: 'r', records: [{ source: 'jira', key: 'PROJ-7', contentSha256: 'c'.repeat(64), createdEntryHash: 'e'.repeat(64) }] },
+-        { key: 'architecture', label: 'Governing architecture', status: 'stale', reason: 'changed', records: [{ target: 'runtime', docPath: '<b>docs/RUNTIME.md</b>', docSha256: 'd'.repeat(64), sourceSha: SHA, status: 'stale', currentSha256: 'f'.repeat(64), via: 'workspace-delivery' }] },
+-        { key: 'code', label: 'Implementation', status: 'recorded', reason: 'r', records: [{ sha: SHA, tree: TREE, branch: 'main', status: 'recorded', files: ['src/a.ts', '<i>x</i>'], filesTruncated: false, via: 'governed-commit', action: 'organize' }] },
+-        reviewOverride ? { key: 'review', label: 'Review', ...reviewOverride } : { key: 'review', label: 'Review', status: vetoed ? 'failing' : 'missing',
+-          reason: vetoed ? 'Intent vetoed by judge at t.' : AWAITING,
+-          records: decision ? [{ record: 'intent-decision', decision: vetoed ? 'vetoed' : 'approved for implementation (not a review)', status: decision.status, actor: decision.actor, timestamp: decision.timestamp, entryHash: decision.entryHash, provenance: DECISION_NOTE }] : [] },
+-        { key: 'governance', label: 'Governance evidence', status: 'recorded', reason: 'r', records: [
+-          { entryId: 7, eventType: 'GOVERNANCE_PAUSED', timestamp: 't', entryHash: 'g'.repeat(64), matchedBy: 'intentId', value: id, kind: 'policy-decision', outcome: 'denied', chain: 'unknown' },
+-        ] },
+-        { key: 'receipt', label: 'Delivery receipt', status: 'unavailable', reason: 'Blocked on the damaged ledger (#467), B216.', records: [] },
+-      ],
+-    },
+-  };
+-}
+-
+-const INTENTS = {
+-  integrity: 'valid',
+-  intents: [
+-    { id: ACTIVE, purpose: '<img src=x onerror="window.__pwned=1">PROJ-7', type: 'feature', status: 'PULSE', createdAt: 't', active: true },
+-    { id: SEALED, purpose: 'PROJ-6 — older', type: 'feature', status: 'SEALED', createdAt: 't', active: false },
+-  ],
+-};
+-const CANDIDATES = {
+-  architecture: { state: 'present', rows: [
+-    { id: 'runtime', domain: 'runtime', docPath: 'docs/architecture/RUNTIME.md', status: 'canonical' },
+-    { id: 'storage', domain: 'storage', docPath: 'docs/architecture/STORAGE.md', status: 'proposed' },
+-  ] },
+-  commits: { state: 'ok', head: SHA2, branch: 'main', commits: [
+-    { sha: SHA2, subject: 'seed <script>alert(1)</script>' }, { sha: SHA, subject: 'older' },
+-  ] },
+-};
+-
+-interface G { window?: unknown; document?: unknown; fetch?: unknown }
+-interface Posted { url: string; body: Record<string, unknown> }
+-
+-function setupDom(): { cleanup: () => void; doc: Document; posted: Posted[]; fetched: string[] } {
+-  const dom = new JSDOM('<!DOCTYPE html><html><head></head><body><div id="workspace"></div></body></html>', { url: 'http://localhost:9999' });
+-  const g = global as unknown as G;
+-  const prev = { window: g.window, document: g.document, fetch: g.fetch };
+-  const posted: Posted[] = [];
+-  const fetched: string[] = [];
+-  g.window = dom.window;
+-  g.document = dom.window.document;
+-  g.fetch = async (url: string, init?: { method?: string; body?: string }) => {
+-    fetched.push(url);
+-    if (init?.method === 'POST') {
+-      posted.push({ url, body: JSON.parse(init.body ?? '{}') });
+-      return { ok: true, status: 200, json: async () => ({ ok: true }) };
+-    }
+-    const body = url === '/api/v1/delivery/intents' ? INTENTS
+-      : url === `/api/v1/delivery/intents/${ACTIVE}` ? view(ACTIVE, true, INTENTS.intents[0].purpose)
+-        : url === `/api/v1/delivery/intents/${SEALED}` ? view(SEALED, false, 'PROJ-6 — older')
+-          : url === '/api/v1/delivery/candidates' ? CANDIDATES : { error: 'unknown' };
+-    return { ok: true, status: 200, json: async () => body };
+-  };
+-  return {
+-    doc: dom.window.document as unknown as Document, posted, fetched,
+-    cleanup: () => { g.window = prev.window; g.document = prev.document; g.fetch = prev.fetch; },
+-  };
+-}
++import { ACTIVE, DECISION_NOTE, SCOPE, SEALED, SHA, SHA2, TREE, fire, fx, resetFixture, settled, setupDom } from './deliveryRendererFixture';
+ 
+ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+-  setup(() => { decision = null; overall = 'incomplete'; reachable = []; reviewOverride = null; });
++  setup(() => resetFixture());
+ 
+   test('six steps with a chip per status, the overall outcome and its gaps; no "cannot be assessed" line while the ledger and git are readable', async () => {
+     const ctx = setupDom();
+@@ -139,7 +47,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+   test('the four outcome pills; Complete reads "Evidence complete except receipt" and never claims a receipt', async () => {
+     const seen: Array<[string, string]> = [];
+     for (const o of ['evidence-complete-except-receipt', 'awaiting-review', 'incomplete', 'failing']) {
+-      overall = o;
++      fx.overall = o;
+       const ctx = setupDom();
+       try {
+         await new DeliveryAssessmentRenderer('workspace').refresh();
+@@ -159,7 +67,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+   });
+ 
+   test('complete cannot be assessed only while the ledger or git cannot be read', async () => {
+-    reachable = ['ledger-unavailable', 'git-unavailable'];
++    fx.reachable = ['ledger-unavailable', 'git-unavailable'];
+     const ctx = setupDom();
+     try {
+       await new DeliveryAssessmentRenderer('workspace').refresh();
+@@ -168,8 +76,8 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+   });
+ 
+   test('the review step lists blocking items with their commit state and reviews with reviewer, proof and ledger entry', async () => {
+-    overall = 'failing';
+-    reviewOverride = {
++    fx.overall = 'failing';
++    fx.reviewOverride = {
+       status: 'failing', reason: 'Rejected by review: VETO on a (ledger entry #8). (and 1 more blocking item)',
+       records: [
+         { record: 'blocking', kind: 'veto', id: 8, hash: 'h'.repeat(64), label: 'Rejected by review: VETO on a.', verdict: 'VETO', commitSha: SHA, commitState: 'sealed', note: 'missing tests' },
+@@ -195,338 +103,31 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+   test('Record PASS and Record VETO on a linked commit, with a note, each post once; a sealed intent has no review controls', async () => {
+     const ctx = setupDom();
+     try {
+-      await new DeliveryAssessmentRenderer('workspace').refresh();
++      const r = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(r, 'review');
++      const refreshed = settled(r, 'refresh');
++      await r.refresh();
+       const d = ctx.doc;
+       const options = [...d.querySelectorAll('.cc-dlv-review-pick option')].map((o) => (o as HTMLOptionElement).value);
+       assert.deepEqual(options, [SHA], 'only linked commits can be reviewed');
+       (d.querySelector('.cc-dlv-review-note') as HTMLInputElement).value = 'ship it';
+       (d.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+-      await new Promise((res) => setTimeout(res, 20));
++      await reviewed();
+       (d.querySelector('.cc-dlv-review-veto') as HTMLButtonElement).click();
+-      await new Promise((res) => setTimeout(res, 20));
++      await reviewed();
+       assert.deepEqual(ctx.posted, [
+         { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'ship it' } },
+         { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'VETO', commitSha: SHA, note: '' } },
+       ]);
+       const picker = d.querySelector('.cc-dlv-picker') as HTMLSelectElement;
+       picker.value = SEALED;
+-      picker.dispatchEvent(new (d.defaultView as unknown as { Event: typeof Event }).Event('change'));
+-      await new Promise((res) => setTimeout(res, 50));
++      for (let i = 0; i < 3; i++) await refreshed(); // the first load and the refresh after each review
++      fire(d, picker, 'change');
++      await refreshed();
+       assert.equal(d.querySelectorAll('.cc-dlv-review-pass, .cc-dlv-review-veto, .cc-dlv-review-pick').length, 0);
+     } finally { ctx.cleanup(); }
+   });
+ 
+-  test('a typed review note survives an async repaint and posts exactly once before the draft is cleared (#703)', async () => {
+-    const ctx = setupDom();
+-    try {
+-      const renderer = new DeliveryAssessmentRenderer('workspace');
+-      const originalReview = renderer.review.bind(renderer);
+-      let finishReview!: () => void;
+-      const reviewFinished = new Promise<void>((resolve) => { finishReview = resolve; });
+-      renderer.review = async (...args: unknown[]) => {
+-        try { return await originalReview(...args); }
+-        finally { finishReview(); }
+-      };
+-      await renderer.refresh();
+-      const oldInput = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+-      oldInput.value = 'keep this note';
+-      oldInput.dispatchEvent(new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('input', { bubbles: true }));
+-
+-      // This recreates reviewControls, just as an overlapping API refresh does in the real UI.
+-      await renderer.refresh();
+-      const newInput = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+-      assert.notEqual(newInput, oldInput, 'the refresh must replace the actual input');
+-      assert.equal(newInput.value, 'keep this note', 'unsent text must not disappear during a refresh');
+-      (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+-      await reviewFinished;
+-      assert.deepEqual(ctx.posted, [
+-        { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'keep this note' } },
+-      ], 'only the real typed note may be recorded');
+-      assert.equal((ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement).value, '', 'a successful post clears the private draft');
+-    } finally { ctx.cleanup(); }
+-  });
+-
+-  test('#703: a stale detail response cannot repaint a newer selected intent', async () => {
+-    const ctx = setupDom();
+-    const g = global as unknown as { fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown> };
+-    const prior = g.fetch;
+-    let announceDetail!: () => void;
+-    let releaseDetail!: () => void;
+-    let delayFirst = true;
+-    const started = new Promise<void>((resolve) => { announceDetail = resolve; });
+-    const suspended = new Promise<void>((resolve) => { releaseDetail = resolve; });
+-    g.fetch = async (url, init) => {
+-      if (delayFirst && url === `/api/v1/delivery/intents/${ACTIVE}`) {
+-        delayFirst = false;
+-        announceDetail();
+-        await suspended;
+-      }
+-      return prior(url, init);
+-    };
+-    try {
+-      const renderer = new DeliveryAssessmentRenderer('workspace');
+-      const earlier = renderer.refresh();
+-      await started;
+-      renderer.selectedId = SEALED; // Operator chose another intent while the detail GET was pending.
+-      await renderer.refresh();
+-      const currentPanel = ctx.doc.querySelector('.cc-dlv');
+-      assert.ok(currentPanel, 'the newly chosen intent must render');
+-      assert.match(currentPanel.textContent || '', /PROJ-6/);
+-      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null, 'sealed intent cannot be reviewed');
+-      releaseDetail();
+-      await earlier;
+-      assert.equal(ctx.doc.querySelector('.cc-dlv'), currentPanel,
+-        'an older response must not replace the newer selected view');
+-      assert.equal(renderer.selectedId, SEALED);
+-      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null);
+-    } finally { releaseDetail(); ctx.cleanup(); }
+-  });
+-
+-  test('#703: delayed candidates from a previous intent cannot overwrite the newly selected view', async () => {
+-    const ctx = setupDom();
+-    const g = global as unknown as { fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown> };
+-    const prior = g.fetch;
+-    let announce!: () => void;
+-    let release!: () => void;
+-    let delayFirst = true;
+-    const started = new Promise<void>((resolve) => { announce = resolve; });
+-    const suspended = new Promise<void>((resolve) => { release = resolve; });
+-    g.fetch = async (url, init) => {
+-      if (delayFirst && url === '/api/v1/delivery/candidates') {
+-        delayFirst = false;
+-        announce();
+-        await suspended;
+-      }
+-      return prior(url, init);
+-    };
+-    try {
+-      const renderer = new DeliveryAssessmentRenderer('workspace');
+-      const earlier = renderer.refresh();
+-      await started;
+-      renderer.selectedId = SEALED;
+-      await renderer.refresh();
+-      const newPanel = ctx.doc.querySelector('.cc-dlv');
+-      assert.ok(newPanel);
+-      assert.match(newPanel.textContent || '', /PROJ-6/);
+-      release();
+-      await earlier;
+-      assert.equal(ctx.doc.querySelector('.cc-dlv'), newPanel, 'stale candidates must not repaint');
+-      assert.equal(renderer.selectedId, SEALED);
+-      assert.equal(ctx.doc.querySelector('.cc-dlv-review-pass'), null);
+-    } finally { release(); ctx.cleanup(); }
+-  });
+-
+-  test('#703: an old failed GET must not overwrite a later successful Delivery view', async () => {
+-    const ctx = setupDom();
+-    const g = global as unknown as { fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown> };
+-    const prior = g.fetch;
+-    let announce!: () => void;
+-    let release!: () => void;
+-    let delayFirst = true;
+-    const started = new Promise<void>((resolve) => { announce = resolve; });
+-    const suspended = new Promise<void>((resolve) => { release = resolve; });
+-    g.fetch = async (url, init) => {
+-      if (delayFirst && url === '/api/v1/delivery/intents') {
+-        delayFirst = false;
+-        announce();
+-        await suspended;
+-        throw new Error('stale transport failure');
+-      }
+-      return prior(url, init);
+-    };
+-    try {
+-      const renderer = new DeliveryAssessmentRenderer('workspace');
+-      const earlier = renderer.refresh();
+-      await started;
+-      await renderer.refresh();
+-      const currentPanel = ctx.doc.querySelector('.cc-dlv');
+-      assert.ok(currentPanel);
+-      assert.match(currentPanel.textContent || '', /PROJ-7/);
+-      release();
+-      await earlier;
+-      assert.equal(ctx.doc.querySelector('.cc-dlv'), currentPanel);
+-      assert.doesNotMatch(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /stale transport failure/);
+-    } finally { release(); ctx.cleanup(); }
+-  });
+-
+-  for (const nextDraft of ['new unsent draft', 'submitted earlier']) {
+-    test(`#703: a later ${nextDraft === 'submitted earlier' ? 'same-text' : 'different-text'} edit survives a prior POST`, async () => {
+-      const ctx = setupDom();
+-      try {
+-        const g = global as unknown as {
+-          fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+-        };
+-        const prior = g.fetch;
+-        let finishPost: (() => void) | undefined;
+-        g.fetch = async (url, init) => {
+-          if (url === '/api/actions/delivery/review' && init?.method === 'POST') {
+-            await new Promise<void>((resolve) => { finishPost = resolve; });
+-          }
+-          return prior(url, init);
+-        };
+-        const renderer = new DeliveryAssessmentRenderer('workspace');
+-        const originalReview = renderer.review.bind(renderer);
+-        let finishReview!: () => void;
+-        const reviewFinished = new Promise<void>((resolve) => { finishReview = resolve; });
+-        renderer.review = async (...args: unknown[]) => {
+-          try { return await originalReview(...args); }
+-          finally { finishReview(); }
+-        };
+-        await renderer.refresh();
+-        const note = ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement;
+-        const sendInput = () => note.dispatchEvent(
+-          new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('input', { bubbles: true }),
+-        );
+-        note.value = 'submitted earlier';
+-        sendInput();
+-        (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+-        assert.ok(finishPost, 'POST must remain pending');
+-        note.value = nextDraft;
+-        sendInput();
+-        finishPost!();
+-        await reviewFinished;
+-        assert.deepEqual(ctx.posted, [
+-          { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'submitted earlier' } },
+-        ]);
+-        assert.equal((ctx.doc.querySelector('.cc-dlv-review-note') as HTMLInputElement).value, nextDraft,
+-          'a newer unsent draft must not be cleared by completion of the older request');
+-      } finally { ctx.cleanup(); }
+-    });
+-  }
+-
+-  for (const fail of [false, true]) {
+-    test(`#703: ${fail ? 'failed' : 'successful'} review POST does not display its result on another intent`, async () => {
+-      const ctx = setupDom();
+-      const g = global as unknown as {
+-        fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+-      };
+-      const prior = g.fetch;
+-      let release!: () => void;
+-      const pending = new Promise<void>((resolve) => { release = resolve; });
+-      g.fetch = async (url, init) => {
+-        if (url === '/api/actions/delivery/review' && init?.method === 'POST') {
+-          await pending;
+-          if (fail) throw new Error('late network failure');
+-        }
+-        return prior(url, init);
+-      };
+-      try {
+-        const renderer = new DeliveryAssessmentRenderer('workspace');
+-        const originalReview = renderer.review.bind(renderer);
+-        let completed!: () => void;
+-        const finished = new Promise<void>((resolve) => { completed = resolve; });
+-        renderer.review = async (...args: unknown[]) => {
+-          try { return await originalReview(...args); }
+-          finally { completed(); }
+-        };
+-        await renderer.refresh();
+-        (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+-        // A different intent becomes visible while the earlier POST is pending.
+-        renderer.selectedId = SEALED;
+-        await renderer.refresh();
+-        assert.match(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /PROJ-6/);
+-        release();
+-        await finished;
+-        assert.equal(renderer.selectedId, SEALED);
+-        assert.equal(ctx.doc.querySelector('.cc-dlv-result'), null,
+-          'an older intent review must not be reported as this sealed intent result');
+-        assert.match(ctx.doc.querySelector('.cc-dlv')?.textContent || '', /PROJ-6/);
+-        renderer.selectedId = ACTIVE;
+-        await renderer.refresh();
+-        const result = ctx.doc.querySelector('.cc-dlv-result')?.textContent || '';
+-        assert.match(result, fail ? /Recording the review failed: late network failure/ : /Review PASS recorded/);
+-        assert.equal(ctx.doc.querySelectorAll('.cc-dlv-result').length, 1,
+-          'completion may be displayed once, only on its initiating intent');
+-        await renderer.refresh();
+-        assert.equal(ctx.doc.querySelector('.cc-dlv-result'), null,
+-          'a consumed completion message may not replay on another refresh');
+-      } finally { release(); ctx.cleanup(); }
+-    });
+-  }
+-
+-  test('#703: PASS and VETO cannot both submit across an overlapping repaint', async () => {
+-    const ctx = setupDom();
+-    const g = global as unknown as {
+-      fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+-    };
+-    const prior = g.fetch;
+-    let release: (() => void) | undefined;
+-    const blocked = new Promise<void>((resolve) => { release = resolve; });
+-    g.fetch = async (url, init) => {
+-      if (url === '/api/actions/delivery/review' && init?.method === 'POST') await blocked;
+-      return prior(url, init);
+-    };
+-    try {
+-      const renderer = new DeliveryAssessmentRenderer('workspace');
+-      const originalReview = renderer.review.bind(renderer);
+-      let finishReview!: () => void;
+-      const reviewFinished = new Promise<void>((resolve) => { finishReview = resolve; });
+-      renderer.review = async (...args: unknown[]) => {
+-        try { return await originalReview(...args); }
+-        finally { finishReview(); }
+-      };
+-      await renderer.refresh();
+-      const pass = ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement;
+-      pass.click();
+-      assert.equal(pass.disabled, true);
+-      const veto = ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement;
+-      assert.equal(veto.disabled, true, 'the opposite outcome must be unavailable while PASS is pending');
+-
+-      // An HTTP snapshot can repaint the whole panel while an earlier review POST is pending.
+-      await renderer.refresh();
+-      const repaintedVeto = ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement;
+-      assert.notEqual(veto, repaintedVeto);
+-      assert.equal(repaintedVeto.disabled, true, 'a new panel must not bypass the in-flight guard');
+-      repaintedVeto.dispatchEvent(new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('click', { bubbles: true }));
+-      release!();
+-      await reviewFinished;
+-      assert.equal(ctx.posted.length, 1, 'only one backend review may be submitted');
+-      assert.equal(ctx.posted[0].body.verdict, 'PASS');
+-      assert.equal((ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement).disabled, false,
+-        'controls become available once the request completes');
+-    } finally {
+-      release?.();
+-      ctx.cleanup();
+-    }
+-  });
+-
+-  test('#703: rejected network POST re-enables review instead of leaving disabled controls', async () => {
+-    const ctx = setupDom();
+-    const g = global as unknown as {
+-      fetch: (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
+-    };
+-    const prior = g.fetch;
+-    let rejected = false;
+-    g.fetch = async (url, init) => {
+-      if (!rejected && url === '/api/actions/delivery/review' && init?.method === 'POST') {
+-        rejected = true;
+-        throw new Error('disconnected');
+-      }
+-      return prior(url, init);
+-    };
+-    try {
+-      const renderer = new DeliveryAssessmentRenderer('workspace');
+-      const originalReview = renderer.review.bind(renderer);
+-      const pending: Array<() => void> = [];
+-      renderer.review = async (...args: unknown[]) => {
+-        try { return await originalReview(...args); }
+-        finally { pending.shift()?.(); }
+-      };
+-      const nextFinished = () => new Promise<void>((resolve) => { pending.push(resolve); });
+-      await renderer.refresh();
+-      const first = nextFinished();
+-      (ctx.doc.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+-      await first;
+-      assert.match(ctx.doc.querySelector('.cc-dlv-result')?.textContent || '', /Recording the review failed: disconnected/);
+-      const veto = ctx.doc.querySelector('.cc-dlv-review-veto') as HTMLButtonElement;
+-      assert.equal(veto.disabled, false, 'the operator may retry after failure');
+-      const second = nextFinished();
+-      veto.click();
+-      await second;
+-      assert.deepEqual(ctx.posted.map((p) => p.body.verdict), ['VETO']);
+-    } finally { ctx.cleanup(); }
+-  });
+-
+   test('the legend names all six statuses with distinct chips', async () => {
+     const ctx = setupDom();
+     try {
+@@ -539,7 +140,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+   });
+ 
+   test('the intent decision: approved for implementation (not a review), with the provenance note; review stays missing', async () => {
+-    decision = { status: 'PASS', actor: 'judge', timestamp: '2026-10-19T00:00:00.000Z', entryHash: 'p'.repeat(64) };
++    fx.decision = { status: 'PASS', actor: 'judge', timestamp: '2026-10-19T00:00:00.000Z', entryHash: 'p'.repeat(64) };
+     const ctx = setupDom();
+     try {
+       await new DeliveryAssessmentRenderer('workspace').refresh();
+@@ -557,8 +158,8 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+   });
+ 
+   test('a vetoed intent: review Failing, the Failing pill, "vetoed" in the header', async () => {
+-    decision = { status: 'VETO', actor: 'judge', timestamp: 't', entryHash: 'v'.repeat(64) };
+-    overall = 'failing';
++    fx.decision = { status: 'VETO', actor: 'judge', timestamp: 't', entryHash: 'v'.repeat(64) };
++    fx.overall = 'failing';
+     const ctx = setupDom();
+     try {
+       await new DeliveryAssessmentRenderer('workspace').refresh();
+@@ -626,6 +227,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+     const ctx = setupDom();
+     try {
+       const r = new DeliveryAssessmentRenderer('workspace');
++      const linked = settled(r, 'post');
+       await r.refresh();
+       const d = ctx.doc;
+       assert.equal(d.querySelectorAll('.cc-dlv-unlink').length, 2);
+@@ -634,9 +236,9 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+       const commitOptions = [...d.querySelectorAll('.cc-dlv-commit-pick option')].map((o) => (o as HTMLOptionElement).value);
+       assert.deepEqual(commitOptions, [SHA2], 'the linked commit is not offered again');
+       (d.querySelector('.cc-dlv-link-arch') as HTMLButtonElement).click();
+-      await new Promise((res) => setTimeout(res, 20));
++      await linked();
+       (d.querySelector('.cc-dlv-link-commit') as HTMLButtonElement).click();
+-      await new Promise((res) => setTimeout(res, 20));
++      await linked();
+       assert.deepEqual(ctx.posted, [
+         { url: '/api/actions/delivery/link', body: { intentId: ACTIVE, edge: 'implements', target: 'storage' } },
+         { url: '/api/actions/delivery/link', body: { intentId: ACTIVE, edge: 'committed-under', target: SHA2 } },
+@@ -650,10 +252,11 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+     try {
+       const r = new DeliveryAssessmentRenderer('workspace');
+       await r.refresh();
++      const refreshed = settled(r, 'refresh');
+       const picker = ctx.doc.querySelector('.cc-dlv-picker') as HTMLSelectElement;
+       picker.value = SEALED;
+-      picker.dispatchEvent(new (ctx.doc.defaultView as unknown as { Event: typeof Event }).Event('change'));
+-      await new Promise((res) => setTimeout(res, 50));
++      fire(ctx.doc, picker, 'change');
++      await refreshed();
+       const d = ctx.doc;
+       assert.equal(d.querySelector('.cc-dlv')?.getAttribute('data-intent'), SEALED);
+       assert.equal(d.querySelectorAll('.cc-dlv-link-arch, .cc-dlv-link-commit, .cc-dlv-unlink').length, 0);
+@@ -664,8 +267,8 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+   });
+ 
+   test('B344 (red-first): "Reworked by" appears only on trusted VETO records, and Record PASS posts the chosen reworks once', async () => {
+-    overall = 'failing';
+-    reviewOverride = {
++    fx.overall = 'failing';
++    fx.reviewOverride = {
+       status: 'failing', reason: 'Rejected by review: VETO on 9',
+       records: [
+         { record: 'blocking', kind: 'veto', id: 8, hash: 'h'.repeat(64), label: 'Rejected by review: VETO.', verdict: 'VETO', commitSha: SHA2, commitState: 'sealed' },
+@@ -674,7 +277,9 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+     };
+     const ctx = setupDom();
+     try {
+-      await new DeliveryAssessmentRenderer('workspace').refresh();
++      const r = new DeliveryAssessmentRenderer('workspace');
++      const reviewed = settled(r, 'review');
++      await r.refresh();
+       const d = ctx.doc;
+       const selects = [...d.querySelectorAll('.cc-dlv-rework-pick')] as HTMLSelectElement[];
+       assert.equal(selects.length, 1, 'only the trusted VETO record offers a rework');
+@@ -682,7 +287,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
+       assert.deepEqual([...selects[0].options].map((o) => o.value), ['', SHA], 'none, or a linked commit other than the vetoed one');
+       selects[0].value = SHA;
+       (d.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+-      await new Promise((res) => setTimeout(res, 20));
++      await reviewed();
+       assert.deepEqual(ctx.posted, [
+         { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: '', reworks: [{ vetoEntryId: 8, reworkCommit: SHA }] } },
+       ]);
+diff --git a/FailSafe/extension/src/test/roadmap/deliveryRendererFixture.ts b/FailSafe/extension/src/test/roadmap/deliveryRendererFixture.ts
+new file mode 100644
+index 00000000..92d07b01
+--- /dev/null
++++ b/FailSafe/extension/src/test/roadmap/deliveryRendererFixture.ts
+@@ -0,0 +1,217 @@
++// Shared jsdom fixture for the Workspace "Delivery" renderer suites (#532, plan-b320, #703):
++// two intents (ACTIVE linkable, SEALED read-only), their assessment views, the link candidates, a
++// fake fetch that records every request, and deterministic waits for asynchronous renderer work.
++
++import { JSDOM } from 'jsdom';
++
++export const SCOPE = 'This assessment uses only the links you recorded here and evidence already in the FailSafe ledger. ' +
++  'Nothing is inferred and nothing leaves this machine. Receipts are unavailable until the ledger repair (#467). ' +
++  'Recorded means the evidence is present, not that it passed.';
++
++export const ACTIVE = '11111111-1111-4111-8111-111111111111';
++export const SEALED = '22222222-2222-4222-8222-222222222222';
++export const SHA = 'a'.repeat(40);
++export const TREE = 'b'.repeat(40);
++export const SHA2 = '9'.repeat(40);
++
++export const DECISION_NOTE = 'Recorded in the local intent history; the chain shows the entry is unchanged since it was chained, not who wrote it.';
++export const AWAITING = 'Awaiting review: no PASS is recorded on a linked commit. Record a PASS or VETO on the newest linked commit (Workspace > Delivery, or the command FailSafe: Record a Delivery Review).';
++
++interface FixtureState {
++  decision: { status: string; actor: string; timestamp: string; entryHash: string } | null;
++  overall: string;
++  reachable: string[];
++  reviewOverride: { status: string; reason: string; records: Array<Record<string, unknown>> } | null;
++  /** #703: commits linked after SHA, oldest first; the review picker defaults to the newest. */
++  extraLinked: string[];
++  /** #703: serve SEALED as a second linkable intent, so it also shows review controls. */
++  secondLinkable: boolean;
++}
++const INITIAL: FixtureState = { decision: null, overall: 'incomplete', reachable: [], reviewOverride: null, extraLinked: [], secondLinkable: false };
++export const fx: FixtureState = { ...INITIAL };
++export function resetFixture(): void { Object.assign(fx, INITIAL, { reachable: [], extraLinked: [] }); }
++
++function reviewStep() {
++  const { decision, reviewOverride } = fx;
++  if (reviewOverride) return { key: 'review', label: 'Review', ...reviewOverride };
++  const vetoed = decision?.status === 'VETO';
++  return { key: 'review', label: 'Review', status: vetoed ? 'failing' : 'missing',
++    reason: vetoed ? 'Intent vetoed by judge at t.' : AWAITING,
++    records: decision ? [{ record: 'intent-decision', decision: vetoed ? 'vetoed' : 'approved for implementation (not a review)', status: decision.status, actor: decision.actor, timestamp: decision.timestamp, entryHash: decision.entryHash, provenance: DECISION_NOTE }] : [] };
++}
++
++export function view(id: string, linkable: boolean, purpose: string) {
++  const { decision, overall, reachable } = fx;
++  const commit = (sha: string) => ({ edge: 'committed-under', target: sha, provenance: { sha, tree: TREE, branch: 'main' }, linkedAt: 't', actor: 'user', entryHash: `h-${sha.slice(0, 4)}` });
++  return {
++    integrity: 'valid', found: true, linkable,
++    intent: {
++      id, purpose, status: linkable ? 'PULSE' : 'SEALED', active: linkable, sealed: !linkable,
++      createdBy: 'user', createdAt: '2026-10-17T00:00:00.000Z', createdEntryHash: 'e'.repeat(64), decision,
++    },
++    edges: [
++      { edge: 'implements', target: 'runtime', provenance: { docPath: '<b>docs/RUNTIME.md</b>' }, linkedAt: 't', actor: 'user', entryHash: 'h1' },
++      { ...commit(SHA), entryHash: 'h2' },
++      ...fx.extraLinked.map(commit),
++    ],
++    assessment: {
++      intentId: id, overall, gaps: overall === 'evidence-complete-except-receipt' ? [] : ['architecture', 'review', 'governance'],
++      completeReachable: reachable.length === 0, completeBlockedBy: reachable,
++      steps: [
++        { key: 'issue', label: 'External issue', status: 'recorded', reason: 'r', records: [{ source: 'jira', key: 'PROJ-7', contentSha256: 'c'.repeat(64), createdEntryHash: 'e'.repeat(64) }] },
++        { key: 'architecture', label: 'Governing architecture', status: 'stale', reason: 'changed', records: [{ target: 'runtime', docPath: '<b>docs/RUNTIME.md</b>', docSha256: 'd'.repeat(64), sourceSha: SHA, status: 'stale', currentSha256: 'f'.repeat(64), via: 'workspace-delivery' }] },
++        { key: 'code', label: 'Implementation', status: 'recorded', reason: 'r', records: [{ sha: SHA, tree: TREE, branch: 'main', status: 'recorded', files: ['src/a.ts', '<i>x</i>'], filesTruncated: false, via: 'governed-commit', action: 'organize' }] },
++        reviewStep(),
++        { key: 'governance', label: 'Governance evidence', status: 'recorded', reason: 'r', records: [
++          { entryId: 7, eventType: 'GOVERNANCE_PAUSED', timestamp: 't', entryHash: 'g'.repeat(64), matchedBy: 'intentId', value: id, kind: 'policy-decision', outcome: 'denied', chain: 'unknown' },
++        ] },
++        { key: 'receipt', label: 'Delivery receipt', status: 'unavailable', reason: 'Blocked on the damaged ledger (#467), B216.', records: [] },
++      ],
++    },
++  };
++}
++
++export const INTENTS = {
++  integrity: 'valid',
++  intents: [
++    { id: ACTIVE, purpose: '<img src=x onerror="window.__pwned=1">PROJ-7', type: 'feature', status: 'PULSE', createdAt: 't', active: true },
++    { id: SEALED, purpose: 'PROJ-6 — older', type: 'feature', status: 'SEALED', createdAt: 't', active: false },
++  ],
++};
++const CANDIDATES = {
++  architecture: { state: 'present', rows: [
++    { id: 'runtime', domain: 'runtime', docPath: 'docs/architecture/RUNTIME.md', status: 'canonical' },
++    { id: 'storage', domain: 'storage', docPath: 'docs/architecture/STORAGE.md', status: 'proposed' },
++  ] },
++  commits: { state: 'ok', head: SHA2, branch: 'main', commits: [
++    { sha: SHA2, subject: 'seed <script>alert(1)</script>' }, { sha: SHA, subject: 'older' },
++  ] },
++};
++
++type FetchFn = (url: string, init?: { method?: string; body?: string }) => Promise<unknown>;
++interface G { window?: unknown; document?: unknown; fetch?: unknown }
++export interface Posted { url: string; body: Record<string, unknown> }
++
++function getBody(url: string): unknown {
++  if (url === '/api/v1/delivery/intents') return INTENTS;
++  if (url === `/api/v1/delivery/intents/${ACTIVE}`) return view(ACTIVE, true, INTENTS.intents[0].purpose);
++  if (url === `/api/v1/delivery/intents/${SEALED}`) return view(SEALED, fx.secondLinkable, 'PROJ-6 — older');
++  return url === '/api/v1/delivery/candidates' ? CANDIDATES : { error: 'unknown' };
++}
++
++export function setupDom(): { cleanup: () => void; doc: Document; posted: Posted[]; fetched: string[] } {
++  const dom = new JSDOM('<!DOCTYPE html><html><head></head><body><div id="workspace"></div></body></html>', { url: 'http://localhost:9999' });
++  const g = global as unknown as G;
++  const prev = { window: g.window, document: g.document, fetch: g.fetch };
++  const posted: Posted[] = [];
++  const fetched: string[] = [];
++  g.window = dom.window;
++  g.document = dom.window.document;
++  g.fetch = async (url: string, init?: { method?: string; body?: string }) => {
++    fetched.push(url);
++    if (init?.method === 'POST') {
++      posted.push({ url, body: JSON.parse(init.body ?? '{}') });
++      return { ok: true, status: 200, json: async () => ({ ok: true }) };
++    }
++    const body = getBody(url);
++    return { ok: true, status: 200, json: async () => body };
++  };
++  return {
++    doc: dom.window.document as unknown as Document, posted, fetched,
++    cleanup: () => { g.window = prev.window; g.document = prev.document; g.fetch = prev.fetch; },
++  };
++}
++
++/** Dispatch a DOM event of `type` on `node` with the jsdom window's Event constructor. */
++export function fire(doc: Document, node: Element, type: string): void {
++  node.dispatchEvent(new (doc.defaultView as unknown as { Event: typeof Event }).Event(type, { bubbles: true }));
++}
++
++/**
++ * Hold the first POST to `url` until release(); then it completes normally (`fail` 'none'), rejects
++ * ('network') or answers HTTP 409 ('http'), the last two without reaching the recording fetch.
++ * Later POSTs pass through. held() is true once the first POST reached the gate.
++ * setupDom().cleanup restores the original fetch.
++ */
++export function holdPosts(url: string, fail: 'none' | 'network' | 'http' = 'none'): { release: () => void; held: () => boolean } {
++  const g = global as unknown as { fetch: FetchFn };
++  const prior = g.fetch;
++  let release!: () => void;
++  let held = false;
++  const gate = new Promise<void>((resolve) => { release = resolve; });
++  g.fetch = async (u, init) => {
++    if (!held && u === url && init?.method === 'POST') {
++      held = true;
++      await gate;
++      if (fail === 'network') throw new Error('late network failure');
++      if (fail === 'http') return { ok: false, status: 409, json: async () => ({ error: 'late refusal' }) };
++    }
++    return prior(u, init);
++  };
++  return { release, held: () => held };
++}
++
++/**
++ * Suspend the first GET of `url`: started resolves when it reaches the gate; after release() it
++ * completes normally, rejects with Error(failWith), or answers 200 with `body` instead.
++ */
++export function holdFirstGet(url: string, then: { failWith?: string; body?: unknown } = {}): { started: Promise<void>; release: () => void } {
++  const g = global as unknown as { fetch: FetchFn };
++  const prior = g.fetch;
++  let announce!: () => void;
++  let release!: () => void;
++  let first = true;
++  const started = new Promise<void>((resolve) => { announce = resolve; });
++  const gate = new Promise<void>((resolve) => { release = resolve; });
++  g.fetch = async (u, init) => {
++    if (first && u === url && init?.method !== 'POST') {
++      first = false;
++      announce();
++      await gate;
++      if (then.failWith) throw new Error(then.failWith);
++      if (then.body !== undefined) { await prior(u, init); return { ok: true, status: 200, json: async () => then.body }; } // recorded, then replaced
++    }
++    return prior(u, init);
++  };
++  return { started, release };
++}
++
++/**
++ * Wrap obj[method]. The n-th call of the returned function resolves when the n-th call of the
++ * method has settled, whether it is awaited before or after that call starts.
++ */
++export function settled(obj: Record<string, unknown>, method: string): () => Promise<void> {
++  const original = (obj[method] as (...args: unknown[]) => Promise<unknown>).bind(obj);
++  const waiters = new Map<number, () => void>();
++  let done = 0;
++  let asked = 0;
++  obj[method] = async (...args: unknown[]) => {
++    try { return await original(...args); } finally { done += 1; waiters.get(done)?.(); }
++  };
++  return () => {
++    const n = ++asked;
++    return n <= done ? Promise.resolve() : new Promise<void>((resolve) => { waiters.set(n, resolve); });
++  };
++}
++
++// #703 review-form helpers shared by the review and switch suites.
++export const REVIEW = '/api/actions/delivery/review';
++export const SHA3 = '7'.repeat(40);
++export const q = <T extends Element>(doc: Document, selector: string) => doc.querySelector(selector) as T;
++export const value = (doc: Document, selector: string) => q<HTMLInputElement | HTMLSelectElement>(doc, selector).value;
++export function typeNote(doc: Document, text: string): HTMLInputElement {
++  const note = q<HTMLInputElement>(doc, '.cc-dlv-review-note');
++  note.value = text;
++  fire(doc, note, 'input');
++  return note;
++}
++export function pick(doc: Document, selector: string, choice: string): void {
++  const select = q<HTMLSelectElement>(doc, selector);
++  select.value = choice;
++  fire(doc, select, 'change');
++}
++/** A failing review step whose blocking records are trusted VETOs, each [ledger id, sealed commit]. */
++export const vetoes = (...on: Array<[number, string]>) => ({
++  status: 'failing', reason: 'Rejected by review: VETO',
++  records: on.map(([id, commitSha]) => ({ record: 'blocking', kind: 'veto', id, hash: 'h'.repeat(64), label: 'Rejected by review: VETO.', verdict: 'VETO', commitSha, commitState: 'sealed' })),
++});
