@@ -1,0 +1,78 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-24T1904-4e594e",
+  "ts": "2026-11-24T20:25:10Z",
+  "plan_path": ".failsafe/governance/plans/plan-703-delivery-review-refresh-race.md",
+  "phases": [
+    "The #706 source as committed (no edits)",
+    "Review form across repaints, load-bearing guards, and the Razor split"
+  ],
+  "open_questions": [],
+  "doc_tier": "standard",
+  "terms": [],
+  "change_class": "hotfix",
+  "originating_remediation": "FailSafe #703 (PR #706)",
+  "boundaries": {
+    "limitations": [
+      "one in-memory review form and one note draft per renderer, each tagged with intent (note also commit); the form is not cleared by a successful review; reload drops both",
+      "in-flight guard is per renderer, disabling review on every intent while one POST is pending",
+      "an intent-scoped completion message stays held until its intent is painted again",
+      "UI guard is not the authority; server review lock (FX1010) remains",
+      "FX589 is a stub-client journey, not a live Bicameral daemon; its 250 ms delay alone does not detect a regression",
+      "link and unlink still do not catch a network rejection",
+      "jsdom checks structure and ordering, not visuals"
+    ],
+    "non_goals": [
+      "server review semantics or payloads",
+      "draft persistence across reloads",
+      "version bump, tag or release"
+    ],
+    "exclusions": [
+      ".github/workflows/**",
+      "pre-existing file-length findings reduced not removed: renderer 482->433, test 380->296",
+      "suite() registration callbacks measured but exempt from the 40-line limit (274, 116, 212)"
+    ]
+  },
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX1010",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.review.test.ts",
+      "test_descriptor": "the picked commit, rework picks and unsent note survive a repaint and are posted; a newer draft survives an older POST; PASS and VETO cannot both post"
+    },
+    {
+      "entry_id": "FX1010",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.refresh.test.ts",
+      "test_descriptor": "a stale listing/detail/candidates/failed GET neither repaints nor keeps fetching; a late review or link result shows only on its initiating intent, once"
+    },
+    {
+      "entry_id": "FX589",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/ui/bicameral-advanced-tools.spec.ts",
+      "test_descriptor": "after a 250 ms delayed stub connect the journey waits for status running, then dashboard result shows features 3 and decisions 12"
+    }
+  ],
+  "ci_commands": [
+    "npm ci",
+    "npm run compile",
+    "npm run lint",
+    "npm run test:node",
+    "npm run test:ui",
+    "npm test",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File tools/reliability/prepush-validate.ps1",
+    "npm run build:package"
+  ],
+  "iteration": 4,
+  "supersedes_plan_sha256": "427eab02b2af1926b92df990ce32908a6bb8b73ecd6fdf3147eacc48b8c3deb3",
+  "source_revision": "c38f970d045bb0fddad53bcd5436f4c642690f23",
+  "plan_sha256": "7cf505cd00e3e6f41e96208424d2ca5065f5910fc28a0cd0e59be722d283ec92",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "absent",
+    "ts": "2026-11-24T20:25:10Z"
+  }
+}

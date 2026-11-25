@@ -1,0 +1,9 @@
+{
+  "session": "2026-11-24T1904-4e594e",
+  "plan_path": ".failsafe/governance/plans/plan-703-delivery-review-refresh-race.md",
+  "plan_hash": "49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891",
+  "audit_path": ".failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter7.md",
+  "audit_hash": "d68be3fedec7870247d6a6fbe330129dee9513dc60242e61a5f8e37f2879d735",
+  "head_commit": "c38f970d045bb0fddad53bcd5436f4c642690f23",
+  "captured_ts": "2026-11-25T06:08:16.153156Z"
+}

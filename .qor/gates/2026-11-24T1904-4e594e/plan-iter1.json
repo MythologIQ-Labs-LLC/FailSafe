@@ -1,0 +1,70 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-24T1904-4e594e",
+  "ts": "2026-11-24T19:06:50Z",
+  "plan_path": ".failsafe/governance/plans/plan-703-delivery-review-refresh-race.md",
+  "phases": [
+    "The #706 source as committed (no edits)",
+    "Behaviour-preserving Razor repair"
+  ],
+  "open_questions": [],
+  "doc_tier": "standard",
+  "terms": [],
+  "change_class": "hotfix",
+  "originating_remediation": "FailSafe #703 (PR #706)",
+  "boundaries": {
+    "limitations": [
+      "one in-memory draft slot per renderer; reload drops it",
+      "in-flight guard is per renderer, disabling review on every intent while one POST is pending",
+      "an intent-scoped completion message stays held until its intent is painted again",
+      "UI guard is not the authority; server review lock (FX1010) remains",
+      "FX589 is a stub-client journey, not a live Bicameral daemon",
+      "jsdom checks structure and ordering, not visuals"
+    ],
+    "non_goals": [
+      "server review semantics or payloads",
+      "link/unlink error handling beyond intent-scoped messages",
+      "draft persistence across reloads",
+      "version bump, tag or release"
+    ],
+    "exclusions": [
+      ".github/workflows/**",
+      "pre-existing file-length Razor findings in delivery-assessment-renderer.js (482) and its test (380) at origin/main"
+    ]
+  },
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX1010",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/roadmap/delivery-assessment-renderer.test.ts",
+      "test_descriptor": "a typed review note survives repaint; stale GET/POST completions cannot repaint, reset selection, erase a newer draft or report under another intent; PASS and VETO cannot both post"
+    },
+    {
+      "entry_id": "FX589",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/ui/bicameral-advanced-tools.spec.ts",
+      "test_descriptor": "after a 250 ms delayed stub connect the journey waits for status running, then dashboard result shows features 3 and decisions 12"
+    }
+  ],
+  "ci_commands": [
+    "npm ci",
+    "npm run compile",
+    "npm run lint",
+    "npm run test:node",
+    "npm run test:ui",
+    "npm test",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File tools/reliability/prepush-validate.ps1",
+    "npm run build:package"
+  ],
+  "iteration": 1,
+  "source_revision": "c38f970d045bb0fddad53bcd5436f4c642690f23",
+  "plan_sha256": "80bd7180578e38f8a72b7d7dd1877513b604e6816400a44013647164cdeed9d9",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "absent",
+    "ts": "2026-11-24T19:06:51Z"
+  }
+}

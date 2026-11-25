@@ -23,6 +23,9 @@
  * on its Refresh button, after a link or unlink, and on a `delivery.changed` event.
  */
 
+import { el, button } from './delivery-dom.js';
+import { reviewControls } from './delivery-review-controls.js';
+
 const STYLE_ID = 'cc-dlv-style';
 const STYLE = `
 .cc-dlv { display:flex; flex-direction:column; gap:12px; }
@@ -91,22 +94,8 @@ function linkedBy(rec) {
   return 'not recorded';
 }
 
-function el(tag, cls, text) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined && text !== null) node.textContent = String(text);
-  return node;
-}
-
 function pill(label, cls) {
   return el('span', `cc-dlv-pill ${cls}`, label);
-}
-
-function button(label, cls, onClick) {
-  const b = el('button', `cc-dlv-btn${cls ? ` ${cls}` : ''}`, label);
-  b.type = 'button';
-  b.addEventListener('click', onClick);
-  return b;
 }
 
 function row(key, value) {
@@ -189,6 +178,11 @@ export class DeliveryAssessmentRenderer {
     this.container = document.getElementById(containerId);
     this.selectedId = null;
     this.message = null;
+    // #703: the review form survives a repaint (delivery-review-controls.js); one review request at a time.
+    this.reviewForm = null;
+    this.reviewNoteDraft = null;
+    this.reviewInFlight = false;
+    this.refreshGeneration = 0;
   }
 
   ensureStyle() {
@@ -209,23 +203,29 @@ export class DeliveryAssessmentRenderer {
 
   async refresh() {
     if (!this.container) return;
+    // An older GET must never replace a newer selection or repaint its view.
+    const generation = ++this.refreshGeneration;
     this.ensureStyle();
     let state;
     try {
       const listing = await getJson('/api/v1/delivery/intents');
+      if (generation !== this.refreshGeneration) return;
       if (listing.integrity === 'invalid') { this.paint(this.container, { invalid: true }); return; }
       const intents = Array.isArray(listing.intents) ? listing.intents : [];
       const chosen = intents.find((i) => i.id === this.selectedId) || intents.find((i) => i.active) || intents[0];
       if (!chosen) { this.paint(this.container, { intents }); return; }
       this.selectedId = chosen.id;
       const view = await getJson(`/api/v1/delivery/intents/${encodeURIComponent(chosen.id)}`);
+      if (generation !== this.refreshGeneration) return;
       const candidates = view.linkable ? await getJson('/api/v1/delivery/candidates') : null;
       state = { intents, view, candidates };
     } catch (err) {
+      if (generation !== this.refreshGeneration) return;
       this.paint(this.container, { error: `Could not load the delivery assessment: ${err && err.message ? err.message : err}` });
       return;
     }
     // Paint into the container current at completion (the TabGroup may have swapped it).
+    if (generation !== this.refreshGeneration) return;
     this.paint(this.container, state);
   }
 
@@ -238,7 +238,9 @@ export class DeliveryAssessmentRenderer {
     root.appendChild(this.legend());
     if (state.intents && state.intents.length) sub.appendChild(this.picker(state.intents));
     sub.appendChild(button('Refresh', 'cc-dlv-refresh', () => this.refresh()));
-    if (this.message) {
+    // Only the intent that initiated an operation may display its completion.
+    // A pending POST can resolve after the operator navigates to another intent.
+    if (this.message && this.message[2] === state.view?.intent?.id) {
       root.appendChild(el('p', `cc-dlv-result${this.message[1] ? ' cc-dlv-result-bad' : ''}`, this.message[0]));
       this.message = null;
     }
@@ -344,79 +346,28 @@ export class DeliveryAssessmentRenderer {
     }
     if (view.linkable && candidates && step.key === 'architecture') card.appendChild(this.linkArchitecture(view, candidates));
     if (view.linkable && candidates && step.key === 'code') card.appendChild(this.linkCommit(view, candidates));
-    if (view.linkable && step.key === 'review') card.appendChild(this.reviewControls(view));
+    if (view.linkable && step.key === 'review') card.appendChild(reviewControls(this, view));
     return card;
-  }
-
-  /** plan-b320 LD9: Record PASS / Record VETO on one linked commit, with a note; each posts once. */
-  reviewControls(view) {
-    const actions = el('div', 'cc-dlv-actions cc-dlv-review-actions');
-    const linked = view.edges.filter((e) => e.edge === 'committed-under');
-    if (!linked.length) {
-      actions.appendChild(el('span', 'cc-dlv-line', 'Link a commit first; a review is recorded on one linked commit.'));
-      return actions;
-    }
-    const select = el('select', 'cc-dlv-select cc-dlv-review-pick');
-    select.setAttribute('aria-label', 'Commit to review');
-    for (const e of linked) {
-      const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
-      opt.value = e.target;
-      select.appendChild(opt);
-    }
-    select.selectedIndex = linked.length - 1;
-    const note = el('input', 'cc-dlv-select cc-dlv-review-note');
-    note.type = 'text';
-    note.maxLength = 500;
-    note.placeholder = 'Note (optional)';
-    note.setAttribute('aria-label', 'Review note');
-    actions.appendChild(select);
-    actions.appendChild(note);
-    const reworkPicks = this.reworkPicks(view, linked);
-    for (const pick of reworkPicks) actions.appendChild(pick.parentNode);
-    const reworksOf = () => reworkPicks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
-    const record = (verdict, btn) => {
-      btn.disabled = true;
-      void this.review(view.intent.id, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
-    };
-    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS', pass));
-    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO', veto));
-    actions.appendChild(pass);
-    actions.appendChild(veto);
-    return actions;
-  }
-
-  /**
-   * #532 B344 (plan-b344 LD5): a "Reworked by" select on each blocking trusted VETO (a sealed row's
-   * commit): none, or a linked commit other than the vetoed one. The server verifies the relation.
-   */
-  reworkPicks(view, linked) {
-    const step = ((view.assessment && view.assessment.steps) || []).find((s) => s.key === 'review');
-    const vetoes = ((step && step.records) || []).filter((r) => r.record === 'blocking' && r.kind === 'veto' && r.commitState === 'sealed' && r.commitSha);
-    return vetoes.map((r) => {
-      const wrap = el('label', 'cc-dlv-line cc-dlv-rework', `Reworked by (VETO #${r.id} on ${String(r.commitSha).slice(0, 12)}): `);
-      const pick = el('select', 'cc-dlv-select cc-dlv-rework-pick');
-      pick.setAttribute('data-veto', String(r.id));
-      pick.setAttribute('aria-label', `Linked commit that reworks the VETO in ledger entry #${r.id}`);
-      const none = el('option', null, 'none');
-      none.value = '';
-      pick.appendChild(none);
-      for (const e of linked.filter((x) => x.target !== r.commitSha)) {
-        const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
-        opt.value = e.target;
-        pick.appendChild(opt);
-      }
-      wrap.appendChild(pick);
-      return pick;
-    });
   }
 
   async review(intentId, verdict, commitSha, note, reworks = []) {
     const body = reworks.length ? { intentId, verdict, commitSha, note, reworks } : { intentId, verdict, commitSha, note };
-    const { status, data } = await postJson('/api/actions/delivery/review', body);
-    this.message = status === 200
-      ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
-      : [data.error || `Recording the review failed (${status}).`, true];
-    await this.refresh();
+    const submittedDraft = this.reviewNoteDraft;
+    try {
+      const { status, data } = await postJson('/api/actions/delivery/review', body);
+      if (status === 200 && submittedDraft && this.reviewNoteDraft === submittedDraft &&
+          submittedDraft.intentId === intentId && submittedDraft.commitSha === commitSha && submittedDraft.value === note) {
+        this.reviewNoteDraft = null;
+      }
+      this.message = status === 200
+        ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false, intentId]
+        : [data.error || `Recording the review failed (${status}).`, true, intentId];
+    } catch (err) {
+      this.message = [`Recording the review failed: ${err && err.message ? err.message : err}`, true, intentId];
+    } finally {
+      this.reviewInFlight = false;
+      await this.refresh();
+    }
   }
 
   linkArchitecture(view, candidates) {
@@ -471,8 +422,8 @@ export class DeliveryAssessmentRenderer {
     const url = action === 'unlink' ? '/api/actions/delivery/unlink' : '/api/actions/delivery/link';
     const { status, data } = await postJson(url, { intentId, edge, target });
     this.message = status === 200
-      ? [action === 'unlink' ? 'Link removed and recorded in the intent history.' : 'Link recorded in the intent history.', false]
-      : [data.error || `${action === 'unlink' ? 'Unlink' : 'Link'} failed (${status}).`, true];
+      ? [action === 'unlink' ? 'Link removed and recorded in the intent history.' : 'Link recorded in the intent history.', false, intentId]
+      : [data.error || `${action === 'unlink' ? 'Unlink' : 'Link'} failed (${status}).`, true, intentId];
     await this.refresh();
   }
 
