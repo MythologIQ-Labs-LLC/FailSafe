@@ -1,0 +1,14 @@
+KILLED    J1 census N consistency dropped | rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures
+APPLY-FAIL J2 committedModes vacuous null (0)
+KILLED    J3 FC006 scans past Tier 1 section | FC006 detects missing and duplicated version authority rows, scoped to Tier 1
+KILLED    J4 FC006 any Tier heading | #722: the checked-out repository has no current-release marker error (prospective stale-marker guard); current checked-out Tier-1 governance version authority matches the real manifest
+APPLY-FAIL J5 trackedFiles vacuous null (0)
+KILLED    J6 tier-1 absent rows skipped | rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+KILLED    J7 FC006 substring match | FC006 detects missing and duplicated version authority rows, scoped to Tier 1
+KILLED    J9 state marker read anywhere | reads the current-release marker only from the head of SYSTEM_STATE, not from its history
+KILLED    J10 private count not compared | accepts claims only inside one publication section, rejecting duplicate claims; rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures
+SURVIVED  J11 HEAD read failure tolerated | 
+KILLED    J12 FC006 row found by any purpose | #722: the checked-out repository has no current-release marker error (prospective stale-marker guard); current checked-out Tier-1 governance version authority matches the real manifest
+KILLED    J13 tier-1 rows not starting with backtick ignored | binds every explicit Tier-1 authority to a regular tracked HEAD blob, except one disclosed local YAML; rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+APPLY-FAIL J5b trackedFiles vacuous null for the real repository only (0)
+KILLED    J2b committedModes vacuous null for the real repository only | binds every explicit Tier-1 authority to a regular tracked HEAD blob, except one disclosed local YAML

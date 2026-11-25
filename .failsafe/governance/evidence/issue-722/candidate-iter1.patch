@@ -1,0 +1,812 @@
+diff --git a/.github/workflows/repo-standards-enforcement.yml b/.github/workflows/repo-standards-enforcement.yml
+index 849760d0..1af7ab74 100644
+--- a/.github/workflows/repo-standards-enforcement.yml
++++ b/.github/workflows/repo-standards-enforcement.yml
+@@ -52,7 +52,7 @@ jobs:
+       - name: Governance document and publication regressions
+         working-directory: FailSafe/extension
+         run: |
+-          node --test src/test/governance/governance-index-publication.test.cjs src/test/scripts/governanceCurrency.test.cjs
++          node --test src/test/governance/governance-index-publication.test.cjs src/test/governance/governance-index-census.test.cjs src/test/scripts/governanceCurrency.test.cjs
+ 
+       - name: Lint
+         working-directory: FailSafe/extension
+diff --git a/FailSafe/extension/scripts/check-governance-currency.cjs b/FailSafe/extension/scripts/check-governance-currency.cjs
+index 03295104..ca4db87c 100644
+--- a/FailSafe/extension/scripts/check-governance-currency.cjs
++++ b/FailSafe/extension/scripts/check-governance-currency.cjs
+@@ -19,22 +19,24 @@ const REL = Object.freeze({
+ const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+ const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+ 
++const USAGE = 'Usage: check-governance-currency.cjs [--repo-root PATH] [--format json] [--enforce]';
++// Each option: how many values it consumes and how it applies them. Each may appear once.
++const OPTIONS = Object.freeze({
++  '--repo-root': { values: 1, apply: (args, value) => { args.root = value; } },
++  '--format': { values: 1, apply: (args, value) => { if (value !== 'json') throw new Error(USAGE); args.json = true; } },
++  '--enforce': { values: 0, apply: (args) => { args.enforce = true; } },
++});
++
+ function parseArgs(argv) {
+   const args = { root: process.cwd(), json: false, enforce: false };
+   const seen = new Set();
+   for (let i = 0; i < argv.length; i++) {
+-    const token = argv[i];
+-    if (token === '--repo-root' && !seen.has(token) && argv[i + 1]) {
+-      args.root = argv[++i];
+-    } else if (token === '--format' && !seen.has(token) && argv[i + 1] === 'json') {
+-      i += 1;
+-      args.json = true;
+-    } else if (token === '--enforce' && !seen.has(token)) {
+-      args.enforce = true;
+-    } else {
+-      throw new Error('Usage: check-governance-currency.cjs [--repo-root PATH] [--format json] [--enforce]');
+-    }
+-    seen.add(token);
++    const option = OPTIONS[argv[i]];
++    const value = argv[i + 1];
++    if (!option || seen.has(argv[i]) || (option.values === 1 && !value)) throw new Error(USAGE);
++    seen.add(argv[i]);
++    option.apply(args, value);
++    i += option.values;
+   }
+   return args;
+ }
+@@ -126,10 +128,18 @@ function checkCurrency(rootArg) {
+   const published = sections.filter(m => m[1] === version);
+   if (published.length !== 1) throw new Error(`Expected exactly one CHANGELOG heading for ${version}; got ${published.length}`);
+   const publishedAt = releaseDate(published[0][2]);
++  const findings = markerFindings(source, version, publishedAt, sections[0]?.[1]);
++  return { kind: 'candidate-document-currency', version, publishedAt, reviewedAt: indexReviewDate(source.governance), findings, summary: {
++    errors: findings.filter(f => f.severity === 'error').length,
++    warnings: findings.filter(f => f.severity === 'warning').length,
++  } };
++}
++
++/** FC001-FC006: each current-release marker against the manifest version and its release date. */
++function markerFindings(source, version, publishedAt, newest) {
+   const findings = [];
+   const error = (id, rel, message) => findings.push({ id, severity: 'error', path: rel, message });
+   const warn = (id, rel, message) => findings.push({ id, severity: 'warning', path: rel, message });
+-  const newest = sections[0]?.[1];
+   if (newest !== version) error('FC001', REL.changelog, `Newest release heading ${newest ?? "missing"} differs from extension manifest ${version}`);
+ 
+   const stateRelease = singleHeader(source.state.slice(0, 12000), /^\*\*Current Release:\*\*[ \t]*v?(\S+)/gm, 'SYSTEM_STATE Current Release');
+@@ -150,10 +160,7 @@ function checkCurrency(rootArg) {
+   if (featureLead && featureLead[1] !== version) {
+     warn('FC005', REL.features, `Feature Index introduction names historical ${featureLead[1]}; current release ${version}. Review actual FX coverage, not just prose.`);
+   }
+-  return { kind: 'candidate-document-currency', version, publishedAt, reviewedAt, findings, summary: {
+-    errors: findings.filter(f => f.severity === 'error').length,
+-    warnings: findings.filter(f => f.severity === 'warning').length,
+-  } };
++  return findings;
+ }
+ 
+ function main(argv) {
+diff --git a/FailSafe/extension/src/test/governance/governance-index-census.test.cjs b/FailSafe/extension/src/test/governance/governance-index-census.test.cjs
+new file mode 100644
+index 00000000..8bb34ba7
+--- /dev/null
++++ b/FailSafe/extension/src/test/governance/governance-index-census.test.cjs
+@@ -0,0 +1,132 @@
++/**
++ * #722 Tier-1 authority registry and publication census, read from docs/GOVERNANCE_INDEX.md.
++ *
++ * Tier 1 is an authority registry: every backticked first-cell path, including multi-path rows,
++ * JSON and YAML, must be a regular blob in committed HEAD (one disclosed operator-local file
++ * excepted). The publication totals stated in the index are recomputed from the committed tree
++ * by FX939's first-backticked-.md-per-row rule and must match. Planted fixtures prove refusals.
++ *
++ * Runs standalone: node --test src/test/governance/governance-index-census.test.cjs
++ */
++
++'use strict';
++
++const { describe, it } = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('fs');
++const path = require('path');
++const { spawnSync } = require('child_process');
++const {
++  indexText, trackedFiles, verifyPublicationCensus, tierOneRegistrations, committedModes, verifyTierOneRegistrations,
++} = require('./governanceIndexReaders.cjs');
++
++describe('#722 GOVERNANCE_INDEX Tier-1 authority and publication census', () => {
++
++  it('binds every explicit Tier-1 authority to a regular tracked HEAD blob, except one disclosed local YAML', () => {
++    const modes = committedModes();
++    if (modes === null) return; // Archive/package without Git: no branch-authority claim.
++    const result = verifyTierOneRegistrations(indexText(), modes);
++    assert.ok(result.paths >= 19, 'Tier-1 registration coverage unexpectedly contracted');
++    assert.equal(result.committed, result.paths - 1);
++  });
++
++  it('rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions', () => {
++    const text = indexText();
++    const registrations = tierOneRegistrations(text);
++    const names = registrations.map((row) => row.path);
++    assert.ok(names.includes('.github/copilot-instructions.md'),
++      'Fixture requires the agent-instruction multi-path row');
++    const modes = new Map(names.filter((name) => name !== 'docs/roadmap/tracker-config.yaml')
++      .map((name) => [name, '100644']));
++    assert.equal(verifyTierOneRegistrations(text, modes).paths, names.length);
++    modes.delete('GEMINI.md');
++    assert.throws(() => verifyTierOneRegistrations(text, modes),
++      /Tier-1 canonical authority is absent/);
++    modes.set('GEMINI.md', '100644');
++    modes.set('.github/copilot-instructions.md', '120000');
++    assert.throws(() => verifyTierOneRegistrations(text, modes),
++      /not a regular-file blob/);
++    modes.set('.github/copilot-instructions.md', '100644');
++    modes.set('docs/roadmap/tracker-config.yaml', '100644');
++    assert.throws(() => verifyTierOneRegistrations(text, modes),
++      /Operator-local tracker unexpectedly published/);
++    modes.delete('docs/roadmap/tracker-config.yaml');
++    assert.throws(() => verifyTierOneRegistrations(
++      text.replace('A local file, not in the repository', 'published authority'), modes
++    ), /operator-local Tier-1 exception/);
++    assert.throws(() => verifyTierOneRegistrations(
++      text.replace('\x60GEMINI.md\x60', '\x60AGENTS.md\x60'), modes
++    ), /duplicate canonical paths/);
++    assert.throws(() => verifyTierOneRegistrations(
++      text.replace('\x60FailSafe/extension/package.json\x60', '\x60package.json\x60'), modes
++    ), /Tier-1 canonical authority is absent/);
++    modes.set('package.json', '100644'); // a committed root manifest still cannot replace the nested one
++    assert.throws(() => verifyTierOneRegistrations(
++      text.replace('\x60FailSafe/extension/package.json\x60', '\x60package.json\x60'), modes
++    ), /Canonical nested Node manifest must remain/);
++  });
++
++  it('checks recorded publication totals against current tracked tree, rather than trusting historical prose', () => {
++    const tracked = trackedFiles();
++    if (tracked === null) return; // GitHub source review is separately required without a checkout.
++    const census = verifyPublicationCensus(indexText(), tracked);
++    assert.equal(census.registered, census.tracked + census.private + census.shapes);
++  });
++
++  it('rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures', () => {
++    const rows = '| `docs/a.md` | published |\n| `docs/private.md` | private |\n| `docs/plan-*.md` | shape |\n';
++    const section = '\n## Publication status\n- private-by-default: `docs/`\n';
++    const ending = '\n## Out-of-tier paths\n';
++    const make = (claim) => rows + section + claim + ending;
++    const actual = make('1 of the 3 paths registered below have had that done; 1 have not.\n1 of the 3 are of that kind.\n');
++    const tracked = new Set(['docs/a.md']);
++    assert.deepEqual(verifyPublicationCensus(actual, tracked),
++      { registered: 3, tracked: 1, private: 1, shapes: 1 });
++    assert.throws(() => verifyPublicationCensus(
++      make('2 of the 3 paths registered below have had that done; 0 have not.\n1 of the 3 are of that kind.\n'), tracked
++    ), /publication status counts disagree/);
++    assert.throws(() => verifyPublicationCensus(
++      make('1 of the 3 paths registered below have had that done; 1 have not.\n'), tracked
++    ), /Missing or inconsistent publication census claims/);
++    assert.throws(() => verifyPublicationCensus(
++      actual.replace('- private-by-default: `docs/`', '- private-by-default: `.failsafe/`'), tracked
++    ), /registered paths missing outside private-by-default prefixes/);
++  });
++
++  it('uses committed HEAD, never a staged-only phantom, for publication evidence', (t) => {
++    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-fx939-git-'));
++    t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
++    const git = (...args) => {
++      const p = spawnSync('git', args, { cwd: tmp, encoding: 'utf8' });
++      assert.equal(p.status, 0, p.stderr);
++    };
++    git('init', '-q');
++    fs.writeFileSync(path.join(tmp, 'committed.md'), 'committed\n');
++    git('add', 'committed.md');
++    git('-c', 'user.name=FX939 Test', '-c', 'user.email=fx939@example.invalid',
++      '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=' + path.join(tmp, 'no-hooks'),
++      'commit', '-qm', 'initial');
++    fs.writeFileSync(path.join(tmp, 'staged-only.md'), 'not published\n');
++    git('add', 'staged-only.md');
++    const tracked = trackedFiles(tmp);
++    assert.equal(tracked.has('committed.md'), true);
++    assert.equal(tracked.has('staged-only.md'), false);
++  });
++
++  it('accepts claims only inside one publication section, rejecting duplicate claims', () => {
++    const actual = '| \`docs/a.md\` | published |\n| \`docs/private.md\` | private |\n'
++      + '| \`docs/plan-*.md\` | shape |\n'
++      + '## Publication status\n- private-by-default: \`docs/\`\n'
++      + '1 of the 3 paths registered below have had that done; 1 have not.\n'
++      + '1 of the 3 are of that kind.\n## Out-of-tier paths\n';
++    const tracked = new Set(['docs/a.md']);
++    const falseHistorical = '99 of the 100 paths registered below have had that done; 1 have not.\n'
++      + '1 of the 100 are of that kind.\n';
++    assert.deepEqual(verifyPublicationCensus(falseHistorical + actual, tracked),
++      { registered: 3, tracked: 1, private: 1, shapes: 1 });
++    assert.throws(() => verifyPublicationCensus(
++      actual.replace('## Out-of-tier paths',
++        '1 of the 3 paths registered below have had that done; 1 have not.\n## Out-of-tier paths'), tracked
++    ), /Missing or inconsistent publication census claims/);
++  });
++});
+diff --git a/FailSafe/extension/src/test/governance/governance-index-publication.test.cjs b/FailSafe/extension/src/test/governance/governance-index-publication.test.cjs
+index e5ebe418..c23c095e 100644
+--- a/FailSafe/extension/src/test/governance/governance-index-publication.test.cjs
++++ b/FailSafe/extension/src/test/governance/governance-index-publication.test.cjs
+@@ -25,217 +25,12 @@
+ 
+ const { describe, it } = require('node:test');
+ const assert = require('node:assert/strict');
+-const fs = require('fs');
+-const path = require('path');
+-const { spawnSync } = require('child_process');
+-
+-// src/test/governance -> src/test -> src -> extension -> FailSafe -> <repo root>
+-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
+-const INDEX = path.join(REPO_ROOT, 'docs', 'GOVERNANCE_INDEX.md');
+-
+-function indexText() {
+-  return fs.readFileSync(INDEX, 'utf8');
+-}
+-
+-/** A row path naming a shape rather than a file. */
+-function isPattern(p) {
+-  return p.includes('*') || p.includes('<');
+-}
+-
+-/**
+- * Every `.md` path appearing in the first cell of a TIER-table row.
+- *
+- * Everything from the `## Out-of-tier paths` heading onward is excluded. That
+- * section exists, in its own words, "so they are not confused with governance" —
+- * treating its rows as registered artifacts is exactly the confusion it was
+- * written to prevent, and doing so made `confidentiality.md` look unexplained
+- * after it had been correctly relocated there.
+- */
+-function registeredPaths(text) {
+-  const cut = text.indexOf('## Out-of-tier paths');
+-  const tiers = cut === -1 ? text : text.slice(0, cut);
+-  return [...tiers.matchAll(/^\|\s*`([^`]+\.md)`/gm)].map((m) => m[1]);
+-}
+-
+-/**
+- * Prefixes the index declares private-by-default, read from the
+- * `## Publication status` section rather than hardcoded here — a check that
+- * carried its own copy of the list could not detect the list going stale.
+- */
+-function declaredPrivatePrefixes(text) {
+-  const section = /^## Publication status$([\s\S]*?)^## /m.exec(text);
+-  if (!section) return [];
+-  return [...section[1].matchAll(/^- private-by-default:\s*`([^`]+)`/gm)].map((m) => m[1]);
+-}
+-
+-function trackedFiles(repoRoot = REPO_ROOT) {
+-  const cwd = { cwd: repoRoot, encoding: 'utf8' };
+-  const probe = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], cwd);
+-  if (probe.status !== 0) return null; // distribution without a Git checkout
+-  assert.equal(probe.stdout.trim(), 'true', 'FX939 requires a non-bare Git checkout');
+-
+-  // Commit tree is authoritative: git ls-files would also include index-only
+-  // staged files not present in this PR HEAD, falsely counting them as published.
+-  // -z prevents filenames containing newlines or whitespace from being mangled.
+-  const res = spawnSync('git', ['ls-tree', '-r', '-z', '--name-only', 'HEAD'], cwd);
+-  assert.equal(res.status, 0, 'FX939 could not read the committed HEAD tree: ' + res.stderr);
+-  return new Set(res.stdout.split('\0').filter(Boolean));
+-}
+-
+-/**
+- * FX939 publication census is row-based, not unique-path-based. It is deliberately
+- * narrower than all Tier-1 registrations: the historical contract enumerates only
+- * the first backticked .md path per tier table row.
+- */
+-function measuredPublicationCensus(text, tracked) {
+-  const prefixes = declaredPrivatePrefixes(text);
+-  const paths = registeredPaths(text);
+-  const tally = { registered: paths.length, tracked: 0, private: 0, shapes: 0, unexplained: [] };
+-  for (const p of paths) {
+-    if (isPattern(p)) tally.shapes++;
+-    else if (tracked.has(p)) tally.tracked++;
+-    else if (prefixes.some((pre) => p.startsWith(pre))) tally.private++;
+-    else tally.unexplained.push(p);
+-  }
+-  return tally;
+-}
+-
+-function claimedPublicationCensus(text) {
+-  // Do not accept an old count from a historical note outside the authoritative
+-  // publication section, or silently take the first of two conflicting claims.
+-  const section = /^## Publication status$([\s\S]*?)^## /m.exec(text);
+-  if (!section) throw new Error('Missing publication status section in GOVERNANCE_INDEX');
+-  const published = [...section[1].matchAll(/(\d+) of the (\d+) paths registered below have had that done;\s*(\d+) have not/g)];
+-  const patterns = [...section[1].matchAll(/(\d+) of the (\d+) are of that kind/g)];
+-  if (published.length !== 1 || patterns.length !== 1 || published[0][2] !== patterns[0][2]) {
+-    throw new Error('Missing or inconsistent publication census claims in GOVERNANCE_INDEX');
+-  }
+-  return {
+-    registered: Number(published[0][2]),
+-    tracked: Number(published[0][1]),
+-    private: Number(published[0][3]),
+-    shapes: Number(patterns[0][1]),
+-  };
+-}
+-
+-function verifyPublicationCensus(text, tracked) {
+-  const measured = measuredPublicationCensus(text, tracked);
+-  assert.deepEqual(measured.unexplained, [], 'registered paths missing outside private-by-default prefixes');
+-  const { unexplained, ...counts } = measured;
+-  assert.deepEqual(counts, claimedPublicationCensus(text),
+-    'GOVERNANCE_INDEX publication status counts disagree with the actual tracked/declared-private tier rows');
+-  return counts;
+-}
+-
+-
+-/**
+- * Tier 1 is an authority registry, not the historical Markdown publication census.
+- * Inspect EVERY backticked path in its first column, including multi-path rows,
+- * JSON and YAML. Otherwise a missing second agent instruction or version manifest
+- * can remain invisible while FX939's first-.md-path census still reports green.
+- */
+-function tierOneRegistrations(text) {
+-  const match = /^## Tier 1[^\n]*$/m.exec(text);
+-  assert.ok(match, 'Missing canonical Tier 1 section');
+-  const rest = text.slice(match.index + match[0].length);
+-  const next = rest.search(/^## /m);
+-  const section = next < 0 ? rest : rest.slice(0, next);
+-  const registrations = [];
+-  for (const line of section.split(/\r?\n/)) {
+-    if (!/^\|\s*\x60/.test(line)) continue;
+-    const cell = line.split('|')[1] || '';
+-    for (const m of cell.matchAll(/\x60([^\x60]+)\x60/g)) {
+-      registrations.push({ path: m[1], row: line });
+-    }
+-  }
+-  assert.ok(registrations.length, 'Tier 1 section contains no registered paths');
+-  return registrations;
+-}
+-
+-/** Read committed object modes, never staged-only index paths or workspace links. */
+-function committedModes(repoRoot = REPO_ROOT) {
+-  const cwd = { cwd: repoRoot, encoding: 'utf8' };
+-  const probe = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], cwd);
+-  if (probe.status !== 0) return null;
+-  assert.equal(probe.stdout.trim(), 'true', 'Tier-1 census requires a Git checkout');
+-  const result = spawnSync('git', ['ls-tree', '-r', '-z', 'HEAD'], cwd);
+-  assert.equal(result.status, 0, 'Cannot inspect committed Tier-1 files: ' + result.stderr);
+-  const modes = new Map();
+-  for (const entry of result.stdout.split('\0').filter(Boolean)) {
+-    const tab = entry.indexOf('\t');
+-    assert.ok(tab > 0, 'Malformed committed-tree entry');
+-    const metadata = entry.slice(0, tab).split(' ');
+-    assert.equal(metadata.length, 3, 'Malformed committed-tree metadata');
+-    modes.set(entry.slice(tab + 1), metadata[0]);
+-  }
+-  return modes;
+-}
+-
+-function verifyTierOneRegistrations(text, modes) {
+-  const rows = tierOneRegistrations(text);
+-  const names = rows.map((row) => row.path);
+-  assert.equal(new Set(names).size, names.length, 'Tier 1 has duplicate canonical paths');
+-  const localOnly = 'docs/roadmap/tracker-config.yaml';
+-  for (const { path: registered, row } of rows) {
+-    if (registered === localOnly) {
+-      assert.ok(row.includes('A local file, not in the repository'),
+-        'The one operator-local Tier-1 exception must explicitly disclose its absence');
+-      assert.equal(modes.has(registered), false,
+-        'Operator-local tracker unexpectedly published; review its authority classification');
+-      continue;
+-    }
+-    assert.equal(modes.get(registered), '100644',
+-      'Tier-1 canonical authority is absent from committed HEAD or not a regular-file blob: ' + registered);
+-  }
+-  assert.ok(names.includes('FailSafe/extension/package.json'),
+-    'Canonical nested Node manifest must remain a registered Tier-1 authority');
+-  return { paths: names.length, committed: names.length - 1, localOnly };
+-}
+-
++const {
++  indexText, isPattern, registeredPaths, declaredPrivatePrefixes, trackedFiles,
++} = require('./governanceIndexReaders.cjs');
+ 
+ describe('FX939 GOVERNANCE_INDEX publication status', () => {
+ 
+-  it('binds every explicit Tier-1 authority to a regular tracked HEAD blob, except one disclosed local YAML', () => {
+-    const modes = committedModes();
+-    if (modes === null) return; // Archive/package without Git: no branch-authority claim.
+-    const result = verifyTierOneRegistrations(indexText(), modes);
+-    assert.ok(result.paths >= 19, 'Tier-1 registration coverage unexpectedly contracted');
+-    assert.equal(result.committed, result.paths - 1);
+-  });
+-
+-  it('rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions', () => {
+-    const text = indexText();
+-    const registrations = tierOneRegistrations(text);
+-    const names = registrations.map((row) => row.path);
+-    assert.ok(names.includes('.github/copilot-instructions.md'),
+-      'Fixture requires the agent-instruction multi-path row');
+-    const modes = new Map(names.filter((name) => name !== 'docs/roadmap/tracker-config.yaml')
+-      .map((name) => [name, '100644']));
+-    assert.equal(verifyTierOneRegistrations(text, modes).paths, names.length);
+-    modes.delete('GEMINI.md');
+-    assert.throws(() => verifyTierOneRegistrations(text, modes),
+-      /Tier-1 canonical authority is absent/);
+-    modes.set('GEMINI.md', '100644');
+-    modes.set('.github/copilot-instructions.md', '120000');
+-    assert.throws(() => verifyTierOneRegistrations(text, modes),
+-      /not a regular-file blob/);
+-    modes.set('.github/copilot-instructions.md', '100644');
+-    modes.set('docs/roadmap/tracker-config.yaml', '100644');
+-    assert.throws(() => verifyTierOneRegistrations(text, modes),
+-      /Operator-local tracker unexpectedly published/);
+-    modes.delete('docs/roadmap/tracker-config.yaml');
+-    assert.throws(() => verifyTierOneRegistrations(
+-      text.replace('A local file, not in the repository', 'published authority'), modes
+-    ), /operator-local Tier-1 exception/);
+-    assert.throws(() => verifyTierOneRegistrations(
+-      text.replace('\x60GEMINI.md\x60', '\x60AGENTS.md\x60'), modes
+-    ), /duplicate canonical paths/);
+-    assert.throws(() => verifyTierOneRegistrations(
+-      text.replace('\x60FailSafe/extension/package.json\x60', '\x60package.json\x60'), modes
+-    ), /Tier-1 canonical authority is absent/);
+-  });
+-
+-
+   it('registers no path that is neither tracked nor under a declared-private prefix', () => {
+     const text = indexText();
+     const tracked = trackedFiles();
+@@ -273,71 +68,6 @@ describe('FX939 GOVERNANCE_INDEX publication status', () => {
+     );
+   });
+ 
+-
+-  it('checks recorded publication totals against current tracked tree, rather than trusting historical prose', () => {
+-    const tracked = trackedFiles();
+-    if (tracked === null) return; // GitHub source review is separately required without a checkout.
+-    const census = verifyPublicationCensus(indexText(), tracked);
+-    assert.equal(census.registered, census.tracked + census.private + census.shapes);
+-  });
+-
+-  it('rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures', () => {
+-    const rows = '| `docs/a.md` | published |\n| `docs/private.md` | private |\n| `docs/plan-*.md` | shape |\n';
+-    const section = '\n## Publication status\n- private-by-default: `docs/`\n';
+-    const ending = '\n## Out-of-tier paths\n';
+-    const make = (claim) => rows + section + claim + ending;
+-    const actual = make('1 of the 3 paths registered below have had that done; 1 have not.\n1 of the 3 are of that kind.\n');
+-    const tracked = new Set(['docs/a.md']);
+-    assert.deepEqual(verifyPublicationCensus(actual, tracked),
+-      { registered: 3, tracked: 1, private: 1, shapes: 1 });
+-    assert.throws(() => verifyPublicationCensus(
+-      make('2 of the 3 paths registered below have had that done; 0 have not.\n1 of the 3 are of that kind.\n'), tracked
+-    ), /publication status counts disagree/);
+-    assert.throws(() => verifyPublicationCensus(
+-      make('1 of the 3 paths registered below have had that done; 1 have not.\n'), tracked
+-    ), /Missing or inconsistent publication census claims/);
+-    assert.throws(() => verifyPublicationCensus(
+-      actual.replace('- private-by-default: `docs/`', '- private-by-default: `.failsafe/`'), tracked
+-    ), /registered paths missing outside private-by-default prefixes/);
+-  });
+-
+-  it('uses committed HEAD, never a staged-only phantom, for publication evidence', (t) => {
+-    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'failsafe-fx939-git-'));
+-    t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+-    const git = (...args) => {
+-      const p = spawnSync('git', args, { cwd: tmp, encoding: 'utf8' });
+-      assert.equal(p.status, 0, p.stderr);
+-    };
+-    git('init', '-q');
+-    fs.writeFileSync(path.join(tmp, 'committed.md'), 'committed\n');
+-    git('add', 'committed.md');
+-    git('-c', 'user.name=FX939 Test', '-c', 'user.email=fx939@example.invalid',
+-      '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=' + path.join(tmp, 'no-hooks'),
+-      'commit', '-qm', 'initial');
+-    fs.writeFileSync(path.join(tmp, 'staged-only.md'), 'not published\n');
+-    git('add', 'staged-only.md');
+-    const tracked = trackedFiles(tmp);
+-    assert.equal(tracked.has('committed.md'), true);
+-    assert.equal(tracked.has('staged-only.md'), false);
+-  });
+-
+-  it('accepts claims only inside one publication section, rejecting duplicate claims', () => {
+-    const actual = '| \`docs/a.md\` | published |\n| \`docs/private.md\` | private |\n'
+-      + '| \`docs/plan-*.md\` | shape |\n'
+-      + '## Publication status\n- private-by-default: \`docs/\`\n'
+-      + '1 of the 3 paths registered below have had that done; 1 have not.\n'
+-      + '1 of the 3 are of that kind.\n## Out-of-tier paths\n';
+-    const tracked = new Set(['docs/a.md']);
+-    const falseHistorical = '99 of the 100 paths registered below have had that done; 1 have not.\n'
+-      + '1 of the 100 are of that kind.\n';
+-    assert.deepEqual(verifyPublicationCensus(falseHistorical + actual, tracked),
+-      { registered: 3, tracked: 1, private: 1, shapes: 1 });
+-    assert.throws(() => verifyPublicationCensus(
+-      actual.replace('## Out-of-tier paths',
+-        '1 of the 3 paths registered below have had that done; 1 have not.\n## Out-of-tier paths'), tracked
+-    ), /Missing or inconsistent publication census claims/);
+-  });
+-
+   it('registers docs/README.md in some tier', () => {
+     assert.ok(
+       registeredPaths(indexText()).includes('docs/README.md'),
+diff --git a/FailSafe/extension/src/test/governance/governanceIndexReaders.cjs b/FailSafe/extension/src/test/governance/governanceIndexReaders.cjs
+new file mode 100644
+index 00000000..8c65d3e1
+--- /dev/null
++++ b/FailSafe/extension/src/test/governance/governanceIndexReaders.cjs
+@@ -0,0 +1,183 @@
++'use strict';
++/**
++ * Readers for docs/GOVERNANCE_INDEX.md shared by the FX939 publication suite and the #722
++ * Tier-1 authority and publication-census suite. Read-only: nothing here writes a file.
++ */
++
++const assert = require('node:assert/strict');
++const fs = require('fs');
++const path = require('path');
++const { spawnSync } = require('child_process');
++
++// src/test/governance -> src/test -> src -> extension -> FailSafe -> <repo root>
++const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
++const INDEX = path.join(REPO_ROOT, 'docs', 'GOVERNANCE_INDEX.md');
++
++function indexText() {
++  return fs.readFileSync(INDEX, 'utf8');
++}
++
++/** A row path naming a shape rather than a file. */
++function isPattern(p) {
++  return p.includes('*') || p.includes('<');
++}
++
++/**
++ * Every `.md` path appearing in the first cell of a TIER-table row.
++ *
++ * Everything from the `## Out-of-tier paths` heading onward is excluded. That
++ * section exists, in its own words, "so they are not confused with governance" —
++ * treating its rows as registered artifacts is exactly the confusion it was
++ * written to prevent, and doing so made `confidentiality.md` look unexplained
++ * after it had been correctly relocated there.
++ */
++function registeredPaths(text) {
++  const cut = text.indexOf('## Out-of-tier paths');
++  const tiers = cut === -1 ? text : text.slice(0, cut);
++  return [...tiers.matchAll(/^\|\s*`([^`]+\.md)`/gm)].map((m) => m[1]);
++}
++
++/**
++ * Prefixes the index declares private-by-default, read from the
++ * `## Publication status` section rather than hardcoded here — a check that
++ * carried its own copy of the list could not detect the list going stale.
++ */
++function declaredPrivatePrefixes(text) {
++  const section = /^## Publication status$([\s\S]*?)^## /m.exec(text);
++  if (!section) return [];
++  return [...section[1].matchAll(/^- private-by-default:\s*`([^`]+)`/gm)].map((m) => m[1]);
++}
++
++function trackedFiles(repoRoot = REPO_ROOT) {
++  const cwd = { cwd: repoRoot, encoding: 'utf8' };
++  const probe = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], cwd);
++  if (probe.status !== 0) return null; // distribution without a Git checkout
++  assert.equal(probe.stdout.trim(), 'true', 'FX939 requires a non-bare Git checkout');
++
++  // Commit tree is authoritative: git ls-files would also include index-only
++  // staged files not present in this PR HEAD, falsely counting them as published.
++  // -z prevents filenames containing newlines or whitespace from being mangled.
++  const res = spawnSync('git', ['ls-tree', '-r', '-z', '--name-only', 'HEAD'], cwd);
++  assert.equal(res.status, 0, 'FX939 could not read the committed HEAD tree: ' + res.stderr);
++  return new Set(res.stdout.split('\0').filter(Boolean));
++}
++
++/**
++ * FX939 publication census is row-based, not unique-path-based. It is deliberately
++ * narrower than all Tier-1 registrations: the historical contract enumerates only
++ * the first backticked .md path per tier table row.
++ */
++function measuredPublicationCensus(text, tracked) {
++  const prefixes = declaredPrivatePrefixes(text);
++  const paths = registeredPaths(text);
++  const tally = { registered: paths.length, tracked: 0, private: 0, shapes: 0, unexplained: [] };
++  const kindOf = (p) => {
++    if (isPattern(p)) return 'shapes';
++    if (tracked.has(p)) return 'tracked';
++    return prefixes.some((pre) => p.startsWith(pre)) ? 'private' : 'unexplained';
++  };
++  for (const p of paths) {
++    const kind = kindOf(p);
++    if (kind === 'unexplained') tally.unexplained.push(p);
++    else tally[kind]++;
++  }
++  return tally;
++}
++
++function claimedPublicationCensus(text) {
++  // Do not accept an old count from a historical note outside the authoritative
++  // publication section, or silently take the first of two conflicting claims.
++  const section = /^## Publication status$([\s\S]*?)^## /m.exec(text);
++  if (!section) throw new Error('Missing publication status section in GOVERNANCE_INDEX');
++  const published = [...section[1].matchAll(/(\d+) of the (\d+) paths registered below have had that done;\s*(\d+) have not/g)];
++  const patterns = [...section[1].matchAll(/(\d+) of the (\d+) are of that kind/g)];
++  if (published.length !== 1 || patterns.length !== 1 || published[0][2] !== patterns[0][2]) {
++    throw new Error('Missing or inconsistent publication census claims in GOVERNANCE_INDEX');
++  }
++  return {
++    registered: Number(published[0][2]),
++    tracked: Number(published[0][1]),
++    private: Number(published[0][3]),
++    shapes: Number(patterns[0][1]),
++  };
++}
++
++function verifyPublicationCensus(text, tracked) {
++  const measured = measuredPublicationCensus(text, tracked);
++  assert.deepEqual(measured.unexplained, [], 'registered paths missing outside private-by-default prefixes');
++  const { unexplained, ...counts } = measured;
++  assert.deepEqual(counts, claimedPublicationCensus(text),
++    'GOVERNANCE_INDEX publication status counts disagree with the actual tracked/declared-private tier rows');
++  return counts;
++}
++
++
++/**
++ * Tier 1 is an authority registry, not the historical Markdown publication census.
++ * Inspect EVERY backticked path in its first column, including multi-path rows,
++ * JSON and YAML. Otherwise a missing second agent instruction or version manifest
++ * can remain invisible while FX939's first-.md-path census still reports green.
++ */
++function tierOneRegistrations(text) {
++  const match = /^## Tier 1[^\n]*$/m.exec(text);
++  assert.ok(match, 'Missing canonical Tier 1 section');
++  const rest = text.slice(match.index + match[0].length);
++  const next = rest.search(/^## /m);
++  const section = next < 0 ? rest : rest.slice(0, next);
++  const registrations = [];
++  for (const line of section.split(/\r?\n/)) {
++    if (!/^\|\s*\x60/.test(line)) continue;
++    const cell = line.split('|')[1] || '';
++    for (const m of cell.matchAll(/\x60([^\x60]+)\x60/g)) {
++      registrations.push({ path: m[1], row: line });
++    }
++  }
++  assert.ok(registrations.length, 'Tier 1 section contains no registered paths');
++  return registrations;
++}
++
++/** Read committed object modes, never staged-only index paths or workspace links. */
++function committedModes(repoRoot = REPO_ROOT) {
++  const cwd = { cwd: repoRoot, encoding: 'utf8' };
++  const probe = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], cwd);
++  if (probe.status !== 0) return null;
++  assert.equal(probe.stdout.trim(), 'true', 'Tier-1 census requires a Git checkout');
++  const result = spawnSync('git', ['ls-tree', '-r', '-z', 'HEAD'], cwd);
++  assert.equal(result.status, 0, 'Cannot inspect committed Tier-1 files: ' + result.stderr);
++  const modes = new Map();
++  for (const entry of result.stdout.split('\0').filter(Boolean)) {
++    const tab = entry.indexOf('\t');
++    assert.ok(tab > 0, 'Malformed committed-tree entry');
++    const metadata = entry.slice(0, tab).split(' ');
++    assert.equal(metadata.length, 3, 'Malformed committed-tree metadata');
++    modes.set(entry.slice(tab + 1), metadata[0]);
++  }
++  return modes;
++}
++
++function verifyTierOneRegistrations(text, modes) {
++  const rows = tierOneRegistrations(text);
++  const names = rows.map((row) => row.path);
++  assert.equal(new Set(names).size, names.length, 'Tier 1 has duplicate canonical paths');
++  const localOnly = 'docs/roadmap/tracker-config.yaml';
++  for (const { path: registered, row } of rows) {
++    if (registered === localOnly) {
++      assert.ok(row.includes('A local file, not in the repository'),
++        'The one operator-local Tier-1 exception must explicitly disclose its absence');
++      assert.equal(modes.has(registered), false,
++        'Operator-local tracker unexpectedly published; review its authority classification');
++      continue;
++    }
++    assert.equal(modes.get(registered), '100644',
++      'Tier-1 canonical authority is absent from committed HEAD or not a regular-file blob: ' + registered);
++  }
++  assert.ok(names.includes('FailSafe/extension/package.json'),
++    'Canonical nested Node manifest must remain a registered Tier-1 authority');
++  return { paths: names.length, committed: names.length - 1, localOnly };
++}
++
++module.exports = {
++  REPO_ROOT, indexText, isPattern, registeredPaths, declaredPrivatePrefixes, trackedFiles,
++  measuredPublicationCensus, claimedPublicationCensus, verifyPublicationCensus,
++  tierOneRegistrations, committedModes, verifyTierOneRegistrations,
++};
+diff --git a/FailSafe/extension/src/test/scripts/governanceCurrency.test.cjs b/FailSafe/extension/src/test/scripts/governanceCurrency.test.cjs
+index 7f937939..4fb23d5d 100644
+--- a/FailSafe/extension/src/test/scripts/governanceCurrency.test.cjs
++++ b/FailSafe/extension/src/test/scripts/governanceCurrency.test.cjs
+@@ -7,6 +7,8 @@ const path = require('node:path');
+ const { spawnSync } = require('node:child_process');
+ const { checkCurrency } = require('../../../scripts/check-governance-currency.cjs');
+ const CLI = path.join(__dirname, '..', '..', '..', 'scripts', 'check-governance-currency.cjs');
++// A Windows junction needs no symlink privilege and lstat reports it as a symbolic link.
++const DIR_LINK = process.platform === 'win32' ? 'junction' : 'dir';
+ 
+ function fixture(t) {
+   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-doc-currency-'));
+@@ -92,8 +94,8 @@ test('refuses missing files and symlinks outside the checked repository', t => {
+   try {
+     fs.symlinkSync(path.join(f.root, 'docs/ARCHITECTURE_PLAN.md'), path.join(f.root, 'docs/FEATURE_INDEX.md'));
+   } catch (error) {
+-    // Some Windows hosts restrict symlink creation; absence was already tested.
+-    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return;
++    // Some Windows hosts restrict symlink creation; absence was already tested. Report it as skipped.
++    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return t.skip('symlink creation not permitted on this host');
+     throw error;
+   }
+   assert.throws(() => checkCurrency(f.root), /Not a regular file/);
+@@ -114,6 +116,8 @@ test('rejects unknown args and duplicate options with refusal exit 2', t => {
+   const f = fixture(t);
+   assert.equal(f.run('--something-unsafe').status, 2);
+   assert.equal(f.run('--enforce', '--enforce').status, 2);
++  assert.equal(f.run('--format', 'text').status, 2, 'only --format json is accepted');
++  assert.equal(f.run('--repo-root').status, 2, '--repo-root needs a value');
+ });
+ 
+ test('refuses malformed SYSTEM_STATE release suffix rather than accepting matching prefix', t => {
+@@ -142,9 +146,9 @@ test('refuses a canonical docs ancestor symlink even when the target remains in
+   const moved = path.join(f.root, 'docs-original');
+   fs.renameSync(canonical, moved);
+   try {
+-    fs.symlinkSync(moved, canonical, 'dir');
++    fs.symlinkSync(moved, canonical, DIR_LINK);
+   } catch (error) {
+-    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return;
++    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return t.skip('symlink creation not permitted on this host');
+     throw error;
+   }
+   assert.throws(() => checkCurrency(f.root), /Not a regular file.*docs\//);
+@@ -196,3 +200,30 @@ test('current checked-out Tier-1 governance version authority matches the real m
+   assert.equal(fs.readFileSync(path.join(f.root, 'docs', 'GOVERNANCE_INDEX.md'), 'utf8'), index,
+     'read-only validation must never update the governance review marker');
+ });
++
++test('#722: the checked-out repository has no current-release marker error (prospective stale-marker guard)', () => {
++  // Holds the real Tier-1 documents current: a release that leaves SYSTEM_STATE, ARCHITECTURE_PLAN,
++  // the Governance Index review marker or the Tier-1 version authority behind fails here.
++  const repo = path.resolve(__dirname, '..', '..', '..', '..', '..');
++  const report = checkCurrency(repo);
++  const errors = report.findings.filter((f) => f.severity === 'error');
++  assert.deepEqual(errors, [], `Tier-1 release markers disagree with v${report.version}: ${errors.map((e) => e.id + ' ' + e.message).join('; ')}`);
++});
++
++test('refuses an oversized source, a malformed manifest version and a symlinked repository root', t => {
++  const f = fixture(t);
++  f.write('docs/FEATURE_INDEX.md', 'x'.repeat(3 * 1024 * 1024 + 1));
++  assert.throws(() => checkCurrency(f.root), /Oversized source: docs\/FEATURE_INDEX\.md/);
++  const g = fixture(t);
++  g.write('FailSafe/extension/package.json', '{ "version": "6.0" }\n');
++  assert.throws(() => checkCurrency(g.root), /does not declare an unambiguous SemVer version/);
++  const link = path.join(os.tmpdir(), `failsafe-doc-currency-link-${process.pid}-${Date.now()}`);
++  try {
++    fs.symlinkSync(g.root, link, DIR_LINK);
++  } catch (error) {
++    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return t.skip('symlink creation not permitted on this host');
++    throw error;
++  }
++  t.after(() => fs.rmSync(link, { force: true }));
++  assert.throws(() => checkCurrency(link), /Repository root must be a real directory/);
++});
+diff --git a/docs/FEATURE_INDEX.md b/docs/FEATURE_INDEX.md
+index 5dc07b4b..a7a40e9b 100644
+--- a/docs/FEATURE_INDEX.md
++++ b/docs/FEATURE_INDEX.md
+@@ -688,7 +688,7 @@ Single canonical cross-reference for FailSafe v6.0.13, recording user-facing and
+ | FX936 | `.gitignore` rules anchor to paths that exist in this tree — generated Playwright output is ignored again | `plan-qor169-sprint1-seal-unblock.md` (GAP-HYG-01) | `.gitignore` (`extension/test-results/` -> `FailSafe/extension/test-results/`; 4 mis-anchored siblings + 2 dead token duplicates removed) | `src/test/governance/gitignore-anchoring.test.cjs` (4 cases) | verified | A pattern containing a slash anchors to the gitignore's own directory, so `extension/test-results/` matched `<root>/extension/`, which does not exist; the rule never fired and two Playwright artifacts reached the index. Carries inverse coverage — asserts the target IS ignored AND that `src/` is NOT, so a rule broadened to swallow the subtree fails rather than passes. The 4th assertion (no rule anchored to `<root>/extension/`) caught two further dead rules the audit had not found, `extension/.vsce-token` and `extension/.ovsx-token`; those are credential paths, but bare `.vsce-token`/`.ovsx-token` at `.gitignore:107-108` already cover them at any depth, so this was redundant config and never an exposure. No coverage lost by the removals: all five previously-matched paths re-verified ignored via `git check-ignore --no-index -v`. | governance |
+ | FX937 | TTS timeout-path latency assertion is deterministic and falsifying (#406 test-harness defect) | `plan-qor169-sprint1-seal-unblock.md` (GAP-TEST-01) | `src/roadmap/ui/modules/tts-engine.js` UNCHANGED — `_now` injection at `:64` already supported this | `src/test/roadmap/tts-engine-timeout-and-cancellation.test.ts` (`records the TIMEOUT path`) | verified | The prior assertion was `ms >= 20` against a configured bound of 20, read off the real wall clock. Two defects: it went red in CI on timer coarseness (run 33751001155, blocking dependabot PR #447 on an unrelated `qs` bump), and it could not falsify its own stated claim — an implementation echoing the bound back satisfies `20 >= 20`. Replaced with an injected clock advancing 37ms and `assert.strictEqual(ms, 37)`. Mutation-proved in BOTH directions: with `tts-engine.js` mutated to record `this.timeoutMs` instead of elapsed time, the old assertion passes (10 passing, exit 0) and the new one fails (1 failing, exit 1). `npm test` could not run — the local VS Code updater held `checkInnoSetupMutex` for 31s and the extension host refused to launch, a machine condition unrelated to this change; verified instead by direct `mocha --ui tdd` against compiled output (10 passing), following the same disclosure precedent as FX933. | governance |
+ | FX938 | `docs/SYSTEM_STATE.md` satisfies its own Tier 1 freshness contract — Current Release, Last Updated, and per-release body sections are machine-asserted | `plan-system-state-currency.md` + `docs/GOVERNANCE_INDEX.md` Tier 1 row | `docs/SYSTEM_STATE.md` (header restated to v6.0.4; six `##` sections added for the 6.x line + Entry #602) | `src/test/governance/system-state-currency.test.cjs` (4 cases) | verified | SYSTEM_STATE claimed `Current Release: v5.9.0` while the repo shipped v6.0.4 — five releases of Tier 1 drift against a contract of "MUST be current at every cycle close". Nothing caught it because nothing read the file: a grep over `scripts/` and `src/test/` for SYSTEM_STATE returned only ledger-fork fixtures and an unrelated `HubSnapshotService` test, and Step 6.5's `check_documentation_currency` asks only whether the current cycle's `files_touched` implies a doc update. It returned 0 warnings on the 2026-09-03 seal against this document in its stale state. All four assertions verified failing against `main` @ `1e1215cc` before the fix. Assertion 3 was INVERTED after an empirical check: written first as "Last Updated is not older than the newest section", it is satisfied by a header restamped while the body is abandoned (2026-08-20 >= 2026-05-28) and so passed on the exact defect it existed to catch; requiring a section FOR the claimed date fails on it. Mutation-proved both ways: reverting Current Release to v5.9.0 fails 2 assertions; restamping Last Updated with no matching section fails assertion 3. Surfaced but NOT repaired: v6.0.4 has no `DELIVER` ledger entry (last is #596 for v6.0.3; #601 is a retrospective seal recording "NO VERSION BUMP, NO SEAL TAG") — owned by `/qor-repo-release`. | governance |
+-| FX939 | `docs/GOVERNANCE_INDEX.md` distinguishes published from private-by-design, and a broken row is mechanically detectable | `plan-governance-index-publication-status.md` | `docs/GOVERNANCE_INDEX.md` (new `## Publication status` section; `confidentiality.md` relocated to Out-of-tier; `docs/README.md` registered Tier 5) | `src/test/governance/governance-index-publication.test.cjs` (3 cases) | verified | The index required every governance doc to be registered but had no vocabulary for published vs private, so 15 legitimately-private rows and 1 broken row were indistinguishable absences to a clone reader. `.gitignore:52-56` makes `docs/` and `.failsafe/` private by default ("governance records (licensing TBD)"), published by exception via `git add -f` — 38 of 68 registered paths have had that done. The broken row: `confidentiality.md` was registered as a root Tier 2 artifact while existing nowhere in the repository; it is operator memory holding pricing and tier internals per CLAUDE.md, and its contents were deliberately NOT imported — only the misrepresenting row was corrected, into the Out-of-tier section that already exists for this distinction. Falsifier run BEFORE the assertion was written per the Entry #603 standing correction, and it changed the design: 14 of the 68 rows name a shape rather than a file (`plan-*.md`, `entry-<N>-body.md`), which a reasoned-not-measured check would have reported as 14 false positives. The suite then caught a bug in its own extractor — it was counting the Out-of-tier table as registered rows, the exact confusion that section exists to prevent. Assertion 2's falsifier demonstrated by mutation per the audit mandate: a bogus `nonexistent-tree/` prefix fails with "dead declaration", removing it passes. | governance |
++| FX939 | `docs/GOVERNANCE_INDEX.md` distinguishes published from private-by-design, and a broken row is mechanically detectable | `plan-governance-index-publication-status.md` | `docs/GOVERNANCE_INDEX.md` (new `## Publication status` section; `confidentiality.md` relocated to Out-of-tier; `docs/README.md` registered Tier 5) | `src/test/governance/governance-index-census.test.cjs` (#722: Tier-1 authority paths are regular committed blobs, publication totals recomputed from committed HEAD, planted refusals; 6 cases); `src/test/scripts/governanceCurrency.test.cjs` (#722 `scripts/check-governance-currency.cjs` release-marker checks FC001-FC006 and the real-tree stale-marker guard; 19 cases); `src/test/governance/governance-index-publication.test.cjs` (3 cases) | verified | The index required every governance doc to be registered but had no vocabulary for published vs private, so 15 legitimately-private rows and 1 broken row were indistinguishable absences to a clone reader. `.gitignore:52-56` makes `docs/` and `.failsafe/` private by default ("governance records (licensing TBD)"), published by exception via `git add -f` — 38 of 68 registered paths have had that done. The broken row: `confidentiality.md` was registered as a root Tier 2 artifact while existing nowhere in the repository; it is operator memory holding pricing and tier internals per CLAUDE.md, and its contents were deliberately NOT imported — only the misrepresenting row was corrected, into the Out-of-tier section that already exists for this distinction. Falsifier run BEFORE the assertion was written per the Entry #603 standing correction, and it changed the design: 14 of the 68 rows name a shape rather than a file (`plan-*.md`, `entry-<N>-body.md`), which a reasoned-not-measured check would have reported as 14 false positives. The suite then caught a bug in its own extractor — it was counting the Out-of-tier table as registered rows, the exact confusion that section exists to prevent. Assertion 2's falsifier demonstrated by mutation per the audit mandate: a bogus `nonexistent-tree/` prefix fails with "dead declaration", removing it passes. | governance |
+ | FX941 | FEATURE_INDEX allocates each FX id exactly once — duplicate-id detector with collide/clean fixtures | `plan-fx935-collision-renumber.md` | `docs/FEATURE_INDEX.md` (FX935 row renumbered to FX940) | `src/test/governance/feature-index-id-integrity.test.cjs` (4 cases) + `src/test/fixtures/feature-index/{duplicate-id,clean}.md` | verified | FX935 was allocated twice: PR #445 on 2026-08-24 and `main` on 2026-09-03. Neither cycle erred — each computed `max(FX)+1` against its own view of the index and the views had diverged, which is structurally the Entry #597 ledger fork one artifact over. Operator ruling: older claim wins, so #445 keeps FX935 and `.qorlogic/config.json` renumbered to FX940. FX934 was double-allocated the same way, and the older of those two claims is the plan for `check-governance-structure.cjs` — a detector scoped in its own words to catch "a FEATURE_INDEX with two FX930 rows", which collided on its own id before it was implemented; operator ruled shipped work outranks a dormant claim, so PR #444 keeps FX934. The detector is exercised against fixtures, not only the live index: the live index is and should be clean, so a check observable only in its passing state proves nothing about whether it can fail. Verified both directions before the renumber — fires on `duplicate-id.md`, silent on `clean.md`. | governance |
+ | FX942 | qor-logic conformance probe — reports which seal-ladder controls can actually be made to fail (#233 Scope B, first slice) | `plan-233b-conformance-probe.md` + `.failsafe/governance/RESEARCH_BRIEF_233b-conformance-probe-2026-09-04.md` | `FailSafe/extension/scripts/qor-conformance-probe.cjs` (per-control registry, 4-way classification, report-only) | `src/test/scripts/qorConformanceProbe.test.cjs` (8 cases) | verified | Ledger #602 found five ABORT-class controls returning success while inspecting nothing; nothing in any exit code revealed it. Only running each control against input that MUST make it fail surfaced them. This automates that for three verified controls. **The probe carries its own falsifier**: assertion 2 feeds the classifier a stub exiting 0 on BOTH fixtures and requires NOT-FALSIFIABLE — a probe reporting FALSIFIABLE for everything is a vacuous control of exactly the kind it exists to find, and worse than none because it manufactures confidence in the opposite direction. Mutation-proved both ways: a classifier hardcoded to FALSIFIABLE fails assertions 2/3/4; neutralising the planted leak flips publication_boundary_lint to NOT-FALSIFIABLE and the report names it. `expectDefectSignal` exists because `instruction_hygiene_lint --repo-root` exits 2 on a usage error, which exit-code-only logic would have scored as successful falsification — a false FALSIFIABLE, the worst output this probe can emit. Invocation is per-control data, not a template: that control accepts `--repo-root` but REQUIRES `--staged`/`--files`, and is filename-gated (identical content in `dirty2.md` silent, in `CLAUDE.md` fires). Three known-inapplicable controls are declared with ledger citations rather than reported as broken. `secret_scanner` excluded by operator decision — fixturing it writes a credential-shaped string to disk, a standing stop condition. Report-only, exit 0 by design: an ABORT whose own falsifier had not been exercised against real upgrades would be this issue's own defect. Scope C (2026-09-04) pointed it at `.qorlogic/config.json` -> `permanent_skips`, the same section `permanent_skips.apply()` reads to close skip events, so applicability has ONE source of truth serving both. The inline list survives only for controls that cannot yet emit a skip event, and a config declaration of the same id supersedes it. The added assertion proves the declared control is not merely reported INAPPLICABLE but is never RUN: its fixture builder throws, so a probe that ignored the declaration fails loudly. Mutation-proved — ignoring `permanent_skips` fails it with `declared control was RUN`. | governance |
+ | FX943 | Disclosed-skip emission — a gate that can never apply here produces a machine-readable event, closed at emission by its declaration (#233 Scope C) | `plan-233c-applicability-declaration.md` + `.failsafe/governance/RESEARCH_BRIEF_233c-applicability-declaration-2026-09-04.md` | `FailSafe/extension/scripts/qor-skip-emitter.cjs` + `.qorlogic/config.json` (`permanent_skips.data_api_acl_lint`) | `src/test/scripts/qorSkipEmitter.test.cjs` (4 cases) | verified | The chain has three links and only the LAST one existed: a control skips because it cannot apply here (every seal) -> something emits `gate_skipped_prerequisite_absent` (**never happened**) -> `permanent_skips` closes it at emission (works, had nothing to close). `docs/PROCESS_SHADOW_GENOME.md` held ZERO such events across every seal this repository has ever performed. `data_api_acl_lint` prints `(Phase 75 disclosed-skip)` but contains no `shadow_process` reference — the string is prose, so inapplicability lived only in ledger narrative, which nothing can read. This supplies the emission Phase 75 assigns to the operator. Closure semantics stay upstream's (`cannot-automate:` prefix, >=50-char justification, closable-event-type restriction) — a local reimplementation would drift from the toolkit on the next minor, the exact failure #233 exists to prevent. **The falsifier is assertion 2**: an UNDECLARED gate must stay `addressed: false`; if it were written closed, every skipping gate would look handled and the declaration would do no work at all. A sub-50-char justification raises BEFORE anything is written, because a partial write would leave an unclosed event reading as genuine debt. A non-closable event type (`gate_override`) is refused outright rather than emitted as debt no declaration can ever close. | governance |
+diff --git a/docs/GOVERNANCE_INDEX.md b/docs/GOVERNANCE_INDEX.md
+index 8af10753..04fb5969 100644
+--- a/docs/GOVERNANCE_INDEX.md
++++ b/docs/GOVERNANCE_INDEX.md
+@@ -313,7 +313,7 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
+ 
+ Registration in this index and presence in the repository are **different things**, and a reader of a clone cannot tell them apart without this section.
+ 
+-`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 111 paths registered below have had that done; 15 have not (measured 2026-11-23 on protected `main@b03e47b7` using FX939's first-backticked `.md` per-tier-table-row rule; pattern rows are counted separately).
++`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 111 paths registered below have had that done; 15 have not (measured 2026-11-25 on protected `main@7863a29e` using FX939's first-backticked `.md` per-tier-table-row rule; pattern rows are counted separately; `governance-index-census.test.cjs` recomputes these totals from the committed tree on every run).
+ 
+ An unpublished row is not drift. Whether a given governance doc *should* be published is a licensing decision the operator has explicitly deferred, and this index does not presume it.
+ 

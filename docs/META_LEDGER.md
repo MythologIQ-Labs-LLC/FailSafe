@@ -37043,3 +37043,122 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: SESSION SEAL for plan-703 iteration 7, by a fresh-context independent Judge. Reality = Promise, with disclosures. Patch custody: candidate-iter7.patch (sha256 34fc82e83db985c0434dfecf2d018f91289ce542b2898fd61f301f9acff8b7e5) applied to a clean c38f970d gives tree aced858b236538a148f984fddcb5c850020fd803, equal to the 71d3a1c5 tree; 71d3a1c5 has the single parent c38f970d; e13cc15a changes no path under FailSafe/. LD1 blobs equal. Every planned file exists; no unplanned source; ledger_commitment OK. D4 C1: the seven mutant scripts in the evidence folder, re-run on the Judge's e13cc15a worktree, give 119 mutants, 109 KILLED, 10 SURVIVED (J13, J14, J15, X13, Y9, Y18, Z19, W8 equivalent; W6, W7 unclaimed insertions), 0 apply failures, with verdicts identical to mutation-map-iter7.txt; the R1-R14 Mutants column lists exactly the 109 killed, none twice, none unkilled. C2: asserts703.py gives 106 baseline and 151 new assertions, only the five recorded replacements and the two parameterised names. C3: focused jsdom 49 passing; red-first 9 failing on the c38f970d renderer and 32 failing on the origin/main renderer (17 passing = 15 pre-#703 + 2). TS-AST Razor: every added or changed function and test body is 40 lines or fewer, nesting at most 3; only suite and describe callbacks exceed 40 (containers); renderer 433 and old test file 296 lines equal the D2 caps (declared pre-existing excess, both reduced from 482 and 380); nested ternaries 2 at origin/main and 2 now. No TODO, stub or console.log added. CI at e13cc15a (read only): PR Full Test 45664170653 success on merge 0fd939a (tree equal to the head tree), extension host 6249 passing 15 pending, architecture 19, test:node 1170 tests 1135 pass 0 fail 35 skipped, test:ui 264 passed 4 skipped, all 34 #703 cases passing by name; Dependency Review, OSS SAST, VSIX Proprietary Guardrails, Repo Standards and Cross-platform compile success. The local g4Witness.test.cjs:110 failure is pre-existing: the same assertion fails in a full origin/main worktree (the CLI reports the v6.0.13 witness g4-000001 and exits 0), no g4 path changed, and it passes on the CI depth-1 checkout. Installed-host record HOST-ACCEPTANCE-WINDOWS.md is consistent and scoped: the VSIX sha256 e82522332f2ea6669d258d1d1d57f81d640ba18d3d3a5821645516555f881323 matches the file, it postdates 71d3a1c5, and its three Delivery UI modules are byte-equal to 71d3a1c5; it claims only R5, R6, R8, R9, R10 and R13 on one Windows host and discloses its limits. Gates: governance-health 8/8 OK; intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner rc 0; procedural_fidelity, dod_check, merge_velocity (healthy) rc 0; skill_size_budget WARN only; data_api_acl SKIP with a disclosed-skip event closed at emission; install_drift OK; strict doc_integrity PASS; governance-index enforce rc 0; doc currency no warnings; ac_close_guard no closing references; ledger post-anchor clean and #974-#983 recompute. Disclosures: N1 publication_boundary_lint rc 1, 538 findings at origin/main and at this tree, identical lists, #703 adds 0. N2 g4Witness as above. N3 substantiate_gates needs --skill. N4 plan D3 says two new suites; three were added, and FEATURE_INDEX FX1010 correctly lists three plus the fixture. N5 the Judge relied on CI and the implementer's local record for the full Windows npm test, prepush gate and installed host. N6 the uncommitted .qor/session/current and the untracked scripts/FailSafe-v6.1-Dependency-Audit-ReadOnly.ps1 are not part of this seal. N7 two protocol events appended to PROCESS_SHADOW_GENOME.md (data_api_acl skip, FX922 surface lint). N8 the Tier 4 archive-at-seal rule is not performed, as at #968 and #975. N9 the intent lock head c38f970d verifies by ancestry. SKIP or inapplicable: version_applicability (needs pyproject.toml) and Step 7.5/7.6/9.5.5 (no root version manifest; hotfix, plan non_goals forbid any bump, tag or release; package.json 6.0.13 equals tag v6.0.13); seal_artifacts (no numeric phase; hotfix exempt from --check); dist_compile (no qor/skills in this consumer). BACKLOG has no open Security or Development Blockers. Not merged, released or tagged; no version bump. Owner source-bound GO remains outstanding.
 
 ---
+
+### Entry #985: GATE TRIBUNAL - plan-721-governance-currency-glossary (iteration 1) VETO
+
+**Timestamp**: 2026-11-25T20:31:20Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-25T1958-4f4867`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-721-governance-currency-glossary.md` (iteration 1, sha256 3fee335b07e9bb805f0eed1596af9fbe6fb1239c0f0ffc029cee6b02f0407534; baseline bc3786a5d4d123375d2fd86e6ba967dfe95ef78f = merge of PR #721 head d208937c235567b4f05982859e94ecc882f78b24 and origin/main 7863a29e15a4ef06c185b6ba34a1a2053a7bfd8a; candidate patch sha256 f6178e2327d677ef0cc2044c92b9f3080dad1b10e564f9b866bc4bf9e9096b86)
+**Report**: `.failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T1958-4f4867/audit-iter1.json` (also audit.json)
+
+**Content Hash**: `10d259809ad32599adaec2b24ab8d6a4ee5b6a3501553879f1c39e09dbef95f2`
+**Previous Hash**: `46a75e877e065d9908cd99331cd7f0668f1230a0b695bd2bbd2a9a0d925fedc1`
+**Chain Hash (Merkle seal)**: `36d17bd80730bc4e8447ab63ebc048f5fb04310282a115e45a4950f102daaa30`
+
+**Decision**: GATE TRIBUNAL VETO for plan-721 iteration 1 (#722, #702; PR #721 reconciled onto main), fresh-context independent Judge, solo mode, risk grade L2. Verified in the Judge's own scratch worktrees: frozen parse_glossary 16 on main, 17 on bc3786a5 and candidate; check_orphans and strict run_all_checks_from_plan PASS on all three; census 111 = 79 + 15 + 17, 0 unexplained; Tier 1 19 paths; LD3 facts reproduce; mutants721.py reproduces mutation-map-721.txt exactly (36 KILLED, C22 and C23 surviving, both equivalences hold); Razor OK; test:node failure set identical to bc3786a5. Grounds: V1 (specification-drift) the candidate OPTIONS table is indexed without an own-key guard, so constructor, toString, hasOwnProperty and valueOf are accepted as options with exit 0 (bc3786a5 refuses), contradicting G3 and "same accepted grammar and refusals". V2 (coverage-gap) Judge mutants J1 (unchecked second census total, G6), J2/J2b (Tier-1 real-tree proof vacuous when the repository git read returns null, G5), J5b (real-tree census vacuous, G6/G7) and J7 (FC006 substring match accepts a different path, G2) survive and are shown non-equivalent. V3 (coverage-gap) the claim table omits #722's Tier-1 freshness census against the last sealed ledger entry (ARCHITECTURE_INDEX 2026-10-20, ARCHITECTURE_PLAN 2026-11-20 "review pending", both older than seal #984) and the ARCHITECTURE_PLAN Risk Grade removed while GOVERNANCE_INDEX:108 registers it. V4 (specification-drift, self-application) the FX939 row states 19 currency cases; the suite has 20. Judge script: jmut721-iter1-auditor.py. Required next action: Governor amends plan and candidate for V1-V4, re-records patch hash and mutation map, re-runs /qor-audit. The historical local governance line is not relied on; this entry continues main's chain from #984. Shadow Genome Failure Entry #343.
+
+---
+
+### Entry #986: GATE TRIBUNAL - plan-721-governance-currency-glossary (iteration 2) VETO
+
+**Timestamp**: 2026-11-25T21:41:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-25T1958-4f4867`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-721-governance-currency-glossary.md` (iteration 2, sha256 cc06448456946dfff09782493e5abd31f6c73e5b5adf6d30503eb60d4124e118; baseline bc3786a5d4d123375d2fd86e6ba967dfe95ef78f; candidate-iter2.patch sha256 97096e8a2c2e86014f13dc9f885a760ea7208cc7cf00bf92abba4a72449fee03; iteration 1 preserved as plan-iter1.md 3fee335b...)
+**Report**: `.failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T1958-4f4867/audit-iter2.json` (also audit.json)
+
+**Content Hash**: `d685fce8db7b87717e062d15834f8cf372e6e2d0a57240816b671837f78e536e`
+**Previous Hash**: `36d17bd80730bc4e8447ab63ebc048f5fb04310282a115e45a4950f102daaa30`
+**Chain Hash (Merkle seal)**: `dd784c44a9cae36608ad07ffd0218d245cd4a94cc1579eea8fff57e78cea29ce`
+
+**Decision**: GATE TRIBUNAL VETO for plan-721 iteration 2, closure re-check of Entry #985 by the same Judge, solo mode, bounded-claim rule; risk grade L2. Re-executed in a fresh scratch worktree: suites 31 tests (30 pass, 1 Windows file-symlink skip; census 7, currency 21); frozen glossary 17, orphans and strict PASS; currency CLI 0/0; inherited option names all rc 2; mutants721.py 41 KILLED with C22/C23 equivalent and jmut721-iter1-auditor.py 10 KILLED, J11 SURVIVED, J2/J5/J5b APPLY-FAIL, both byte-identical to the recorded maps; mechanical row cross-check clean; census 111 = 79 + 15 + 17; check-architecture-index PASS; Razor OK; test:node failure set identical to the bc3786a5 baseline. Iteration-1 grounds closed: V1 (Object.hasOwn; C26, K1, K2 killed), V2 (R14, R15, R16, J1, J2b, C27/J7 killed; Judge K3/K4 silent non-Git results killed), V3 (LD7 freshness census re-measured; ARCHITECTURE_PLAN Risk Grade restored, #707 L3 and #703 L2 confirmed in the ledger; eight markerless files narrowed by the recorded owner decision of 2026-11-25, which the Judge relies on as recorded), V4 (21 and 7 measured). New ground W1 (coverage-gap): Judge mutant K6 (check:111 exact comparison made a prefix match) survives all 31 cases; a Tier-1 cell `FailSafe/extension/package.json` and `package.json` (root) gives FC006 on the candidate and none under K6, violating G2 "exactly one row naming exactly FailSafe/extension/package.json". Judge script jmut721-iter2-auditor.py. Required next action: Governor adds a trailing-path FC006 case (or narrows G2), lists K6 in G2, re-records patch hash and maps, re-runs /qor-audit. Shadow Genome Failure Entry #344.
+
+---
+
+### Entry #987: GATE TRIBUNAL - plan-721-governance-currency-glossary (iteration 3) VETO
+
+**Timestamp**: 2026-11-25T21:49:36Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-25T1958-4f4867`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-721-governance-currency-glossary.md` (iteration 3, sha256 d4328dade44a9dead8c4d1e794e9df5843e7097d9047e359530db9e1f1d0f1a3; baseline bc3786a5d4d123375d2fd86e6ba967dfe95ef78f; candidate-iter3.patch sha256 bd2b0267bbdbbd22361968aded2ae4b322a262e12bba99f699159bac2bca7219; iteration 2 preserved as plan-iter2.md cc064484...)
+**Report**: `.failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T1958-4f4867/audit-iter3.json` (also audit.json)
+
+**Content Hash**: `c005a4a4cecc5a06f89dcec9518c7420d1e7d9ebefc014bd98e99e7f6a276c3d`
+**Previous Hash**: `dd784c44a9cae36608ad07ffd0218d245cd4a94cc1579eea8fff57e78cea29ce`
+**Chain Hash (Merkle seal)**: `e1250f4bcf4e60fb217ff841673ba60ac776c50465e401c14c69f29ea041859c`
+
+**Decision**: GATE TRIBUNAL VETO for plan-721 iteration 3, closure re-check of Entry #986 by the same Judge, solo mode, bounded-claim rule; risk grade L2. Re-executed in a fresh scratch worktree: suites 31 tests (30 pass, 1 Windows file-symlink skip; census 7, currency 21); frozen glossary 17, orphans and strict PASS; currency CLI 0/0; all three mutant maps byte-identical to the recorded iteration-3 maps (57 KILLED; C22/C23 equivalent; J11 note; J2/J5/J5b not applicable); mechanical row cross-check clean; Razor OK; architecture index PASS. Closed: W1 (K6/C28 killed by the trailing-path FC006 case) and N7 (marker reworded). New ground W2 (coverage-gap): Judge mutants L1 (suffix match), L2 (case-insensitive) and L4 (whitespace-insensitive) of the FC006 comparison at check:111 survive all 31 cases; probes give FC006 on the candidate and none under the mutant for `package.json` (root) and `FailSafe/extension/package.json`, `failsafe/extension/package.json` and `FailSafe/extension/ package.json`, violating G2 "naming exactly". L3 is killed. Auditor disclosure: the iteration-2 required action named only the trailing side. Workflow reviewed structurally only; running the offered actionlint binary was denied by the host permission system and was not worked around. Judge script jmut721-iter3-auditor.py. Required next action: one table-driven FC006 case over leading, trailing, inner, case and whitespace near misses (or narrow G2), list L1, L2, L4 in G2, re-record patch hash and maps, re-run /qor-audit. Shadow Genome Failure Entry #345.
+
+---
+
+### Entry #988: GATE TRIBUNAL - plan-721-governance-currency-glossary (iteration 4) PASS
+
+**Timestamp**: 2026-11-25T22:00:17Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-25T1958-4f4867`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-721-governance-currency-glossary.md` (iteration 4, sha256 7db0173ed2b634fd01b001b3ff0ea0d66debf81deb6eea2655cdad50a8d1fd69; baseline bc3786a5d4d123375d2fd86e6ba967dfe95ef78f; candidate-iter4.patch sha256 7fd46c9b7f6a0bd03f3d0c4e79c28a79dfa3a5ffbfa0a2471e87c1151845ebaa; iteration 3 preserved as plan-iter3.md d4328dad...)
+**Report**: `.failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter4.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T1958-4f4867/audit-iter4.json` (also audit.json)
+
+**Content Hash**: `7b5582f97e778c2eb154f3ddc5838ad9f225a993efbcd163c69c1791e38234af`
+**Previous Hash**: `e1250f4bcf4e60fb217ff841673ba60ac776c50465e401c14c69f29ea041859c`
+**Chain Hash (Merkle seal)**: `9e432df444685614fec4992e76069dafcded0adf1faefe0e7116062a62b903ed`
+
+**Decision**: GATE TRIBUNAL PASS for plan-721 iteration 4 (#722, #702; PR #721 reconciled onto main), closure re-check of Entry #987 by the same Judge, solo mode, bounded-claim rule; risk grade L2. Re-executed in fresh scratch worktrees: four suites 31 tests (30 pass, 1 Windows file-symlink skip; census 7, currency 12, refusals 9, publication 3, as FX939 states); the split is behaviour-preserving (21 iteration-3 tests present by name, 20 byte-identical, the FC006 test changed only by the W2 table; fixture moved unchanged); frozen glossary 17, orphans and strict PASS; currency CLI 0/0; all four mutant maps byte-identical to map-*-iter4.txt (61 KILLED; C22/C23 equivalent; J11 note; J2/J5/J5b not applicable); the coordinator's edit to the Judge scripts is the SUITES entry only; mechanical row cross-check clean; fresh Judge mutants M1, M2 killed and M3 equivalent; Razor OK; test:node 118 suites with the baseline failure set; architecture index PASS. W2 closed: L1-L4 killed by the seven-class FC006 near-miss table. No non-equivalent survivor violates a listed row; no #722/#702 acceptance item omitted without the recorded owner narrowing. Workflow reviewed structurally; the actionlint result is the coordinator's observation. Notes: N11 G3 proof cites the refusal suite while C19 is killed by currency-suite tests; N12 full local gate not run by the Judge; N13 D4 C1-C3 and owner GO remain. Next: /qor-implement applies candidate-iter4.patch byte-for-byte to bc3786a5.
+
+---
+
+### Entry #989: RECORD CORRECTION - plan-721-governance-currency-glossary audit report (iteration 4); verdict unchanged
+
+**Timestamp**: 2026-11-25T22:03:06Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-25T1958-4f4867`
+**Risk Grade**: L2
+**Verdict**: PASS (unchanged from Entry #988)
+**Target**: `.failsafe/governance/plans/plan-721-governance-currency-glossary.md` (iteration 4, sha256 7db0173ed2b634fd01b001b3ff0ea0d66debf81deb6eea2655cdad50a8d1fd69)
+**Report**: `.failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter4.md` (Content Hash = SHA256, LF-normalized, of the corrected report)
+**Gate**: `.qor/gates/2026-11-25T1958-4f4867/audit-iter4.json` (also audit.json), unchanged
+
+**Content Hash**: `42a6251a315698db4f2ae7be82b6445e02908d0813b5ffa1747f00ad1f068243`
+**Previous Hash**: `9e432df444685614fec4992e76069dafcded0adf1faefe0e7116062a62b903ed`
+**Chain Hash (Merkle seal)**: `4c1787f2059cdf0d434f58c6ac4bb3119f610c25a01fdaff483566679969e5e1`
+
+**Decision**: Record correction only. The iteration-4 audit report as sealed in Entry #988 (content hash 7b5582f97e778c2eb154f3ddc5838ad9f225a993efbcd163c69c1791e38234af) had a **Target** line with a period after the closing backtick, which qor.scripts.verdict_dialect.read_target cannot parse, so verdict_reconcile reported report-unreadable and /qor-implement Step 2 would ABORT. The Judge reformatted that one line to the parseable form `<path>` (iteration 4, ...) and appended a correction note to the report; verdict, findings and evidence are unchanged. Entry #988 is left as written (append-only). The gate artifact records the plan hash (target_content_hash 7db0173e...), not the report hash, so it is unchanged. After the correction, verdict_reconcile against audit.json (with --plan-digest 7db0173e...) and against audit-iter4.json returns 0 findings, and read_verdict reads PASS. Iteration 1-3 reports parse correctly and are not changed.
+
+---
+
+### Entry #990: IMPLEMENT - plan-721-governance-currency-glossary (iteration 4); not sealed
+
+**Timestamp**: 2026-11-25T22:34:42Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-11-25T1958-4f4867`
+**Risk Grade**: L2
+**Target**: `.failsafe/governance/plans/plan-721-governance-currency-glossary.md` (iteration 4, sha256 7db0173ed2b634fd01b001b3ff0ea0d66debf81deb6eea2655cdad50a8d1fd69)
+**Report**: `.failsafe/governance/evidence/issue-722/IMPLEMENTATION.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T1958-4f4867/implement.json`
+
+**Content Hash**: `052122683aa95520924ddce24780de6129feb3f1f7fce1b2ed9b27d6eefde996`
+**Previous Hash**: `4c1787f2059cdf0d434f58c6ac4bb3119f610c25a01fdaff483566679969e5e1`
+**Chain Hash (Merkle seal)**: `1fa9ec6cf0fe4e0ff1b0447e6eb3173133accc8feb71176506b477ee99c4a705`
+
+**Decision**: IMPLEMENT record for plan-721 iteration 4 after audit PASS Entry #988 (record correction #989); the VETOs of Entries #985-#987 stand. Commit 71edad8f on fix/702-close-sentry-glossary-fence-20261118 over audited source bc3786a5 (PR #721 d208937c merged with main 7863a29e) applies candidate-iter4.patch (sha256 7fd46c9b7f6a0bd03f3d0c4e79c28a79dfa3a5ffbfa0a2471e87c1151845ebaa) byte-for-byte; verdict_reconcile 0 findings; intent lock captured. Four governance suites 30 pass, 1 skip. Full local gate after npm ci in the worktree: lint 0 errors; npm test 6228 passing, 34 pending, 2 failing (bicameral install-handler cases rejecting every pip candidate because the worktree path contains the excluded .failsafe/ folder; environmental, unrelated to this change and green in the main checkout the same day); architecture host 19; test:node 1187 pass, 1 fail (pre-existing g4Witness, #696), 10 skipped; test:ui 264 passed; package-target and validate-vsix PASS. Currency check --enforce exit 0; architecture index PASS (49 rows); frozen glossary parser 17 entries with strict doc_integrity PASS; actionlint 1.7.12 exit 0 on the workflow. Mutation maps identical on the committed tree. Outstanding: substantiation, exact-head CI, owner GO including the protected workflow step. This entry is not a seal, merge or release.
+
+---

@@ -1,0 +1,43 @@
+KILLED    C1 FC001 newest heading not compared | reports current-state and changelog mismatch without accepting historical section
+KILLED    C2 FC002 SYSTEM_STATE release not compared | reports current-state and changelog mismatch without accepting historical section
+KILLED    C3 FC003 ARCHITECTURE_PLAN release not compared | detects stale architecture release marker without changing archived details
+KILLED    C4 FC004 stale review marker accepted | emits machine-readable JSON with stable finding ids, never a native audit verdict; finds stale governance review marker without overwriting historical entries
+KILLED    C5 FC004 uses the oldest review marker | #722: the checked-out repository has no current-release marker error (prospective stale-marker guard); detects stale architecture release marker without changing archived details; flags only a warning for dated Feature Index intro, not invented FX coverage; reads the current-release marker only from
+KILLED    C6 FC005 warning dropped | flags only a warning for dated Feature Index intro, not invented FX coverage
+KILLED    C7 FC006 manifest issue ignored | FC006 detects missing and duplicated version authority rows, scoped to Tier 1; FC006 flags a phantom root package.json authority, preserving the index unchanged; FC006 refuses a missing Tier-1 section rather than silently passing
+KILLED    C8 FC006 phantom root manifest accepted | FC006 flags a phantom root package.json authority, preserving the index unchanged
+KILLED    C9 FC006 duplicate authority rows accepted | FC006 detects missing and duplicated version authority rows, scoped to Tier 1
+KILLED    C10 FC006 missing Tier 1 section passes | FC006 refuses a missing Tier-1 section rather than silently passing
+KILLED    C11 duplicate CHANGELOG heading accepted | refuses duplicate current changelog release heading
+KILLED    C12 impossible date accepted | refuses impossible release dates and ambiguous canonical release markers
+KILLED    C13 symlink component followed | refuses a canonical docs ancestor symlink even when the target remains in the repo
+KILLED    C14 malformed suffix accepted (state) | refuses malformed ARCHITECTURE_PLAN release suffix rather than accepting matching prefix; refuses malformed SYSTEM_STATE release suffix rather than accepting matching prefix
+KILLED    C15 ambiguous duplicate marker accepted | refuses impossible release dates and ambiguous canonical release markers
+KILLED    C16 duplicate option accepted | rejects unknown args and duplicate options with refusal exit 2
+KILLED    C17 unknown option accepted | rejects unknown args and duplicate options with refusal exit 2
+KILLED    C18 refusal exits 0 | refuses duplicate current changelog release heading; refuses malformed SYSTEM_STATE release suffix rather than accepting matching prefix; refuses malformed first governance review date rather than falling through to older history; rejects unknown args and duplicate options with refusal exit 2
+KILLED    C19 --enforce ignored | FC006 flags a phantom root package.json authority, preserving the index unchanged; emits machine-readable JSON with stable finding ids, never a native audit verdict; finds stale governance review marker without overwriting historical entries
+KILLED    C20 non-json format accepted | rejects unknown args and duplicate options with refusal exit 2
+KILLED    C21 oversize source accepted | refuses an oversized source, a malformed manifest version and a symlinked repository root
+SURVIVED  C22 file outside repository accepted | 
+SURVIVED  C23 symlinked repository root accepted | 
+KILLED    C24 FC004 equal dates flagged | FC006 detects missing and duplicated version authority rows, scoped to Tier 1; FC006 flags a phantom root package.json authority, preserving the index unchanged; FC006 refuses a missing Tier-1 section rather than silently passing; detects stale architecture release marker without changing archived d
+KILLED    C25 manifest version shape unchecked | refuses an oversized source, a malformed manifest version and a symlinked repository root
+KILLED    C26 inherited names accepted as options | rejects unknown args and duplicate options with refusal exit 2
+KILLED    C27 FC006 substring authority accepted | FC006 detects missing and duplicated version authority rows, scoped to Tier 1
+KILLED    R1 census counts unexplained as private | rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures
+KILLED    R2 census claims accepted outside the section | accepts claims only inside one publication section, rejecting duplicate claims
+KILLED    R3 census duplicate claims accepted | accepts claims only inside one publication section, rejecting duplicate claims
+KILLED    R4 census count comparison dropped | rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures
+KILLED    R5 tracked set from index not HEAD | uses committed HEAD, never a staged-only phantom, for publication evidence
+KILLED    R6 tier-1 non-regular mode accepted | rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+KILLED    R7 tier-1 duplicate paths accepted | rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+KILLED    R8 tier-1 local exception undisclosed accepted | rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+KILLED    R9 tier-1 published local tracker accepted | rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+KILLED    R10 tier-1 only first path per row | binds every explicit Tier-1 authority to a regular tracked HEAD blob, except one disclosed local YAML; rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+KILLED    R11 tier-1 manifest registration not required | rejects missing second-column paths, staged-only phantoms, symlinks and disguised local exceptions
+KILLED    R12 out-of-tier rows counted | checks recorded publication totals against current tracked tree, rather than trusting historical prose; registers no path that is neither tracked nor under a declared-private prefix
+KILLED    R13 shapes counted as files | checks recorded publication totals against current tracked tree, rather than trusting historical prose; registers no path that is neither tracked nor under a declared-private prefix
+KILLED    R14 trackedFiles vacuous without Git | refuses to census a directory that is not a Git checkout instead of passing vacuously
+KILLED    R15 committedModes vacuous for the real repository | binds every explicit Tier-1 authority to a regular tracked HEAD blob, except one disclosed local YAML; refuses to census a directory that is not a Git checkout instead of passing vacuously
+KILLED    R16 census N consistency dropped | rejects stale totals, omitted shape counts, and unexplained paths in planted census fixtures

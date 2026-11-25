@@ -1,0 +1,4 @@
+KILLED    L1 FC006 suffix match | FC006 detects missing and duplicated version authority rows, scoped to Tier 1
+KILLED    L2 FC006 case-insensitive | FC006 detects missing and duplicated version authority rows, scoped to Tier 1
+KILLED    L3 FC006 first backticked path only | FC006 detects missing and duplicated version authority rows, scoped to Tier 1
+KILLED    L4 FC006 whitespace-insensitive | FC006 detects missing and duplicated version authority rows, scoped to Tier 1

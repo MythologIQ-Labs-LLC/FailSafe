@@ -1,0 +1,66 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-25T1958-4f4867",
+  "ts": "2026-11-25T20:09:08Z",
+  "plan_path": ".failsafe/governance/plans/plan-721-governance-currency-glossary.md",
+  "phases": [
+    "PR #721 as reconciled (no edits)",
+    "Razor repair, prospective real-tree guard, refusal coverage"
+  ],
+  "open_questions": [],
+  "doc_tier": "standard",
+  "terms": [],
+  "change_class": "hotfix",
+  "originating_remediation": "FailSafe #722, #702 (PR #721)",
+  "boundaries": {
+    "limitations": [
+      "checks explicit current-release markers only; does not prove a review happened",
+      "census uses FX939 first-backticked-.md-per-row rule",
+      "file-symlink refusal case skipped on Windows hosts without symlink privilege",
+      "documentation reconciled against the repository, no installed-host run (no consumer behaviour change)"
+    ],
+    "non_goals": [
+      "importing or re-sealing the historical local #699/#698/#696/#701 governance line",
+      "Bicameral compatibility (#692)",
+      "modifying the frozen Qor-logic package",
+      "version bump, tag or release"
+    ],
+    "exclusions": [
+      "describe registration callbacks exempt from the 40-line limit",
+      "workflow timeout-minutes (#708 scope)"
+    ]
+  },
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX939",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/governance/governance-index-census.test.cjs",
+      "test_descriptor": "every Tier-1 authority path is a regular committed blob and the stated publication totals equal the recount from committed HEAD"
+    },
+    {
+      "entry_id": "FX939",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/scripts/governanceCurrency.test.cjs",
+      "test_descriptor": "the checked-out repository has no current-release marker error; stale or ambiguous markers are errors or refusals"
+    }
+  ],
+  "ci_commands": [
+    "node --test src/test/governance/governance-index-publication.test.cjs src/test/governance/governance-index-census.test.cjs src/test/scripts/governanceCurrency.test.cjs",
+    "node FailSafe/extension/scripts/check-governance-currency.cjs --enforce",
+    "npm run test:node",
+    "npm run lint",
+    "npm test",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File tools/reliability/prepush-validate.ps1"
+  ],
+  "iteration": 1,
+  "source_revision": "bc3786a5",
+  "plan_sha256": "3fee335b07e9bb805f0eed1596af9fbe6fb1239c0f0ffc029cee6b02f0407534",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "absent",
+    "ts": "2026-11-25T20:09:08Z"
+  }
+}
