@@ -23,6 +23,8 @@ import { spawn } from 'child_process';
 import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
+import { inspectPushBinding } from './githubPushBinding';
+import { preConsentGitOptions, requiresExactSelection, type ApprovedFile } from './governedCommitSelection';
 
 export type GitRunner = (args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
 
@@ -35,6 +37,8 @@ export interface GovernedCommitRequest {
   base: string;     // PR base, e.g. "main"
   prTitle: string;
   prBody: string;
+  /** Operator-approved exact file/blob snapshot when directory consent was expanded. */
+  approvedFiles?: ApprovedFile[];
 }
 
 export interface GovernedCommitDeps {
@@ -42,6 +46,10 @@ export interface GovernedCommitDeps {
   post?: GitHubPostFn;
   token?: string;
   apiBaseUrl?: string;
+  /** Operator approval of the exact fetch and effective push destinations. */
+  requireExactRemoteApproval?: boolean;
+  approvedRemoteUrl?: string;
+  approvedPushUrl?: string;
 }
 
 export type GovernedCommitStep = 'not-a-repo' | 'noop' | 'committed' | 'pushed' | 'pr';
@@ -90,14 +98,156 @@ export async function commitPushOpenPr(
   const isRepo = await git(['rev-parse', '--is-inside-work-tree'], cwd);
   if (isRepo.code !== 0 || isRepo.stdout.trim() !== 'true') return { step: 'not-a-repo' };
 
-  const status = await git(['status', '--porcelain', '--', ...req.paths], cwd);
-  if (status.code === 0 && status.stdout.trim() === '') return { step: 'noop' };
+  // A bare `git add -A --` has repository-wide reach. Refuse empty or
+  // non-filename input rather than treating absence of paths as broad authority.
+  if (!Array.isArray(req.paths) || req.paths.length === 0 || req.paths.some(path =>
+    typeof path !== 'string' || !path.trim() || path.includes('\0') ||
+    path.startsWith('/') || path.startsWith('\\') || /^[A-Za-z]:/.test(path) ||
+    path.split(/[\\/]/).some(segment => segment === '.' || segment === '..'))) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'invalid selected paths; no status, branch, commit, push or PR attempted' };
+  }
 
-  // Create the branch (fall back to switching to it if it already exists).
+  // Even with an approved manifest, directory pathspecs may stage additional
+  // descendants before the staged-index check. Only exact file paths may reach
+  // the lower-level Git add boundary, regardless of trailing slash spelling.
+  const broadPaths = await Promise.all(req.paths.map(path => requiresExactSelection(git, cwd, path)));
+  if (broadPaths.some(Boolean)) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'directory selection must be expanded to exact approved files; no branch, commit, push or PR attempted' };
+  }
+
+  // Git pathspec magic must never reinterpret an operator-selected filename.
+  const literalPaths = req.paths.map((path) => `:(literal)${path}`);
+  const status = await git(['status', '--porcelain', '--', ...literalPaths], cwd);
+  if (status.code !== 0) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'git status failed; no branch changes, commit, push or PR attempted' };
+  }
+  if (status.stdout.trim() === '') return { step: 'noop' };
+
+  // An automated commit cannot silently include content staged before this offer.
+  // Explicitly include submodule changes: repository .gitmodules ignore=all can
+  // otherwise conceal a staged 160000 gitlink from all three diff checks.
+  // Git diff --cached returns 0 for an empty index (including unborn HEAD), 1 for
+  // staged content and >1 on errors; only 0 authorizes the next step.
+  const initialIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--ignore-submodules=none', '--'], cwd);
+  if (initialIndex.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: initialIndex.code === 1
+      ? 'pre-existing staged changes require manual review; no branch, commit, push or PR attempted'
+      : 'staged index could not be verified; no branch, commit, push or PR attempted' };
+
+  // A failed branch switch must never fall through to staging or committing on
+  // the original branch. The fallback is supported only for an existing branch.
   const branched = await git(['checkout', '-b', req.branch], cwd);
-  if (branched.code !== 0) await git(['checkout', req.branch], cwd);
+  if (branched.code !== 0) {
+    const switched = await git(['checkout', req.branch], cwd);
+    if (switched.code !== 0) {
+      return { step: 'noop', branch: req.branch, warning: 'target branch checkout failed; no changes committed or pushed' };
+    }
+  }
+  // A zero exit code is not itself proof that the intended branch is active.
+  const active = await git(['symbolic-ref', '--quiet', '--short', 'HEAD'], cwd);
+  if (active.code !== 0 || active.stdout.trim() !== req.branch) {
+    return { step: 'noop', branch: req.branch, warning: 'target branch identity verification failed; no changes committed or pushed' };
+  }
 
-  await git(['add', '-A', '--', ...req.paths], cwd);
+  // A checkout hook may have staged different content; refuse before touching it.
+  const switchedIndex = await git(['diff', '--cached', '--quiet', '--exit-code', '--ignore-submodules=none', '--'], cwd);
+  if (switchedIndex.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: switchedIndex.code === 1
+      ? 'staged changes appeared during checkout; no add, commit, push or PR attempted'
+      : 'staged index could not be verified after checkout; no add, commit, push or PR attempted' };
+
+  const staged = await git(['add', '-A', '--', ...literalPaths], cwd);
+  if (staged.code !== 0) {
+    // git add can have staged a subset before failing. Refuse to commit any
+    // pre-existing/partial index, and leave inspection/recovery to the owner.
+    return { step: 'noop', branch: req.branch, warning: 'git staging failed; no commit or push attempted (inspect the index for partial staging)' };
+  }
+  // git add may have succeeded while another actor staged an unrelated file.
+  // The inclusion pathspec covers the whole repo. Resolve each exclusion from
+  // the same root; unprefixed exclusions here silently reject valid commits in
+  // nested workspaces, or fail to describe their authorized files.
+  const scope = await git(['rev-parse', '--show-prefix'], cwd);
+  const prefix = scope.stdout.replace(/\r?\n$/, '');
+  if (scope.code !== 0 || prefix.startsWith('/') || prefix.startsWith('\\') ||
+    /^[A-Za-z]:/.test(prefix) || /[\r\n\0]/.test(prefix) ||
+    prefix.split(/[\\/]/).some(segment => segment === '.' || segment === '..')) {
+    return { step: 'noop', branch: req.branch,
+      warning: 'repository-relative scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+  }
+  const outsideSelection = await git([
+    'diff', '--cached', '--quiet', '--exit-code', '--ignore-submodules=none', '--', ':(top)',
+    ...req.paths.map((path) => `:(exclude,top,literal)${prefix}${path}`),
+  ], cwd);
+  if (outsideSelection.code !== 0) return { step: 'noop', branch: req.branch,
+    warning: outsideSelection.code === 1
+      ? 'staged changes outside selected paths detected after git add; no commit, push or PR attempted (inspect index)'
+      : 'staged scope could not be verified after git add; no commit, push or PR attempted (inspect index)' };
+
+  // Directory consent is a finite list of files and Git blob identities, not
+  // authority for any new descendant or changed contents added after approval.
+  if (req.approvedFiles) {
+    const stagedFiles = await git(['ls-files', '--stage', '-z', '--', ...literalPaths], cwd);
+    if (stagedFiles.code !== 0 || stagedFiles.stdout.length > 256 * 1024 ||
+      (stagedFiles.stdout.length > 0 && !stagedFiles.stdout.endsWith('\0'))) {
+      return { step: 'noop', branch: req.branch,
+        warning: 'approved file blobs could not be verified; no commit, push or PR attempted (inspect index)' };
+    }
+    const actual = new Map<string, { blob: string; mode: '100644' | '100755' }>();
+    for (const row of stagedFiles.stdout.slice(0, -1).split('\0').filter(Boolean)) {
+      // Reject symlink, gitlink and unmerged-index stages until reviewed.
+      const match = /^(100644|100755) ([a-f0-9]{40}(?:[a-f0-9]{24})?) 0\t(.+)$/.exec(row);
+      if (!match || actual.has(match[3])) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'approved file blobs were ambiguous; no commit, push or PR attempted (inspect index)' };
+      }
+      actual.set(match[3], { blob: match[2], mode: match[1] as '100644' | '100755' });
+    }
+    const approved = new Map(req.approvedFiles.map(file => [file.path, file.blob]));
+    if (approved.size !== req.approvedFiles.length ||
+      [...actual].some(([path]) => !approved.has(path))) {
+      return { step: 'noop', branch: req.branch,
+        warning: 'staged file set differs from approved manifest; no commit, push or PR attempted (inspect index)' };
+    }
+    for (const file of req.approvedFiles) {
+      const stagedEntry = actual.get(file.path) ?? null;
+      if (file.blob === null) {
+        if (file.mode !== null || stagedEntry !== null) return { step: 'noop', branch: req.branch,
+          warning: 'approved deletion changed before commit; no commit, push or PR attempted (inspect index)' };
+        continue;
+      }
+      if (stagedEntry === null) return { step: 'noop', branch: req.branch,
+        warning: 'approved file missing from staged index; no commit, push or PR attempted (inspect index)' };
+      if ((file.mode !== '100644' && file.mode !== '100755') || stagedEntry.mode !== file.mode) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'staged executable mode differs from approved file; no commit, push or PR attempted (inspect index)' };
+      }
+      const stagedObject = stagedEntry.blob;
+      const raw = await git(['hash-object', '--no-filters', '--', file.path], cwd);
+      if (raw.code !== 0 || raw.stdout.trim() !== file.blob) {
+        return { step: 'noop', branch: req.branch,
+          warning: 'approved file contents changed before commit; no commit, push or PR attempted (inspect index)' };
+      }
+      // Git may normalize line endings or apply an owner-configured clean filter
+      // when staging. Never invoke that filter before consent. Only if the staged
+      // blob differs from raw content, compute the expected filtered blob now.
+      if (stagedObject !== file.blob) {
+        const filtered = await git(['hash-object', '--path=' + file.path, '--', file.path], cwd);
+        if (filtered.code !== 0 || filtered.stdout.trim() !== stagedObject) {
+          return { step: 'noop', branch: req.branch,
+            warning: 'Git-filtered staging differed from approved file; no commit, push or PR attempted (inspect index)' };
+        }
+        const rawAgain = await git(['hash-object', '--no-filters', '--', file.path], cwd);
+        if (rawAgain.code !== 0 || rawAgain.stdout.trim() !== file.blob) {
+          return { step: 'noop', branch: req.branch,
+            warning: 'approved file contents changed during staging verification; no commit, push or PR attempted (inspect index)' };
+        }
+      }
+    }
+  }
+
   const before = await readBeforeCommit(git, cwd);
   const committed = await git(['commit', '--cleanup=verbatim', '-m', req.message], cwd);
   if (committed.code !== 0) {
@@ -106,9 +256,9 @@ export async function commitPushOpenPr(
   const head = await git(['rev-parse', '--short', 'HEAD'], cwd);
   const commit = head.stdout.trim();
   const bound = await bindCommit(git, cwd, req, before);
-  const withBinding = <T extends GovernedCommitResult>(r: T): T => ('sha' in bound
-    ? { ...r, commitSha: bound.sha }
-    : { ...r, warning: [r.warning, `commit not bound to this run (${bound.reason}); it is not offered for linking`].filter(Boolean).join('\n') });
+  if (!('sha' in bound)) return { step: 'committed', branch: req.branch, commit, warning:
+    `commit not bound to this run (${bound.reason}); no push or PR attempted` };
+  const withBinding = <T extends GovernedCommitResult>(r: T): T => ({ ...r, commitSha: bound.sha });
 
   const remote = await git(['remote', 'get-url', 'origin'], cwd);
   if (remote.code !== 0 || !remote.stdout.trim()) {
@@ -118,6 +268,21 @@ export async function commitPushOpenPr(
   // Redacted copy for anything that leaves this function; `remoteUrl` itself stays
   // intact for slug parsing and the PR call.
   const safeRemoteUrl = redactUrlCredentials(remoteUrl);
+  // A fetch remote is not the push authority: pushurl / pushInsteadOf may
+  // target another host, even on default public GitHub with no PR token.
+  const binding = await inspectPushBinding(git, cwd, remoteUrl, deps.apiBaseUrl);
+  if (!binding.ok) {
+    return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
+      warning: binding.error + '; no push or PR attempted' });
+  }
+  // The direct API must not accept a rewritten push target without a prior
+  // operator approval. The UI explicitly approves both URLs when available.
+  const expectedPush = deps.requireExactRemoteApproval ? deps.approvedPushUrl : remoteUrl;
+  if (!expectedPush || binding.pushUrl !== expectedPush ||
+      (deps.requireExactRemoteApproval && deps.approvedRemoteUrl !== remoteUrl)) {
+    return withBinding({ step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl,
+      warning: 'Git fetch or effective push destination changed or was not approved; no push or PR attempted' });
+  }
 
   const pushed = await git(['push', '-u', 'origin', req.branch], cwd);
   if (pushed.code !== 0) {
@@ -127,6 +292,18 @@ export async function commitPushOpenPr(
   const cmp = compareUrl(remoteUrl, req.base, req.branch);
   if (!deps.post || !deps.token || !deps.token.trim()) {
     return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp, warning: 'no GitHub token — branch pushed; open the PR manually' });
+  }
+  // Recheck both identities before token egress. The Git push and this
+  // recheck cannot be made atomic against hostile concurrent config writes.
+  const again = await git(['remote', 'get-url', 'origin'], cwd);
+  if (again.code !== 0 || again.stdout.trim() !== remoteUrl) {
+    return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
+      warning: 'Git origin changed after the approved push; authenticated PR refused' });
+  }
+  const fresh = await inspectPushBinding(git, cwd, remoteUrl, deps.apiBaseUrl);
+  if (!fresh.ok || fresh.pushUrl !== binding.pushUrl) {
+    return withBinding({ step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp,
+      warning: 'Git push destination changed after the approved push; authenticated PR refused' });
   }
 
   const pr = await createPullRequest(
@@ -200,10 +377,31 @@ export const defaultGitRunner: GitRunner = (args, cwd) =>
     child.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
   });
 
-/** Parse `git status --porcelain` → the set of changed paths (strips status flags + rename arrows + quotes). */
+/**
+ * Changed paths inside the workspace, relative to it, for the before/after diff
+ * that precedes the governed-commit offer. This runs before consent, so it uses
+ * the pre-consent options (no fsmonitor hook, no filter, no index write), NUL
+ * framing (no octal-quoted names) and a `.` pathspec, and strips the repository
+ * prefix so a nested workspace never names a same-named file elsewhere.
+ * Submodules are not inspected. Any failure yields [] (no offer).
+ */
 export async function statusPaths(git: GitRunner, cwd: string): Promise<string[]> {
-  const res = await git(['status', '--porcelain'], cwd);
-  if (res.code !== 0) return [];
-  return res.stdout.split(/\r?\n/).map((l) => l.replace(/\r$/, '')).filter((l) => l.trim().length > 0)
-    .map((l) => l.slice(3).replace(/^.*\s->\s/, '').replace(/^"|"$/g, '').trim());
+  const guard = await preConsentGitOptions(git, cwd);
+  if (!guard) return [];
+  const scope = await git([...guard, 'rev-parse', '--show-prefix'], cwd);
+  if (scope.code !== 0) return [];
+  const prefix = scope.stdout.replace(/\r?\n$/, '');
+  const res = await git([...guard, 'status', '--porcelain=v1', '-z', '--ignore-submodules=all', '--', '.'], cwd);
+  if (res.code !== 0 || res.stdout.length > 256 * 1024 ||
+    (res.stdout.length > 0 && !res.stdout.endsWith('\0'))) return [];
+  const records = res.stdout ? res.stdout.slice(0, -1).split('\0') : [];
+  const paths: string[] = [];
+  for (let i = 0; i < records.length; i++) {
+    const state = records[i].slice(0, 2);
+    const name = records[i].slice(3);
+    // In -z porcelain v1 a rename or copy is followed by its source path.
+    if (state.includes('R') || state.includes('C')) i++;
+    if (name.length > prefix.length && name.startsWith(prefix)) paths.push(name.slice(prefix.length));
+  }
+  return paths;
 }

@@ -7,7 +7,7 @@ import { strict as assert } from 'assert';
 import * as path from 'path';
 import { IntegrationCredentials, secretKey } from '../../../integrations/credentials/IntegrationCredentials';
 import {
-  buildCredentialSnapshot, endpointRefusalMessage, governedCommitConnection, moveMessage, MOVE_ACTION,
+  buildCredentialSnapshot, endpointRefusalMessage, githubCustomEndpointRefusalMessage, governedCommitConnection, moveMessage, MOVE_ACTION,
   notifierConfig, notifyFailureText, optionalCredential, providerConnection, requireCredential,
   unavailableMessage, type EndpointReader, type EndpointScope,
 } from '../../../integrations/credentials/credentialGates';
@@ -18,6 +18,7 @@ import { runGitHubAdvisory, type GitHubAdvisoryOptions } from '../../../extensio
 import { resolveSentryOptions } from '../../../integrations/sentry/sentry-settings';
 import { governedCommitPrStep, runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
 import type { GitRunner } from '../../../extension/governedCommit';
+import { createApprovalFixture } from '../../shared/governedCommitApprovalFixture';
 import type { ImportUi } from '../../../integrations/credentials/importUi';
 import { FakeInspector, FakeSecretStore, RecordingLogger } from './fakes';
 import { findCredentialReads } from './credentialScan';
@@ -90,7 +91,8 @@ suite('requireCredential and providerConnection (FX965 #482)', () => {
   for (const [endpointScope, credScope, allowed] of [
     ['workspace', 'user', false],
     ['workspace', 'workspace', true],
-    ['user', 'user', true],
+    ['user', 'user', false],
+    ['user', 'workspace', true],
     ['default', 'user', true],
   ] as const) {
     test(`endpoint trust: endpoint from ${endpointScope} + ${credScope} credential -> ${allowed ? 'allowed' : 'refused'}`, async () => {
@@ -99,12 +101,30 @@ suite('requireCredential and providerConnection (FX965 #482)', () => {
       if (endpointScope !== 'default') x.endpoints.values.set('failsafe.integrations.github.apiBaseUrl', { value: 'https://ghe.example/api/v3', scope: endpointScope });
       const conn = providerConnection(x.creds, x.endpoints, 'github', x.ui, 'x');
       assert.equal(conn?.credential, allowed ? TOKEN : undefined);
-      assert.deepEqual(x.ui.warnings, allowed ? [] : [endpointRefusalMessage('GitHub')]);
+      assert.deepEqual(x.ui.warnings, allowed ? [] :
+        [githubCustomEndpointRefusalMessage()]);
     });
   }
+
+  test('B290: a Dev Container globalValue cannot authorize user GitHub credentials to another host', async () => {
+    const x = await h();
+    await x.creds.set('github.token', 'user', TOKEN);
+    for (const ep of ['https://ghe.attacker.example/api/v3', 'https://api.github.com.evil/api/v3',
+      'https://api.github.com/other', 'not a URL']) {
+      x.endpoints.values.set('failsafe.integrations.github.apiBaseUrl', { value: ep, scope: 'user' });
+      assert.equal(governedCommitConnection(x.creds, x.endpoints, x.ui), undefined);
+    }
+    assert.deepEqual(x.ui.warnings, Array(4).fill(githubCustomEndpointRefusalMessage()));
+    x.endpoints.values.set('failsafe.integrations.github.apiBaseUrl', {
+      value: 'https://api.github.com', scope: 'user',
+    });
+    assert.equal(providerConnection(x.creds, x.endpoints, 'github', x.ui, 'unconfigured')?.credential, TOKEN);
+  });
 });
 
 suite('integration consumers (FX965 #482)', () => {
+  const approval = createApprovalFixture(['.gitignore']);
+  suiteTeardown(() => approval.cleanup());
   test('runLinearImport: after migration the transport receives the migrated key; with only plain text it is never called', async () => {
     const x = await h();
     x.config.set('failsafe.integrations.linear.apiKey', 'user', TOKEN);
@@ -171,7 +191,7 @@ suite('integration consumers (FX965 #482)', () => {
 
     await runGitHubAdvisory(deps);
     assert.deepEqual(published, []);
-    assert.deepEqual(x.ui.warnings, [endpointRefusalMessage('GitHub')]);
+    assert.deepEqual(x.ui.warnings, [githubCustomEndpointRefusalMessage()]);
 
     await x.creds.set('github.token', 'workspace', 'ws_gh_token_4321');
     await runGitHubAdvisory(deps);
@@ -258,8 +278,15 @@ suite('integration consumers (FX965 #482)', () => {
   test('governed commit: a stored token reaches the PR creator; plain text only -> PR step skipped, commit still made', async () => {
     const git: GitRunner = async (a) => {
       if (a[0] === 'rev-parse' && a.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
+      const bindingOp = a.join(' ');
+      if (bindingOp === 'rev-parse --verify --quiet HEAD') return { code: 0, stdout: 'a'.repeat(40), stderr: '' };
+      if (bindingOp === 'rev-parse --verify HEAD') return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+      if (bindingOp.startsWith('rev-parse --verify --quiet refs/heads/')) return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+      if (bindingOp === 'write-tree') return { code: 0, stdout: '7'.repeat(40), stderr: '' };
+      if (a[0] === 'log') return { code: 0, stdout: '7'.repeat(40) + '\0' + 'a'.repeat(40) + '\0' + "chore(organize): apply 1 workspace change(s)\n\n- x" + '\n', stderr: '' };
       if (a[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
       if (a[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
+      if (a[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-20261015000000', stderr: '' };
       if (a[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
       return { code: 0, stdout: '', stderr: '' };
     };
@@ -267,8 +294,8 @@ suite('integration consumers (FX965 #482)', () => {
       const auth: string[] = [];
       const commits: string[][] = [];
       const r = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
-        workspaceRoot: '/ws', confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-15T00:00:00Z',
-        git: async (a, cwd) => { if (a[0] === 'commit') commits.push(a); return git(a, cwd); },
+        workspaceRoot: approval.workspaceRoot, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-15T00:00:00Z',
+        git: approval.wrap(async (a, cwd) => { if (a[0] === 'commit') commits.push(a); return git(a, cwd); }),
         ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), async (_u, headers) => {
           auth.push(String(headers.Authorization));
           return { status: 201, body: '{"html_url":"https://github.com/o/r/pull/1"}' };

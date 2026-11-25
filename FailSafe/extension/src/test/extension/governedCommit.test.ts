@@ -9,8 +9,15 @@ type GitResp = { code: number; stdout: string; stderr: string };
 
 function defaultFor(args: string[]): GitResp {
   if (args[0] === 'rev-parse' && args.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
+  const bindingOp = args.join(' ');
+  if (bindingOp === 'rev-parse --verify --quiet HEAD') return { code: 0, stdout: 'a'.repeat(40), stderr: '' };
+  if (bindingOp === 'rev-parse --verify HEAD') return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp.startsWith('rev-parse --verify --quiet refs/heads/')) return { code: 0, stdout: 'b'.repeat(40), stderr: '' };
+  if (bindingOp === 'write-tree') return { code: 0, stdout: '7'.repeat(40), stderr: '' };
+  if (args[0] === 'log') return { code: 0, stdout: '7'.repeat(40) + '\0' + 'a'.repeat(40) + '\0' + REQ.message + '\n', stderr: '' };
   if (args[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
   if (args[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
+  if (args[0] === 'symbolic-ref') return { code: 0, stdout: 'fix/organize-123', stderr: '' };
   if (args[0] === 'remote') return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' };
   return { code: 0, stdout: '', stderr: '' };
 }
@@ -75,7 +82,7 @@ suite('commitPushOpenPr — governed Organize ladder', () => {
     const git: GitRunner = async (args) => { calls.push(args); return defaultFor(args); };
     await commitPushOpenPr(REQ, { git, post: okPost, token: 'tok' });
     const add = calls.find((c) => c[0] === 'add');
-    assert.deepEqual(add, ['add', '-A', '--', '.gitignore', '.editorconfig', 'prs.json']);
+    assert.deepEqual(add, ['add', '-A', '--', ':(literal).gitignore', ':(literal).editorconfig', ':(literal)prs.json']);
   });
 });
 
@@ -95,7 +102,9 @@ suite('commitPushOpenPr — credential redaction (#241 F-3)', () => {
 
   test('push stderr echoing a credentialed url → warning is redacted', async () => {
     const r = await commitPushOpenPr(REQ, {
-      git: withRemote(CRED, (a) =>
+      // Use a clean authorized fetch/push target; the *error text* still
+      // contains a fake credential and must be redacted before surfacing.
+      git: gitWith((a) =>
         a[0] === 'push' ? { code: 1, stderr: `fatal: Authentication failed for '${CRED}/'` } : undefined),
     });
     assert.equal(r.step, 'committed');
@@ -103,11 +112,19 @@ suite('commitPushOpenPr — credential redaction (#241 F-3)', () => {
     assert.match(r.warning || '', /push failed: fatal: Authentication failed for 'https:\/\/\*\*\*@github\.com\/o\/r\.git\/'/);
   });
 
-  test('redaction leaves the slug-derived compare url and PR creation intact', async () => {
-    const r = await commitPushOpenPr(REQ, { git: withRemote(CRED), post: okPost, token: 'tok' });
-    assert.equal(r.step, 'pr');
-    assert.equal(r.prUrl, 'https://github.com/o/r/pull/9');
-    assert.equal(r.compareUrl, 'https://github.com/o/r/compare/main...fix/organize-123');
+  test('credential-bearing Git fetch URL is redacted and cannot authorize outbound push or PR', async () => {
+    let posts = 0;
+    const calls: string[][] = [];
+    const g = withRemote(CRED);
+    const r = await commitPushOpenPr(REQ, {
+      git: async (args, cwd) => { calls.push(args); return g(args, cwd); },
+      token: 'tok', post: async () => { posts++; return { status: 201, body: '{}' }; },
+    });
+    assert.equal(r.step, 'committed');
+    assert.equal(r.remoteUrl, 'https://***@github.com/o/r.git');
+    assert.equal(r.prUrl, undefined);
+    assert.equal(posts, 0);
+    assert.equal(calls.filter(c => c[0] === 'push').length, 0);
   });
 
   test('ssh remotes are untouched — `git@` is a username, not a secret', async () => {
@@ -238,4 +255,31 @@ suite('commitPushOpenPr — commit binding (#532 B286)', () => {
     assert.equal(r.commitSha, undefined);
     assert.match(r.warning ?? '', /not bound/);
   });
+  test('unverified new commit never reaches remote push or authenticated PR', async () => {
+    const cases: Array<[string, Script]> = [
+      ['foreign parent', { log: `${TREE}\0${'c'.repeat(40)}\0${MSG}\n` }],
+      ['unreadable staged tree', { tree: 'invalid' }],
+      ['wrong branch tip', { tip: 'c'.repeat(40) }],
+      ['unreadable pre-commit HEAD', { pre: { code: 128, stdout: '', stderr: 'failure' } }],
+    ];
+    for (const [label, script] of cases) {
+      const calls: string[][] = [];
+      const underlying = bindGit(script, calls);
+      let posts = 0;
+      const git: GitRunner = async (args, cwd) => {
+        if (args[0] === 'remote') { calls.push(args); return { code: 0, stdout: 'https://github.com/o/r.git', stderr: '' }; }
+        return underlying(args, cwd);
+      };
+      const result = await commitPushOpenPr(REQ, {
+        git, token: 'synthetic', post: async () => { posts++; return { status: 201, body: '{}' }; },
+      });
+      assert.equal(result.step, 'committed', label);
+      assert.equal(result.commitSha, undefined, label);
+      assert.match(result.warning ?? '', /not bound to this run.*no push or PR attempted/, label);
+      assert.equal(calls.some(a => a[0] === 'push'), false, label);
+      assert.equal(calls.some(a => a[0] === 'remote'), false, label);
+      assert.equal(posts, 0, label);
+    }
+  });
+
 });

@@ -76,7 +76,7 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
     const calls: string[] = [];
     const get: GitHubGetFn = async (url) => {
       calls.push(url);
-      if (/\/pulls\/7\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #3, #4' }) };
+      if (/\/pulls\/7\b/.test(url)) return { status: 200, body: JSON.stringify({ head: { sha: 's' }, body: 'Closes #3, #4' }) };
       if (/\/issues\b/.test(url)) return { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }, { number: 4, state: 'open' }]) };
       return { status: 404, body: '' };
     };
@@ -95,7 +95,7 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
   // misstating the reason (nonexistent vs closed).
   test('runLinkageAudit: closing a NONEXISTENT issue ⇒ fail via live knownIssues, not silently downgraded to warn (F-7)', async () => {
     const get: GitHubGetFn = async (url) => {
-      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #999' }) };
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ head: { sha: 's' }, body: 'Closes #999' }) };
       if (/\/issues\b/.test(url)) {
         return { status: 200, body: JSON.stringify([{ number: 1, state: 'open' }, { number: 2, state: 'closed' }]) };
       }
@@ -115,7 +115,7 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
   // fix must not turn every closing reference into a hard failure.
   test('runLinkageAudit: closing an already-closed KNOWN issue ⇒ warn, distinct from nonexistent (F-7)', async () => {
     const get: GitHubGetFn = async (url) => {
-      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #2' }) };
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ head: { sha: 's' }, body: 'Closes #2' }) };
       if (/\/issues\b/.test(url)) {
         return { status: 200, body: JSON.stringify([{ number: 1, state: 'open' }, { number: 2, state: 'closed' }]) };
       }
@@ -135,7 +135,7 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
 suite('runLinkageAudit pagination (FX914/#241C)', () => {
   function pagedGet(pages: Array<Array<{ number: number }>>, prBody: string) {
     return async (url: string) => {
-      if (url.includes('/pulls/')) return { status: 200, body: JSON.stringify({ body: prBody }) };
+      if (url.includes('/pulls/')) return { status: 200, body: JSON.stringify({ head: { sha: 's' }, body: prBody }) };
       const m = url.match(/[?&]page=([0-9]+)/);
       const page = m ? Number(m[1]) : 1;
       return { status: 200, body: JSON.stringify(pages[page - 1] ?? []) };
@@ -146,7 +146,7 @@ suite('runLinkageAudit pagination (FX914/#241C)', () => {
     const page1 = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, state: 'open' }));
     const page2 = [{ number: 555, state: 'open' }];
     const r = await runLinkageAudit({
-      enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9,
+      enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9, headSha: 's',
       get: pagedGet([page1, page2], 'Closes #555'),
     } as any);
     assert.equal(r.ok, true);
@@ -161,7 +161,7 @@ suite('runLinkageAudit pagination (FX914/#241C)', () => {
     const full = (start: number) => Array.from({ length: 100 }, (_, i) => ({ number: start + i, state: 'open' }));
     const pages = Array.from({ length: 10 }, (_, p) => full(p * 100 + 1));
     const r = await runLinkageAudit({
-      enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9,
+      enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9, headSha: 's',
       get: pagedGet(pages, 'Closes #1'),
     } as any);
     assert.equal(r.ok, true);
@@ -215,7 +215,7 @@ suite('#374 linkage signal quality', () => {
 
   test('publish path: a pull_request page item populates knownPrs end-to-end', async () => {
     const get: GitHubGetFn = async (url) => {
-      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #5' }) };
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ head: { sha: 's' }, body: 'Closes #5' }) };
       if (/\/issues\b/.test(url)) {
         return { status: 200, body: JSON.stringify([
           { number: 1, state: 'open' },
@@ -233,7 +233,7 @@ suite('#374 linkage signal quality', () => {
 
   test('publish path: Closes #<selfPr> gets the accurate pull-request detail (audit F3 bonus pin)', async () => {
     const get: GitHubGetFn = async (url) => {
-      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #8' }) };
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ head: { sha: 's' }, body: 'Closes #8' }) };
       if (/\/issues\b/.test(url)) {
         return { status: 200, body: JSON.stringify([
           { number: 1, state: 'open' },

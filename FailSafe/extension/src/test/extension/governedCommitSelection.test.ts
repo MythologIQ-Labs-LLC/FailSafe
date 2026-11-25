@@ -1,0 +1,428 @@
+// Real-Git admission tests for #715 directory selection manifests.
+// Deliberately use disposable repositories, no GitHub remote or authenticated PR.
+import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { spawnSync } from 'child_process';
+import { commitPushOpenPr, defaultGitRunner, type GitRunner } from '../../extension/governedCommit';
+import { snapshotExactSelection, sameExactSelection } from '../../extension/governedCommitSelection';
+import { runGovernedCommitFlow } from '../../extension/governedCommitFlow';
+
+function git(cwd: string, ...args: string[]): string {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8', windowsHide: true });
+  assert.equal(r.status, 0, r.stderr || args.join(' '));
+  return r.stdout.trim();
+}
+
+suite('#715 exact-directory manifest, real Git', () => {
+  let root = '';
+  setup(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-exact-directory-'));
+    git(root, 'init', '-q');
+    git(root, 'config', 'user.name', 'FailSafe test');
+    git(root, 'config', 'user.email', 'fixture@failsafe.invalid');
+    git(root, 'config', 'commit.gpgsign', 'false');
+    fs.mkdirSync(path.join(root, 'docs'));
+  });
+  teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  test('directory without trailing slash is expanded and shown as exact files before approval', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# reviewed\n');
+    let prompt = '';
+    const result = await runGovernedCommitFlow('organize', ['docs'], ['Organize docs'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { prompt = text; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /Exact changed files to commit \(1\):/);
+    assert.match(prompt, /docs\/approved\.md/);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+  });
+
+  test('deleted last tracked child still makes a missing bare directory selector unsafe', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'gone.md'), 'before\n');
+    git(root, 'add', '--', 'docs/gone.md');
+    git(root, 'commit', '-qm', 'baseline');
+    fs.rmSync(path.join(root, 'docs', 'gone.md'));
+    fs.rmdirSync(path.join(root, 'docs'));
+
+    const original = git(root, 'rev-parse', 'HEAD');
+    const direct = await commitPushOpenPr({
+      workspaceRoot: root, paths: ['docs'], branch: 'fix/missing-dir',
+      message: 'unsafe directory selector', base: 'main', prTitle: 'test', prBody: '',
+    }, { git: defaultGitRunner });
+    assert.equal(direct.step, 'noop');
+    assert.match(direct.warning ?? '', /directory selection.*exact/i);
+    assert.equal(git(root, 'rev-parse', 'HEAD'), original);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+
+    let prompt = '';
+    const flow = await runGovernedCommitFlow('organize', ['docs'], ['Delete docs/gone.md'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { prompt = text; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /Exact changed files to commit \(1\):/);
+    assert.match(prompt, /docs\/gone\.md/);
+    assert.equal(flow.step, 'committed', JSON.stringify(flow));
+    assert.equal(git(root, 'show', '--format=', '--name-status', 'HEAD'), 'D\tdocs/gone.md');
+  });
+
+  test('direct bare directory cannot stage more than the authorized file manifest', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), '# unreviewed\n');
+    for (const approvedFiles of [undefined, [
+      { path: 'docs/approved.md', state: '??', blob: git(root, 'hash-object', '--no-filters', '--', 'docs/approved.md'), mode: '100644' as const },
+    ]]) {
+      const before = git(root, 'symbolic-ref', '--short', 'HEAD');
+      const result = await commitPushOpenPr({
+        workspaceRoot: root, paths: ['docs'], approvedFiles,
+        branch: 'fix/unsafe-dir', message: 'test', base: 'main', prTitle: 'test', prBody: '',
+      }, { git: defaultGitRunner });
+      assert.equal(result.step, 'noop', JSON.stringify(result));
+      assert.match(result.warning ?? '', /directory selection.*exact.*files/i);
+      assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+      assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), before);
+      assert.equal(git(root, 'branch', '--list', 'fix/unsafe-dir'), '');
+    }
+  });
+
+
+  test('approved regular-file mode must also bind the executable bit in the staged Git index', async () => {
+    if (process.platform === 'win32') return; // Native Windows stat permissions do not represent Git executable mode.
+    const file = path.join(root, 'docs', 'reviewed.sh');
+    fs.writeFileSync(file, 'echo baseline\\n');
+    fs.chmodSync(file, 0o644);
+    git(root, 'config', 'core.filemode', 'true');
+    git(root, 'add', '--', 'docs/reviewed.sh');
+    git(root, 'commit', '-qm', 'baseline');
+    fs.writeFileSync(file, 'echo modified\\n');
+    const approved = await snapshotExactSelection(defaultGitRunner, root, ['docs/reviewed.sh']);
+    assert.equal(approved.ok, true, JSON.stringify(approved));
+    if (!approved.ok) return;
+    assert.equal(approved.selection.files[0].mode, '100644');
+    const approvedBlob = approved.selection.files[0].blob;
+    const baselineHead = git(root, 'rev-parse', 'HEAD');
+
+    // A post-approval chmod changes executable authority but not the content SHA.
+    fs.chmodSync(file, 0o755);
+    assert.equal(git(root, 'hash-object', '--no-filters', '--', 'docs/reviewed.sh'), approvedBlob);
+    const rescanned = await snapshotExactSelection(defaultGitRunner, root, ['docs/reviewed.sh']);
+    assert.equal(rescanned.ok, true, JSON.stringify(rescanned));
+    if (!rescanned.ok) return;
+    assert.equal(rescanned.selection.files[0].mode, '100755');
+    assert.equal(sameExactSelection(approved.selection, rescanned.selection), false);
+
+    // Exercise the lower-level call directly to prove staged-index verification
+    // still rejects the mode change if a caller fails to resnapshot.
+    const result = await commitPushOpenPr({
+      workspaceRoot: root, paths: ['docs/reviewed.sh'], approvedFiles: approved.selection.files,
+      branch: 'fix/mode-approval', message: 'must-not-commit', base: 'main', prTitle: 'test', prBody: '',
+    }, { git: defaultGitRunner });
+    assert.equal(result.step, 'noop', JSON.stringify(result));
+    assert.match(result.warning ?? '', /staged executable mode differs from approved file/);
+    assert.equal(git(root, 'rev-parse', 'HEAD'), baselineHead, 'unapproved executable mode must never commit');
+    assert.equal(git(root, 'ls-files', '--stage', '--', 'docs/reviewed.sh').split(' ')[0], '100755',
+      'the negative test must prove Git actually staged the changed executable mode');
+  });
+
+  test('untracked directory is expanded to reviewed individual filenames, not "docs/"', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    const first = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(first.ok, true, JSON.stringify(first));
+    if (!first.ok) return;
+    assert.deepEqual(first.selection.files.map(f => f.path), ['docs/approved.md']);
+    assert.equal(first.selection.files[0].state, '??');
+    assert.match(first.selection.files[0].blob ?? '', /^[a-f0-9]{40,64}$/);
+    const again = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(again.ok, true);
+    if (again.ok) assert.equal(sameExactSelection(first.selection, again.selection), true);
+  });
+
+  test('new descendant after checkpoint changes the manifest; content change also changes it', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# reviewed\n');
+    const first = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(first.ok, true);
+    if (!first.ok) return;
+    fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), 'not consented\n');
+    const second = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(second.ok, true);
+    if (!second.ok) return;
+    assert.equal(sameExactSelection(first.selection, second.selection), false);
+    assert.deepEqual(second.selection.files.map(f => f.path), ['docs/approved.md', 'docs/unreviewed.md']);
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# changed after review\n');
+    const third = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(third.ok, true);
+    if (third.ok) assert.equal(sameExactSelection(second.selection, third.selection), false);
+  });
+
+  test('nested workspace returns workspace-relative exact filenames', async () => {
+    const nested = path.join(root, 'docs');
+    fs.mkdirSync(path.join(nested, 'sub'));
+    fs.writeFileSync(path.join(nested, 'sub', 'file.md'), 'nested\n');
+    const result = await snapshotExactSelection(defaultGitRunner, nested, ['sub/']);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    if (result.ok) assert.deepEqual(result.selection.files.map(f => f.path), ['sub/file.md']);
+  });
+
+  test('tracked deletion in selected directory has an explicit null blob', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'deleted.md'), 'old\n');
+    git(root, 'add', '--', 'docs/deleted.md');
+    git(root, 'commit', '-qm', 'baseline');
+    fs.rmSync(path.join(root, 'docs', 'deleted.md'));
+    const result = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    if (result.ok) {
+      assert.deepEqual(result.selection.files.map(f => f.path), ['docs/deleted.md']);
+      assert.equal(result.selection.files[0].blob, null);
+      assert.match(result.selection.files[0].state, /D/);
+    }
+  });
+
+  test('more than 64 untracked files refuse rather than silently truncate approval', async () => {
+    for (let i = 0; i < 65; i++) fs.writeFileSync(path.join(root, 'docs', 'a' + i + '.md'), 'x\n');
+    const result = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.warning, /64 changed files/i);
+  });
+
+  test('Unicode bidi controls cannot visually spoof approved filenames', async () => {
+    if (process.platform === 'win32') return; // Windows names can be restricted by platform policy.
+    const spoof = 'visible' + '\u202e' + 'txt.dm';
+    fs.writeFileSync(path.join(root, 'docs', spoof), 'spoofed\n');
+    const result = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(result.ok, false, JSON.stringify(result));
+    if (!result.ok) assert.match(result.warning, /invalid|outside|unsafe|status/i);
+  });
+
+  test('unmerged and conflicted Git porcelain states cannot be approved', async () => {
+    for (const state of ['UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD']) {
+      const spoofed: GitRunner = async (args, cwd) => {
+        if (args.includes('status')) return {
+          code: 0, stdout: state + ' docs/conflicted.md\0', stderr: '',
+        };
+        return defaultGitRunner(args, cwd);
+      };
+      const result = await snapshotExactSelection(spoofed, root, ['docs/']);
+      assert.equal(result.ok, false, state + ': ' + JSON.stringify(result));
+      if (!result.ok) assert.match(result.warning, /conflict|unmerged/i);
+    }
+  });
+
+  test('unreadable, misleading or truncated porcelain cannot authorize any filenames', async () => {
+    const cases = [
+      { code: 1, stdout: '', stderr: 'refused' },
+      { code: 0, stdout: '?? docs/approved.md', stderr: '' },
+      { code: 0, stdout: '?? docs/../private.md\0', stderr: '' },
+      { code: 0, stdout: '?? docs/evil\nname.md\0', stderr: '' },
+    ];
+    for (const injected of cases) {
+      const guard: GitRunner = async (args, cwd) => args.includes('status')
+        ? injected : defaultGitRunner(args, cwd);
+      const result = await snapshotExactSelection(guard, root, ['docs/']);
+      assert.equal(result.ok, false, JSON.stringify(result));
+    }
+  });
+
+  test('a symlinked selected file is refused before any content hashing', async () => {
+    if (process.platform === 'win32') return; // Symlink creation is privileged on some Windows hosts.
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-symlink-target-'));
+    try {
+      fs.writeFileSync(path.join(outside, 'secret.md'), 'not workspace content\n');
+      fs.symlinkSync(path.join(outside, 'secret.md'), path.join(root, 'docs', 'link.md'));
+      const calls: string[][] = [];
+      const guarded: GitRunner = async (args, cwd) => {
+        calls.push(args);
+        if (args[0] === 'hash-object') throw new Error('hashing a symlink target is forbidden');
+        return defaultGitRunner(args, cwd);
+      };
+      const result = await snapshotExactSelection(guarded, root, ['docs/']);
+      assert.equal(result.ok, false, JSON.stringify(result));
+      if (!result.ok) assert.match(result.warning, /symlink|regular file|outside workspace/i);
+      assert.equal(calls.some(args => args[0] === 'hash-object'), false);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('preconsent status and tracked-file lookup do not invoke core.fsmonitor commands', async () => {
+    if (process.platform === 'win32') return; // Host-specific executable proof requires installed Windows acceptance.
+    const hook = path.join(root, 'fsmonitor.sh');
+    const marker = path.join(root, 'fsmonitor-executed.log');
+    fs.writeFileSync(hook, '#!/bin/sh\nprintf "hook ran\\n" >> "' + marker + '"\nprintf "\\0"\n');
+    fs.chmodSync(hook, 0o755);
+    git(root, 'config', 'core.fsmonitor', hook);
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), 'raw content\n');
+    const current = await snapshotExactSelection(defaultGitRunner, root, ['docs/']);
+    assert.equal(current.ok, true, JSON.stringify(current));
+    assert.equal(fs.existsSync(marker), false, 'status must not run configured fsmonitor');
+    const missing = await snapshotExactSelection(defaultGitRunner, root, ['docs/missing.md']);
+    assert.equal(missing.ok, true, JSON.stringify(missing));
+    assert.equal(fs.existsSync(marker), false, 'ls-files must not run configured fsmonitor');
+  });
+
+  test('pre-approval file hashes never invoke configured Git clean filters', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), 'original\n');
+    const calls: string[][] = [];
+    const captureOnly: GitRunner = async (args, cwd) => {
+      calls.push(args);
+      if (args[0] === 'hash-object' && !args.includes('--no-filters')) {
+        throw new Error('Git filter capable hashing occurred before consent');
+      }
+      return defaultGitRunner(args, cwd);
+    };
+    const manifest = await snapshotExactSelection(captureOnly, root, ['docs/']);
+    assert.equal(manifest.ok, true, JSON.stringify(manifest));
+    assert.ok(calls.some(x => x[0] === 'hash-object' && x.includes('--no-filters')));
+    assert.equal(calls.some(x => x[0] === 'hash-object' && x.some(v => v.startsWith('--path='))), false);
+  });
+
+  test('approved CRLF content can be staged with Git text normalization', async () => {
+    fs.writeFileSync(path.join(root, '.gitattributes'), '*.md text\n');
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# win\r\nline\r\n');
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Normalize approved markdown'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { assert.match(text, /docs\/approved\.md/); return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+    const raw = git(root, 'hash-object', '--no-filters', '--', 'docs/approved.md');
+    const staged = git(root, 'rev-parse', 'HEAD:docs/approved.md');
+    assert.notEqual(raw, staged, 'Git text normalization changes the object ID');
+  });
+
+  test('consent and commit count use expanded file count, not collapsed directory count', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'a.md'), 'a\n');
+    fs.writeFileSync(path.join(root, 'docs', 'b.md'), 'b\n');
+    let prompt = '';
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Organize docs'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async message => { prompt = message; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /applied 2 change\(s\)/);
+    assert.match(prompt, /Exact changed files to commit \(2\):/);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'log', '-1', '--format=%s'), 'chore(organize): apply 2 workspace change(s)');
+  });
+
+  test('approved directory lists exact filenames and commits only that reviewed set', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    let prompt = '';
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { prompt = text; return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.match(prompt, /Exact changed files to commit \(1\):/);
+    assert.match(prompt, /docs\/approved\.md/);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+  });
+
+  test('new file inside selected directory after consent refuses without checkout or staging', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    const before = git(root, 'symbolic-ref', '--short', 'HEAD');
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => {
+        assert.match(text, /docs\/approved\.md/);
+        assert.doesNotMatch(text, /docs\/unreviewed\.md/);
+        fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), '# introduced later\n');
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'noop');
+    assert.match('warning' in result ? result.warning || '' : '', /manifest changed after approval/i);
+    assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), before);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+    assert.equal(git(root, 'branch', '--list', 'fix/organize-20261118120000'), '');
+  });
+
+  test('#715: changed contents of a selected single file after approval refuse before checkout', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# reviewed\n');
+    const before = git(root, 'symbolic-ref', '--short', 'HEAD');
+    const run = await runGovernedCommitFlow('organize', ['docs/approved.md'], ['Update approved file'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => {
+        assert.match(text, /Exact changed files to commit \(1\):/);
+        assert.match(text, /docs\/approved\.md/);
+        fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# swapped after consent\n');
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(run.step, 'noop', JSON.stringify(run));
+    assert.match('warning' in run ? run.warning || '' : '', /manifest changed after approval/i);
+    assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), before);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+    assert.equal(git(root, 'branch', '--list', 'fix/organize-20261118120000'), '');
+  });
+
+  test('#715: unchanged selected single file is committed with the same content identity', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# reviewed\n');
+    const run = await runGovernedCommitFlow('organize', ['docs/approved.md'], ['Update approved file'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { assert.match(text, /docs\/approved\.md/); return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(run.step, 'committed', JSON.stringify(run));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+  });
+
+  test('changed contents after directory approval refuse even when filename set is unchanged', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async () => {
+        fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# different content\n');
+        return true;
+      },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'noop');
+    assert.match('warning' in result ? result.warning || '' : '', /manifest changed after approval/i);
+    assert.equal(git(root, 'diff', '--cached', '--name-only'), '');
+  });
+
+  test('new descendant appearing after the recheck still cannot enter approved commit', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'approved.md'), '# approved\n');
+    let injected = 0;
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Add docs files'], {
+      workspaceRoot: root,
+      git: async (args, cwd) => {
+        const response = await defaultGitRunner(args, cwd);
+        if (args[0] === 'checkout' && args[1] === '-b' && response.code === 0) {
+          fs.writeFileSync(path.join(root, 'docs', 'unreviewed.md'), 'late newcomer\n');
+          injected++;
+        }
+        return response;
+      },
+      confirm: async () => true,
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(injected, 1);
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-only', 'HEAD'), 'docs/approved.md');
+    assert.equal(git(root, 'status', '--porcelain', '--', 'docs/unreviewed.md'), '?? docs/unreviewed.md');
+  });
+
+  test('an approved tracked deletion remains a valid directory change', async () => {
+    fs.writeFileSync(path.join(root, 'docs', 'gone.md'), 'before\n');
+    git(root, 'add', '--', 'docs/gone.md');
+    git(root, 'commit', '-qm', 'baseline');
+    fs.rmSync(path.join(root, 'docs', 'gone.md'));
+    const result = await runGovernedCommitFlow('organize', ['docs/'], ['Remove file'], {
+      workspaceRoot: root, git: defaultGitRunner,
+      confirm: async text => { assert.match(text, /docs\/gone\.md/); return true; },
+      recordDeclined: async () => {}, now: () => '2026-11-18T12:00:00.000Z',
+    });
+    assert.equal(result.step, 'committed', JSON.stringify(result));
+    assert.equal(git(root, 'show', '--format=', '--name-status', 'HEAD'), 'D\tdocs/gone.md');
+  });
+
+});
