@@ -1,0 +1,33 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-11-25T1958-4f4867",
+  "ts": "2026-11-25T22:55:37Z",
+  "verdict": "PASS",
+  "merkle_seal": "e13a6e28f56e2b3bd3a5d61506a3bbfcc12dca28b5e62fd9c3f56b4d8a0ba3e7",
+  "content_hash": "7db0173ed2b634fd01b001b3ff0ea0d66debf81deb6eea2655cdad50a8d1fd69",
+  "previous_hash": "1fa9ec6cf0fe4e0ff1b0447e6eb3173133accc8feb71176506b477ee99c4a705",
+  "ledger_entry": 991,
+  "entry_id": "bcf6b78dbb67",
+  "iteration": 1,
+  "reality_check": {
+    "missing": [],
+    "unplanned": [],
+    "matches": 19
+  },
+  "intent_lock_state": "verified",
+  "boundary_scope": "structural",
+  "report_path": ".failsafe/governance/evidence/issue-722/SUBSTANTIATE.md",
+  "source_revision": "f174926213784cd1438406b8265c9fa140ad6eb2",
+  "implementation_commit": "71edad8f7d74f44ffeea4bf418d7d4294755536e",
+  "plan_sha256": "7db0173ed2b634fd01b001b3ff0ea0d66debf81deb6eea2655cdad50a8d1fd69",
+  "ci": "PR Full Test 45714871613 success at f1749262 (merge a5618f2); all six pull_request workflows and the push Repo Standards run success",
+  "sealed": true,
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "pass",
+    "ts": "2026-11-25T22:56:28Z"
+  }
+}

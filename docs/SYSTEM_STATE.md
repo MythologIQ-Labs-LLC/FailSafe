@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-11-25 (#703 Delivery review form and refresh races sealed on PR #706 at ledger #984, not merged or released; historical release events remain in their dated sections below).
+**Last Updated:** 2026-11-25 (#722/#702 Tier-1 currency, publication census and glossary fence sealed on PR #721 at ledger #991, and #703 Delivery review form and refresh races sealed on PR #706 at ledger #984; neither merged or released; historical release events remain in their dated sections below).
 **Current development:** v6.1.0 is planned and in progress under [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679), with the published v6.0.13 baseline unchanged. The root [Architecture Index](../ARCHITECTURE_INDEX.md) remains the design-authority entry point; the [Governance Index](GOVERNANCE_INDEX.md) governs artifact tiers and freshness. No v6.1.0 release or skill cutover is authorized by this status snapshot.
 **Live pull-request queue:** [GitHub's open PR list](https://github.com/MythologIQ-Labs-LLC/FailSafe/pulls?q=is%3Apr+is%3Aopen) is authoritative. This document deliberately does not label historical PR numbers or local branch names as currently open; earlier #442–#447 and September sprint references belong to historical context.
 **Current Release:** v6.0.13 (2026-11-13): sealed (#968) and G4-witnessed (genesis `g4-000001`, release verification PASS on H and M), published 2026-11-13 (tag `v6.0.13` object `62a28fc1` on `26c1161a`, release run 43337880053; VS Code Marketplace, Open VSX and GitHub Release verified byte-identical; ledger #969). Previous published release: v6.0.12 (2026-11-10, tag `v6.0.12` on `0e70e539`, release run 42842387243).
@@ -12,6 +12,13 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-11-25 - #722 Tier-1 currency and publication census; #702 glossary fence (SESSION SEAL #991; PR #721, not merged)
+
+- PR #721 (`fix/702-close-sentry-glossary-fence-20261118`), reconciled onto main 7863a29e by the merge bc3786a5, is sealed against `plan-721-governance-currency-glossary.md` iteration 4: three audit VETOs (#985-#987), audit PASS #988 with record correction #989, implementation #990 (commit 71edad8f, the audited `candidate-iter4.patch` byte-for-byte), substantiation PASS #991. It is not merged or released, and no version bump or tag was made.
+- `qor/references/glossary.md` closes the YAML block after `Quarantined change set`, so the frozen Qor-logic parser now sees 17 entries including `Sentry import outcome` (16 on main).
+- `FailSafe/extension/scripts/check-governance-currency.cjs` (new) compares the explicit current-release markers (newest CHANGELOG heading, SYSTEM_STATE and ARCHITECTURE_PLAN `**Current Release:**`, the first Governance Index `**Last Reviewed**`, the Tier-1 version-authority row, the Feature Index lead) with `FailSafe/extension/package.json`, refuses (exit 2) on malformed or ambiguous input and exits 1 under `--enforce` on any error. The Governance Index readers moved to `governanceIndexReaders.cjs`; four governance suites (publication 3, census 7, currency 12, refusals 9) run in Repo Standards Enforcement; workflow triggers unchanged.
+- Tier-1 freshness (plan LD7): ARCHITECTURE_PLAN, ARCHITECTURE_INDEX and the FEATURE_INDEX lead re-dated 2026-11-25; the eight Tier-1 instruction and genesis files without a freshness marker are outside #722 by owner decision 2026-11-25. Evidence: `.failsafe/governance/evidence/issue-722/`.
 
 ## 2026-11-25 — #703 Delivery review form, refresh and result attribution races (SESSION SEAL #984; PR #706, not merged)
 
