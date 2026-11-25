@@ -19,22 +19,24 @@ const REL = Object.freeze({
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
+const USAGE = 'Usage: check-governance-currency.cjs [--repo-root PATH] [--format json] [--enforce]';
+// Each option: how many values it consumes and how it applies them. Each may appear once.
+const OPTIONS = Object.freeze({
+  '--repo-root': { values: 1, apply: (args, value) => { args.root = value; } },
+  '--format': { values: 1, apply: (args, value) => { if (value !== 'json') throw new Error(USAGE); args.json = true; } },
+  '--enforce': { values: 0, apply: (args) => { args.enforce = true; } },
+});
+
 function parseArgs(argv) {
   const args = { root: process.cwd(), json: false, enforce: false };
   const seen = new Set();
   for (let i = 0; i < argv.length; i++) {
-    const token = argv[i];
-    if (token === '--repo-root' && !seen.has(token) && argv[i + 1]) {
-      args.root = argv[++i];
-    } else if (token === '--format' && !seen.has(token) && argv[i + 1] === 'json') {
-      i += 1;
-      args.json = true;
-    } else if (token === '--enforce' && !seen.has(token)) {
-      args.enforce = true;
-    } else {
-      throw new Error('Usage: check-governance-currency.cjs [--repo-root PATH] [--format json] [--enforce]');
-    }
-    seen.add(token);
+    const option = Object.hasOwn(OPTIONS, argv[i]) ? OPTIONS[argv[i]] : undefined;
+    const value = argv[i + 1];
+    if (!option || seen.has(argv[i]) || (option.values === 1 && !value)) throw new Error(USAGE);
+    seen.add(argv[i]);
+    option.apply(args, value);
+    i += option.values;
   }
   return args;
 }
@@ -126,10 +128,18 @@ function checkCurrency(rootArg) {
   const published = sections.filter(m => m[1] === version);
   if (published.length !== 1) throw new Error(`Expected exactly one CHANGELOG heading for ${version}; got ${published.length}`);
   const publishedAt = releaseDate(published[0][2]);
+  const findings = markerFindings(source, version, publishedAt, sections[0]?.[1]);
+  return { kind: 'candidate-document-currency', version, publishedAt, reviewedAt: indexReviewDate(source.governance), findings, summary: {
+    errors: findings.filter(f => f.severity === 'error').length,
+    warnings: findings.filter(f => f.severity === 'warning').length,
+  } };
+}
+
+/** FC001-FC006: each current-release marker against the manifest version and its release date. */
+function markerFindings(source, version, publishedAt, newest) {
   const findings = [];
   const error = (id, rel, message) => findings.push({ id, severity: 'error', path: rel, message });
   const warn = (id, rel, message) => findings.push({ id, severity: 'warning', path: rel, message });
-  const newest = sections[0]?.[1];
   if (newest !== version) error('FC001', REL.changelog, `Newest release heading ${newest ?? "missing"} differs from extension manifest ${version}`);
 
   const stateRelease = singleHeader(source.state.slice(0, 12000), /^\*\*Current Release:\*\*[ \t]*v?(\S+)/gm, 'SYSTEM_STATE Current Release');
@@ -150,10 +160,7 @@ function checkCurrency(rootArg) {
   if (featureLead && featureLead[1] !== version) {
     warn('FC005', REL.features, `Feature Index introduction names historical ${featureLead[1]}; current release ${version}. Review actual FX coverage, not just prose.`);
   }
-  return { kind: 'candidate-document-currency', version, publishedAt, reviewedAt, findings, summary: {
-    errors: findings.filter(f => f.severity === 'error').length,
-    warnings: findings.filter(f => f.severity === 'warning').length,
-  } };
+  return findings;
 }
 
 function main(argv) {

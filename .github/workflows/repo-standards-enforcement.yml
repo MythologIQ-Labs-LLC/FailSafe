@@ -52,7 +52,7 @@ jobs:
       - name: Governance document and publication regressions
         working-directory: FailSafe/extension
         run: |
-          node --test src/test/governance/governance-index-publication.test.cjs src/test/scripts/governanceCurrency.test.cjs
+          node --test src/test/governance/governance-index-publication.test.cjs src/test/governance/governance-index-census.test.cjs src/test/scripts/governanceCurrency.test.cjs src/test/scripts/governanceCurrencyRefusals.test.cjs
 
       - name: Lint
         working-directory: FailSafe/extension

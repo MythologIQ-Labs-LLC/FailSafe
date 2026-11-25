@@ -313,7 +313,7 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
 
 Registration in this index and presence in the repository are **different things**, and a reader of a clone cannot tell them apart without this section.
 
-`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 111 paths registered below have had that done; 15 have not (measured 2026-11-23 on protected `main@b03e47b7` using FX939's first-backticked `.md` per-tier-table-row rule; pattern rows are counted separately).
+`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 79 of the 111 paths registered below have had that done; 15 have not (measured 2026-11-25 on protected `main@7863a29e` using FX939's first-backticked `.md` per-tier-table-row rule; pattern rows are counted separately; `governance-index-census.test.cjs` recomputes these totals from the committed tree on every run).
 
 An unpublished row is not drift. Whether a given governance doc *should* be published is a licensing decision the operator has explicitly deferred, and this index does not presume it.
 

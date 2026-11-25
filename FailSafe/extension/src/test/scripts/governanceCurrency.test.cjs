@@ -2,32 +2,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
 const { checkCurrency } = require('../../../scripts/check-governance-currency.cjs');
-const CLI = path.join(__dirname, '..', '..', '..', 'scripts', 'check-governance-currency.cjs');
-
-function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-doc-currency-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const tierOne = '\n## Tier 1 — Canonical Sources\n| Path | Purpose |\n| `FailSafe/extension/package.json` | Authoritative version source |\n';
-  const write = (name, contents) => {
-    // Existing fixtures target release markers. Keep unrelated canonical
-    // registry authority valid unless a test provides a Tier-1 table itself.
-    if (name === 'docs/GOVERNANCE_INDEX.md' && !contents.includes('## Tier 1')) contents += tierOne;
-    const file = path.join(root, ...name.split('/'));
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, contents);
-  };
-  write('FailSafe/extension/package.json', '{ "version": "6.0.13" }\n');
-  write('CHANGELOG.md', '# Changelog\n\n## [Unreleased]\n\n## [6.0.13] - 2026-11-13\n\n## [6.0.12] - 2026-11-10\n');
-  write('docs/SYSTEM_STATE.md', '# System state\n**Current Release:** v6.0.13 (2026-11-13): verified\n');
-  write('docs/ARCHITECTURE_PLAN.md', '# Architecture\n**Current Release:** v6.0.13\n');
-  write('docs/GOVERNANCE_INDEX.md', '# Governance index\n**Last Reviewed**: 2026-11-13 (reviewed)\n**Last Reviewed**: 2026-10-22 (historical event)\n');
-  write('docs/FEATURE_INDEX.md', '# Feature Index\nSingle canonical cross-reference for FailSafe v6.0.13\n');
-  return { root, write, run: (...args) => spawnSync(process.execPath, [CLI, '--repo-root', root, ...args], { encoding: 'utf8' }) };
-}
+const { fixture } = require('./governanceCurrencyFixture.cjs');
 
 test('reports zero errors on current consistent fixture without mutating any file', t => {
   const f = fixture(t);
@@ -69,36 +46,6 @@ test('reports current-state and changelog mismatch without accepting historical 
   assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), ['FC001', 'FC002']);
 });
 
-test('refuses duplicate current changelog release heading', t => {
-  const f = fixture(t);
-  f.write('CHANGELOG.md', '## [6.0.13] - 2026-11-13\n## [6.0.13] - 2026-11-14\n');
-  assert.throws(() => checkCurrency(f.root), /exactly one CHANGELOG/);
-  assert.equal(f.run('--enforce').status, 2);
-});
-
-test('refuses impossible release dates and ambiguous canonical release markers', t => {
-  const f = fixture(t);
-  f.write('CHANGELOG.md', '## [6.0.13] - 2026-02-30\n');
-  assert.throws(() => checkCurrency(f.root), /Impossible release date/);
-  f.write('CHANGELOG.md', '## [6.0.13] - 2026-11-13\n');
-  f.write('docs/ARCHITECTURE_PLAN.md', '**Current Release:** v6.0.13\n**Current Release:** v6.0.12\n');
-  assert.throws(() => checkCurrency(f.root), /exactly one ARCHITECTURE_PLAN/);
-});
-
-test('refuses missing files and symlinks outside the checked repository', t => {
-  const f = fixture(t);
-  fs.rmSync(path.join(f.root, 'docs/FEATURE_INDEX.md'));
-  assert.throws(() => checkCurrency(f.root), /ENOENT/);
-  try {
-    fs.symlinkSync(path.join(f.root, 'docs/ARCHITECTURE_PLAN.md'), path.join(f.root, 'docs/FEATURE_INDEX.md'));
-  } catch (error) {
-    // Some Windows hosts restrict symlink creation; absence was already tested.
-    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return;
-    throw error;
-  }
-  assert.throws(() => checkCurrency(f.root), /Not a regular file/);
-});
-
 test('emits machine-readable JSON with stable finding ids, never a native audit verdict', t => {
   const f = fixture(t);
   f.write('docs/GOVERNANCE_INDEX.md', '# Gov\n**Last Reviewed**: 2026-10-22\n');
@@ -108,46 +55,6 @@ test('emits machine-readable JSON with stable finding ids, never a native audit 
   assert.equal(result.kind, 'candidate-document-currency');
   assert.equal(result.findings[0].id, 'FC004');
   assert.equal(Object.hasOwn(result, 'governanceVerdict'), false);
-});
-
-test('rejects unknown args and duplicate options with refusal exit 2', t => {
-  const f = fixture(t);
-  assert.equal(f.run('--something-unsafe').status, 2);
-  assert.equal(f.run('--enforce', '--enforce').status, 2);
-});
-
-test('refuses malformed SYSTEM_STATE release suffix rather than accepting matching prefix', t => {
-  const f = fixture(t);
-  f.write('docs/SYSTEM_STATE.md', '**Current Release:** v6.0.13.999\n');
-  assert.throws(() => checkCurrency(f.root), /Malformed SYSTEM_STATE Current Release/);
-  assert.equal(f.run('--enforce').status, 2);
-});
-
-test('refuses malformed ARCHITECTURE_PLAN release suffix rather than accepting matching prefix', t => {
-  const f = fixture(t);
-  f.write('docs/ARCHITECTURE_PLAN.md', '**Current Release:** v6.0.13junk\n');
-  assert.throws(() => checkCurrency(f.root), /Malformed ARCHITECTURE_PLAN Current Release/);
-});
-
-test('refuses malformed first governance review date rather than falling through to older history', t => {
-  const f = fixture(t);
-  f.write('docs/GOVERNANCE_INDEX.md', '**Last Reviewed**: 2026-11-13junk\n**Last Reviewed**: 2026-10-22\n');
-  assert.throws(() => checkCurrency(f.root), /Invalid ISO release date/);
-  assert.equal(f.run('--format', 'json').status, 2);
-});
-
-test('refuses a canonical docs ancestor symlink even when the target remains in the repo', t => {
-  const f = fixture(t);
-  const canonical = path.join(f.root, 'docs');
-  const moved = path.join(f.root, 'docs-original');
-  fs.renameSync(canonical, moved);
-  try {
-    fs.symlinkSync(moved, canonical, 'dir');
-  } catch (error) {
-    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) return;
-    throw error;
-  }
-  assert.throws(() => checkCurrency(f.root), /Not a regular file.*docs\//);
 });
 
 test('FC006 flags a phantom root package.json authority, preserving the index unchanged', t => {
@@ -170,6 +77,20 @@ test('FC006 detects missing and duplicated version authority rows, scoped to Tie
   const canonical = '| `FailSafe/extension/package.json` | Authoritative version source |\n';
   f.write('docs/GOVERNANCE_INDEX.md', header + canonical + canonical);
   assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), ['FC006']);
+  // Near misses of the exact authority cell, one per class; each must be FC006, never accepted.
+  const nearMisses = [
+    ['a prefix and suffix around the path', '`legacy/FailSafe/extension/package.json.bak`'],
+    ['a trailing extra path', '`FailSafe/extension/package.json` and `package.json` (root)'],
+    ['a leading extra path', '`package.json` (root) and `FailSafe/extension/package.json`'],
+    ['a case variant', '`failsafe/extension/package.json`'],
+    ['an inserted character', '`FailSafe/extension/ package.json`'],
+    ['a changed character', '`FailSafe/extensiom/package.json`'],
+    ['the path without code quotes', 'FailSafe/extension/package.json'],
+  ];
+  for (const [kind, cell] of nearMisses) {
+    f.write('docs/GOVERNANCE_INDEX.md', header + `| ${cell} | Authoritative version source |\n`);
+    assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), ['FC006'], `near miss accepted (${kind}): ${cell}`);
+  }
   f.write('docs/GOVERNANCE_INDEX.md', header + canonical + '## Tier 2 — Historical\n'
     + '| `package.json` | Authoritative version source in an archived record |\n');
   assert.deepEqual(checkCurrency(f.root).findings.map(x => x.id), [],
@@ -195,4 +116,20 @@ test('current checked-out Tier-1 governance version authority matches the real m
     'current Tier-1 manifest declaration must match the nested manifest');
   assert.equal(fs.readFileSync(path.join(f.root, 'docs', 'GOVERNANCE_INDEX.md'), 'utf8'), index,
     'read-only validation must never update the governance review marker');
+});
+
+test('#722: the checked-out repository has no current-release marker error (prospective stale-marker guard)', () => {
+  // Holds the real Tier-1 documents current: a release that leaves SYSTEM_STATE, ARCHITECTURE_PLAN,
+  // the Governance Index review marker or the Tier-1 version authority behind fails here.
+  const repo = path.resolve(__dirname, '..', '..', '..', '..', '..');
+  const report = checkCurrency(repo);
+  const errors = report.findings.filter((f) => f.severity === 'error');
+  assert.deepEqual(errors, [], `Tier-1 release markers disagree with v${report.version}: ${errors.map((e) => e.id + ' ' + e.message).join('; ')}`);
+});
+
+test('reads the current-release marker only from the head of SYSTEM_STATE, not from its history', t => {
+  const f = fixture(t);
+  const history = '\n## History\n' + 'x'.repeat(12000) + '\n**Current Release:** v6.0.12 (2026-11-10)\n';
+  f.write('docs/SYSTEM_STATE.md', '# System state\n**Current Release:** v6.0.13 (2026-11-13): verified\n' + history);
+  assert.deepEqual(checkCurrency(f.root).findings, [], 'a historical release line deep in the document is not the current marker');
 });

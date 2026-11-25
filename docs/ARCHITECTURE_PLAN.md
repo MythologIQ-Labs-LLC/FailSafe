@@ -1,9 +1,10 @@
 # FailSafe Architecture Baseline
 
-**Last Updated:** 2026-11-20 (published-release source reconciliation; native governance review pending).
+**Last Updated:** 2026-11-25 (published-release source reconciliation, reconciled under native plan-721 for #722).
 **Current Release:** v6.0.13 (published 2026-11-13; see [System State](SYSTEM_STATE.md)).
 **Development Track:** v6.1.0 in progress under [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679); not published.
 **Design Authority:** [Architecture Index](../ARCHITECTURE_INDEX.md) owns domain/document authority; [Governance Index](GOVERNANCE_INDEX.md) owns governance artifacts.
+**Risk Grade:** L2, the last audited architecture baseline, carried for published v6.0.13. Each v6.1.0 change takes its own risk grade from its native plan (for example #707 L3, #703 L2); this line does not reclassify the whole product.
 **Qualification Boundary:** This document reports source and release evidence, not a new `/qor-audit` verdict, substantiation seal or owner release decision.
 
 ## Published v6.0.13 boundaries and v6.1.0 direction
