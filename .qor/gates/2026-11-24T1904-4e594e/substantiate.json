@@ -1,0 +1,33 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-11-24T1904-4e594e",
+  "ts": "2026-11-25T17:40:09Z",
+  "verdict": "PASS",
+  "merkle_seal": "46a75e877e065d9908cd99331cd7f0668f1230a0b695bd2bbd2a9a0d925fedc1",
+  "content_hash": "49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891",
+  "previous_hash": "da6b48d319f8c81869dd81262bc175a6f48b2d9df583f8ddd04bb4d52c45a75b",
+  "ledger_entry": 984,
+  "entry_id": "fee3e54430d6",
+  "iteration": 1,
+  "reality_check": {
+    "missing": [],
+    "unplanned": [],
+    "matches": 10
+  },
+  "intent_lock_state": "verified",
+  "boundary_scope": "structural",
+  "report_path": ".failsafe/governance/evidence/issue-703/SUBSTANTIATE.md",
+  "source_revision": "e13cc15a50d158e91b3b1e566128d437556831b2",
+  "implementation_commit": "71d3a1c5e78822ac18918803c08ae7b4a7ef1ed9",
+  "plan_sha256": "49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891",
+  "ci": "PR Full Test 45664170653 success at e13cc15a (merge 0fd939a)",
+  "sealed": true,
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "pass",
+    "ts": "2026-11-25T17:42:59Z"
+  }
+}
