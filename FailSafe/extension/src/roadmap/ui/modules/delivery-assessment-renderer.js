@@ -23,6 +23,9 @@
  * on its Refresh button, after a link or unlink, and on a `delivery.changed` event.
  */
 
+import { el, button } from './delivery-dom.js';
+import { reviewControls } from './delivery-review-controls.js';
+
 const STYLE_ID = 'cc-dlv-style';
 const STYLE = `
 .cc-dlv { display:flex; flex-direction:column; gap:12px; }
@@ -91,22 +94,8 @@ function linkedBy(rec) {
   return 'not recorded';
 }
 
-function el(tag, cls, text) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined && text !== null) node.textContent = String(text);
-  return node;
-}
-
 function pill(label, cls) {
   return el('span', `cc-dlv-pill ${cls}`, label);
-}
-
-function button(label, cls, onClick) {
-  const b = el('button', `cc-dlv-btn${cls ? ` ${cls}` : ''}`, label);
-  b.type = 'button';
-  b.addEventListener('click', onClick);
-  return b;
 }
 
 function row(key, value) {
@@ -189,7 +178,8 @@ export class DeliveryAssessmentRenderer {
     this.container = document.getElementById(containerId);
     this.selectedId = null;
     this.message = null;
-    // Unsubmitted review text survives an overlapping refresh but is scoped to its intent and commit.
+    // #703: the review form survives a repaint (delivery-review-controls.js); one review request at a time.
+    this.reviewForm = null;
     this.reviewNoteDraft = null;
     this.reviewInFlight = false;
     this.refreshGeneration = 0;
@@ -228,7 +218,6 @@ export class DeliveryAssessmentRenderer {
       const view = await getJson(`/api/v1/delivery/intents/${encodeURIComponent(chosen.id)}`);
       if (generation !== this.refreshGeneration) return;
       const candidates = view.linkable ? await getJson('/api/v1/delivery/candidates') : null;
-      if (generation !== this.refreshGeneration) return;
       state = { intents, view, candidates };
     } catch (err) {
       if (generation !== this.refreshGeneration) return;
@@ -251,7 +240,7 @@ export class DeliveryAssessmentRenderer {
     sub.appendChild(button('Refresh', 'cc-dlv-refresh', () => this.refresh()));
     // Only the intent that initiated an operation may display its completion.
     // A pending POST can resolve after the operator navigates to another intent.
-    if (this.message && (!this.message[2] || this.message[2] === state.view?.intent?.id)) {
+    if (this.message && this.message[2] === state.view?.intent?.id) {
       root.appendChild(el('p', `cc-dlv-result${this.message[1] ? ' cc-dlv-result-bad' : ''}`, this.message[0]));
       this.message = null;
     }
@@ -357,86 +346,8 @@ export class DeliveryAssessmentRenderer {
     }
     if (view.linkable && candidates && step.key === 'architecture') card.appendChild(this.linkArchitecture(view, candidates));
     if (view.linkable && candidates && step.key === 'code') card.appendChild(this.linkCommit(view, candidates));
-    if (view.linkable && step.key === 'review') card.appendChild(this.reviewControls(view));
+    if (view.linkable && step.key === 'review') card.appendChild(reviewControls(this, view));
     return card;
-  }
-
-  /** plan-b320 LD9: Record PASS / Record VETO on one linked commit, with a note; each posts once. */
-  reviewControls(view) {
-    const actions = el('div', 'cc-dlv-actions cc-dlv-review-actions');
-    const linked = view.edges.filter((e) => e.edge === 'committed-under');
-    if (!linked.length) {
-      actions.appendChild(el('span', 'cc-dlv-line', 'Link a commit first; a review is recorded on one linked commit.'));
-      return actions;
-    }
-    const select = el('select', 'cc-dlv-select cc-dlv-review-pick');
-    select.setAttribute('aria-label', 'Commit to review');
-    for (const e of linked) {
-      const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
-      opt.value = e.target;
-      select.appendChild(opt);
-    }
-    select.selectedIndex = linked.length - 1;
-    const note = el('input', 'cc-dlv-select cc-dlv-review-note');
-    note.type = 'text';
-    note.maxLength = 500;
-    note.placeholder = 'Note (optional)';
-    note.setAttribute('aria-label', 'Review note');
-    const restoreDraft = () => {
-      const draft = this.reviewNoteDraft;
-      note.value = draft && draft.intentId === view.intent.id && draft.commitSha === select.value ? draft.value : '';
-    };
-    restoreDraft();
-    note.addEventListener('input', () => {
-      this.reviewNoteDraft = { intentId: view.intent.id, commitSha: select.value, value: note.value };
-    });
-    select.addEventListener('change', restoreDraft);
-    actions.appendChild(select);
-    actions.appendChild(note);
-    const reworkPicks = this.reworkPicks(view, linked);
-    for (const pick of reworkPicks) actions.appendChild(pick.parentNode);
-    const reworksOf = () => reworkPicks.filter((p) => p.value).map((p) => ({ vetoEntryId: Number(p.getAttribute('data-veto')), reworkCommit: p.value }));
-    // One operator review request at a time: PASS and VETO must not race
-    // into contradictory ledger submissions while the first POST is pending.
-    const record = (verdict) => {
-      if (this.reviewInFlight) return;
-      this.reviewInFlight = true;
-      pass.disabled = true;
-      veto.disabled = true;
-      void this.review(view.intent.id, verdict, select.value, note.value, verdict === 'PASS' ? reworksOf() : []);
-    };
-    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS'));
-    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO'));
-    pass.disabled = this.reviewInFlight;
-    veto.disabled = this.reviewInFlight;
-    actions.appendChild(pass);
-    actions.appendChild(veto);
-    return actions;
-  }
-
-  /**
-   * #532 B344 (plan-b344 LD5): a "Reworked by" select on each blocking trusted VETO (a sealed row's
-   * commit): none, or a linked commit other than the vetoed one. The server verifies the relation.
-   */
-  reworkPicks(view, linked) {
-    const step = ((view.assessment && view.assessment.steps) || []).find((s) => s.key === 'review');
-    const vetoes = ((step && step.records) || []).filter((r) => r.record === 'blocking' && r.kind === 'veto' && r.commitState === 'sealed' && r.commitSha);
-    return vetoes.map((r) => {
-      const wrap = el('label', 'cc-dlv-line cc-dlv-rework', `Reworked by (VETO #${r.id} on ${String(r.commitSha).slice(0, 12)}): `);
-      const pick = el('select', 'cc-dlv-select cc-dlv-rework-pick');
-      pick.setAttribute('data-veto', String(r.id));
-      pick.setAttribute('aria-label', `Linked commit that reworks the VETO in ledger entry #${r.id}`);
-      const none = el('option', null, 'none');
-      none.value = '';
-      pick.appendChild(none);
-      for (const e of linked.filter((x) => x.target !== r.commitSha)) {
-        const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
-        opt.value = e.target;
-        pick.appendChild(opt);
-      }
-      wrap.appendChild(pick);
-      return pick;
-    });
   }
 
   async review(intentId, verdict, commitSha, note, reworks = []) {
