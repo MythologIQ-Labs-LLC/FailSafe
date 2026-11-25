@@ -1,0 +1,83 @@
+{
+ "app": "C:/LocalAI/Voice/Chatterbox/demo-v091/app/Sonic Rift",
+ "takes": [
+  {
+   "file": "VO_N5_m3v2-take1.wav",
+   "expected_key": "VO_N5_",
+   "seconds": 17.78,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 12.54,
+   "words_per_second": 3.43,
+   "peak_dbfs": -2.43,
+   "rms_dbfs": -22.99,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.14,
+   "median_pitch_hz": 137.8,
+   "pitch_range_p10_p90_hz": 83.4,
+   "heard": "Stateright shows its own run history page. This account has no runs yet. They appear once a workflow is activated in a connected Stateright client. Failsafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+   "missing_words": [
+    "statewright",
+    "statewright"
+   ],
+   "extra_words": [
+    "stateright",
+    "stateright"
+   ],
+   "similarity_to_reference": 0.9232,
+   "similarity_to_other_takes": 0.9833
+  },
+  {
+   "file": "VO_N5_m3v2-take2.wav",
+   "expected_key": "VO_N5_",
+   "seconds": 18.16,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 13.16,
+   "words_per_second": 3.27,
+   "peak_dbfs": -3.11,
+   "rms_dbfs": -22.66,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.04,
+   "median_pitch_hz": 130.1,
+   "pitch_range_p10_p90_hz": 78.8,
+   "heard": "StateRite shows its own run history page. This account has no runs yet. They appear once a workflow is activated in a connected StateRite client. Failsafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+   "missing_words": [
+    "statewright",
+    "statewright"
+   ],
+   "extra_words": [
+    "staterite",
+    "staterite"
+   ],
+   "similarity_to_reference": 0.9171,
+   "similarity_to_other_takes": 0.989
+  },
+  {
+   "file": "VO_N5_m3v2-take3.wav",
+   "expected_key": "VO_N5_",
+   "seconds": 19.23,
+   "sample_rate": 24000,
+   "channels": 1,
+   "speech_seconds": 13.24,
+   "words_per_second": 3.25,
+   "peak_dbfs": -4.31,
+   "rms_dbfs": -22.56,
+   "clipped_samples": 0,
+   "longest_internal_pause_s": 1.26,
+   "median_pitch_hz": 135.5,
+   "pitch_range_p10_p90_hz": 65.3,
+   "heard": "Stateright shows its own run history page. This account has no runs yet. They appear once a workflow is activated in a connected Stateright client. Failsafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+   "missing_words": [
+    "statewright",
+    "statewright"
+   ],
+   "extra_words": [
+    "stateright",
+    "stateright"
+   ],
+   "similarity_to_reference": 0.921,
+   "similarity_to_other_takes": 0.9895
+  }
+ ]
+}

@@ -1,0 +1,143 @@
+{
+ "take": "take1",
+ "fps": 30,
+ "title_seconds": 5.0,
+ "crossfade_seconds": 0.5,
+ "end_card_seconds": 8.4,
+ "total_seconds": 64.294,
+ "clips": [
+  {
+   "label": "vscode",
+   "source": "take1/vscode.mkv",
+   "source_in": 1.726,
+   "source_out": 14.445,
+   "film_in": 4.5,
+   "film_out": 17.219,
+   "framing": "full frame 1920x1080, 1:1"
+  },
+  {
+   "label": "chrome",
+   "source": "take1/console.mkv",
+   "source_in": 18.008,
+   "source_out": 38.283,
+   "film_in": 17.219,
+   "film_out": 37.494,
+   "framing": "whole Chrome window 1920x1188 scaled to 1746x1080 (x=87), navy pillarbox"
+  }
+ ],
+ "provider_segment": {
+  "source": "C:/dev/mythologiq/failsafe/_work/v6013-demo/captures/edge-signedin/statewright-runs-signedin-redacted.mkv",
+  "film_in": 37.494,
+  "film_out": 56.394,
+  "framing": "native pixels, centred on navy (no scaling)",
+  "cut": {
+   "new_tab": 37.859,
+   "first_painted_frame": 38.283,
+   "frames_scanned": 24
+  }
+ },
+ "end_card_in": 55.894,
+ "pointer": {
+  "source": "events.json pointer[] (trusted CDP mouse events)",
+  "hidden_after_film": 37.22,
+  "clicks_film": [
+   21.953,
+   25.407,
+   36.766
+  ]
+ },
+ "redactions": [],
+ "narration": [
+  {
+   "scene": "N1",
+   "file": "C:\\dev\\mythologiq\\failsafe\\_work\\v6013-demo\\audio\\takes\\VO_N1_m3-take3.wav",
+   "take": "VO_N1_m3-take3.wav",
+   "start": 0.5,
+   "seconds": 6.419,
+   "text": "FailSafe 6.0.13 adds a simple path from your development Console to Statewright.",
+   "gap_after": 0.481
+  },
+  {
+   "scene": "N2",
+   "file": "C:\\dev\\mythologiq\\failsafe\\_work\\v6013-demo\\audio\\takes\\VO_N2_m3-take1.wav",
+   "take": "VO_N2_m3-take1.wav",
+   "start": 7.4,
+   "seconds": 4.728,
+   "text": "Open FailSafe in VS Code, and launch the Console from the Command Palette.",
+   "gap_after": 9.125
+  },
+  {
+   "scene": "N3",
+   "file": "C:\\dev\\mythologiq\\failsafe\\_work\\v6013-demo\\audio\\takes\\VO_N3_m3-take3.wav",
+   "take": "VO_N3_m3-take3.wav",
+   "start": 21.253,
+   "seconds": 8.315,
+   "text": "Select Integrations, then Catalog. Here you'll find Statewright AI, clearly labeled as a website handoff.",
+   "gap_after": 3.291
+  },
+  {
+   "scene": "N4",
+   "file": "C:\\dev\\mythologiq\\failsafe\\_work\\v6013-demo\\audio\\takes\\VO_N4_m3-take3.wav",
+   "take": "VO_N4_m3-take3.wav",
+   "start": 32.859,
+   "seconds": 4.787,
+   "text": "Select Open Statewright Run History, and Statewright opens in your browser.",
+   "gap_after": 0.298
+  },
+  {
+   "scene": "N5",
+   "file": "C:\\dev\\mythologiq\\failsafe\\_work\\v6013-demo\\audio\\takes-n5v2\\VO_N5_m3v2-take1.wav",
+   "take": "VO_N5_m3v2-take1.wav",
+   "start": 37.944,
+   "seconds": 17.784,
+   "text": "Statewright shows its own Run History page. This account has no runs yet. They appear once a workflow is activated in a connected Statewright client. FailSafe does not import that history or enforce those workflows. This card is a link, not a connection.",
+   "gap_after": 0.666
+  },
+  {
+   "scene": "N6",
+   "file": "C:\\dev\\mythologiq\\failsafe\\_work\\v6013-demo\\audio\\takes\\VO_N6_m3-take2.wav",
+   "take": "VO_N6_m3-take2.wav",
+   "start": 56.394,
+   "seconds": 6.863,
+   "text": "Open Statewright run history from FailSafe. Version 6.0.13 is available now."
+  }
+ ],
+ "captions": [
+  {
+   "scene": "N1",
+   "sentences": 1,
+   "pauses": 0,
+   "method": "measured pauses"
+  },
+  {
+   "scene": "N2",
+   "sentences": 1,
+   "pauses": 0,
+   "method": "measured pauses"
+  },
+  {
+   "scene": "N3",
+   "sentences": 2,
+   "pauses": 1,
+   "method": "measured pauses"
+  },
+  {
+   "scene": "N4",
+   "sentences": 1,
+   "pauses": 0,
+   "method": "measured pauses"
+  },
+  {
+   "scene": "N5",
+   "sentences": 5,
+   "pauses": 3,
+   "method": "measured paragraph pauses"
+  },
+  {
+   "scene": "N6",
+   "sentences": 2,
+   "pauses": 1,
+   "method": "measured pauses"
+  }
+ ]
+}
