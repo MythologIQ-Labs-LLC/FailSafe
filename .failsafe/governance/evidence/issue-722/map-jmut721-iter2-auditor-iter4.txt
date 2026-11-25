@@ -1,0 +1,5 @@
+KILLED    K1 own-key guard via in operator | rejects unknown args and duplicate options with refusal exit 2
+KILLED    K2 own-key guard dropped | rejects unknown args and duplicate options with refusal exit 2
+KILLED    K3 trackedFiles non-Git returns empty set | refuses to census a directory that is not a Git checkout instead of passing vacuously
+KILLED    K4 committedModes non-Git returns empty map | refuses to census a directory that is not a Git checkout instead of passing vacuously
+KILLED    K6 FC006 trailing-text accepted | FC006 detects missing and duplicated version authority rows, scoped to Tier 1

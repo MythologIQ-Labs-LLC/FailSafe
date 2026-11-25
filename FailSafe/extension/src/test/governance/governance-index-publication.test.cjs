@@ -13,7 +13,7 @@
  * nowhere in the repository — it is operator memory. Its contents are NOT imported here; per
  * CLAUDE.md it holds pricing and tier internals.
  *
- * Pattern rows are skipped deliberately. 14 of the 68 registered paths are shapes, not files
+ * Pattern rows are skipped deliberately. In the original audit, 14 of 68 paths were shapes, not files
  * (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`); an existence check that did not
  * skip them would report 14 false positives on its first run. That was found by measuring
  * before writing the assertion, not by reasoning about it.
@@ -25,60 +25,15 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
-
-// src/test/governance -> src/test -> src -> extension -> FailSafe -> <repo root>
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
-const INDEX = path.join(REPO_ROOT, 'docs', 'GOVERNANCE_INDEX.md');
-
-function indexText() {
-  return fs.readFileSync(INDEX, 'utf8');
-}
-
-/** A row path naming a shape rather than a file. */
-function isPattern(p) {
-  return p.includes('*') || p.includes('<');
-}
-
-/**
- * Every `.md` path appearing in the first cell of a TIER-table row.
- *
- * Everything from the `## Out-of-tier paths` heading onward is excluded. That
- * section exists, in its own words, "so they are not confused with governance" —
- * treating its rows as registered artifacts is exactly the confusion it was
- * written to prevent, and doing so made `confidentiality.md` look unexplained
- * after it had been correctly relocated there.
- */
-function registeredPaths(text) {
-  const cut = text.indexOf('## Out-of-tier paths');
-  const tiers = cut === -1 ? text : text.slice(0, cut);
-  return [...tiers.matchAll(/^\|\s*`([^`]+\.md)`/gm)].map((m) => m[1]);
-}
-
-/**
- * Prefixes the index declares private-by-default, read from the
- * `## Publication status` section rather than hardcoded here — a check that
- * carried its own copy of the list could not detect the list going stale.
- */
-function declaredPrivatePrefixes(text) {
-  const section = /^## Publication status$([\s\S]*?)^## /m.exec(text);
-  if (!section) return [];
-  return [...section[1].matchAll(/^- private-by-default:\s*`([^`]+)`/gm)].map((m) => m[1]);
-}
-
-function trackedFiles() {
-  const res = spawnSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' });
-  if (res.status !== 0) return null;         // not a git checkout
-  return new Set(res.stdout.split('\n').map((s) => s.trim()).filter(Boolean));
-}
+const {
+  indexText, isPattern, registeredPaths, declaredPrivatePrefixes, trackedFiles,
+} = require('./governanceIndexReaders.cjs');
 
 describe('FX939 GOVERNANCE_INDEX publication status', () => {
+
   it('registers no path that is neither tracked nor under a declared-private prefix', () => {
     const text = indexText();
     const tracked = trackedFiles();
-    if (tracked === null) return;            // no git: nothing to compare against
     const prefixes = declaredPrivatePrefixes(text);
 
     const unexplained = registeredPaths(text)

@@ -1,0 +1,9 @@
+{
+  "session": "2026-11-25T1958-4f4867",
+  "plan_path": ".failsafe/governance/plans/plan-721-governance-currency-glossary.md",
+  "plan_hash": "7db0173ed2b634fd01b001b3ff0ea0d66debf81deb6eea2655cdad50a8d1fd69",
+  "audit_path": ".failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter4.md",
+  "audit_hash": "42a6251a315698db4f2ae7be82b6445e02908d0813b5ffa1747f00ad1f068243",
+  "head_commit": "bc3786a5d4d123375d2fd86e6ba967dfe95ef78f",
+  "captured_ts": "2026-11-25T22:03:49.326203Z"
+}

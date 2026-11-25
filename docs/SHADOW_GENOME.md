@@ -3362,3 +3362,66 @@ The table was built by mapping the existing mutant sets onto rows, not by checki
 
 ### Remediation Attempted
 None by the Judge, who may not edit source or the plan. Required: the Governor adopts PROBE-W1, PROBE-W11 and PROBE-W23 (.failsafe/governance/evidence/issue-703/probe-iter6-auditor.test.ts) as named tests, or narrows R11-R13 and the plan:12 limitation, adds W1, W11 and W23 to the rows, re-records the patch sha256 and the mutation map (with wmut-iter6-auditor.py), and re-runs /qor-audit.
+
+## Failure Entry #343
+
+**Date**: 2026-11-25T20:31:20Z
+**Verdict ID**: GATE TRIBUNAL plan-721-governance-currency-glossary iteration 1 VETO (session 2026-11-25T1958-4f4867; report .failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter1.md; ledger Entry #985)
+**Failure Mode**: GHOST_PATH (closed claim rows proven by tests that can pass vacuously or skip a clause; a refactor that silently widened accepted input; an acceptance item omitted from the closed table)
+
+### What Failed
+- The option-table refactor of check-governance-currency.cjs indexed a plain object with user input, so inherited keys (constructor, toString, hasOwnProperty, valueOf) became accepted options with exit 0.
+- G5 and G6 rest on real-tree tests that return early when the git read yields null, so the claims can pass without checking anything; G6's second stated total and G2's exact-path equality had no test.
+- The closed claim table left out #722's Tier-1 freshness census against the last sealed ledger entry and the ARCHITECTURE_PLAN Risk Grade registration.
+- A case count written into the Tier-1 Feature Index (19) did not match the suite (20).
+
+### Why It Failed
+The mutation map was built from the author's own mutants of each branch, which does not cover inherited-key lookups, early-return guards or the secondary consistency checks. The acceptance list was read for the defects already fixed rather than item by item.
+
+### Pattern to Avoid
+- Never index a plain object with untrusted keys; use Object.hasOwn or a null-prototype map, and test an inherited name.
+- A real-tree test with an "environment absent" early return is a Vacuous pass unless that skip is disclosed or made to fail loudly.
+- Give every consistency check in a claimed reader its own mutant; give every exact-match claim a near-miss input.
+- Map each acceptance item of the issue to a claim row or an explicit owner-authorized exclusion.
+- Recount any number written into a Tier-1 document from the source at the final head.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required actions V1-V4 are in the report.
+
+## Failure Entry #344
+
+**Date**: 2026-11-25T21:41:00Z
+**Verdict ID**: GATE TRIBUNAL plan-721-governance-currency-glossary iteration 2 VETO (session 2026-11-25T1958-4f4867; report .failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter2.md; ledger Entry #986)
+**Failure Mode**: GHOST_PATH (an exact-match claim proven with a near-miss input that differs at both ends, so a one-sided match survives)
+
+### What Failed
+G2 claims the Tier-1 version authority row names exactly `FailSafe/extension/package.json`. The iteration-2 near-miss test uses `legacy/FailSafe/extension/package.json.bak`, which kills a substring match but not a prefix match. Judge mutant K6 (startsWith) survives; a cell naming the nested manifest followed by the phantom root `package.json` passes FC006 under it.
+
+### Why It Failed
+The iteration-1 lesson ("give every exact-match claim a near-miss input") was applied with a single input that is wrong on both sides. One input cannot separate equality from prefix, suffix and substring matches at once.
+
+### Pattern to Avoid
+- For an exact-match claim, use at least one near-miss per side: the exact value with a leading addition, the exact value with a trailing addition, and a value containing it inside.
+- Prefer the original defect's own shape as a fixture (here: the nested manifest plus a root manifest in the same cell).
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: add the trailing-path FC006 case (or narrow G2), list K6 in G2, re-record the patch sha256 and maps, re-run /qor-audit.
+
+## Failure Entry #345
+
+**Date**: 2026-11-25T21:49:36Z
+**Verdict ID**: GATE TRIBUNAL plan-721-governance-currency-glossary iteration 3 VETO (session 2026-11-25T1958-4f4867; report .failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter3.md; ledger Entry #987)
+**Failure Mode**: GHOST_PATH (an exact-match claim closed one near-miss at a time, so each round leaves another comparison class unproven)
+
+### What Failed
+G2 claims the version-authority cell names exactly `FailSafe/extension/package.json`. Iteration 2 closed the substring class, iteration 3 the prefix class; the suffix (leading addition), case-insensitive and whitespace-insensitive comparisons still pass every test (L1, L2, L4).
+
+### Why It Failed
+Both the Judge's required actions and the Governor's fixes were phrased per mutant rather than per comparison class. The Judge's iteration-2 action named only the trailing side, although the recorded pattern (#344) named both.
+
+### Pattern to Avoid
+- For an exact-equality claim, enumerate the comparison classes once (substring, prefix, suffix, case, whitespace or normalisation, first-token-only) and prove all of them with one table-driven case.
+- A Judge's required action should name the whole class set, not only the surviving mutant, so that closure does not take one round per class.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: the table-driven FC006 case (or a narrowed G2), L1, L2 and L4 listed in G2, re-recorded patch sha256 and maps, re-run /qor-audit.

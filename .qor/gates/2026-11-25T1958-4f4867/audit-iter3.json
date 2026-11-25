@@ -1,0 +1,22 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-25T1958-4f4867",
+  "ts": "2026-11-25T21:49:36Z",
+  "target": ".failsafe/governance/plans/plan-721-governance-currency-glossary.md",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/issue-722/AUDIT-PLAN-iter3.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "coverage-gap"
+  ],
+  "target_content_hash": "d4328dade44a9dead8c4d1e794e9df5843e7097d9047e359530db9e1f1d0f1a3",
+  "reviews_remediate_gate": null,
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "veto",
+    "ts": "2026-11-25T21:49:36Z"
+  }
+}
