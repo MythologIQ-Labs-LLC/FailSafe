@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-11-23 (#707 browser voice vendoring isolation sealed on PR #712 at ledger #975, not merged or released; historical release events remain in their dated sections below).
+**Last Updated:** 2026-11-25 (#703 Delivery review form and refresh races sealed on PR #706 at ledger #984, not merged or released; historical release events remain in their dated sections below).
 **Current development:** v6.1.0 is planned and in progress under [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679), with the published v6.0.13 baseline unchanged. The root [Architecture Index](../ARCHITECTURE_INDEX.md) remains the design-authority entry point; the [Governance Index](GOVERNANCE_INDEX.md) governs artifact tiers and freshness. No v6.1.0 release or skill cutover is authorized by this status snapshot.
 **Live pull-request queue:** [GitHub's open PR list](https://github.com/MythologIQ-Labs-LLC/FailSafe/pulls?q=is%3Apr+is%3Aopen) is authoritative. This document deliberately does not label historical PR numbers or local branch names as currently open; earlier #442–#447 and September sprint references belong to historical context.
 **Current Release:** v6.0.13 (2026-11-13): sealed (#968) and G4-witnessed (genesis `g4-000001`, release verification PASS on H and M), published 2026-11-13 (tag `v6.0.13` object `62a28fc1` on `26c1161a`, release run 43337880053; VS Code Marketplace, Open VSX and GitHub Release verified byte-identical; ledger #969). Previous published release: v6.0.12 (2026-11-10, tag `v6.0.12` on `0e70e539`, release run 42842387243).
@@ -12,6 +12,14 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-11-25 — #703 Delivery review form, refresh and result attribution races (SESSION SEAL #984; PR #706, not merged)
+
+- PR #706 (`fix/703-delivery-review-note-refresh-race`) is sealed against `plan-703-delivery-review-refresh-race.md` iteration 7: six audit VETOs (#976-#981, with a `/qor-remediate` that closed the claim surface into the table R1-R15), audit PASS #982, implementation #983 (commit 71d3a1c5, the audited `candidate-iter7.patch` byte-for-byte), substantiation PASS #984. It is not merged or released, and no version bump or tag was made.
+- The Delivery review form is kept on the renderer, not in the DOM: the picked commit and rework picks per intent (`reviewForm`) and the unsent note per intent and commit (`reviewNoteDraft`) survive repaints; one review request is in flight at a time; an obsolete refresh stops at its first stale response; completion messages are shown only on the intent that started them. The server review lock (FX1010) remains the authority.
+- `delivery-assessment-renderer.js` is split: `delivery-review-controls.js` (review controls) and `delivery-dom.js` (`el`, `button`); the jsdom tests move into a shared `deliveryRendererFixture.ts` and three new suites (refresh, review, switch), and seven fixed sleeps become deterministic waits. FX589 (Bicameral Advanced tools) waits for the server `running` state after a delayed connect.
+- Evidence: `.failsafe/governance/evidence/issue-703/` (mutation map 109 killed, 10 recorded survivors; installed Windows VSIX acceptance). Exact-head CI at e13cc15a passed.
+
 
 ## 2026-11-23 — #707 browser voice vendoring isolated from core npm ci (SESSION SEAL #975; PR #712, not merged)
 

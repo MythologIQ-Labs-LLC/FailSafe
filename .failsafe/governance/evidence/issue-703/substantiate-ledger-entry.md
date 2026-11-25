@@ -1,0 +1,33 @@
+# SUBSTANTIATE ledger entry (SESSION SEAL, PASS)
+
+Appended to docs/META_LEDGER.md directly after Entry #983 by the Judge on 2026-11-25. Layout: the file ended with Entry #983, a blank line and `---`; appended a blank line, the text between the markers, a blank line and `---`, then a final newline. The working copy is CRLF (`git ls-files --eol`: `i/lf w/crlf`), so the entry was written with CRLF and git stores LF. ASCII only (checked with `str.isascii()`).
+
+Hashes (skill Step 6.8 / Step 7; GAP-GOV-01): Content Hash = `ledger_hash.content_hash` of the audited plan `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (LF-normalized; equal to its raw sha256 because the file is LF), the same binding as the #975 SESSION SEAL. Previous Hash = the Chain Hash of Entry #983. Chain Hash = SHA256(content_hash + "|" + previous_hash). All four values passed `hash_guard.validate_sha256`. Entry ID = `entry_id.derive_entry_id("2026-11-25T17:40:09Z", "SUBSTANTIATE", content_hash)`.
+
+----- BEGIN ENTRY -----
+
+### Entry #984: SESSION SEAL - plan-703-delivery-review-refresh-race (iteration 7)
+
+**Timestamp**: 2026-11-25T17:40:09Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-11-24T1904-4e594e`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Entry ID**: `fee3e54430d6`
+**Plan**: `.failsafe/governance/plans/plan-703-delivery-review-refresh-race.md` (iteration 7, sha256 49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891; VETO #976-#981, audit PASS #982, implement #983)
+**Target**: PR #706 (issue #703), origin/main b03e47b75a1e0c5f486e3b0a3051005e8719dd55 ... e13cc15a50d158e91b3b1e566128d437556831b2 (implementation 71d3a1c5e78822ac18918803c08ae7b4a7ef1ed9)
+**Report**: `.failsafe/governance/evidence/issue-703/SUBSTANTIATE.md`
+**Gate**: `.qor/gates/2026-11-24T1904-4e594e/substantiate.json` (verdict PASS)
+**SSDF Practices**: PS.2.1, RV.1.1, RV.1.2, RV.2.1
+**Feature Inventory**: Total: 805 / verified: 765 / unverified: 0 / n/a: 40
+**Newly unverified**: none (no prior snapshot under .qor/feature_index_snapshots, so the regression diff cannot run)
+**Spec Corpus Hash**: none (spec_fold: no deltas declared)
+
+**Content Hash**: `49980f13e4891b166d1305108456aed7d07d59b4d59719501b352fa92a5a7891`
+**Previous Hash**: `da6b48d319f8c81869dd81262bc175a6f48b2d9df583f8ddd04bb4d52c45a75b`
+**Chain Hash (Merkle seal)**: `46a75e877e065d9908cd99331cd7f0668f1230a0b695bd2bbd2a9a0d925fedc1`
+
+**Decision**: SESSION SEAL for plan-703 iteration 7, by a fresh-context independent Judge. Reality = Promise, with disclosures. Patch custody: candidate-iter7.patch (sha256 34fc82e83db985c0434dfecf2d018f91289ce542b2898fd61f301f9acff8b7e5) applied to a clean c38f970d gives tree aced858b236538a148f984fddcb5c850020fd803, equal to the 71d3a1c5 tree; 71d3a1c5 has the single parent c38f970d; e13cc15a changes no path under FailSafe/. LD1 blobs equal. Every planned file exists; no unplanned source; ledger_commitment OK. D4 C1: the seven mutant scripts in the evidence folder, re-run on the Judge's e13cc15a worktree, give 119 mutants, 109 KILLED, 10 SURVIVED (J13, J14, J15, X13, Y9, Y18, Z19, W8 equivalent; W6, W7 unclaimed insertions), 0 apply failures, with verdicts identical to mutation-map-iter7.txt; the R1-R14 Mutants column lists exactly the 109 killed, none twice, none unkilled. C2: asserts703.py gives 106 baseline and 151 new assertions, only the five recorded replacements and the two parameterised names. C3: focused jsdom 49 passing; red-first 9 failing on the c38f970d renderer and 32 failing on the origin/main renderer (17 passing = 15 pre-#703 + 2). TS-AST Razor: every added or changed function and test body is 40 lines or fewer, nesting at most 3; only suite and describe callbacks exceed 40 (containers); renderer 433 and old test file 296 lines equal the D2 caps (declared pre-existing excess, both reduced from 482 and 380); nested ternaries 2 at origin/main and 2 now. No TODO, stub or console.log added. CI at e13cc15a (read only): PR Full Test 45664170653 success on merge 0fd939a (tree equal to the head tree), extension host 6249 passing 15 pending, architecture 19, test:node 1170 tests 1135 pass 0 fail 35 skipped, test:ui 264 passed 4 skipped, all 34 #703 cases passing by name; Dependency Review, OSS SAST, VSIX Proprietary Guardrails, Repo Standards and Cross-platform compile success. The local g4Witness.test.cjs:110 failure is pre-existing: the same assertion fails in a full origin/main worktree (the CLI reports the v6.0.13 witness g4-000001 and exits 0), no g4 path changed, and it passes on the CI depth-1 checkout. Installed-host record HOST-ACCEPTANCE-WINDOWS.md is consistent and scoped: the VSIX sha256 e82522332f2ea6669d258d1d1d57f81d640ba18d3d3a5821645516555f881323 matches the file, it postdates 71d3a1c5, and its three Delivery UI modules are byte-equal to 71d3a1c5; it claims only R5, R6, R8, R9, R10 and R13 on one Windows host and discloses its limits. Gates: governance-health 8/8 OK; intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner rc 0; procedural_fidelity, dod_check, merge_velocity (healthy) rc 0; skill_size_budget WARN only; data_api_acl SKIP with a disclosed-skip event closed at emission; install_drift OK; strict doc_integrity PASS; governance-index enforce rc 0; doc currency no warnings; ac_close_guard no closing references; ledger post-anchor clean and #974-#983 recompute. Disclosures: N1 publication_boundary_lint rc 1, 538 findings at origin/main and at this tree, identical lists, #703 adds 0. N2 g4Witness as above. N3 substantiate_gates needs --skill. N4 plan D3 says two new suites; three were added, and FEATURE_INDEX FX1010 correctly lists three plus the fixture. N5 the Judge relied on CI and the implementer's local record for the full Windows npm test, prepush gate and installed host. N6 the uncommitted .qor/session/current and the untracked scripts/FailSafe-v6.1-Dependency-Audit-ReadOnly.ps1 are not part of this seal. N7 two protocol events appended to PROCESS_SHADOW_GENOME.md (data_api_acl skip, FX922 surface lint). N8 the Tier 4 archive-at-seal rule is not performed, as at #968 and #975. N9 the intent lock head c38f970d verifies by ancestry. SKIP or inapplicable: version_applicability (needs pyproject.toml) and Step 7.5/7.6/9.5.5 (no root version manifest; hotfix, plan non_goals forbid any bump, tag or release; package.json 6.0.13 equals tag v6.0.13); seal_artifacts (no numeric phase; hotfix exempt from --check); dist_compile (no qor/skills in this consumer). BACKLOG has no open Security or Development Blockers. Not merged, released or tagged; no version bump. Owner source-bound GO remains outstanding.
+
+----- END ENTRY -----

@@ -1,0 +1,32 @@
+# /qor-remediate: plan-703 audit loop (session 2026-11-24T1904-4e594e)
+
+**Trigger**: cycle-count escalation after the Entry #980 VETO. `cycle_count_escalator.check` and `check_session_total` both return `/qor-remediate`, signature `d3d29c40b9855932`, cycle_count 3 (three consecutive `{coverage-gap}` VETOs: Entries #978, #979, #980). Operator decision (2026-11-24): remediate, then one final independent audit.
+
+## Context read (Step 1)
+
+`remediate_read_context.load_unaddressed_groups()` returns one group for this session: `capability_shortfall` / `qor-audit`, ten events (codex-plugin and external-reviewer absent, two per audit iteration):
+4939be9c8ea1fa92220128251e8f503f4dd2c8fcd40b35e26643e5716227814d, 9082a6f65f454b849318c609439b71cc580fefb25aa55e6b8265b4696adacfce, f22e4f59fa9c99787e7da0d7495e65781b50c8c7edc408438aa961733b418afa, f887d71af13580449edd848f1f20d39b728e54877a6b431a873f63da5e0557d0, ad543662108db23bce572bd7e256d6212ecac10122a15a4b21224b7aab5ba900, 257bd0f46d7197c86ed0fb64a31ab69d7840ad7993f25573893143a960728564, 195ac44d17f6762bfbba067e5d621c717bc88d9b9f65ecb50c06c7fd176db1dd, ac9fb4cbb68b085dd2239ec39b649804f1c44cd356307d8e8a421889adbea617, 7722082fe45ee4ab84c545441d35c4b40bb006a255c759e585a897d82e893635, 74e9da78b078a6c29cf08fb7249b3a8ee16161ba392f8eeaf90c129f6ad6a860.
+
+The VETO loop itself is recorded in `.qor/gates/2026-11-24T1904-4e594e/audit_history.jsonl` (five VETOs), the ledger (Entries #976-#980) and the Shadow Genome (#337-#341), not as Process Shadow Genome events.
+
+## Pattern (Step 2)
+
+- **Classifier output**: capability-shortfall aggregation (10 events, one session).
+- **Operator-identified pattern, from the audit record**: gate-loop by claim breadth. Since iteration 1 no auditor found a code defect (iterations 2-5 state this explicitly). Each fresh auditor wrote new mutants (J, X, Y, Z series) against broadly worded claims - D1 "survives any repaint", "never changes the selected intent", LD10 - and found one behaviour no test pinned. Each iteration closed every earlier ground, so the loop converged on tests but never on claims: the claim surface was open-ended prose, so the set of possible blocking mutants was unbounded.
+
+## Proposal (Step 3)
+
+**proposal_kind**: doctrine (plan-scoped), with a test adoption.
+
+1. **Closed claim table.** Iteration 6 of plan-703 replaces the D1 prose and the behavioural sentences of LD2-LD5 and LD10 with an enumerated claim table (rows R1..Rn). Each row states one behaviour, the named test that proves it, and the mutant ids it kills. A behaviour not in the table is not claimed; the plan lists the known unclaimed behaviours explicitly under "Not claimed".
+2. **Blocking rule for the final audit.** A surviving, non-equivalent mutant blocks only if it violates a table row (the existing Test Functionality and Feature Test Coverage passes, applied to the table). A surviving mutant against an unclaimed behaviour is a note that proposes a row for later work. This is the rule the earlier auditors already applied ("unclaimed pre-existing behaviour is a note"), made explicit by bounding what is claimed.
+3. **Adopt the iteration-5 probes as named tests.** The seven probes in `probe-iter5-auditor.test.ts` (Z14, Z8, X14, Z2, Z1, Z10, Z16) become tests in the two #703 suites, so every mutant the five audits killed or raised stays killed: K1-K16, J1-J12, J16, J17, X1-X12, X15-X18, Y1-Y5, Y7, Y8, Y10-Y17, Y19, Y20, Z-series grounds. Equivalent mutants remain recorded as equivalent.
+4. **Capability shortfall.** No Codex plugin or external reviewer is configured. Each audit used a fresh-context independent Judge (the Option B review `audit_risk_score` requires). Accepted residual for this repository; no configuration change is proposed here.
+
+**closure_enforcer**: `/qor-audit Step 3` (Test Functionality Pass and Feature Test Coverage Pass, applied to the closed claim table).
+
+**addressed_event_ids**: the ten capability_shortfall ids above.
+
+## Review
+
+Advisory until reviewed: the final `/qor-audit` of plan-703 iteration 6 runs with `reviews-remediate:.qor/gates/2026-11-24T1904-4e594e/remediate.json`; the Step 6 flip happens only on PASS.

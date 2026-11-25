@@ -1,0 +1,37 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-24T1904-4e594e",
+  "ts": "2026-11-24T22:37:47Z",
+  "target": ".failsafe/governance/plans/plan-703-delivery-review-refresh-race.md",
+  "target_content_hash": "eaceb5df6f33ff26c1987f05d32e7e90960f95b4e3e029350a2da9754170d649",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/issue-703/AUDIT-PLAN-iter6.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "coverage-gap"
+  ],
+  "violations": [
+    {
+      "id": "V1",
+      "category": "coverage-gap"
+    },
+    {
+      "id": "V2",
+      "category": "coverage-gap"
+    },
+    {
+      "id": "V3",
+      "category": "coverage-gap"
+    }
+  ],
+  "report_content_hash": "e49ad941acba85242a2cc9d2f4d4ad69823f308b6fa2937ae1c819fe1b627ded",
+  "reviews_remediate_gate": ".qor/gates/2026-11-24T1904-4e594e/remediate.json",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "veto",
+    "ts": "2026-11-24T22:37:47Z"
+  }
+}
