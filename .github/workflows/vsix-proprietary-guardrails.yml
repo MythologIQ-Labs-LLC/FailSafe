@@ -19,6 +19,7 @@ permissions:
 jobs:
   verify-vsix-guardrails:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout

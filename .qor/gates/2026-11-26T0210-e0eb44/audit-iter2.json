@@ -1,0 +1,20 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-26T0210-e0eb44",
+  "ts": "2026-11-26T02:20:43Z",
+  "target": ".failsafe/governance/plans/plan-708-ci-job-timeouts.md",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/issue-708/AUDIT-PLAN-iter2.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "infrastructure-mismatch"
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "veto",
+    "ts": "2026-11-26T02:20:43Z"
+  }
+}

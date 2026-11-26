@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-11-26 (#696 G4 CLI witness fixtures sealed on PR #737 at ledger #995, not merged or released; earlier, #722/#702 Tier-1 currency, publication census and glossary fence sealed on PR #721 at ledger #991, and #703 Delivery review form and refresh races sealed on PR #706 at ledger #984; historical release events remain in their dated sections below).
+**Last Updated:** 2026-11-26 (#708 PR workflow job timeouts sealed on PR #738 at ledger #1000, not merged or released; earlier, #696 G4 CLI witness fixtures sealed on PR #737 at ledger #995; #722/#702 Tier-1 currency, publication census and glossary fence sealed on PR #721 at ledger #991, and #703 Delivery review form and refresh races sealed on PR #706 at ledger #984; historical release events remain in their dated sections below).
 **Current development:** v6.1.0 is planned and in progress under [#679](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/679), with the published v6.0.13 baseline unchanged. The root [Architecture Index](../ARCHITECTURE_INDEX.md) remains the design-authority entry point; the [Governance Index](GOVERNANCE_INDEX.md) governs artifact tiers and freshness. No v6.1.0 release or skill cutover is authorized by this status snapshot.
 **Live pull-request queue:** [GitHub's open PR list](https://github.com/MythologIQ-Labs-LLC/FailSafe/pulls?q=is%3Apr+is%3Aopen) is authoritative. This document deliberately does not label historical PR numbers or local branch names as currently open; earlier #442–#447 and September sprint references belong to historical context.
 **Current Release:** v6.0.13 (2026-11-13): sealed (#968) and G4-witnessed (genesis `g4-000001`, release verification PASS on H and M), published 2026-11-13 (tag `v6.0.13` object `62a28fc1` on `26c1161a`, release run 43337880053; VS Code Marketplace, Open VSX and GitHub Release verified byte-identical; ledger #969). Previous published release: v6.0.12 (2026-11-10, tag `v6.0.12` on `0e70e539`, release run 42842387243).
@@ -12,6 +12,12 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-11-26 - #708 PR workflow job timeouts (SESSION SEAL #1000; PR #738, not merged)
+
+- PR #738 (`fix/708-ci-job-timeouts`) is sealed against `plan-708-ci-job-timeouts.md` iteration 3: audit VETOs #996-#997, audit PASS L2 #998, implementation #999 (commit 5d8d8e1c, the cherry-pick of the existing candidate b1874170), substantiation PASS #1000. It is not merged or released, and no version bump or tag was made (governance class).
+- Three PR workflow jobs gain a job-level `timeout-minutes`: `pr-full-test.yml` `full-test` 30, `repo-standards-enforcement.yml` `standards` 10, `vsix-proprietary-guardrails.yml` `verify-vsix-guardrails` 10. No trigger, matrix, concurrency, draft skip, permission or step changed. The `full-test` budget is 1.18x the observed maximum successful job execution and its transport-retry path is unmeasured; after adoption, `timed_out` conclusions of these jobs are to be reported on #708 with run ids.
+- Evidence (actionlint record, job-duration snapshot with run lists and script, audits, substantiation): `.failsafe/governance/evidence/issue-708/`.
 
 ## 2026-11-26 - #696 G4 CLI witness fixtures (SESSION SEAL #995; PR #737, not merged)
 

@@ -3445,3 +3445,43 @@ Recovering a previously audited change invites restating the owner instruction i
 
 ### Remediation Attempted
 None by the Judge, who may not edit source or the plan. Required: amend the plan for V1-V3 (or record owner narrowings), re-run /qor-audit as iteration 2.
+
+## Failure Entry #347
+
+**Date**: 2026-11-26T02:16:07Z
+**Verdict ID**: GATE TRIBUNAL plan-708-ci-job-timeouts iteration 1 VETO (session 2026-11-26T0210-e0eb44; report .failsafe/governance/evidence/issue-708/AUDIT-PLAN-iter1.md; ledger Entry #996)
+**Failure Mode**: HALLUCINATION (a headroom claim computed from a small, unnamed sample that the issue's own recorded evidence contradicts; plus a change class that contradicts the issue)
+
+### What Failed
+The plan claimed every timeout leaves >=1.8x headroom over the observed maximum, citing PR Full Test up to 966 s. The 100 latest successful runs reach 1531 s (job 25.43 min), and #708 had already recorded that tail and the one-retry envelope risk. The plan also declared change_class hotfix although #708 and the plan's own Authority section call it governance-class.
+
+### Why It Failed
+Recovering a small, previously reviewed change invites re-measuring with a default-size query (gh run list returns 20) and summarizing the issue body while skipping its later qualifying comments.
+
+### Pattern to Avoid
+- Name the sample window for every duration claim and use a window at least as large as the one the issue already cites.
+- Re-read every issue comment for conditions (tail risk, retry envelope, monitoring) and carry each into a claim row or an explicit Not claimed / limitation.
+- Copy the change class from the issue's governance statement; a protected-workflow change is `governance`, not a release class.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: amend plan V1-V3 (values 30/10/10 unchanged), re-run /qor-audit as iteration 2.
+
+## Failure Entry #348
+
+**Date**: 2026-11-26T02:20:43Z
+**Verdict ID**: GATE TRIBUNAL plan-708-ci-job-timeouts iteration 2 VETO (session 2026-11-26T0210-e0eb44; report .failsafe/governance/evidence/issue-708/AUDIT-PLAN-iter2.md; ledger Entry #997)
+**Failure Mode**: HALLUCINATION (a remediation that adds summary statistics which the stated command and window do not reproduce)
+
+### What Failed
+Iteration 2 fixed the maxima and T4 but added a PR Full Test p95 of 1150 s (1.57x) and a median of 914. The stated sample (46 successes in the stated window) gives p95 1028 nearest-rank and median 911.5; no standard percentile method gives 1150. One window label was applied to three workflows whose 100-run windows differ.
+
+### Why It Failed
+When answering a VETO about wrong numbers, the remedy added more numbers than the ground required, without naming the computation or re-deriving each figure from the recorded command output.
+
+### Pattern to Avoid
+- Every statistic in a locked decision names its method (nearest-rank, inclusive, exclusive) and is computed from the exact recorded output, not estimated.
+- Give each sample its own window; do not reuse one workflow's window for another.
+- Add only the figures the ground needs; each added figure is a new claim.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: correct LD2 and limitations (V4), re-run /qor-audit as iteration 3.

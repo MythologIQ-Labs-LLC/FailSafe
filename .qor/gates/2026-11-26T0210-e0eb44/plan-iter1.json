@@ -1,0 +1,43 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-26T0210-e0eb44",
+  "ts": "2026-11-26T02:11:28Z",
+  "plan_path": ".failsafe/governance/plans/plan-708-ci-job-timeouts.md",
+  "phases": [
+    "The recovered change (no edits)"
+  ],
+  "open_questions": [],
+  "doc_tier": "minimal",
+  "terms": [],
+  "change_class": "hotfix",
+  "originating_remediation": "FailSafe #708",
+  "boundaries": {
+    "limitations": [
+      "timeouts bound minutes, not the extglob cost itself",
+      "actionlint without shellcheck/pyflakes",
+      "no test guards the values"
+    ],
+    "non_goals": [
+      "any other workflow content",
+      "#695 dependency remediation",
+      "a regression test for the values"
+    ],
+    "exclusions": []
+  },
+  "feature_inventory_touches": [],
+  "ci_commands": [
+    "actionlint .github/workflows/pr-full-test.yml .github/workflows/repo-standards-enforcement.yml .github/workflows/vsix-proprietary-guardrails.yml",
+    "git diff --stat origin/main HEAD"
+  ],
+  "iteration": 1,
+  "source_revision": "50a943c7d60c6b1f020014f1c28b2354ba827c76",
+  "plan_sha256": "4cf9368435f5029e34f48b61c09dd44884a9268fe64c72c2d6d91bafc0f44abe",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "absent",
+    "ts": "2026-11-26T02:11:28Z"
+  }
+}
