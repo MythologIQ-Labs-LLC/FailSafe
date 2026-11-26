@@ -1,0 +1,20 @@
+{
+  "phase": "audit",
+  "session_id": "2026-11-25T2335-247ff7",
+  "ts": "2026-11-25T23:55:39Z",
+  "target": ".failsafe/governance/plans/plan-696-g4-witness-fixtures.md",
+  "verdict": "VETO",
+  "report_path": ".failsafe/governance/evidence/issue-696/AUDIT-PLAN-iter1.md",
+  "risk_grade": "L3",
+  "findings_categories": [
+    "coverage-gap"
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "veto",
+    "ts": "2026-11-25T23:55:39Z"
+  }
+}

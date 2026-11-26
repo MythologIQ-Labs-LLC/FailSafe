@@ -1,0 +1,9 @@
+{
+  "session": "2026-11-25T2335-247ff7",
+  "plan_path": ".failsafe/governance/plans/plan-696-g4-witness-fixtures.md",
+  "plan_hash": "49019d3a53590799959d0ce005fd28edc66abc7decf880b4915a0a07ddbff50d",
+  "audit_path": ".failsafe/governance/evidence/issue-696/AUDIT-PLAN-iter2.md",
+  "audit_hash": "e6512f3517d9928dfd3f1d1f1068ab42b2953c944f9e87e1edac57826cbbd9c6",
+  "head_commit": "e32bb62f6f373a9eb4dab872d45b720f0ca5baf0",
+  "captured_ts": "2026-11-26T00:10:02.290670Z"
+}
