@@ -37273,3 +37273,82 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: SESSION SEAL for plan-696 iteration 2 (#696), by a fresh-context independent Judge. Reality = Promise, with disclosures. Custody: e32bb62f (single parent 0550c413) changes only g4Witness.test.cjs (+32/-6, blob 59abc40d = 83460701's); 939a53b9 changes no source. H3: Node v22.23.5 zip 4a191082... equals the freshly downloaded nodejs.org SHASUMS256 line and node.exe 247e9693... equals the zip member; fresh full clone main 0550c413 RED 10/9/1 (stale real-repo case sees PASS OK g4-000001), candidate GREEN 11/11, head worktree 11/11. H1/H2: the two CLI fixture cases pass; mutants696.py M1-M7 KILLED under Node 22, map identical; verifier, library and g4Scenario sha256 unchanged after mutants and probe, git status clean. H5: teardown probe T1-T3 refused with sentinel kept, T4 deleted, identical to the record; junction removed without following, leaked work dirs removed, temp dir back to its pre-run state. H6: depth-1 main 10/10 (masked), depth-1 head 11/11; Linux exact-head PR Full Test 45730044400 success on depth-1 merge 1fb4547 (ok 533, ok 534, not skipped). H4: no change under scripts/, g4Scenario, g4TestPki, tools/g4 or witness evidence. Razor: 163-line file, added bodies 2-8 lines, nesting 1, no nested ternary, stub or console.log. Ledger #992-#994 recompute. Local test:node under Node 22 1199/1189 pass/0 fail/10 skipped. Exact-head CI at 939a53b9, all seven runs success: PR Full Test (extension host 6249 passing 15 pending, architecture 19, test:node 1164 pass 0 fail 35 skipped, test:ui 264 passed), Repo Standards pull_request and push, Cross-platform compile, OSS SAST, Dependency Review, VSIX Proprietary Guardrails. Gates: governance-health 8/8 OK; intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner, procedural_fidelity, dod_check, merge_velocity (strained) rc 0; skill_size_budget WARN only; data_api_acl SKIP with a disclosed-skip event; install_drift OK; doc_integrity strict PASS; governance-index enforce rc 0; doc currency no warnings; ledger_commitment OK; ac_close_guard WARN only. Disclosures: N1 publication_boundary_lint rc 1, 558 at main and 565 here, the 7 added absolute local paths in the pushed teardown696.txt (pre-existing class); N2 Entry #994 Target says iteration 4 for iteration 2; N3 Judge relied on CI for npm test and prepush; N4 release-mode and installed-host verification not claimed by the audited plan; N5 substantiate_gates needs --skill and the plan path was passed explicitly; N6 two PROCESS_SHADOW_GENOME events; N7 uncommitted .qor/session/current; N8 Node 22 put first on PATH for the scripts. SKIP or inapplicable: version_applicability and Steps 7.5/7.6/9.5.5 (no root manifest; hotfix), seal_artifacts, dist_compile, continuity_gate. BACKLOG has no open blockers. Not merged, released or tagged; no version bump. Owner GO remains outstanding.
 
 ---
+
+### Entry #996: GATE TRIBUNAL - plan-708-ci-job-timeouts (iteration 1) VETO
+
+**Timestamp**: 2026-11-26T02:16:07Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-26T0210-e0eb44`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-708-ci-job-timeouts.md` (iteration 1, sha256 4cf9368435f5029e34f48b61c09dd44884a9268fe64c72c2d6d91bafc0f44abe; baseline origin/main 50a943c7d60c6b1f020014f1c28b2354ba827c76; candidate 5d8d8e1cc86ea414cdce0009e7440689b94a4fdd = cherry-pick -x of b18741701384c08f179444fb344e6d3c841d602e, not pushed)
+**Report**: `.failsafe/governance/evidence/issue-708/AUDIT-PLAN-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-26T0210-e0eb44/audit-iter1.json` (also audit.json; findings_categories specification-drift, infrastructure-mismatch, coverage-gap)
+
+**Content Hash**: `e7c15bb2040ef74866e789394b7e1a4ac272443ef83982cfdf9486a4ffd10854`
+**Previous Hash**: `2d777ace1916aadeaee236cfefeafee9091d0233c003e2c2edc802cdd3aa0da8`
+**Chain Hash (Merkle seal)**: `7876b63910a3601142e73fffa878c8006536a5f9c2628ab2abba2c7525bfb3ac`
+
+**Decision**: GATE TRIBUNAL VETO for plan-708 iteration 1 (#708), fresh-context independent Judge, solo mode, bounded-claim rule; risk grade L2. The candidate holds: origin/main..5d8d8e1c is 3 files, 3 insertions, 0 deletions (pr-full-test.yml:30 timeout-minutes 30, repo-standards-enforcement.yml:27 10, vsix-proprietary-guardrails.yml:22 10, job level after runs-on); triggers, concurrency, permissions, env and steps unchanged; #721 step kept (repo-standards-enforcement.yml:51-56); actionlint 1.7.12 exit 0, no findings, on baseline and candidate; CLAUDE.md Actions-budget rules respected (owner-approved, nothing pushed). Grounds (plan-text): V1 specification-drift, change_class hotfix (plan:3, gate) contradicts #708 'governance-class' and plan:22; V2 infrastructure-mismatch, LD2/T4 claim >=1.8x over an observed max of 966 s, but the 100 latest successful PR Full Test runs reach 1531 s (45221551410, job 25.43 min; 1.18x), as #708 itself records; V3 coverage-gap, the one-retry full-suite envelope (pr-full-test.yml:42-60), long-tail sensitivity and post-adoption timed_out monitoring recorded in #708 are neither claimed nor disclosed. Values 30/10/10 not disputed (owner-approved). Next: Governor amends plan text, re-runs /qor-audit (iteration 2); no source change required. Shadow Genome #347.
+
+---
+
+### Entry #997: GATE TRIBUNAL - plan-708-ci-job-timeouts (iteration 2) VETO
+
+**Timestamp**: 2026-11-26T02:20:43Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-26T0210-e0eb44`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-708-ci-job-timeouts.md` (iteration 2, sha256 30f2a5e9b21456dae858c664409d9823cfcac13845d572fef2445700c725597d; supersedes iteration 1 4cf93684...; baseline origin/main 50a943c7d60c6b1f020014f1c28b2354ba827c76; candidate 5d8d8e1cc86ea414cdce0009e7440689b94a4fdd unchanged)
+**Report**: `.failsafe/governance/evidence/issue-708/AUDIT-PLAN-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-26T0210-e0eb44/audit-iter2.json` (also audit.json; findings_categories infrastructure-mismatch)
+
+**Content Hash**: `b16b3323235a7bc22b4c3e7416b2e0fdf2869cf90f8519cf376ffe8be0163c9a`
+**Previous Hash**: `7876b63910a3601142e73fffa878c8006536a5f9c2628ab2abba2c7525bfb3ac`
+**Chain Hash (Merkle seal)**: `c72187c79aeb76b3ec6104564c8cda3d55752b43a727422b4c4a8e8ca71e7693`
+
+**Decision**: GATE TRIBUNAL VETO for plan-708 iteration 2 (#708), closure re-check of Entry #996 by the same Judge, solo mode, bounded-claim rule; risk grade L2. V1 closed (change_class governance in plan:3 and gate, no bump). V3 closed (retry .github/workflows/pr-full-test.yml:42-60, thin tail, unmeasured retry, push/workflow_dispatch scope in limitations and gate; T6 timed_out monitoring; Not claimed 'cannot time out'). N1, N2, N4 closed. V2 partly closed: T4 maxima and ratios true (1531 s 1.18x, 150 s 4.0x, 116 s 5.2x). New ground V4 infrastructure-mismatch: LD2/limitations state PR Full Test p95 1150 s (1.57x) and median 914, but the stated gh run list -L 100 over the stated window (46 successes) gives p95 1028 nearest-rank (1023 inclusive, 1295 exclusive) and median 911.5; the single window label is wrong for Repo Standards (from 2026-11-21T17:33:13Z) and VSIX (to 2026-11-26T02:10:06Z). Candidate unchanged (3 files +3/-0), actionlint 1.7.12 exit 0. Next: Governor corrects LD2 and limitations, re-runs /qor-audit (iteration 3); no source change required. Shadow Genome #348.
+
+---
+
+### Entry #998: GATE TRIBUNAL - plan-708-ci-job-timeouts (iteration 3) PASS
+
+**Timestamp**: 2026-11-26T02:27:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-26T0210-e0eb44`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-708-ci-job-timeouts.md` (iteration 3, sha256 4b025dc6c63dcdf2cf10485a170630546afc2a089f0a9ffe238e052fbda124c4; supersedes iteration 2 30f2a5e9...; baseline origin/main 50a943c7d60c6b1f020014f1c28b2354ba827c76; candidate 5d8d8e1cc86ea414cdce0009e7440689b94a4fdd unchanged)
+**Report**: `.failsafe/governance/evidence/issue-708/AUDIT-PLAN-iter3.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-26T0210-e0eb44/audit-iter3.json` (also audit.json)
+
+**Content Hash**: `8a5fbcf25d5568951dd5bb2c0405949ea0363f16555507dc27d4eec4c41c8325`
+**Previous Hash**: `c72187c79aeb76b3ec6104564c8cda3d55752b43a727422b4c4a8e8ca71e7693`
+**Chain Hash (Merkle seal)**: `b758fa510a129220749bd7afcbe9cde2412d64c0393310bb9522e025f20413e0`
+
+**Decision**: GATE TRIBUNAL PASS for plan-708 iteration 3 (#708), closure re-check of Entry #997 by the same Judge, solo mode, bounded-claim rule; risk grade L2. V4 closed: LD2 now uses job execution time (started_at to completed_at, latest attempt) from job-durations-snapshot.json with named conventions (nearest-rank p95, mean-of-middle-two median) and a window per workflow; the Judge's own script reproduced every figure (full-test n46 787/900/1024/1526, 1.18x; standards n96 78/125/138/145, 4.14x; vsix n96 33/73.5/94/111, 5.41x), the snapshot run sets equal the committed run lists' successes, which equal live gh run list -L 100, and nine rows (min, p95, max, attempt-2 re-run 44726195838) match the live jobs API. V1-V3 and N1/N2/N4 remain closed; candidate 3 files +3/-0, actionlint 1.7.12 exit 0. Note N8: .failsafe/ is git-ignored, so the snapshot and evidence must be force-added (verify at substantiation). Next: /qor-implement records 5d8d8e1c unchanged; D4/T5 exact-head CI, T6 after adoption and owner GO remain.
+
+---
+
+### Entry #999: IMPLEMENT - plan-708-ci-job-timeouts (iteration 3); not sealed
+
+**Timestamp**: 2026-11-26T02:27:53Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-11-26T0210-e0eb44`
+**Risk Grade**: L2
+**Target**: `.failsafe/governance/plans/plan-708-ci-job-timeouts.md` (iteration 3, sha256 4b025dc6c63dcdf2cf10485a170630546afc2a089f0a9ffe238e052fbda124c4)
+**Report**: `.failsafe/governance/evidence/issue-708/IMPLEMENTATION.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-26T0210-e0eb44/implement.json`
+
+**Content Hash**: `ae3b55b7e41475578f6d5384d4336d2dfc6a0aedb8fff811e83bb6a3b9e3e3cb`
+**Previous Hash**: `b758fa510a129220749bd7afcbe9cde2412d64c0393310bb9522e025f20413e0`
+**Chain Hash (Merkle seal)**: `66aeb59b159df5295defc3abc7b80d9945f844d87e495f3c486a1a4ad1c6859c`
+
+**Decision**: IMPLEMENT record for plan-708 iteration 3 after audit PASS L2 Entry #998; the VETOs of Entries #996-#997 stand. No new source commit: the audited candidate 5d8d8e1c on fix/708-ci-job-timeouts (parent main 50a943c7) is the existing candidate b1874170 cherry-picked and rebased; three job-level timeout-minutes lines (30, 10, 10). verdict_reconcile 0 findings; intent lock captured; actionlint 1.7.12 exit 0 with no findings on the committed head. Job-duration evidence is the committed snapshot named in LD2. Outstanding: exact-head CI under the new limits (T5), seal, owner GO, and the post-adoption timed_out watch (T6). This entry is not a seal, merge or release.
+
+---

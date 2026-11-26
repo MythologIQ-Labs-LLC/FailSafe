@@ -1,0 +1,9 @@
+{
+  "session": "2026-11-26T0210-e0eb44",
+  "plan_path": ".failsafe/governance/plans/plan-708-ci-job-timeouts.md",
+  "plan_hash": "4b025dc6c63dcdf2cf10485a170630546afc2a089f0a9ffe238e052fbda124c4",
+  "audit_path": ".failsafe/governance/evidence/issue-708/AUDIT-PLAN-iter3.md",
+  "audit_hash": "8a5fbcf25d5568951dd5bb2c0405949ea0363f16555507dc27d4eec4c41c8325",
+  "head_commit": "5d8d8e1cc86ea414cdce0009e7440689b94a4fdd",
+  "captured_ts": "2026-11-26T02:27:30.047572Z"
+}
