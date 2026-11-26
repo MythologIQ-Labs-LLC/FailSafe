@@ -1,0 +1,7 @@
+KILLED    M1 BLOCKED exits 0 | the CLI blocks a disposable unwitnessed repository with exit 2
+KILLED    M2 PASS exits 2 | the CLI accepts a disposable witness diagnostically with exit 0
+KILLED    M3 diagnostic label dropped | the CLI accepts a disposable witness diagnostically with exit 0
+KILLED    M4 verdict line not printed | the CLI blocks a disposable unwitnessed repository with exit 2; the CLI accepts a disposable witness diagnostically with exit 0
+KILLED    M5 no-checkpoint code renamed | the CLI blocks a disposable unwitnessed repository with exit 2
+KILLED    M6 no checkpoints reported as REFUSED | the CLI blocks a disposable unwitnessed repository with exit 2
+KILLED    M7 BLOCKED printed as PASS | the CLI blocks a disposable unwitnessed repository with exit 2

@@ -1,0 +1,52 @@
+{
+  "phase": "plan",
+  "session_id": "2026-11-25T2335-247ff7",
+  "ts": "2026-11-25T23:38:22Z",
+  "plan_path": ".failsafe/governance/plans/plan-696-g4-witness-fixtures.md",
+  "phases": [
+    "The recovered change (no edits)"
+  ],
+  "open_questions": [],
+  "doc_tier": "standard",
+  "terms": [],
+  "change_class": "hotfix",
+  "originating_remediation": "FailSafe #696",
+  "boundaries": {
+    "limitations": [
+      "CLI cases need OpenSSL; skipped (reported) where absent",
+      "diagnostic PASS is not release verification",
+      "fixtures use the existing disposable test PKI and test TSA"
+    ],
+    "non_goals": [
+      "any verifier, library, witness evidence or owner-key change",
+      "importing or re-sealing the historical local governance line"
+    ],
+    "exclusions": []
+  },
+  "feature_inventory_touches": [
+    {
+      "entry_id": "n/a-justified",
+      "operation": "n/a-justified",
+      "test_path": "FailSafe/extension/src/test/scripts/g4Witness.test.cjs",
+      "test_descriptor": "the real CLI blocks a disposable unwitnessed repository with exit 2 and accepts a disposable witness diagnostically with exit 0"
+    }
+  ],
+  "ci_commands": [
+    "node --test src/test/scripts/g4Witness.test.cjs",
+    "npm run test:node",
+    "npm run lint",
+    "npm test",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File tools/reliability/prepush-validate.ps1"
+  ],
+  "iteration": 1,
+  "source_revision": "0550c4135c1d6d29aa03b2107f7b16aa78d08422",
+  "plan_sha256": "2c6de0dea600f054b41ab9af15fcaed9d9ade9567f13f9b2c7a06ad29617dc5e",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "absent",
+    "ts": "2026-11-25T23:38:22Z"
+  }
+}

@@ -37188,3 +37188,88 @@ History is kept byte-for-byte. Nothing above or below the boundary was edited, r
 **Decision**: SESSION SEAL for plan-721 iteration 4, by a fresh-context independent Judge. Reality = Promise, with disclosures. Patch custody: candidate-iter4.patch (sha256 7fd46c9b7f6a0bd03f3d0c4e79c28a79dfa3a5ffbfa0a2471e87c1151845ebaa) applied to a clean bc3786a5 gives tree f7a0b7254ef088f65cacfc00675fe68db64e3911, equal to the 71edad8f tree; 71edad8f has the single parent bc3786a5; f1749262 changes only records. Every planned file exists; no unplanned source; ledger_commitment OK (12). D1: the four mutant scripts re-run on the Judge's own f1749262 worktree (own npm ci) give 42/10/5/4 KILLED with output identical to the four map-*-iter4.txt files; the G1-G9 Mutants column lists exactly the 61 killed (C5 twice by design); survivors only C22, C23 (equivalent) and J11 (note); J2, J5, J5b not applicable. G1: frozen parse_glossary 16 on main, 17 at HEAD including Sentry import outcome; check_orphans and strict run_all_checks_from_plan PASS. G4: check-governance-currency.cjs --enforce v6.0.13 0 errors 0 warnings exit 0 (also after this seal's edits). G8: only one step added to repo-standards-enforcement.yml, triggers unchanged; actionlint 1.7.12 exit 0. G9 readback holds (v6.0.13 10 assets, 8 VSIX; .nvmrc 20.18.1 vs Node 22; bicameral-mcp>=0.14,<0.16; AGENT_OS_CONTAINMENT_AVAILABLE false; FEATURE_INDEX 823 rows). LD7 Tier-1 freshness holds, with the eight markerless instruction and genesis files narrowed out by owner decision 2026-11-25. check-architecture-index PASS (49 rows). Four suites 31 tests, 30 pass, 1 Windows file-symlink skip. Razor (TS AST): every function and test body 40 lines or fewer, nesting at most 3, only describe callbacks over 40 (containers), every code file at most 250 lines, no nested ternary, no stub or console.log added; the LD6 breaches at bc3786a5 are gone. Ledger #985-#990 chain hashes recompute; post-anchor clean. Exact-head CI at f1749262 (read only), all success: PR Full Test 45714871613 on merge a5618f2 (7863a29e is an ancestor, so the merged tree is the head tree), extension host 6249 passing 15 pending, architecture 19, test:node 1198 tests 1163 pass 0 fail 35 skipped, test:ui 264 passed 4 skipped, both Bicameral install-handler cases passing; Repo Standards 45714871716 and push run 45714865754 (governance step 31/31), Cross-platform compile 45714871630, OSS SAST 45714871693, Dependency Review 45714871607, VSIX Proprietary Guardrails 45714871722. Gates: governance-health 8/8 OK; intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner rc 0; procedural_fidelity, dod_check, merge_velocity (healthy) rc 0; skill_size_budget WARN only; data_api_acl SKIP with a disclosed-skip event closed at emission; install_drift OK; governance-index enforce rc 0; doc currency no warnings; ac_close_guard WARN only. Disclosures: N1 publication_boundary_lint rc 1, 538 at origin/main and 558 here, the 20 added all foreign repository URL links to this repository's own issues and to the upstream Bicameral repositories in #721's audited documentation. N2 g4Witness.test.cjs:110 fails identically in a full origin/main worktree and passes in CI. N3 the two local install-handler failures are environmental (no probeable trusted pip on the host: the Judge reproduced them outside any .failsafe/ path, so the implementer's stated cause is unconfirmed); no Bicameral or trusted-executable code changed and both pass in CI. N4 plan says the publication test is 79 lines; it is 77. N5 substantiate_gates needs --skill. N6 the Judge relied on CI and the implementer's record for full npm test and prepush. N7 uncommitted .qor/session/current. N8 two PROCESS_SHADOW_GENOME events (FX922 surface lint, data_api_acl skip). N9 Tier 4 archive-at-seal not performed, as at #968, #975, #984. N10 intent lock head bc3786a5 verifies by ancestry. N11 the protected workflow step still needs owner GO. SKIP or inapplicable: version_applicability (needs pyproject.toml) and Step 7.5/7.6/9.5.5 (no root version manifest; hotfix; package.json 6.0.13 equals tag v6.0.13); seal_artifacts (no numeric phase; hotfix exempt); dist_compile (no qor/skills in this consumer). BACKLOG has no open Security or Development Blockers. Not merged, released or tagged; no version bump. Owner source-bound GO remains outstanding.
 
 ---
+
+### Entry #992: GATE TRIBUNAL - plan-696-g4-witness-fixtures (iteration 1) VETO
+
+**Timestamp**: 2026-11-25T23:55:45Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-25T2335-247ff7`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Target**: `.failsafe/governance/plans/plan-696-g4-witness-fixtures.md` (iteration 1, sha256 2c6de0dea600f054b41ab9af15fcaed9d9ade9567f13f9b2c7a06ad29617dc5e; baseline origin/main 0550c4135c1d6d29aa03b2107f7b16aa78d08422; candidate e32bb62f6f373a9eb4dab872d45b720f0ca5baf0 = cherry-pick -x of 834607018a3166a59351f59261d67cbbb7c6ef98)
+**Report**: `.failsafe/governance/evidence/issue-696/AUDIT-PLAN-iter1.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T2335-247ff7/audit-iter1.json` (also audit.json; findings_categories coverage-gap)
+
+**Content Hash**: `5ec1ed9a58f581aa422fddf5199ad16963b19bd8a55ba7a3b6a69bd9f88aa620`
+**Previous Hash**: `e13a6e28f56e2b3bd3a5d61506a3bbfcc12dca28b5e62fd9c3f56b4d8a0ba3e7`
+**Chain Hash (Merkle seal)**: `77b5a1bf8dd4ad597ef7d8aaafc4514e34da6a8a484fbd2e8fd7954b4b96def1`
+
+**Decision**: GATE TRIBUNAL VETO for plan-696 iteration 1 (#696), fresh-context independent Judge, solo mode, bounded-claim rule; risk grade L3. The candidate holds: LD1 recovery exact (test blob ba8e5de7 -> 59abc40d, verifier/lib/g4Scenario/g4TestPki unchanged since 83460701^, one file +32/-6); red on 0550c413 (10/9/1, stale real-repo test sees PASS OK g4-000001) and green on e32bb62f (11/11) on this host (Node v24.19.0, OpenSSL 3.5.7); both new tests run the real CLI on disposable fixtures (unwitnessed BLOCKED NO_CHECKPOINTS exit 2, witnessed PASS OK exit 0 with the diagnostic NOT-release-evidence mode line); mutants696.py M1-M7 KILLED, map identical; Judge mutants J1-J6, J9, J10 KILLED, J7, J8, J11 survive g4Witness alone (no listed row) and are KILLED by the full G4 suite; teardown decoys (outside root, wrong prefix, junction escape) refused with sentinel kept, control deleted; Razor OK; all sources restored byte-exact. Grounds (plan-text, coverage-gap): V1 #696 step 5 'approved Node22 environment' unbound (H3 says same host; LD2 records no Node version; host is Node 24); V2 #696 step 1 'reliable teardown on Windows' is design prose only, no claim row/proof (buildBase-failure leak unaddressed); V3 #696 step 4 determinism across clean/shallow/complete history and OSes unclaimed (only witness-state independence in H3). No owner narrowing recorded for any. Next: Governor amends the plan, re-runs /qor-audit (iteration 2); no source change required.
+
+---
+
+### Entry #993: GATE TRIBUNAL - plan-696-g4-witness-fixtures (iteration 2) PASS
+
+**Timestamp**: 2026-11-26T00:09:13Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-11-25T2335-247ff7`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Target**: `.failsafe/governance/plans/plan-696-g4-witness-fixtures.md` (iteration 2, sha256 49019d3a53590799959d0ce005fd28edc66abc7decf880b4915a0a07ddbff50d; supersedes iteration 1 2c6de0de..., preserved as evidence/issue-696/plan-iter1.md; baseline 0550c4135c1d6d29aa03b2107f7b16aa78d08422; candidate e32bb62f6f373a9eb4dab872d45b720f0ca5baf0 unchanged)
+**Report**: `.failsafe/governance/evidence/issue-696/AUDIT-PLAN-iter2.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T2335-247ff7/audit-iter2.json` (also audit.json)
+
+**Content Hash**: `e6512f3517d9928dfd3f1d1f1068ab42b2953c944f9e87e1edac57826cbbd9c6`
+**Previous Hash**: `77b5a1bf8dd4ad597ef7d8aaafc4514e34da6a8a484fbd2e8fd7954b4b96def1`
+**Chain Hash (Merkle seal)**: `3034f2b4f072f9667b37c412dd74a2c610bbb83f52ebbc3ba3faf2429b2ce4df`
+
+**Decision**: GATE TRIBUNAL PASS for plan-696 iteration 2 (#696), closure re-check of Entry #992 by the same Judge, solo mode, bounded-claim rule; risk grade L3. V1 closed: Node v22.23.5 provenance re-verified (zip 4a191082... = nodejs.org SHASUMS256; node.exe 247e9693... = zip member); Judge re-ran red on 0550c413 (10/9/1) and green on e32bb62f (11/11) on that binary. V2 closed: H5 probe identical to the Judge's iteration-1 script; T1-T3 refused, T4 deleted; Judge guard mutants G1 (dirname assertion dropped) and G2 (prefix assertion dropped) KILLED, G3 (no realpath) equivalent for the safety claim (rmSync removes only the junction; outside contents kept); buildBase leak under Not claimed. V3 closed: H6 depth-1 candidate clone 11/11 under Node 22; main tree identity 981740d6 for the matrix's depth-1 row; Linux leg a D4 condition; macOS not claimed. N1 closed: REFUSED behaviour not claimed. Candidate unchanged; sources restored byte-exact. Notes N5-N7 (realpath not separately observable on this host; probe uses PATH node; Linux CI and full local gate owed at substantiation). Next: /qor-implement records e32bb62f unchanged; D4 and owner GO remain.
+
+---
+
+### Entry #994: IMPLEMENT - plan-696-g4-witness-fixtures (iteration 2); not sealed
+
+**Timestamp**: 2026-11-26T00:36:54Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-11-25T2335-247ff7`
+**Risk Grade**: L3
+**Target**: `.failsafe/governance/plans/plan-696-g4-witness-fixtures.md` (iteration 4, sha256 49019d3a53590799959d0ce005fd28edc66abc7decf880b4915a0a07ddbff50d)
+**Report**: `.failsafe/governance/evidence/issue-696/IMPLEMENTATION.md` (Content Hash = SHA256, LF-normalized)
+**Gate**: `.qor/gates/2026-11-25T2335-247ff7/implement.json`
+
+**Content Hash**: `41bcf78a0b670c16fd984e8ce4d5b4be670c4b191f9d4bb13fbda4dd8320c65d`
+**Previous Hash**: `3034f2b4f072f9667b37c412dd74a2c610bbb83f52ebbc3ba3faf2429b2ce4df`
+**Chain Hash (Merkle seal)**: `2230077dd50499dfde405446695c401fa25eab69366e43c34a2759f108f6f381`
+
+**Decision**: IMPLEMENT record for plan-696 iteration 2 after audit PASS L3 Entry #993; the VETO of Entry #992 stands. No new source commit: the audited candidate e32bb62f on fix/696-g4-witness-fixtures (parent main 0550c413) is the cherry-pick of the historically qualified 83460701 (blob 59abc40d); verdict_reconcile 0 findings; intent lock captured. g4Witness 11/11 under Node 22.23.5 (checksum-verified) and 24.19.0; red on main 9/1. Full local gate: lint 0 errors; npm test 6228 passing, 34 pending, 2 failing (bicameral install-handler cases failing only because this host's pip.exe cannot be executed; unrelated, green in CI); architecture host 19; test:node 1189 pass, 0 fail, 10 skipped (the g4Witness full-clone failure on main is gone); test:ui 264 passed; package-target and validate-vsix PASS. Outstanding: substantiation (H6 Linux CI leg), owner GO. This entry is not a seal, merge or release.
+
+---
+
+### Entry #995: SESSION SEAL - plan-696-g4-witness-fixtures (iteration 2)
+
+**Timestamp**: 2026-11-26T00:53:13Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-11-25T2335-247ff7`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Entry ID**: `1b3ec379e80e`
+**Plan**: `.failsafe/governance/plans/plan-696-g4-witness-fixtures.md` (iteration 2, sha256 49019d3a53590799959d0ce005fd28edc66abc7decf880b4915a0a07ddbff50d; VETO #992, audit PASS L3 #993, implement #994)
+**Target**: draft PR #737 (issue #696), origin/main 0550c4135c1d6d29aa03b2107f7b16aa78d08422 ... 939a53b9515cc26bb85b334cfab7399cf0d94248 (implementation e32bb62f6f373a9eb4dab872d45b720f0ca5baf0, cherry-pick -x of 834607018a3166a59351f59261d67cbbb7c6ef98)
+**Report**: `.failsafe/governance/evidence/issue-696/SUBSTANTIATE.md`
+**Gate**: `.qor/gates/2026-11-25T2335-247ff7/substantiate.json` (verdict PASS)
+**SSDF Practices**: PS.2.1, RV.2.1
+**Feature Inventory**: Total: 805 / verified: 765 / unverified: 0 / n/a: 40
+**Newly unverified**: none (feature_index_verify --snapshot 2026-11-25T1958-4f4867 rc 0)
+**Spec Corpus Hash**: none (spec_fold: no deltas declared)
+
+**Content Hash**: `49019d3a53590799959d0ce005fd28edc66abc7decf880b4915a0a07ddbff50d`
+**Previous Hash**: `2230077dd50499dfde405446695c401fa25eab69366e43c34a2759f108f6f381`
+**Chain Hash (Merkle seal)**: `2d777ace1916aadeaee236cfefeafee9091d0233c003e2c2edc802cdd3aa0da8`
+
+**Decision**: SESSION SEAL for plan-696 iteration 2 (#696), by a fresh-context independent Judge. Reality = Promise, with disclosures. Custody: e32bb62f (single parent 0550c413) changes only g4Witness.test.cjs (+32/-6, blob 59abc40d = 83460701's); 939a53b9 changes no source. H3: Node v22.23.5 zip 4a191082... equals the freshly downloaded nodejs.org SHASUMS256 line and node.exe 247e9693... equals the zip member; fresh full clone main 0550c413 RED 10/9/1 (stale real-repo case sees PASS OK g4-000001), candidate GREEN 11/11, head worktree 11/11. H1/H2: the two CLI fixture cases pass; mutants696.py M1-M7 KILLED under Node 22, map identical; verifier, library and g4Scenario sha256 unchanged after mutants and probe, git status clean. H5: teardown probe T1-T3 refused with sentinel kept, T4 deleted, identical to the record; junction removed without following, leaked work dirs removed, temp dir back to its pre-run state. H6: depth-1 main 10/10 (masked), depth-1 head 11/11; Linux exact-head PR Full Test 45730044400 success on depth-1 merge 1fb4547 (ok 533, ok 534, not skipped). H4: no change under scripts/, g4Scenario, g4TestPki, tools/g4 or witness evidence. Razor: 163-line file, added bodies 2-8 lines, nesting 1, no nested ternary, stub or console.log. Ledger #992-#994 recompute. Local test:node under Node 22 1199/1189 pass/0 fail/10 skipped. Exact-head CI at 939a53b9, all seven runs success: PR Full Test (extension host 6249 passing 15 pending, architecture 19, test:node 1164 pass 0 fail 35 skipped, test:ui 264 passed), Repo Standards pull_request and push, Cross-platform compile, OSS SAST, Dependency Review, VSIX Proprietary Guardrails. Gates: governance-health 8/8 OK; intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner, procedural_fidelity, dod_check, merge_velocity (strained) rc 0; skill_size_budget WARN only; data_api_acl SKIP with a disclosed-skip event; install_drift OK; doc_integrity strict PASS; governance-index enforce rc 0; doc currency no warnings; ledger_commitment OK; ac_close_guard WARN only. Disclosures: N1 publication_boundary_lint rc 1, 558 at main and 565 here, the 7 added absolute local paths in the pushed teardown696.txt (pre-existing class); N2 Entry #994 Target says iteration 4 for iteration 2; N3 Judge relied on CI for npm test and prepush; N4 release-mode and installed-host verification not claimed by the audited plan; N5 substantiate_gates needs --skill and the plan path was passed explicitly; N6 two PROCESS_SHADOW_GENOME events; N7 uncommitted .qor/session/current; N8 Node 22 put first on PATH for the scripts. SKIP or inapplicable: version_applicability and Steps 7.5/7.6/9.5.5 (no root manifest; hotfix), seal_artifacts, dist_compile, continuity_gate. BACKLOG has no open blockers. Not merged, released or tagged; no version bump. Owner GO remains outstanding.
+
+---

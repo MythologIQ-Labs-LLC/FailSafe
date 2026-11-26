@@ -1,0 +1,32 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-11-25T2335-247ff7",
+  "ts": "2026-11-26T00:53:13Z",
+  "verdict": "PASS",
+  "merkle_seal": "2d777ace1916aadeaee236cfefeafee9091d0233c003e2c2edc802cdd3aa0da8",
+  "content_hash": "49019d3a53590799959d0ce005fd28edc66abc7decf880b4915a0a07ddbff50d",
+  "previous_hash": "2230077dd50499dfde405446695c401fa25eab69366e43c34a2759f108f6f381",
+  "ledger_entry": 995,
+  "entry_id": "1b3ec379e80e",
+  "reality_check": {
+    "missing": [],
+    "unplanned": [],
+    "matches": 1
+  },
+  "intent_lock_state": "verified",
+  "boundary_scope": "structural",
+  "report_path": ".failsafe/governance/evidence/issue-696/SUBSTANTIATE.md",
+  "source_revision": "939a53b9515cc26bb85b334cfab7399cf0d94248",
+  "implementation_commit": "e32bb62f6f373a9eb4dab872d45b720f0ca5baf0",
+  "plan_sha256": "49019d3a53590799959d0ce005fd28edc66abc7decf880b4915a0a07ddbff50d",
+  "ci": "PR Full Test 45730044400 success at 939a53b9 (depth-1 merge 1fb4547; g4Witness ok 533, ok 534); all six pull_request workflows and the push Repo Standards run success",
+  "sealed": true,
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.176.1",
+    "host": "claude-code",
+    "model_family": "claude",
+    "human_oversight": "pass",
+    "ts": "2026-11-26T00:54:57Z"
+  }
+}

@@ -1,7 +1,7 @@
 "use strict";
 /**
- * G4 (#638): unit checks for the witness primitives, the CLI against the real
- * repository (which has no witness yet), and the PowerShell signer tooling.
+ * G4 (#638): unit checks for witness primitives, disposable CLI acceptance
+ * fixtures, and the PowerShell signer tooling.
  * No TPM key is created or used: the signer is pointed at a key name that
  * does not exist and must fail closed.
  */
@@ -18,11 +18,25 @@ const registry = require("../../../scripts/lib/g4/registry.cjs");
 const { parseManifest } = require("../../../scripts/lib/g4/manifest.cjs");
 const { createTpmSigner } = require("../../../scripts/lib/g4/signer.cjs");
 const { createTestSigner } = require("./g4TestPki.cjs");
+const S = require("./g4Scenario.cjs");
 
 const EXT = path.resolve(__dirname, "..", "..", "..");
 const REPO = path.resolve(EXT, "..", "..");
 const PS_SCRIPTS = ["sign-checkpoint.ps1", "enroll-tpm-key.ps1"].map((f) => path.join(REPO, "tools", "g4", f));
 const found = ts.findOpenssl();
+let scenario;
+
+test.before(async () => {
+  if (found) scenario = await S.buildBase(found.bin);
+});
+
+test.after(() => {
+  if (!scenario) return;
+  const target = fs.realpathSync.native(scenario.work);
+  assert.equal(path.dirname(target), fs.realpathSync.native(os.tmpdir()));
+  assert.match(path.basename(target), /^g4-falsify-/);
+  fs.rmSync(target, { recursive: true, force: true });
+});
 
 test("imprint is SHA-256 over the domain tag and u64be length-framed manifest and signature", () => {
   const m = Buffer.from("ab");
@@ -107,10 +121,22 @@ test("committed blobs are read even when rev:path is longer than Windows MAX_PAT
   assert.equal(showBlob(deep, head, "tools/g4"), null, "a tree is not a blob");
 });
 
-test("the CLI never reports PASS for the real repository, which has no witness yet", { skip: found ? false : "openssl unavailable" }, () => {
-  const r = spawnSync(process.execPath, [path.join(EXT, "scripts", "g4-verify-checkpoint.cjs"), "--repo-root", REPO], { encoding: "utf8" });
-  assert.ok(r.status === 1 || r.status === 2, `exit ${r.status}: ${r.stdout}${r.stderr}`);
-  assert.match(r.stdout, /\[g4-verify\] (BLOCKED|REFUSED) /);
+test("the CLI blocks a disposable unwitnessed repository with exit 2", { skip: found ? false : "openssl unavailable" }, () => {
+  const dir = path.join(scenario.work, "unwitnessed");
+  fs.mkdirSync(dir);
+  S.initRepo(dir, scenario.tsa, scenario.signer);
+  const r = spawnSync(process.execPath, [path.join(EXT, "scripts", "g4-verify-checkpoint.cjs"), "--repo-root", dir], { encoding: "utf8", windowsHide: true });
+  assert.equal(r.status, 2, `${r.stdout}${r.stderr}`);
+  assert.match(r.stdout, /\[g4-verify\] BLOCKED NO_CHECKPOINTS:/);
+  assert.doesNotMatch(r.stdout, /\[g4-verify\] PASS /);
+});
+
+test("the CLI accepts a disposable witness diagnostically with exit 0", { skip: found ? false : "openssl unavailable" }, () => {
+  const dir = S.copyRepo(scenario);
+  const r = spawnSync(process.execPath, [path.join(EXT, "scripts", "g4-verify-checkpoint.cjs"), "--repo-root", dir], { encoding: "utf8", windowsHide: true });
+  assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
+  assert.match(r.stdout, /\[g4-verify\] PASS OK:/);
+  assert.match(r.stdout, /\[g4-verify\] mode: diagnostic \(NOT release evidence\)/);
 });
 
 const psSkip = process.platform !== "win32" ? "Windows PowerShell only" : false;

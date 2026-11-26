@@ -3425,3 +3425,23 @@ Both the Judge's required actions and the Governor's fixes were phrased per muta
 
 ### Remediation Attempted
 None by the Judge, who may not edit source or the plan. Required: the table-driven FC006 case (or a narrowed G2), L1, L2 and L4 listed in G2, re-recorded patch sha256 and maps, re-run /qor-audit.
+
+## Failure Entry #346
+
+**Date**: 2026-11-25T23:55:45Z
+**Verdict ID**: GATE TRIBUNAL plan-696-g4-witness-fixtures iteration 1 VETO (session 2026-11-25T2335-247ff7; report .failsafe/governance/evidence/issue-696/AUDIT-PLAN-iter1.md; ledger Entry #992)
+**Failure Mode**: GHOST_PATH (a closed claim table that silently drops acceptance-criterion qualifiers: the environment, teardown and clone-depth elements of #696 are neither claimed nor narrowed)
+
+### What Failed
+The plan's H1-H4 prove the CLI behaviour well, but omit three #696 acceptance elements: red/green on the approved Node22 environment (step 5), reliable Windows teardown (step 1), and determinism across shallow/complete history and OSes (step 4). The historical plan bound Node 22.23.5; the recovery plan dropped it while the host moved to Node 24.
+
+### Why It Failed
+Recovering a previously audited change invites restating the owner instruction in shorter words ("one environment") and copying the mechanism into Affected Files prose, rather than re-deriving the claim table from the issue's acceptance list.
+
+### Pattern to Avoid
+- Derive a closed claim table from the issue's acceptance criteria line by line; every qualifier (runtime version, OS, clone depth, teardown) becomes a row or an explicit "Not claimed" with a recorded owner narrowing.
+- When the defect's own shape is environmental (here clone depth), the environment must be a claimed row.
+- Record the exact runtime (`node --version`) beside every red/green claim.
+
+### Remediation Attempted
+None by the Judge, who may not edit source or the plan. Required: amend the plan for V1-V3 (or record owner narrowings), re-run /qor-audit as iteration 2.

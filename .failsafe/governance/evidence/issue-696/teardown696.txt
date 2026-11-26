@@ -1,0 +1,5 @@
+T1 outside tmp root, right prefix | rc 1 | guard assertion fired True | sentinel kept True | not-ok ['C:\\\\dev\\\\mythologiq\\\\failsafe\\\\.failsafe\\\\worktrees\\\\pr696\\\\FailSafe\\\\extension\\\\src\\\\test\\\\scripts\\\\g4Witness.test.cjs']
+T2 tmp child, wrong prefix | rc 1 | guard assertion fired True | sentinel kept True | not-ok ['C:\\\\dev\\\\mythologiq\\\\failsafe\\\\.failsafe\\\\worktrees\\\\pr696\\\\FailSafe\\\\extension\\\\src\\\\test\\\\scripts\\\\g4Witness.test.cjs']
+T3 tmp-child junction g4-falsify-* -> outside | rc 1 | guard assertion fired True | sentinel kept True | not-ok ['C:\\\\dev\\\\mythologiq\\\\failsafe\\\\.failsafe\\\\worktrees\\\\pr696\\\\FailSafe\\\\extension\\\\src\\\\test\\\\scripts\\\\g4Witness.test.cjs']
+T4 control: tmp child, right prefix | rc 0 | guard assertion fired False | sentinel kept False | not-ok []
+new real work dirs leaked by decoy runs (to remove): ['C:\\Users\\krkna\\AppData\\Local\\Temp\\g4-falsify-aBzDaF', 'C:\\Users\\krkna\\AppData\\Local\\Temp\\g4-falsify-aOPGKP', 'C:\\Users\\krkna\\AppData\\Local\\Temp\\g4-falsify-apnDIw', 'C:\\Users\\krkna\\AppData\\Local\\Temp\\g4-falsify-byLj21']
